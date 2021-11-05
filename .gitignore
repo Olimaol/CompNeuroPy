@@ -1,1 +1,4 @@
 *__pycache__/
+build/
+CompNeuroPy.egg-info/
+dist/
