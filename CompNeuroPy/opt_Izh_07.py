@@ -1,9 +1,10 @@
 from ANNarchy import setup, Population, get_population, reset
-from CompNeuroPy.neuron_models import Izhikevich2007
-from CompNeuroPy.model_functions import compile_in_folder, addMonitors, startMonitors, getMonitors
-from CompNeuroPy.system_functions import save_data
-from CompNeuroPy.simulation_functions import current_step
 import numpy as np
+from CompNeuroPy import neuron_models as nm
+from CompNeuroPy import model_functions as mf
+from CompNeuroPy import simulation_functions as sim
+from CompNeuroPy import system_functions as sf
+import CompNeuroPy as cnp
 
 # hyperopt
 from hyperopt import fmin, tpe, hp, STATUS_OK
@@ -18,28 +19,24 @@ class opt_Izh:
 
     opt_created = []
     
-    def __init__(self, recordings_soll, sp_soll, fitting_variables_space, const_params, compile_folder_name='annarchy_raw_Izhikevich', num_rep_loss=1):
+    def __init__(self, results_soll, experiment, fitting_variables_space, const_params, compile_folder_name='annarchy_raw_Izhikevich', num_rep_loss=1):
     
         if len(self.opt_created)>0:
             print('opt_Izh: Error: Already another opt_Izh created. Only create one per python session!')
             quit()
         else:
-            self.opt_created.append(1)
-            
             print('opt_Izh: Initialize opt_Izh... better not create anything with ANNarchy before!')
             
-            ### check if recordings fit to simulation protocol
-            if recordings_soll['sp'] != sp_soll['name']:
-                print('opt_Izh: Error: Loaded simulation protocol does not fit loeaded recordings!')
-                quit()
-            self.recordings_soll = recordings_soll
-            self.sp_soll = sp_soll
+            ### set object variables
+            self.opt_created.append(1)
+            self.results_soll = results_soll
+            self.experiment = experiment
             self.fv_space = fitting_variables_space
             self.const_params = const_params
             self.num_rep_loss = num_rep_loss
         
             ### setup ANNarchy
-            setup(dt=recordings_soll['dt'])
+            setup(dt=results_soll['recordings']['dt'])
 
             ### create and compile model
             model = self.__raw_Izhikevich__(do_compile=True, compile_folder_name=compile_folder_name)
@@ -55,10 +52,10 @@ class opt_Izh:
             
             returns a list of the names of the populations (for later access)
         """
-        pop   = Population(1, neuron=Izhikevich2007, name='Iz_neuron')
+        pop   = Population(1, neuron=nm.Izhikevich2007, name='Iz_neuron')
 
         if do_compile:
-            compile_in_folder(compile_folder_name)
+            mf.compile_in_folder(compile_folder_name)
         
         return ['Iz_neuron']
         
@@ -109,8 +106,7 @@ class opt_Izh:
             proc.join()
             ### get simulation results/loss
             lossAr[nr_run]=m_list[0]
-            simulation_protocol_ist=m_list[1]
-            recordings_ist=m_list[2]
+            results_ist=m_list[1]
         
         ### calculate mean and std of loss
         if self.num_rep_loss > 1:
@@ -127,16 +123,14 @@ class opt_Izh:
                 'loss': loss,
                 'loss_variance': std,
                 'std': std,
-                'simulation_protocol': simulation_protocol_ist,
-                'recordings': recordings_ist
+                'results': results_ist
                 }
         else:
             return {
                 'status': STATUS_OK,
                 'loss': loss,
                 'std': std,
-                'simulation_protocol': simulation_protocol_ist,
-                'recordings': recordings_ist
+                'results': results_ist
                 }
                 
                 
@@ -149,31 +143,22 @@ class opt_Izh:
 
         ### reset model to compilation state
         reset()
-
-        ### create monitors, iz is a global variable
-        monDict={'pop;'+self.iz:['v', 'spike']}
-        mon=addMonitors(monDict)
         
         ### set parameters which should not be optimized and parameters which should be optimized
         self.__set_fitting_parameters__(fitparams)
         
-        ### simulate, use the same simulation as for the soll-data
-        startMonitors(monDict,mon)
-        sim1 = current_step(self.iz, t1=self.sp_soll['t1'], t2=self.sp_soll['t2'], a1=self.sp_soll['a1'], a2=self.sp_soll['a2'])
-        
-        ### get monitors
-        recordings=getMonitors(monDict,mon)
-        
-        ### get data for comparison, recordings_soll and sp_soll are global variables
-        ist, soll = self.__get_data_for_comparison__(recordings)
+        ### conduct loaded experiment
+        results = self.experiment(self.iz, cnp)
+                
+        ### get data for comparison
+        ist, soll = self.__get_data_for_comparison__(results)
         
         ### compute loss
         loss = np.sqrt(np.mean((soll-ist)**2))
 
         ### "return" loss and other optional things
         m_list[0]=loss
-        m_list[1]=sim1
-        m_list[2]=recordings
+        m_list[1]=results
         
         
     def __set_fitting_parameters__(self, fitparams):
@@ -189,29 +174,36 @@ class opt_Izh:
         fitting_vars_names = [self.fv_space[i].pos_args[0].pos_args[0]._obj for i in range(len(self.fv_space))]
         for idx in range(len(fitparams)):
             setattr(get_population(self.iz), fitting_vars_names[idx], fitparams[idx])
+            if fitting_vars_names[idx]=='v_r':
+                get_population(self.iz).v = fitparams[idx]
         ### set constant parameters
         for key, val in self.const_params.items():
             setattr(get_population(self.iz), key, val)
+            if key=='v_r':
+                get_population(self.iz).v = val
             
             
-    def __get_data_for_comparison__(self, recordings):
+    def __get_data_for_comparison__(self, results):
         """
-            recordings: recordings dictionary of simulation, has to contain spike recordings (of one neuron)
+            results: results dictionary which contains recordings dictionary of simulation, has to contain spike recordings (of one neuron)
             
             transforms spike recordings of ist and soll data into interspike intervals (unequal number of spikes --> fill up with zeros)
             
             global variables:
                 self.iz : name of population
-                self.recordings_soll, self.sp_soll : loaded recordings and protocol of soll data
+                self.results_soll : loaded results dictionary with soll data
         """
-
+        recordings = results['recordings']
+        sp = self.results_soll['sim'][0]
+        recordings_soll = self.results_soll['recordings']
+        
         ### get spike times from recordings
         spike_times_ist = np.array(recordings[self.iz+';spike'][0])
-        spike_times_soll = np.array(self.recordings_soll[self.sp_soll['pop']+';spike'][0])
+        spike_times_soll = np.array(recordings_soll[sp['pop']+';spike'][0])
         
         ### only use spike times from second half
-        spike_times_ist = spike_times_ist[spike_times_ist>int(self.sp_soll['t1']/self.recordings_soll['dt'])]
-        spike_times_soll = spike_times_soll[spike_times_soll>int(self.sp_soll['t1']/self.recordings_soll['dt'])]
+        spike_times_ist = spike_times_ist[spike_times_ist>int(sp['t1']/recordings_soll['dt'])]
+        spike_times_soll = spike_times_soll[spike_times_soll>int(sp['t1']/recordings_soll['dt'])]
         
         ### calculate inter spike intervals
         if len(spike_times_ist)>0:
@@ -223,15 +215,17 @@ class opt_Izh:
         else:
             isi_arr_soll = np.zeros(1)
         
-        ### append entries so that arrays have same length, use values from other array but multiplied by 100
+        ### append entries so that arrays have same length, append 100 at shorter list and set longer list entries to zero
         if len(isi_arr_ist) > len(isi_arr_soll):
             ### append entries to isi_arr_soll
             nr_diff=len(isi_arr_ist)-len(isi_arr_soll)
-            isi_arr_soll = np.concatenate([isi_arr_soll, isi_arr_ist[-nr_diff:]*100])        
+            isi_arr_soll = np.concatenate([isi_arr_soll, np.ones(nr_diff)*100])
+            isi_arr_ist[-nr_diff:]=0     
         elif len(isi_arr_ist) < len(isi_arr_soll):
             ### append entries to isi_arr_ist
             nr_diff=len(isi_arr_soll)-len(isi_arr_ist)
-            isi_arr_ist = np.concatenate([isi_arr_ist, isi_arr_soll[-nr_diff:]*100])
+            isi_arr_ist = np.concatenate([isi_arr_ist, np.ones(nr_diff)*100])
+            isi_arr_soll[-nr_diff:]=0
 
         return [isi_arr_ist, isi_arr_soll]
         
@@ -250,7 +244,7 @@ class opt_Izh:
         return self.__run_simulator__([fitparamsDict[name] for name in fitting_vars_names])
         
      
-    def run(self, max_evals, results_file_name='best'):
+    def run(self, max_evals, results_file_name='best.npy'):
         ### start optimization run
         best = fmin(
                     fn=self.__run_simulator__,
@@ -261,10 +255,9 @@ class opt_Izh:
         fit=self.__test_fit__(best)
         best['loss'] = fit['loss']
         best['std'] = fit['std']
-        best['simulation_protocol'] = fit['simulation_protocol']
-        best['recordings'] = fit['recordings']
+        best['results'] = fit['results']
         self.results=best
         
         ### SAVE OPTIMIZED PARAMS AND LOSS
-        save_data([best], ['parameter_fit/'+results_file_name+'.npy'])
+        sf.save_data([best], ['parameter_fit/'+results_file_name])
 
