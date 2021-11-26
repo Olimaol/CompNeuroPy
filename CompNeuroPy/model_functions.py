@@ -63,8 +63,9 @@ def getMonitors(monDict,mon):
             temp = mon[compartment].get(val_val)
             ### check if it's data of only one neuron --> remove unnecessary dimension
             if isinstance(temp, np.ndarray): # only if temp is an numpy array
-                if len(temp.shape) == 2 and temp.shape[1]==1:
-                    temp = temp[:,0]
+                if len(temp.shape) == 2:
+                    if temp.shape[1]==1:
+                        temp = temp[:,0]
             recordings[compartment+';'+val_val] = temp
     recordings['dt'] = dt()
     return recordings
