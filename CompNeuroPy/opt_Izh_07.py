@@ -6,6 +6,7 @@ from CompNeuroPy import model_functions as mf
 from CompNeuroPy import simulation_functions as sim
 from CompNeuroPy import system_functions as sf
 import CompNeuroPy as cnp
+import ANNarchy as ann
 
 # hyperopt
 from hyperopt import fmin, tpe, hp, STATUS_OK
@@ -162,16 +163,12 @@ class opt_Izh:
                 
             m_list: variable to store results, from multiprocessing
         """
-
-        ### reset model to compilation state
-        reset()
-        print(get_population(self.iz).v,get_population(self.iz).d)
         
-        ### set parameters which should not be optimized and parameters which should be optimized
+        ### reset model and set parameters which should not be optimized and parameters which should be optimized
         self.__set_fitting_parameters__(fitparams)
         
         ### conduct loaded experiment
-        results = self.experiment(self.iz, cnp, get_population, self.__set_fitting_parameters__, {'fitparams':fitparams})###TODO: this does not work, try save/load parameters instead
+        results = self.experiment(ann, cnp, self.iz, self.__set_fitting_parameters__, {'fitparams':fitparams})
                 
         ### compute loss
         loss = self.__get_loss__(results, self.results_soll)
