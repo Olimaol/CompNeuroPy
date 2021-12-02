@@ -1,12 +1,12 @@
-from CompNeuroPy import neuron_models as nm
-from CompNeuroPy import model_functions as mf
-from CompNeuroPy import simulation_functions as sim
-from CompNeuroPy import system_functions as sf
+import CompNeuroPy.neuron_models as nm
+import CompNeuroPy.model_functions as mf
+import CompNeuroPy.simulation_functions as sif
+import CompNeuroPy.system_functions as syf
 
 class Monitors:
 
     
-    def __init__(self, monDict):
+    def __init__(self, monDict={}):
     
         self.mon     = mf.addMonitors(monDict)
         self.monDict = monDict

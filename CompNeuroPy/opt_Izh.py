@@ -1,12 +1,11 @@
 from ANNarchy import setup, Population, get_population, reset
 import numpy as np
 import traceback
-from CompNeuroPy import neuron_models as nm
-from CompNeuroPy import model_functions as mf
-from CompNeuroPy import simulation_functions as sim
-from CompNeuroPy import system_functions as sf
-import CompNeuroPy as cnp
-import ANNarchy as ann
+import CompNeuroPy.neuron_models as nm
+import CompNeuroPy.model_functions as mf
+import CompNeuroPy.simulation_functions as sif
+import CompNeuroPy.system_functions as syf
+from .Experiment import Experiment
 
 # hyperopt
 from hyperopt import fmin, tpe, hp, STATUS_OK
@@ -21,7 +20,7 @@ class opt_Izh:
 
     opt_created = []
     
-    def __init__(self, results_soll, experiment, get_loss_function, fitting_variables_space, const_params, compile_folder_name='annarchy_raw_Izhikevich', num_rep_loss=1):
+    def __init__(self, results_soll, experiment, get_loss_function, fitting_variables_space, const_params, compile_folder_name='annarchy_raw_Izhikevich', num_rep_loss=1, neuron_model=None):
     
         if len(self.opt_created)>0:
             print('opt_Izh: Error: Already another opt_Izh created. Only create one per python session!')
@@ -36,6 +35,7 @@ class opt_Izh:
             self.fv_space = fitting_variables_space
             self.const_params = const_params
             self.num_rep_loss = num_rep_loss
+            self.neuron_model = neuron_model
             
             ### check get_loss function compatibility with experiment
             self.__get_loss__ = self.__check_get_loss_function__(get_loss_function)
@@ -75,12 +75,17 @@ class opt_Izh:
             
             returns a list of the names of the populations (for later access)
         """
-        pop   = Population(1, neuron=nm.Izhikevich2007, name='Iz_neuron')
+        if isinstance(self.neuron_model, type(nm.Izhikevich2007)):
+            pop   = Population(1, neuron=self.neuron_model, name='user_defined_neuron')
+            ret   = ['user_defined_neuron']
+        else:
+            pop   = Population(1, neuron=nm.Izhikevich2007, name='Iz_neuron')
+            ret   = ['Iz_neuron']
 
         if do_compile:
             mf.compile_in_folder(compile_folder_name)
         
-        return ['Iz_neuron']
+        return ret
         
         
     def __test_variables__(self):
@@ -155,7 +160,19 @@ class opt_Izh:
                 'std': std,
                 'results': results_ist
                 }
-                
+              
+    
+    class myexp(Experiment):
+        """
+            cnp Experiment class
+            The method "run" is given as an argument during object instantiation
+        """
+        def __init__(self, reset_function, reset_kwargs, experiment_function):
+            super().__init__(reset_function, reset_kwargs)
+            self.experiment_function = experiment_function
+        def run(self, experiment_kwargs):
+            return(self.experiment_function(self, **experiment_kwargs))
+             
                 
     def __simulator__(self, fitparams, rng, m_list=[0,0,0]):
         """
@@ -168,7 +185,13 @@ class opt_Izh:
         self.__set_fitting_parameters__(fitparams)
         
         ### conduct loaded experiment
-        results = self.experiment(ann, cnp, self.iz, self.__set_fitting_parameters__, {'fitparams':fitparams})
+        experiment_function = self.experiment
+        experiment_kwargs = {'population':self.iz}
+        reset_function = self.__set_fitting_parameters__
+        reset_kwargs = {'fitparams':fitparams}
+        
+        exp_obj = self.myexp(reset_function=reset_function, reset_kwargs=reset_kwargs, experiment_function=experiment_function)
+        results = exp_obj.run(experiment_kwargs)
                 
         ### compute loss
         loss = self.__get_loss__(results, self.results_soll)
@@ -232,5 +255,5 @@ class opt_Izh:
         self.results=best
         
         ### SAVE OPTIMIZED PARAMS AND LOSS
-        sf.save_data([best], ['parameter_fit/'+results_file_name])
+        syf.save_data([best], ['parameter_fit/'+results_file_name])
 
