@@ -1,10 +1,11 @@
 from ANNarchy import setup, Population, get_population, reset
 import numpy as np
-from CompNeuroPy import neuron_models as nm
-from CompNeuroPy import model_functions as mf
-from CompNeuroPy import simulation_functions as sim
-from CompNeuroPy import system_functions as sf
-import CompNeuroPy as cnp
+import traceback
+import CompNeuroPy.neuron_models as nm
+import CompNeuroPy.model_functions as mf
+import CompNeuroPy.simulation_functions as sif
+import CompNeuroPy.system_functions as syf
+from .Experiment import Experiment
 
 # hyperopt
 from hyperopt import fmin, tpe, hp, STATUS_OK
@@ -19,7 +20,7 @@ class opt_Izh:
 
     opt_created = []
     
-    def __init__(self, results_soll, experiment, fitting_variables_space, const_params, compile_folder_name='annarchy_raw_Izhikevich', num_rep_loss=1):
+    def __init__(self, results_soll, experiment, get_loss_function, fitting_variables_space, const_params, compile_folder_name='annarchy_raw_Izhikevich', num_rep_loss=1, neuron_model=None):
     
         if len(self.opt_created)>0:
             print('opt_Izh: Error: Already another opt_Izh created. Only create one per python session!')
@@ -34,6 +35,10 @@ class opt_Izh:
             self.fv_space = fitting_variables_space
             self.const_params = const_params
             self.num_rep_loss = num_rep_loss
+            self.neuron_model = neuron_model
+            
+            ### check get_loss function compatibility with experiment
+            self.__get_loss__ = self.__check_get_loss_function__(get_loss_function)
         
             ### setup ANNarchy
             setup(dt=results_soll['recordings']['dt'])
@@ -46,18 +51,41 @@ class opt_Izh:
             self.__test_variables__()
             
             
+    def __check_get_loss_function__(self, function):
+        """
+            function: function whith arguments (results_ist, results_soll) which computes and returns a loss value
+            
+            Checks if function is compatible to the experiment.
+            To test, function is run with results_soll (also for results_ist argument).
+        """
+        
+        try:
+            function(self.results_soll, self.results_soll)
+        except:
+            print('\nThe get_loss_function is not compatible to the specified experiment:\n')
+            traceback.print_exc()
+            quit()
+            
+        return function
+            
+            
     def __raw_Izhikevich__(self, do_compile=False, compile_folder_name='annarchy_raw_Izhikevich'):
         """
             generates one neuron of the Izhikevich neuron model and optionally compiles the network
             
             returns a list of the names of the populations (for later access)
         """
-        pop   = Population(1, neuron=nm.Izhikevich2007, name='Iz_neuron')
+        if isinstance(self.neuron_model, type(nm.Izhikevich2007)):
+            pop   = Population(1, neuron=self.neuron_model, name='user_defined_neuron')
+            ret   = ['user_defined_neuron']
+        else:
+            pop   = Population(1, neuron=nm.Izhikevich2007, name='Iz_neuron')
+            ret   = ['Iz_neuron']
 
         if do_compile:
             mf.compile_in_folder(compile_folder_name)
         
-        return ['Iz_neuron']
+        return ret
         
         
     def __test_variables__(self):
@@ -132,7 +160,19 @@ class opt_Izh:
                 'std': std,
                 'results': results_ist
                 }
-                
+              
+    
+    class myexp(Experiment):
+        """
+            cnp Experiment class
+            The method "run" is given as an argument during object instantiation
+        """
+        def __init__(self, reset_function, reset_kwargs, experiment_function):
+            super().__init__(reset_function, reset_kwargs)
+            self.experiment_function = experiment_function
+        def run(self, experiment_kwargs):
+            return(self.experiment_function(self, **experiment_kwargs))
+             
                 
     def __simulator__(self, fitparams, rng, m_list=[0,0,0]):
         """
@@ -140,21 +180,21 @@ class opt_Izh:
                 
             m_list: variable to store results, from multiprocessing
         """
-
-        ### reset model to compilation state
-        reset()
         
-        ### set parameters which should not be optimized and parameters which should be optimized
+        ### reset model and set parameters which should not be optimized and parameters which should be optimized
         self.__set_fitting_parameters__(fitparams)
         
         ### conduct loaded experiment
-        results = self.experiment(self.iz, cnp)
-                
-        ### get data for comparison
-        ist, soll = self.__get_data_for_comparison__(results)
+        experiment_function = self.experiment
+        experiment_kwargs = {'population':self.iz}
+        reset_function = self.__set_fitting_parameters__
+        reset_kwargs = {'fitparams':fitparams}
         
+        exp_obj = self.myexp(reset_function=reset_function, reset_kwargs=reset_kwargs, experiment_function=experiment_function)
+        results = exp_obj.run(experiment_kwargs)
+                
         ### compute loss
-        loss = np.sqrt(np.mean((soll-ist)**2))
+        loss = self.__get_loss__(results, self.results_soll)
 
         ### "return" loss and other optional things
         m_list[0]=loss
@@ -170,6 +210,9 @@ class opt_Izh:
         
             Sets all given parameters for the population self.iz.
         """
+        ### reset model to compilation state
+        reset()
+        
         ### set fitting parameters
         fitting_vars_names = [self.fv_space[i].pos_args[0].pos_args[0]._obj for i in range(len(self.fv_space))]
         for idx in range(len(fitparams)):
@@ -182,53 +225,6 @@ class opt_Izh:
             if key=='v_r':
                 get_population(self.iz).v = val
             
-            
-    def __get_data_for_comparison__(self, results):
-        """
-            results: results dictionary which contains recordings dictionary of simulation, has to contain spike recordings (of one neuron)
-            
-            transforms spike recordings of ist and soll data into interspike intervals (unequal number of spikes --> fill up with zeros)
-            
-            global variables:
-                self.iz : name of population
-                self.results_soll : loaded results dictionary with soll data
-        """
-        recordings = results['recordings']
-        sp = self.results_soll['sim'][0]
-        recordings_soll = self.results_soll['recordings']
-        
-        ### get spike times from recordings
-        spike_times_ist = np.array(recordings[self.iz+';spike'][0])
-        spike_times_soll = np.array(recordings_soll[sp['pop']+';spike'][0])
-        
-        ### only use spike times from second half
-        spike_times_ist = spike_times_ist[spike_times_ist>int(sp['t1']/recordings_soll['dt'])]
-        spike_times_soll = spike_times_soll[spike_times_soll>int(sp['t1']/recordings_soll['dt'])]
-        
-        ### calculate inter spike intervals
-        if len(spike_times_ist)>0:
-            isi_arr_ist  = np.diff(np.concatenate([np.zeros(1),np.array(spike_times_ist)]))
-        else:
-            isi_arr_ist = np.zeros(1)
-        if len(spike_times_soll)>0:
-            isi_arr_soll = np.diff(np.concatenate([np.zeros(1),np.array(spike_times_soll)]))
-        else:
-            isi_arr_soll = np.zeros(1)
-        
-        ### append entries so that arrays have same length, append 100 at shorter list and set longer list entries to zero
-        if len(isi_arr_ist) > len(isi_arr_soll):
-            ### append entries to isi_arr_soll
-            nr_diff=len(isi_arr_ist)-len(isi_arr_soll)
-            isi_arr_soll = np.concatenate([isi_arr_soll, np.ones(nr_diff)*100])
-            isi_arr_ist[-nr_diff:]=0     
-        elif len(isi_arr_ist) < len(isi_arr_soll):
-            ### append entries to isi_arr_ist
-            nr_diff=len(isi_arr_soll)-len(isi_arr_ist)
-            isi_arr_ist = np.concatenate([isi_arr_ist, np.ones(nr_diff)*100])
-            isi_arr_soll[-nr_diff:]=0
-
-        return [isi_arr_ist, isi_arr_soll]
-        
         
     def __test_fit__(self, fitparamsDict):
         """
@@ -259,5 +255,5 @@ class opt_Izh:
         self.results=best
         
         ### SAVE OPTIMIZED PARAMS AND LOSS
-        sf.save_data([best], ['parameter_fit/'+results_file_name])
+        syf.save_data([best], ['parameter_fit/'+results_file_name])
 
