@@ -22,3 +22,9 @@ class Monitors:
             monDict = self.monDict
         
         return mf.getMonitors(monDict,self.mon)
+        
+    def get_times(self, monDict=[]):
+        if isinstance(monDict, list):
+            monDict = self.monDict
+        
+        return mf.get_monitor_times(monDict,self.mon)

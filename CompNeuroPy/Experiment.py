@@ -4,9 +4,10 @@ class Experiment():
     import CompNeuroPy as cnp
     
     def __init__(self, reset_function=0, reset_kwargs={}):
-        self.recordings={}
-        self.mon=self.cnp.Monitors()
-        self.sim=[]
+        self.recordings={} # save dict for monitor recordings
+        self.mon=self.cnp.Monitors() # dict for monitors
+        self.sim=[] # list for simulations
+        self.data={} # dict for optional data
         
         ### check function to reset network
         if isinstance(reset_function, int) == True:
@@ -16,4 +17,4 @@ class Experiment():
         self.reset_kwargs = reset_kwargs
         
     def results(self):
-        return {'recordings':self.recordings, 'monDict':self.mon.monDict, 'sim':self.sim}
+        return {'recordings':self.recordings, 'monDict':self.mon.monDict, 'sim':self.sim, 'data':self.data}
