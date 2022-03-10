@@ -71,6 +71,21 @@ def getMonitors(monDict,mon):
     return recordings
     
     
+def get_monitor_times(monDict,mon):
+    """
+        get recording times of monitors in ms
+        
+        monitors and recorded values defined by monDict
+    """
+    times = {}
+    for key, val in monDict.items():
+        compartmentType, compartment = key.split(';')
+        for val_val in val:
+            times['start'] = np.array(mon[compartment].times()[val_val]['start'])*dt() # ANNarchy returns times for each recorded variable of Monitor, in CompNeuroPy they are usually startet and ended all at the same time... only return single start/end times
+            times['stop']   = np.array(mon[compartment].times()[val_val]['stop'])*dt()
+    return times
+    
+    
     
     
     
