@@ -116,7 +116,7 @@ def get_power_spektrum_from_time_array(arr,presimulationTime,simulationTime,simu
         return [frequenzen[2:int(fftSize/2)],spektrum[2:int(fftSize/2)]]
         
         
-def get_pop_rate(spikes,duration,dt=1,t_start=0,t_smooth_ms=-1):#TODO: maybe makes errors with few/no spikes... check this
+def get_pop_rate(spikes,duration,dt=1,t_start=0,t_smooth_ms=-1):#TODO: maybe makes errors with few/no spikes... check this TODO: automatically detect t_smooth does not work for strongly varying activity... implement something different
     """
         spikes: spikes dictionary from ANNarchy
         duration: duration of period after (optional) initial period (t_start) from which rate is calculated in ms
@@ -193,15 +193,18 @@ def plot_recordings(figname, recordings, start_time, end_time, shape, plan, dpi=
             quit()
 
         
-        times=np.arange(start_time,end_time,recordings['dt'])
+        times      = np.arange(start_time,end_time,recordings['dt'])
+        start_step = int(start_time/recordings['dt'])
+        end_step   = int(end_time/recordings['dt'])
             
         plt.subplot(shape[0],shape[1],nr)
         if variable=='spike' and mode=='raster':
             t,n=raster_plot(data)
+            mask = ((t>=start_time).astype(int) * (t<=end_time).astype(int)).astype(bool)
             if style!='':
-                plt.scatter(t,n,s=0.4, color=style)
+                plt.scatter(t[mask],n[mask],s=0.4, color=style)
             else:
-                plt.scatter(t,n,s=0.4, color='k')
+                plt.scatter(t[mask],n[mask],s=0.4, color='k')
             plt.xlim(start_time, end_time)
             plt.xlabel('time [ms]')
             plt.ylabel('# neurons')
@@ -215,7 +218,8 @@ def plot_recordings(figname, recordings, start_time, end_time, shape, plan, dpi=
             plt.title('Mean firing rate '+part)
         elif variable=='spike' and mode=='hybrid':
             t,n=raster_plot(data)
-            plt.plot(t,n,'k.')
+            mask = ((t>=start_time).astype(int) * (t<=end_time).astype(int)).astype(bool)
+            plt.plot(t[mask],n[mask],'k.')
             plt.ylabel('# neurons')
             ax=plt.gca().twinx()
             firing_rate = get_pop_rate(data,end_time-start_time,dt=recordings['dt'],t_start=start_time)
@@ -227,10 +231,10 @@ def plot_recordings(figname, recordings, start_time, end_time, shape, plan, dpi=
             plt.title('Activity '+part)
         elif variable!='spike' and mode=='line':
             if len(data.shape)==1:
-                plt.plot(times,data, color='k')
+                plt.plot(times,data[start_step:end_step], color='k')
             elif len(data.shape)==2:
                 for idx in range(data.shape[1]):
-                    plt.plot(times,data[:,idx], color='k')
+                    plt.plot(times,data[start_step:end_step,idx], color='k')
             else:
                 print('\nERROR plot_recordings: only data of 1D neuron populations accepted,',';'.join([part,variable]),'\n')
             plt.xlim(start_time, end_time)
