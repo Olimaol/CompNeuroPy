@@ -48,7 +48,7 @@ def startMonitors(monDict,mon):
         compartmentType, compartment = key.split(';')
         if compartmentType=='pop' and started[compartment]==False:
             if len(vars(mon[compartment])['_recorded_variables'][val[0]]['stop'])>len(vars(mon[compartment])['_recorded_variables'][val[0]]['start']):
-                ### monitor is currently paused --> resume
+                ### monitor is currently paused --> resume TODO: doesnt wokr with new times function
                 mon[compartment].resume()
                 print('resume', compartment)
             else:

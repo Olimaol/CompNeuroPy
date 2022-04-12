@@ -184,13 +184,15 @@ def plot_recordings(figname, recordings, start_time, end_time, shape, plan, dpi=
                 nr, part, variable, mode, style = subplot.split(';')
                 nr=int(nr)
             except:
-                print('\nERROR plot_recordings: for each subplot give plan-string as: "nr;part;variable;mode" or "nr;part;variable;mode;style" if style is available!\n')
+                print('\nERROR plot_recordings: for each subplot give plan-string as: "nr;part;variable;mode" or "nr;part;variable;mode;style" if style is available!\nWrong string: '+subplot+'\n')
                 quit()
         try:
             data=recordings[';'.join([part,variable])]
         except:
-            print('\nERROR plot_recordings: data',';'.join([part,variable]),'not in recordings\n')
-            quit()
+            print('\nWARNING plot_recordings: data',';'.join([part,variable]),'not in recordings\n')
+            plt.subplot(shape[0],shape[1],nr)
+            plt.text(0.5,0.5,' '.join([part,variable])+' not available', va='center', ha='center')
+            continue
 
         
         times      = np.arange(start_time,end_time,recordings['dt'])
