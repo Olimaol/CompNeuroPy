@@ -17,6 +17,12 @@ class Monitors:
         
         mf.startMonitors(monDict,self.mon)
         
+    def pause(self, monDict=[]):
+        if isinstance(monDict, list):
+            monDict = self.monDict
+        
+        mf.pauseMonitors(monDict,self.mon)
+        
     def get_recordings(self, monDict=[]):
         if isinstance(monDict, list):
             monDict = self.monDict
