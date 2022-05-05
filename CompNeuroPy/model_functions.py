@@ -1,4 +1,4 @@
-from ANNarchy import compile, get_population, Monitor, dt
+from ANNarchy import compile, get_population, Monitor, dt, get_time
 import os
 import numpy as np
 from CompNeuroPy.system_functions import create_dir
@@ -33,9 +33,12 @@ def addMonitors(monDict):
     return mon
     
     
-def startMonitors(monDict,mon):
+def startMonitors(monDict,mon,timings=None):
     """
         starts or resumes monitores defined by monDict
+        monDict: dictionary with compartment and variable names
+        mon: dict with the corresponding monitors
+        currently_paused: dict with key=compartment+variable name and val=if currently paused
     """
     ### for each compartment generate started variable (because compartments can ocure multiple times if multiple variables of them are recorded --> do not start same monitor multiple times)
     started={}
@@ -44,20 +47,33 @@ def startMonitors(monDict,mon):
         if compartmentType=='pop':
             started[compartment]=False
 
-    for key, val in monDict.items():
-        compartmentType, compartment = key.split(';')
-        if compartmentType=='pop' and started[compartment]==False:
-            if len(vars(mon[compartment])['_recorded_variables'][val[0]]['stop'])>len(vars(mon[compartment])['_recorded_variables'][val[0]]['start']):
-                ### monitor is currently paused --> resume TODO: doesnt wokr with new times function
-                mon[compartment].resume()
-                print('resume', compartment)
-            else:
+    if timings==None:
+        ### information about pauses not available, just start
+        for key, val in monDict.items():
+            compartmentType, compartment = key.split(';')
+            if compartmentType=='pop' and started[compartment]==False:
                 mon[compartment].start()
                 print('start', compartment)
-            started[compartment]=True
+                started[compartment]=True
+        return None
+    else:
+        ### information about pauses available, start if not paused, resume if paused
+        for key, val in monDict.items():
+            compartmentType, compartment = key.split(';')
+            if compartmentType=='pop' and started[compartment]==False:
+                if timings[compartment]['currently_paused']:
+                    ### monitor is currently paused --> resume
+                    mon[compartment].resume()
+                    print('resume', compartment)
+                else:
+                    mon[compartment].start()
+                    print('start', compartment)
+                started[compartment]=True
+                timings[compartment]['start'].append(get_time())
+        return timings
             
             
-def pauseMonitors(monDict,mon):
+def pauseMonitors(monDict,mon,timings=None):
     """
         pause monitores defined by monDict
     """
@@ -74,6 +90,15 @@ def pauseMonitors(monDict,mon):
             mon[compartment].pause()
             paused[compartment]=True
             
+    if timings!=None:
+        ### information about pauses is available, update it
+        for key,val in paused.items():
+            timings[key]['currently_paused'] = True
+            timings[key]['stop'].append(get_time())
+        return timings
+    else:
+        return None
+        
           
             
 def getMonitors(monDict,mon):
@@ -97,7 +122,7 @@ def getMonitors(monDict,mon):
     return recordings
     
     
-def get_monitor_times(monDict,mon):
+def get_monitor_times(monDict,mon):# TODO: currently not used, object Monitors uses self-defined timings
     """
         get recording times of monitors in ms
         
@@ -106,9 +131,10 @@ def get_monitor_times(monDict,mon):
     times = {}
     for key, val in monDict.items():
         compartmentType, compartment = key.split(';')
+        print(mon[compartment].times())
         for val_val in val:
             times['start'] = np.array(mon[compartment].times()[val_val]['start'])*dt() # ANNarchy returns times for each recorded variable of Monitor, in CompNeuroPy they are usually startet and ended all at the same time... only return single start/end times
-            times['stop']   = np.array(mon[compartment].times()[val_val]['stop'])*dt()
+            times['stop']  = np.array(mon[compartment].times()[val_val]['stop'])*dt()
     return times
     
     
