@@ -168,6 +168,11 @@ class opt_Izh:
             The method "run" is given as an argument during object instantiation
         """
         def __init__(self, reset_function, reset_kwargs, experiment_function):
+            """
+                runs the init of the standard (parent) Experiment class, which defines the reset function of the Experiment object
+                additionally stores the experiment funciton which can later be used in the run() function
+                the experiment function is given, this enables to use a loaded run function from a previously defined Experiment Object
+            """
             super().__init__(reset_function, reset_kwargs)
             self.experiment_function = experiment_function
         def run(self, experiment_kwargs):

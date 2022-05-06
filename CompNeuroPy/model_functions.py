@@ -64,12 +64,12 @@ def startMonitors(monDict,mon,timings=None):
                 if timings[compartment]['currently_paused']:
                     ### monitor is currently paused --> resume
                     mon[compartment].resume()
-                    print('resume', compartment)
                 else:
                     mon[compartment].start()
-                    print('start', compartment)
                 started[compartment]=True
-                timings[compartment]['start'].append(get_time())
+                ### never make start longer than stop+1!... this can be caused if start is called multiple times without pause in between
+                if len(timings[compartment]['start']) <= len(timings[compartment]['stop']):
+                    timings[compartment]['start'].append(get_time())
         return timings
             
             
@@ -94,7 +94,9 @@ def pauseMonitors(monDict,mon,timings=None):
         ### information about pauses is available, update it
         for key,val in paused.items():
             timings[key]['currently_paused'] = True
-            timings[key]['stop'].append(get_time())
+            ### never make pause longer than start, this can be caused if pause is called multiple times without start in between
+            if len(timings[compartment]['stop']) < len(timings[compartment]['start']):
+                timings[key]['stop'].append(get_time())
         return timings
     else:
         return None

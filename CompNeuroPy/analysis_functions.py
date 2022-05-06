@@ -1,7 +1,17 @@
 import numpy as np
 import pylab as plt
-from ANNarchy import raster_plot
+from ANNarchy import raster_plot, dt
 import warnings
+
+def my_raster_plot(spikes):
+    """
+        Returns two vectors representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
+        
+        The spike times are always in simulation steps (in contrast to default ANNarchy raster_plot)
+    """
+    t,n=raster_plot(spikes)
+    t=t/dt()
+    return t,n
 
 def get_nanmean(a, axis=None, dtype=None):
     """
@@ -166,12 +176,23 @@ def get_pop_rate(spikes,duration,dt=1,t_start=0,t_smooth_ms=-1):#TODO: maybe mak
 
     return ret
     
-def plot_recordings(figname, recordings, start_time, end_time, shape, plan, dpi=300):
+def plot_recordings(figname, recordings, time_lim, idx_lim, shape, plan, dpi=300):
     """
         recordings: dict of recordings
         shape: tuple, shape of subplots
         plan: list of strings, strings defin where to plot which data and how
     """
+    
+    ### define times and indizes for plots
+    print(figname, end=':\t')
+    print(time_lim, end='\t')
+    print(idx_lim)
+
+    start_time = time_lim[0]
+    end_time   = time_lim[1]
+    times      = np.arange(start_time,end_time,recordings['dt'])
+    start_step = idx_lim[0]
+    end_step   = idx_lim[1]
     
     plt.figure(figsize=([6.4*shape[1], 4.8*shape[0]]))
     for subplot in plan:
@@ -193,24 +214,25 @@ def plot_recordings(figname, recordings, start_time, end_time, shape, plan, dpi=
             plt.subplot(shape[0],shape[1],nr)
             plt.text(0.5,0.5,' '.join([part,variable])+' not available', va='center', ha='center')
             continue
-
-        
-        times      = np.arange(start_time,end_time,recordings['dt'])
-        start_step = int(start_time/recordings['dt'])
-        end_step   = int(end_time/recordings['dt'])
             
         plt.subplot(shape[0],shape[1],nr)
         if variable=='spike' and mode=='raster':
-            t,n=raster_plot(data)
-            mask = ((t>=start_time).astype(int) * (t<=end_time).astype(int)).astype(bool)
-            if style!='':
-                plt.scatter(t[mask],n[mask],s=0.4, color=style)
+            t,n=my_raster_plot(data)
+            if np.unique(n).size==0:
+                plt.title('Spikes '+part)
+                print('\nWARNING plot_recordings: data',';'.join([part,variable]),'does not contain any spikes.\n')
+                plt.text(0.5,0.5,' '.join([part,variable])+' does not contain any spikes.', va='center', ha='center')
             else:
-                plt.scatter(t[mask],n[mask],s=0.4, color='k')
-            plt.xlim(start_time, end_time)
-            plt.xlabel('time [ms]')
-            plt.ylabel('# neurons')
-            plt.title('Spikes '+part)
+                t=t*recordings['dt']# convert time steps into ms
+                mask = ((t>=start_time).astype(int) * (t<=end_time).astype(int)).astype(bool)
+                if style!='':
+                    plt.scatter(t[mask],n[mask], color=style, marker='.', s=3, linewidth=0.1)
+                else:
+                    plt.scatter(t[mask],n[mask], color='k', marker='.', s=3, linewidth=0.1)
+                plt.xlim(start_time, end_time)
+                plt.xlabel('time [ms]')
+                plt.ylabel('# neurons')
+                plt.title('Spikes '+part)
         elif variable=='spike' and mode=='mean':
             firing_rate = get_pop_rate(data,end_time-start_time,dt=recordings['dt'],t_start=start_time)
             plt.plot(times,firing_rate, color='k')
@@ -219,18 +241,45 @@ def plot_recordings(figname, recordings, start_time, end_time, shape, plan, dpi=
             plt.ylabel('Mean firing rate [Hz]')
             plt.title('Mean firing rate '+part)
         elif variable=='spike' and mode=='hybrid':
-            t,n=raster_plot(data)
-            mask = ((t>=start_time).astype(int) * (t<=end_time).astype(int)).astype(bool)
-            plt.plot(t[mask],n[mask],'k.')
-            plt.ylabel('# neurons')
-            ax=plt.gca().twinx()
-            firing_rate = get_pop_rate(data,end_time-start_time,dt=recordings['dt'],t_start=start_time)
-            ax.plot(times,firing_rate, color='r')
-            plt.ylabel('Mean firing rate [Hz]', color='r')
-            ax.tick_params(axis='y', colors='r')
-            plt.xlim(start_time, end_time)
-            plt.xlabel('time [ms]')
-            plt.title('Activity '+part)
+            t,n=my_raster_plot(data)
+            if np.unique(n).size==0:
+                plt.title('Spikes '+part)
+                print('\nWARNING plot_recordings: data',';'.join([part,variable]),'does not contain any spikes.\n')
+                plt.text(0.5,0.5,' '.join([part,variable])+' does not contain any spikes.', va='center', ha='center')
+            else:
+                t=t*recordings['dt']# convert time steps into ms
+                mask = ((t>=start_time).astype(int) * (t<=end_time).astype(int)).astype(bool)
+                plt.plot(t[mask],n[mask],'k.', markersize=np.sqrt(3), markeredgewidth=0.1)
+                plt.ylabel('# neurons')
+                ax=plt.gca().twinx()
+                firing_rate = get_pop_rate(data,end_time-start_time,dt=recordings['dt'],t_start=start_time)
+                ax.plot(times,firing_rate, color='r')
+                plt.ylabel('Mean firing rate [Hz]', color='r')
+                ax.tick_params(axis='y', colors='r')
+                plt.xlim(start_time, end_time)
+                plt.xlabel('time [ms]')
+                plt.title('Activity '+part)
+        elif variable=='spike' and mode=='single':
+            t,n=my_raster_plot(data)
+            if np.unique(n).size==0:
+                plt.title('Spikes '+part)
+                print('\nWARNING plot_recordings: data',';'.join([part,variable]),'does not contain any spikes.\n')
+                plt.text(0.5,0.5,' '.join([part,variable])+' does not contain any spikes.', va='center', ha='center')
+            elif np.unique(n).size==1:
+                t=t*recordings['dt']# convert time steps into ms
+                mask = ((t>=start_time).astype(int) * (t<=end_time).astype(int)).astype(bool)
+                if style!='':
+                    plt.scatter(t[mask],n[mask], color=style, marker='|', s=3000, linewidth=0.1)
+                else:
+                    plt.scatter(t[mask],n[mask], color='k', marker='|', s=3000, linewidth=0.1)
+                plt.xlim(start_time, end_time)
+                plt.xlabel('time [ms]')
+                plt.ylabel('# neurons')
+                plt.title('Spikes '+part)
+            else:
+                plt.title('Spikes '+part)
+                print('\nWARNING plot_recordings: data',';'.join([part,variable]),'multiple neurons. Mode "single" not available.\n')
+                plt.text(0.5,0.5,' '.join([part,variable])+' multiple neurons. Mode "single" not available.', va='center', ha='center')
         elif variable!='spike' and mode=='line':
             if len(data.shape)==1:
                 plt.plot(times,data[start_step:end_step], color='k')
