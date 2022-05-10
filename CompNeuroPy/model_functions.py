@@ -1,4 +1,4 @@
-from ANNarchy import compile, get_population, Monitor, dt, get_time
+from ANNarchy import compile, get_population, Monitor, dt, get_time, populations, projections
 import os
 import numpy as np
 from CompNeuroPy.system_functions import create_dir
@@ -67,6 +67,8 @@ def startMonitors(monDict,mon,timings=None):
                 else:
                     mon[compartment].start()
                 started[compartment]=True
+                ### update currently_paused
+                timings[compartment]['currently_paused']=False
                 ### never make start longer than stop+1!... this can be caused if start is called multiple times without pause in between
                 if len(timings[compartment]['start']) <= len(timings[compartment]['stop']):
                     timings[compartment]['start'].append(get_time())
@@ -95,8 +97,12 @@ def pauseMonitors(monDict,mon,timings=None):
         for key,val in paused.items():
             timings[key]['currently_paused'] = True
             ### never make pause longer than start, this can be caused if pause is called multiple times without start in between
-            if len(timings[compartment]['stop']) < len(timings[compartment]['start']):
+            if len(timings[key]['stop']) < len(timings[key]['start']):
                 timings[key]['stop'].append(get_time())
+            ### if pause is directly called after start --> start == stop --> remove these entries, this is no actual period
+            if len(timings[key]['stop']) == len(timings[key]['start']) and timings[key]['stop'][-1]==timings[key]['start'][-1]:
+                timings[key]['stop'] = timings[key]['stop'][:-1]
+                timings[key]['start'] = timings[key]['start'][:-1]
         return timings
     else:
         return None
@@ -140,8 +146,11 @@ def get_monitor_times(monDict,mon):# TODO: currently not used, object Monitors u
     return times
     
     
-    
-    
+def get_full_model():
+    """
+        return all current population and projection names
+    """
+    return [{'populations':[ pop.name for pop in populations() ], 'projections':[ proj.name for proj in projections() ]}]
     
     
     

@@ -67,7 +67,7 @@ class Monitors:
         
     def reset(self, populations=True, projections=False, synapses=False, monitors=True, model=True, net_id=0):
         """
-            TODO: get recordings before emptiing the monitors by reset
+            get recordings before emptiing the monitors by reset
         """
         self.get_recordings()
         self.get_recording_times()
@@ -146,7 +146,7 @@ class recording_times_cl:
     def __lims__(self, string, chunk=None, compartment=None, period=None):
         chunk              = self.__check_chunk__(chunk)
         compartment        = self.__check_compartment__(compartment, chunk)
-        period_0, period_1 = self.__check_period__(period, chunk, compartment) 
+        period_0, period_1 = self.__check_period__(period, chunk, compartment)
         lims = [self.recording_times_list[chunk][compartment]['start'][string][period_0], self.recording_times_list[chunk][compartment]['stop'][string][period_1]]
         return lims
         
