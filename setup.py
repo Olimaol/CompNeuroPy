@@ -5,18 +5,7 @@ try:
 except:
     print('Checking for setuptools... NO')
     print('Error : Python package "setuptools" is required.')
-    exit(0)
-
-
-# ANNarchy
-try:
-    print('Checking for ANNarchy... ', end='')
-    import ANNarchy
-except:
-    print('NO')
-    print('Error : Python package "ANNarchy" is required.')
-    print('For installation check: https://annarchy.readthedocs.io/en/latest/')
-    exit(0)
+    assert False
 
 dependencies = [
     'numpy',
@@ -25,7 +14,8 @@ dependencies = [
     'cython',
     'sympy',
     'hyperopt',
-    'ANNarchy'
+    'ANNarchy',
+    'pandas'
 ]
 
 setuptools.setup(

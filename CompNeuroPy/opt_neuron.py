@@ -16,17 +16,17 @@ from multiprocessing import Process
 import multiprocessing
 
 
-class opt_Izh:
+class opt_neuron:
 
     opt_created = []
     
-    def __init__(self, results_soll, experiment, get_loss_function, fitting_variables_space, const_params, compile_folder_name='annarchy_raw_Izhikevich', num_rep_loss=1, neuron_model=None):
+    def __init__(self, results_soll, experiment, get_loss_function, fitting_variables_space, const_params, compile_folder_name='annarchy_opt_neuron', num_rep_loss=1, neuron_model=None):
     
         if len(self.opt_created)>0:
-            print('opt_Izh: Error: Already another opt_Izh created. Only create one per python session!')
+            print('opt_neuron: Error: Already another opt_neuron created. Only create one per python session!')
             quit()
         else:
-            print('opt_Izh: Initialize opt_Izh... better not create anything with ANNarchy before!')
+            print('opt_neuron: Initialize opt_neuron... better not create anything with ANNarchy before!')
             
             ### set object variables
             self.opt_created.append(1)
@@ -41,10 +41,10 @@ class opt_Izh:
             self.__get_loss__ = self.__check_get_loss_function__(get_loss_function)
         
             ### setup ANNarchy
-            setup(dt=results_soll['recordings']['dt'])
+            setup(dt=results_soll['recordings'][0]['dt'])
 
             ### create and compile model
-            model = self.__raw_Izhikevich__(do_compile=True, compile_folder_name=compile_folder_name)
+            model = self.__raw_neuron__(do_compile=True, compile_folder_name=compile_folder_name)
             self.iz = model[0]
 
             ### check variables
@@ -69,9 +69,9 @@ class opt_Izh:
         return function
             
             
-    def __raw_Izhikevich__(self, do_compile=False, compile_folder_name='annarchy_raw_Izhikevich'):
+    def __raw_neuron__(self, do_compile=False, compile_folder_name='annarchy_opt_neuron'):
         """
-            generates one neuron of the Izhikevich neuron model and optionally compiles the network
+            generates one neuron, default=Izhikevich neuron model, and optionally compiles the network
             
             returns a list of the names of the populations (for later access)
         """
@@ -90,7 +90,7 @@ class opt_Izh:
         
     def __test_variables__(self):
         """
-            self.iz: name of created Izhikevich neuron population
+            self.iz: name of created neuron population
             self.fv_space: hyperopt variable space list
             self.const_params: dictionary with constant variables
             
@@ -106,9 +106,9 @@ class opt_Izh:
                 all_vars_names.remove(name)
                 pop_parameter_names.remove(name)
         if len(pop_parameter_names)>0:
-            print('opt_Izh: WARNING: parameters',pop_parameter_names,'of population',self.iz,'are not used.')
+            print('opt_neuron: WARNING: parameters',pop_parameter_names,'of population',self.iz,'are not used.')
         if len(all_vars_names)>0:
-            print('opt_Izh: Error: Population',self.iz,'does not contain parameters',all_vars_names,'!')
+            print('opt_neuron: Error: Population',self.iz,'does not contain parameters',all_vars_names,'!')
             quit()
             
             
@@ -168,6 +168,11 @@ class opt_Izh:
             The method "run" is given as an argument during object instantiation
         """
         def __init__(self, reset_function, reset_kwargs, experiment_function):
+            """
+                runs the init of the standard (parent) Experiment class, which defines the reset function of the Experiment object
+                additionally stores the experiment funciton which can later be used in the run() function
+                the experiment function is given, this enables to use a loaded run function from a previously defined Experiment Object
+            """
             super().__init__(reset_function, reset_kwargs)
             self.experiment_function = experiment_function
         def run(self, experiment_kwargs):
