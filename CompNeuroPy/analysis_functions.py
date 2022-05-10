@@ -2,6 +2,7 @@ import numpy as np
 import pylab as plt
 from ANNarchy import raster_plot, dt
 import warnings
+from CompNeuroPy.system_functions import create_dir
 
 def my_raster_plot(spikes):
     """
@@ -187,6 +188,9 @@ def plot_recordings(figname, recordings, time_lim, idx_lim, shape, plan, dpi=300
     print(figname, end=':\t')
     print(time_lim, end='\t')
     print(idx_lim)
+    if int(np.diff(time_lim)/recordings['dt'])!=int(np.diff(idx_lim)):
+        print('ERROR plot_recordings, time_lim and idx_lim do not fit! Maybe multiple periods separated by pauses in recordings?')
+        quit()
 
     start_time = time_lim[0]
     end_time   = time_lim[1]
@@ -296,4 +300,9 @@ def plot_recordings(figname, recordings, time_lim, idx_lim, shape, plan, dpi=300
         else:
             print('\nERROR plot_recordings: mode',mode,'not available for variable',variable,'\n')
     plt.tight_layout()
+    
+    ### save plot
+    figname_parts = figname.split('/')
+    save_dir = '/'.join(figname_parts[:-1])
+    create_dir(save_dir)
     plt.savefig(figname, dpi=dpi)
