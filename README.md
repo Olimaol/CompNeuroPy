@@ -1,5 +1,5 @@
 # CompNeuroPy
-Assisting package for computational neuroscience with ANNarchy ([GitHub](https://github.com/ANNarchy/ANNarchy), [documentation](https://annarchy.github.io/), [![DOI](https://zenodo.org/badge/57382690.svg)](https://zenodo.org/badge/latestdoi/57382690)).
+Assisting package for computational neuroscience with ANNarchy ([GitHub](https://github.com/ANNarchy/ANNarchy), [documentation](https://annarchy.github.io/), [DOI](https://zenodo.org/badge/latestdoi/57382690)).
 
 The documentation is available online at:
 
