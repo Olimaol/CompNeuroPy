@@ -150,7 +150,7 @@ def get_full_model():
     """
         return all current population and projection names
     """
-    return [{'populations':[ pop.name for pop in populations() ], 'projections':[ proj.name for proj in projections() ]}]
+    return {'populations':[ pop.name for pop in populations() ], 'projections':[ proj.name for proj in projections() ]}
     
     
     
