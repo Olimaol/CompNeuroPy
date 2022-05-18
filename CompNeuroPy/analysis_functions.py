@@ -303,6 +303,7 @@ def plot_recordings(figname, recordings, time_lim, idx_lim, shape, plan, dpi=300
     
     ### save plot
     figname_parts = figname.split('/')
-    save_dir = '/'.join(figname_parts[:-1])
-    create_dir(save_dir)
+    if len(figname_parts)>1:
+        save_dir = '/'.join(figname_parts[:-1])
+        create_dir(save_dir)
     plt.savefig(figname, dpi=dpi)

@@ -113,3 +113,86 @@ H_and_H_Bischop = Neuron(
     name = "H_and_H_Bischop",
     description = "H & H model of Bischop et al. (2012)."
 )
+
+
+
+
+H_and_H_Corbit2016 = Neuron(
+    parameters="""
+        v_t = 0             # :population #mV (see Corbit et al.,2016 under "Model analysis")
+        C_m =  1.0          # :population #myF/cm^2
+        v_L = -70           # :population # mV
+        gg_L = 0.25         # :population # mS/cm^2
+    
+        E_Na     = 50       # :population # mV
+        gg_Na     = 112.5   # :population # mS/cm^2
+        th_m_Na  = -24.0    # :population # mV
+        k_m_Na   = 11.5     # :population # mV
+        tau_0_m_Na = 0      # :population # ms default value (Corbit et al., 2016 description table 1)
+        tau_1_m_Na = 0      # :population # ms default value (Corbit et al., 2016 description table 1)
+        sigma_0_m_Na = 1    # :population # mV default value (Corbit et al., 2016 description table 1)
+        th_h_Na  = -58.3    # :population # mV
+        k_h_Na   = -6.7      # :population # mV
+        phi_h_Na = -60      # :population # mV
+        sigma_0_h_Na = -12.0# :population # mV
+        tau_0_h_Na = 0.5    # :population # ms
+        tau_1_h_Na = 13.5   # :population # ms
+
+        E_Kv3 = -90         # :population # mV
+        gg_Kv3 = 225.0      # :population # mS/cm^2
+        th_n_Kv3 = -12.4    # :population # mV
+        k_n_Kv3 = 6.8       # :population # mV
+        tau_0_n_Kv3 = 0.087 # :population # ms
+        tau_1_n_Kv3 = 11.313# :population # ms
+        phi_a_n_Kv3 = -14.6 # :population # mV
+        phi_b_n_Kv3 = 1.3   # :population # mV
+        sigma_0_a_n_Kv3 = -8.6  # :population #mV
+        sigma_0_b_n_Kv3 = 18.7  # :population #mV
+        
+        E_Kv1 = -90         # :population #mV
+        gg_Kv1 = 0.1        # :population #mS/cm^2 (but in Corbit et al.,2016 paper : 0.25)
+        th_m_Kv1 = -50      # :population #mV
+        k_m_Kv1 =  20       # :population #mV
+        tau_m_Kv1 = 2       # :population #ms
+        th_h_Kv1 = -70      # :population #mV
+        k_h_Kv1 =  -6       # :population #mV
+        tau_h_Kv1 = 150     # :population #ms
+        
+        I_app  = 0     : population
+    
+    """,
+    equations="""
+        prev_v = v
+        
+        I_L = gg_L * (v - v_L) #CHECK
+        
+  # Na current with h particle and instantaneous m:
+        m_Na = 1.0 / (1.0 + exp((th_m_Na - v) / k_m_Na)) #CHECK
+        dh_Na/dt = (1.0 / (1.0 + exp((th_h_Na - v) / k_h_Na)) - h_Na) / (tau_0_h_Na + (tau_1_h_Na + tau_0_h_Na) / (1.0 + exp((phi_h_Na - v) / sigma_0_h_Na))) #CHECK, in paper: tau_1-tau_0 in numerator, in code: tau_1+tau_0 (= 14) in numerator, in paper: exp + exp in denominator, in code: exp + 1 in denominator, for MSNs they set the term to 0... maybe for FSIs they set it to 1                                                      
+        I_Na = (v - E_Na) * gg_Na * pow(m_Na,3) * h_Na #CHECK
+      
+  # Kv3 current with n particle (but in Corbit et al., 2016 paper version h): 
+        n_Kv3_inf = 1.0 / (1.0 + exp((th_n_Kv3 - v) / k_n_Kv3)) #CHECK
+        tau_n_Kv3_inf = (tau_0_n_Kv3 + (tau_0_n_Kv3 + tau_1_n_Kv3) / (1.0 + exp((phi_a_n_Kv3 - v) / sigma_0_a_n_Kv3)))*(tau_0_n_Kv3 + (tau_0_n_Kv3 + tau_1_n_Kv3) / (1.0 + exp((phi_b_n_Kv3 - v) / sigma_0_b_n_Kv3))) # CHECK
+        dn_Kv3/dt = (n_Kv3_inf - n_Kv3) / tau_n_Kv3_inf #CHECK
+        I_Kv3 = (v - E_Kv3) * gg_Kv3 * pow(n_Kv3,2) #CHECK
+    
+  # Kv1 current with m, h particle : 
+        dm_Kv1/dt = (1.0 / (1.0 + exp((th_m_Kv1 - v) / k_m_Kv1)) - m_Kv1) / tau_m_Kv1 #CHECK
+        dh_Kv1/dt = (1.0 / (1.0 + exp((th_h_Kv1 - v) / k_h_Kv1)) - h_Kv1) / tau_h_Kv1 #CHECK
+        I_Kv1 = (v - E_Kv1)  * gg_Kv1 * pow(m_Kv1, 3) * h_Kv1 #CHECK
+        
+
+        C_m * dv/dt  = -I_L - I_Na - I_Kv3 - I_Kv1 + I_app : init=-69.8
+        
+    """,
+    spike = "(v > v_t) and (prev_v <= v_t)",
+    reset = "",
+    name = "H_and_H_Corbit2016",
+    description = "H & H model of Corbit et al. (2016)."
+)
+
+
+
+
+
