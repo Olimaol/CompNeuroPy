@@ -21,9 +21,10 @@ setuptools.setup(
     version="0.0.1",
     license="MIT",
     author="Oliver Maith",
-    author_email="oli_maith@gmx.de"
+    author_email="oli_maith@gmx.de",
+    packages=setuptools.find_packages('CompNeuroPy'),
+    package_dir={'': 'CompNeuroPy'},
     description="General package for computational neuroscience with ANNarchy.",
     url="https://github.com/Olimaol/compneuropy",
-    packages=setuptools.find_packages(),
     install_requires=dependencies
 )
