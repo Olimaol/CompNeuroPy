@@ -3,7 +3,7 @@ Assisting package for computational neuroscience with ANNarchy ([GitHub](https:/
 
 The documentation is available online at:
 
-TBA
+https://github.com/Olimaol/CompNeuroPy/wiki
 
 ### Authors
 
