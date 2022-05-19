@@ -14,7 +14,7 @@ class H_and_H_model_Corbit_syn(generate_model):
         """
         description = 'One population "HH_Corbit_syn" with two neurons of the H & H neuron model of Corbit et al. (2016) with conductance based synapses'
         model_creation_function = self.__model_creation_function__
-        super().__init__(name=name, do_compile=do_compile, compile_folder_name=compile_folder_name, description=description, model_creation_function=model_creation_function)
+        super().__init__(model_creation_function=model_creation_function, name=name, do_compile=do_compile, compile_folder_name=compile_folder_name, description=description)
         
     def __model_creation_function__(self):
         pop = Population(2, neuron=H_and_H_Corbit_syn, name='HH_Corbit_syn')

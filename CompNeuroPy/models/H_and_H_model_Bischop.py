@@ -14,7 +14,7 @@ class H_and_H_model_Bischop(generate_model):
         """
         description = 'One population "HH_Bischop" with a single neuron of the H & H neuron model of Bischop et al. (2012)'
         model_creation_function = self.__model_creation_function__
-        super().__init__(name=name, do_compile=do_compile, compile_folder_name=compile_folder_name, description=description, model_creation_function=model_creation_function)
+        super().__init__(model_creation_function=model_creation_function, name=name, do_compile=do_compile, compile_folder_name=compile_folder_name, description=description)
         
     def __model_creation_function__(self):
         pop   = Population(1, neuron=H_and_H_Bischop, name='HH_Bischop')
