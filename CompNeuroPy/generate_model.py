@@ -1,31 +1,39 @@
-from CompNeuroPy.neuron_models import H_and_H_Bischop, H_and_H_Corbit2016
+from CompNeuroPy.model_functions import get_full_model
 from CompNeuroPy.model_functions import compile_in_folder
-from ANNarchy import Population
 
-def H_and_H_model_Bischop(do_compile=False, compile_folder_name='annarchy_HH_Bischop'):
-    """
-        generates one neuron of the H & H neuron model of Bischop et al. (2012) and optionally compiles the network
+class generate_model:
+
+    def __init__(self, name='model', do_compile=False, compile_folder_name='annarchy', description='', model_creation_function=None, model_kwargs=None):
+        self.name=name
+        self.description=description
         
-        returns a list of the names of the populations (for later access)
-    """
-    pop   = Population(1, neuron=H_and_H_Bischop, name='HH_Bischop')
-
-    if do_compile:
-        compile_in_folder(compile_folder_name)
-    
-    return {'populations':['HH_Bischop'], 'projections':[]}
-    
-    
-
-def H_and_H_model_Corbit2016(do_compile=False, compile_folder_name='annarchy_HH_Corbit2016'):
-    """
-        generates one neuron of the H & H neuron model of Corbit et al. (2016) and optionally compiles the network
+        initial_existing_model = get_full_model()
         
-        returns a list of the names of the populations (for later access)
-    """
-    pop   = Population(1, neuron=H_and_H_Corbit2016, name='HH_Corbit2016')
-
-    if do_compile:
+        if model_creation_function!=None:
+        
+            ### create model populaitons and projections
+            if model_kwargs != None:
+                model_creation_function(**model_kwargs)
+            else:
+                model_creation_function()
+                
+            ### check which populations and projections have been added
+            post_existing_model = get_full_model()
+            ### save only added not all projections/populations
+            for initial_pop in initial_existing_model['populations']:
+                post_existing_model['populations'].remove(initial_pop)
+            for initial_proj in initial_existing_model['projections']:
+                post_existing_model['projections'].remove(initial_proj)
+            self.populations = post_existing_model['populations']
+            self.projections = post_existing_model['projections']
+        
+            ### optionally compile model
+            if do_compile:
+                compile_in_folder(compile_folder_name)
+                
+    def compile(self, compile_folder_name=None):
+        if compile_folder_name==None:
+            compile_folder_name=self.compile_folder_name
         compile_in_folder(compile_folder_name)
-    
-    return {'populations':['HH_Corbit2016'], 'projections':[]}
+                
+        
