@@ -18,7 +18,7 @@ dependencies = [
 
 setuptools.setup(
     name="CompNeuroPy",
-    version="0.0.1",
+    version="0.0.2",
     license="MIT",
     author="Oliver Maith",
     author_email="oli_maith@gmx.de",
