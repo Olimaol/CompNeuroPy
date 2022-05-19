@@ -7,7 +7,7 @@ class H_and_H_model_Bischop(generate_model):
         generates one neuron of the H & H neuron model of Bischop et al. (2012) and optionally compiles the network
     """
 
-    def __init__(self, name='model', do_compile=False, compile_folder_name='annarchy'):
+    def __init__(self, name='single_HH_Bischop', do_compile=False, compile_folder_name='annarchy_single_HH_Bischop'):
         """
             runs the standard init but with already predefined model_creation_function and description
             one can still adjust name, do_compile and compile_folder_name
