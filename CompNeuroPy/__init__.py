@@ -15,7 +15,9 @@ from CompNeuroPy.model_functions import *
 from CompNeuroPy.neuron_models import *
 from CompNeuroPy.simulation_functions import *
 from CompNeuroPy.system_functions import *
+from CompNeuroPy.simulation_requirements import *
 from CompNeuroPy.opt_neuron import opt_neuron
 from CompNeuroPy.Monitors import Monitors
 from CompNeuroPy.Experiment import Experiment
 from CompNeuroPy.generate_model import generate_model
+from CompNeuroPy.generate_simulation import generate_simulation
