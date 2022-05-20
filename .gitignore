@@ -2,3 +2,4 @@
 build/
 CompNeuroPy.egg-info/
 dist/
+*annarchy_folders/
