@@ -9,8 +9,7 @@ class generate_model:
         self.description = description
         self.model_creation_function = model_creation_function
         self.compile_folder_name = compile_folder_name
-        if model_kwargs!=None:
-            self.model_kwargs = model_kwargs
+        self.model_kwargs = model_kwargs
         self.populations=[]
         self.projections=[]
         self.created = False
