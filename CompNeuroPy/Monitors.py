@@ -5,7 +5,7 @@ import CompNeuroPy.system_functions as syf
 import CompNeuroPy.extra_functions as ef
 from ANNarchy import get_time, dt, reset
 import numpy as np
-
+### TODO: for functions which use a monDict but actually only need compartment list (e.g. start) --> adjust!
 class Monitors:
 
     
