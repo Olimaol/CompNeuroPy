@@ -3,7 +3,7 @@ from ANNarchy import get_time
 
 class generate_simulation:
 
-    def __init__(self, simulation_function, simulation_kwargs=None, name='simulation', description='', requirements=None):
+    def __init__(self, simulation_function, simulation_kwargs=None, name='simulation', description='', requirements=None, kwargs_warning=True):
     
         # set simulaiton function
         self.name = name
@@ -19,9 +19,11 @@ class generate_simulation:
         self.end = []
         self.info = []
         self.kwargs = []
-        self.warned = False
-        
-        
+        if kwargs_warning:
+            self.warned = False
+        else:
+            self.warned = True
+
         ### test requirements
         for req in requirements:
             req.run()
