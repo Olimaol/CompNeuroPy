@@ -3,8 +3,8 @@ from CompNeuroPy import plot_recordings
 import pylab as plt
 
 
-recordings        = np.load('dataRaw/monitor_simulations/recordings.npy', allow_pickle=True)
-recording_timings = np.load('dataRaw/monitor_simulations/recording_times.npy', allow_pickle=True).item()
+recordings        = np.load('dataRaw/run_and_monitor_simulations/recordings.npy', allow_pickle=True)
+recording_timings = np.load('dataRaw/run_and_monitor_simulations/recording_times.npy', allow_pickle=True).item()
 
 
 def plot_chunk(chunk):
