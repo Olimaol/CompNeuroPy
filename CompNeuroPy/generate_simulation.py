@@ -1,5 +1,6 @@
 from gc import get_objects
 from ANNarchy import get_time
+from .extra_functions import remove_key
 
 class generate_simulation:
 
@@ -24,9 +25,8 @@ class generate_simulation:
         else:
             self.warned = True
 
-        ### test requirements
-        for req in requirements:
-            req.run()
+        ### test initial requirements
+        self.__test_req__(simulation_kwargs=simulation_kwargs)
         
     def run(self, simulation_kwargs=None):
         """
@@ -34,6 +34,8 @@ class generate_simulation:
             with each run extend start, end and info list
             simulaiton_kwargs: optionally define new temporary simulation kwargs which override the initialized simulation kwargs
         """
+        
+        ### define the current simulation kwargs
         if simulation_kwargs!=None:
             tmp_kwargs=self.simulation_kwargs.copy()
             ### not replace initialized kwargs completely but only the kwargs which are given
@@ -43,9 +45,14 @@ class generate_simulation:
                 self.warned=True
         else:
             tmp_kwargs=self.simulation_kwargs
+            
+        ### before each run, test requirements
+        self.__test_req__(simulation_kwargs=tmp_kwargs)
+        
+        ### and append current simulation kwargs to the kwargs variable
         self.kwargs.append(tmp_kwargs)
         
-        ### run the simulation, store start and end simualtion time
+        ### run the simulation, store start and end simulation time
         self.start.append(get_time())
         if tmp_kwargs!=None:
             self.info.append(self.simulation_function(**tmp_kwargs))
@@ -67,3 +74,34 @@ class generate_simulation:
                     sim_list.append(vars(obj)['name'])
                     
         return len(sim_list)
+        
+    def __test_req__(self, simulation_kwargs=None):
+        """
+            tests the initialized requirements with the current simulation_kwargs
+        """
+        
+        if simulation_kwargs==None:#--> use the initial simulation_kwargs
+            simulation_kwargs=self.simulation_kwargs
+        
+        for req in self.requirements:
+            if len(list(req.keys()))>1:#--> requirement and arguments
+                req_kwargs=remove_key(req, 'req')
+                ### check if req_kwargs reference to sim_kwargs, if yes, use the corresponding current sim_kwarg as req_kwarg, if not do not update the initialized requirements kwargs
+                for key, val in req_kwargs.items():
+                    if isinstance(val,str):
+                        val_split=val.split('.')
+                        if val_split[0]=='simulation_kwargs':
+                            if len(val_split)==1:
+                                ### val is only simulation_kwargs
+                                req_kwargs = simulation_kwargs
+                            elif len(val_split)==2:
+                                ### val is simulation_kwargs.something
+                                req_kwargs[key] = simulation_kwargs[val_split[1]]
+                            else:
+                                ### val is simulation_kwargs.something.something... e.g. key='pops' and val= 'simulation_kwargs.model.populations'
+                                req_kwargs[key] = eval('simulation_kwargs["'+val_split[1]+'"].'+'.'.join(val_split[2:]))
+                                
+                req['req'](**req_kwargs).run()
+                
+            else: #--> only requirement
+                req['req']().run()

@@ -1,17 +1,14 @@
-from ANNarchy import simulate, get_population, get_time
+from ANNarchy import simulate, get_population
 
 def current_step(pop, t1=500, t2=500, a1=0, a2=100):
     """
-        simulates the model
+        stimulates a given population in two periods with two input currents
         
         pop: population name of population, which should be stimulated with input current
              neuron model of population has to contain "I_app" as input current in pA
         t1/t2: times in ms before/after current step
         a1/a2: current amplitudes before/after current step in pA
     """
-    
-    ### start = current time
-    start = get_time()
     
     ### save prev input current
     I_prev = get_population(pop).I_app
@@ -27,4 +24,5 @@ def current_step(pop, t1=500, t2=500, a1=0, a2=100):
     ### reset input current to previous value
     get_population(pop).I_app = I_prev
     
-    return {'name':'current_step', 'pop':pop, 't1':t1, 't2':t2, 'a1':a1, 'a2':a2, 'start':start, 'end':get_time()}
+    ### return some additional information which could be usefull
+    return {'duration':t1+t2}

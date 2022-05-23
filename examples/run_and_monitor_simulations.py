@@ -69,13 +69,13 @@ increase_rates_pop1 = generate_simulation(increase_rates,
                                           simulation_kwargs={'pop':my_model.populations[0], 'rate_step':10, 'time_step':100, 'nr_steps':15},
                                           name='increase_rates_pop1',
                                           description='increase rates variable of pop1',
-                                          requirements=[req_pop_attr(my_model.populations[0],'rates')]) 
+                                          requirements=[{'req':req_pop_attr, 'pop':my_model.populations[0], 'attr':'rates'}]) 
                                           
 increase_rates_all_pops = generate_simulation(increase_rates,
                                               simulation_kwargs={'pop':my_model.populations, 'rate_step':10, 'time_step':100, 'nr_steps':15},
                                               name='increase_rates_all_pops',
                                               description='increase rates variable of all pops',
-                                              requirements=[req_pop_attr(my_model.populations,'rates')]) 
+                                              requirements=[{'req':req_pop_attr, 'pop':'simulation_kwargs.pop', 'attr':'rates'}]) 
 
 
 ### Now let's use these simulations
