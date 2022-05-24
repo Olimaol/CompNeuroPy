@@ -5,7 +5,8 @@ import CompNeuroPy.system_functions as syf
 import CompNeuroPy.extra_functions as ef
 from ANNarchy import get_time, dt, reset
 import numpy as np
-### TODO: for functions which use a monDict but actually only need compartment list (e.g. start) --> adjust!
+
+
 class Monitors:
 
     
@@ -23,17 +24,17 @@ class Monitors:
         self.recordings=[]
         self.recording_times=[]
         
-    def start(self, monDict=[]):
-        if isinstance(monDict, list):
-            monDict = self.monDict
+    def start(self, compartment_list=None):
+        if compartment_list==None:
+            compartment_list = list(self.monDict.keys())
         
-        self.timings = mf.startMonitors(monDict,self.mon,self.timings)
+        self.timings = mf.startMonitors(compartment_list,self.mon,self.timings)
         
-    def pause(self, monDict=[]):
-        if isinstance(monDict, list):
-            monDict = self.monDict
+    def pause(self, compartment_list=None):
+        if compartment_list==None:
+            compartment_list = list(self.monDict.keys())
         
-        self.timings = mf.pauseMonitors(monDict,self.mon,self.timings)
+        self.timings = mf.pauseMonitors(compartment_list,self.mon,self.timings)
         
     def get_recordings(self, monDict=[]):
         if isinstance(monDict, list):
@@ -42,12 +43,12 @@ class Monitors:
         self.recordings.append(mf.getMonitors(monDict,self.mon))
         return self.recordings
         
-    def get_recording_times(self, monDict=[]):
-        if isinstance(monDict, list):
-            monDict = self.monDict
+    def get_recording_times(self, compartment_list=None):
+        if compartment_list==None:
+            compartment_list = list(self.monDict.keys())
             
         temp_timings={}
-        for key, val in monDict.items():
+        for key in compartment_list:
             compartmentType, compartment = key.split(';')
             if len(self.timings[compartment]['start']) > len(self.timings[compartment]['stop']):
                 ### was started/resumed but never stoped after --> use curretn time for stop time
@@ -95,20 +96,31 @@ class recording_times_cl:
     def all(self):
         return self.recording_times_list
         
-    def combine_data(self, recordings, recording_data_str, mode='sequential'):
+    def combine_chunks(self, recordings, recording_data_str, mode='sequential'):
         """
+            combines the data of all chunks of recordings, only possible if no pauses in between
+            
             recordings: recordings array of recording chunks
             recording_data_str: str of compartment + recorded variable
             mode: how should the time array be generated
                 sequential: each chunk starts at zero e.g.: [0,100] + [0,250] --> [0, 1, ..., 100, 0, 1, ..., 250]
                 consecutive: each chunk starts at the last stop time of the previous chunk e.g.: [0,100] + [0,250] --> [0, 1, ..., 100, 101, 102, ..., 350]
         """
+        
         compartment = recording_data_str.split(';')[0]
         dt = recordings[0]['dt']
         nr_chunks = self.__get_nr_chunks__()
         data_list = []
         time_list = []
         pre_chunk_start_time = 0
+        
+        ### first test, if there are pauses in between
+        for chunk in range(nr_chunks):
+            time_lim=self.time_lims(chunk=chunk, compartment=compartment)
+            idx_lim=self.idx_lims(chunk=chunk, compartment=compartment)
+            if int(np.diff(time_lim)/dt)!=int(np.diff(idx_lim)):
+                assert False, 'ERROR combine_chunks, time_lim and idx_lim do not fit! Maybe multiple periods separated by pauses in recordings?'
+        
         for chunk in range(nr_chunks):
             ### append data list with data of all periods of this chunk
             data_list.append(recordings[chunk][recording_data_str])
@@ -178,7 +190,7 @@ class recording_times_cl:
         
     def __check_chunk__(self, chunk):
         if chunk==None:
-            ### by default use all periods
+            ### by default use first chunk
             chunk = 0
         elif chunk<self.__get_nr_chunks__():
             chunk = chunk
