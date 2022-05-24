@@ -33,23 +33,23 @@ def addMonitors(monDict):
     return mon
     
     
-def startMonitors(monDict,mon,timings=None):
+def startMonitors(compartment_list,mon,timings=None):
     """
         starts or resumes monitores defined by monDict
-        monDict: dictionary with compartment and variable names
+        compartment_list: list with model compartments
         mon: dict with the corresponding monitors
         currently_paused: dict with key=compartment+variable name and val=if currently paused
     """
     ### for each compartment generate started variable (because compartments can ocure multiple times if multiple variables of them are recorded --> do not start same monitor multiple times)
     started={}
-    for key, val in monDict.items():
+    for key in compartment_list:
         compartmentType, compartment = key.split(';')
         if compartmentType=='pop':
             started[compartment]=False
 
     if timings==None:
         ### information about pauses not available, just start
-        for key, val in monDict.items():
+        for key in compartment_list:
             compartmentType, compartment = key.split(';')
             if compartmentType=='pop' and started[compartment]==False:
                 mon[compartment].start()
@@ -58,7 +58,7 @@ def startMonitors(monDict,mon,timings=None):
         return None
     else:
         ### information about pauses available, start if not paused, resume if paused
-        for key, val in monDict.items():
+        for key in compartment_list:
             compartmentType, compartment = key.split(';')
             if compartmentType=='pop' and started[compartment]==False:
                 if timings[compartment]['currently_paused']:
@@ -75,18 +75,18 @@ def startMonitors(monDict,mon,timings=None):
         return timings
             
             
-def pauseMonitors(monDict,mon,timings=None):
+def pauseMonitors(compartment_list,mon,timings=None):
     """
-        pause monitores defined by monDict
+        pause monitores defined by compartment_list
     """
     ### for each compartment generate paused variable (because compartments can ocure multiple times if multiple variables of them are recorded --> do not pause same monitor multiple times)
     paused={}
-    for key, val in monDict.items():
+    for key in compartment_list:
         compartmentType, compartment = key.split(';')
         if compartmentType=='pop':
             paused[compartment]=False
 
-    for key, val in monDict.items():
+    for key in compartment_list:
         compartmentType, compartment = key.split(';')
         if compartmentType=='pop' and paused[compartment]==False:
             mon[compartment].pause()
