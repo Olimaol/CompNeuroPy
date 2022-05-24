@@ -16,6 +16,7 @@ population = model.populations[0]
 class myexp(Experiment):
 
     def run(self, population):
+        ### CompNeuroPy is provided locally
         cnp=self.cnp
         
         ### define recordings
