@@ -35,4 +35,5 @@ def increasing_current():
     ### step increase
     ### number steps
     ### for increasing the currents use curretn_step function
-    a=0
+    a=1
+    return a
