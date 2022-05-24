@@ -26,3 +26,13 @@ def current_step(pop, t1=500, t2=500, a1=0, a2=100):
     
     ### return some additional information which could be usefull
     return {'duration':t1+t2}
+    
+    
+def increasing_current():
+    ### TODO 
+    ### takes pop
+    ### step duration
+    ### step increase
+    ### number steps
+    ### for increasing the currents use curretn_step function
+    a=0
