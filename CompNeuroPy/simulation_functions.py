@@ -31,12 +31,12 @@ def current_step(pop, t1=500, t2=500, a1=0, a2=100):
 
 def increasing_current(pop,I1):
     
-    step = 0.5
+    step = 10
 
     for i in range(10):
        
         I2 = I1 + step
-        current_step(pop,'t1=500','t2=500',I1,I2)
+        current_step(pop,500,500,I1,I2)
 
     return()
 
