@@ -1,8 +1,8 @@
 from CompNeuroPy import opt_neuron
 from CompNeuroPy.system_functions import load_object
+from CompNeuroPy.neuron_models import Izhikevich2007_Corbit
 from hyperopt import hp
 import numpy as np
-from ANNarchy import Neuron
 
 ### load the experiment and results (target data)
 results_soll = np.load('dataRaw/generate_H_and_H_data/results.npy', allow_pickle=True).item()
@@ -93,23 +93,22 @@ def get_loss(results_ist, results_soll):
     
 ### define the variable space
 fitting_variables_space = [
-                           hp.uniform('k', 0.1, 2),
-                           hp.uniform('v_t', -60, -20),
-                           hp.uniform('a', 0.01, 0.5),
-                           hp.uniform('b', -2, 2),
                            hp.uniform('c', -70, -45),
                            hp.uniform('d', 0, 100)
                           ]
 const_params = {
                 'v_peak': 30,
-                'v_r': -67.81,
-                'C': 30
+                'v_t': -51.7,
+                'v_r': -69.8,
+                'k': 0.00442,
+                'b': 0.13268,
+                'a': 0.379,
+                'C': 1
                }
-               
                
 ### run optimization
 sim_id = 1
-opt = opt_neuron(results_soll, experiment, get_loss, fitting_variables_space, const_params, compile_folder_name='annarchy_raw_Izhikevich_'+str(sim_id), num_rep_loss=1)
+opt = opt_neuron(results_soll, experiment, get_loss, fitting_variables_space, const_params, compile_folder_name='annarchy_raw_Izhikevich_'+str(sim_id), num_rep_loss=1, neuron_model=Izhikevich2007_Corbit)
 opt.run(max_evals=200, results_file_name='best_'+str(sim_id)+'.npy')
 print('\nresults:\n')
 for key,val in opt.results.items():

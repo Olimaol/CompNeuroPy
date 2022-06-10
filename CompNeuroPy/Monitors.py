@@ -23,6 +23,8 @@ class Monitors:
         
         self.recordings=[]
         self.recording_times=[]
+        self.already_got_recordings=False
+        self.already_got_recording_times=False
         
     def start(self, compartment_list=None):
         if compartment_list==None:
@@ -37,11 +39,18 @@ class Monitors:
         self.timings = mf.pauseMonitors(compartment_list,self.mon,self.timings)
         
     def get_recordings(self, monDict=[]):
-        if isinstance(monDict, list):
-            monDict = self.monDict
-        
-        self.recordings.append(mf.getMonitors(monDict,self.mon))
-        return self.recordings
+        ### only if recordings in current chunk and get_recodings was not already called add current chunk to recordings
+        if self.__any_recordings_in_current_chunk__() and self.already_got_recordings==False:
+            if isinstance(monDict, list):
+                monDict = self.monDict
+            ### update recordings
+            self.recordings.append(mf.getMonitors(monDict,self.mon))
+            ### upade already_got_recordings --> it will not update recordings again
+            self.already_got_recordings=True
+            return self.recordings
+        else:
+            return self.recordings
+            
         
     def get_recording_times(self, compartment_list=None):
         if compartment_list==None:
@@ -51,20 +60,46 @@ class Monitors:
         for key in compartment_list:
             compartmentType, compartment = key.split(';')
             if len(self.timings[compartment]['start']) > len(self.timings[compartment]['stop']):
-                ### was started/resumed but never stoped after --> use curretn time for stop time
+                ### was started/resumed but never stoped after --> use current time for stop time
                 self.timings[compartment]['stop'].append(get_time())
             ### calculate the idx of the recorded arrays which correspond to the timings and remove 'currently_paused'
             diff_timings = (np.array(self.timings[compartment]['stop']) - np.array(self.timings[compartment]['start']))/dt() ## the length of the periods defines the idx of the arrays + dt
             start_idx = [np.sum(diff_timings[0:i]).astype(int) for i in range(diff_timings.size)]
             stop_idx  = [np.sum(diff_timings[0:i+1]).astype(int) for i in range(diff_timings.size)]
             temp_timings[compartment]={'start':{'ms':self.timings[compartment]['start'], 'idx':start_idx}, 'stop':{'ms':self.timings[compartment]['stop'], 'idx':stop_idx}}
-
-        self.recording_times.append(temp_timings)
         
+        ### only append temp_timings of current chunk if there are recordings in current chunk at all and if get_recordings was not already called (double call would add the same chunk again)
+        if self.__any_recordings_in_current_chunk__() and self.already_got_recording_times==False:  self.recording_times.append(temp_timings)
+            
+        ### upade already_got_recording_times --> it will not update recording_times again
+        self.already_got_recording_times=True
+
         ### generate a object from recording_times and return this instead of the dict
         recording_times_ob = recording_times_cl(self.recording_times)
         
         return recording_times_ob
+        
+        
+    def __any_recordings_in_current_chunk__(self, compartment_list=None):
+        if compartment_list==None:
+            compartment_list = list(self.monDict.keys())
+            
+        temp_timings={}
+        for key in compartment_list:
+            compartmentType, compartment = key.split(';')
+            if len(self.timings[compartment]['start']) > len(self.timings[compartment]['stop']):
+                ### was started/resumed but never stoped after --> use current time for stop time
+                self.timings[compartment]['stop'].append(get_time())
+            ### calculate the idx of the recorded arrays which correspond to the timings and remove 'currently_paused'
+            diff_timings = (np.array(self.timings[compartment]['stop']) - np.array(self.timings[compartment]['start']))/dt() ## the length of the periods defines the idx of the arrays + dt
+            start_idx = [np.sum(diff_timings[0:i]).astype(int) for i in range(diff_timings.size)]
+            stop_idx  = [np.sum(diff_timings[0:i+1]).astype(int) for i in range(diff_timings.size)]
+            temp_timings[compartment]={'start':{'ms':self.timings[compartment]['start'], 'idx':start_idx}, 'stop':{'ms':self.timings[compartment]['stop'], 'idx':stop_idx}}
+        
+        ### generate a temp object of temp timings to check if there were recordings at all
+        recording_times_ob_temp = recording_times_cl([temp_timings])
+        return recording_times_ob_temp.__any_recordings__(chunk=0)
+        
         
     def reset(self, populations=True, projections=False, synapses=False, monitors=True, model=True, net_id=0):
         """
@@ -72,6 +107,8 @@ class Monitors:
         """
         self.get_recordings()
         self.get_recording_times()
+        self.already_got_recordings=False ### after reset one can still update recordings
+        self.already_got_recording_times=False ### after reset one can still update recording_times
         ### reset timings, after reset, add a zero to start if the monitor is still running (this is not resetted by reset())
         for key in self.timings.keys():
             self.timings[key]['start']=[]
@@ -206,6 +243,22 @@ class recording_times_cl:
     def __get_nr_periods__(self, chunk, compartment):
         return len(self.recording_times_list[chunk][compartment]['start']['idx'])
         
+    def __any_recordings__(self, chunk):
+        """
+            check all periods and compartments if there are any recordings
+            returns True/False if there are any recordings
+        """
+        compartment_list = list(self.recording_times_list[chunk].keys())
+        found_recordings = False
+        for compartment in compartment_list:
+        
+            nr_periods_of_compartment = len(self.recording_times_list[chunk][compartment]['start']['idx'])
+            
+            for period_idx in range(nr_periods_of_compartment):
+                idx_lims = self.idx_lims(chunk=chunk, compartment=compartment, period=period_idx)
+                if np.diff(idx_lims)[0]>0: found_recordings = True
+                
+        return found_recordings
         
         
         
