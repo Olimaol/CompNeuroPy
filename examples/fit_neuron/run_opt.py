@@ -1,8 +1,8 @@
 from CompNeuroPy import opt_neuron
 from CompNeuroPy.system_functions import load_object
+from CompNeuroPy.neuron_models import Izhikevich2007
 from hyperopt import hp
 import numpy as np
-from ANNarchy import Neuron
 
 ### load the experiment and results (target data)
 results_soll = np.load('dataRaw/generate_H_and_H_data/results.npy', allow_pickle=True).item()
@@ -63,7 +63,7 @@ def get_loss(results_ist, results_soll):
     if np.absolute(nr_diff)>0:
         isi_loss = np.absolute(nr_diff)**2
     else:
-        z_score_sd = np.std(np.concatenate([isi_arr['soll'],isi_arr['ist']]))
+        z_score_sd = np.std(np.concatenate([isi_arr['soll'],isi_arr['ist']]))+1e-20
         isi_loss = np.sqrt(np.mean(((isi_arr['soll']-isi_arr['ist'])/z_score_sd)**2))
         
         
@@ -81,35 +81,36 @@ def get_loss(results_ist, results_soll):
         membrane_potential[cond] = membrane_potential[cond][int(start_time):int(end_time)]
         
     ### membrane loss
-    z_score_sd = np.std(np.concatenate([membrane_potential['soll'],membrane_potential['ist']]))
+    z_score_sd = np.std(np.concatenate([membrane_potential['soll'],membrane_potential['ist']]))+1e-20
     membrane_loss = np.sqrt(np.mean(((membrane_potential['soll']-membrane_potential['ist'])/z_score_sd)**2))
     
     
-    ### compute loss
-    loss = isi_loss + membrane_loss
-
-    return loss
+    return [isi_loss, membrane_loss]
     
     
 ### define the variable space
 fitting_variables_space = [
-                           hp.uniform('k', 0.1, 2),
-                           hp.uniform('v_t', -60, -20),
-                           hp.uniform('a', 0.01, 0.5),
-                           hp.uniform('b', -2, 2),
+                           hp.uniform('a', 0, 0.5),
+                           hp.uniform('b', -1, 1),
                            hp.uniform('c', -70, -45),
-                           hp.uniform('d', 0, 100)
+                           hp.uniform('d', 0, 100),
+                           hp.uniform('k', 0, 0.5),
+                           hp.uniform('v_t', -55, -50)
                           ]
+### constant parameters and initial values
 const_params = {
                 'v_peak': 30,
-                'v_r': -67.81,
-                'C': 30
+                'v_r': -69.8,
+                'C': 1,
+                'I_app': 1,
+                'v': -69.8,
+                'u': 0
                }
                
                
 ### run optimization
 sim_id = 1
-opt = opt_neuron(results_soll, experiment, get_loss, fitting_variables_space, const_params, compile_folder_name='annarchy_raw_Izhikevich_'+str(sim_id), num_rep_loss=1)
+opt = opt_neuron(results_soll, experiment, get_loss, fitting_variables_space, const_params, compile_folder_name='annarchy_raw_Izhikevich_'+str(sim_id), num_rep_loss=1, neuron_model=Izhikevich2007)
 opt.run(max_evals=200, results_file_name='best_'+str(sim_id)+'.npy')
 print('\nresults:\n')
 for key,val in opt.results.items():

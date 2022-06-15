@@ -100,13 +100,13 @@ class opt_neuron:
         fitting_vars_names = [self.fv_space[i].pos_args[0].pos_args[0]._obj for i in range(len(self.fv_space))]
         all_vars_names = np.concatenate([np.array(list(self.const_params.keys())), np.array(fitting_vars_names)]).tolist()
         ### check if pop has these parameters
-        pop_parameter_names = get_population(self.iz).parameters
+        pop_parameter_names = get_population(self.iz).attributes.copy()
         for name in pop_parameter_names.copy():
             if name in all_vars_names:
                 all_vars_names.remove(name)
                 pop_parameter_names.remove(name)
         if len(pop_parameter_names)>0:
-            print('opt_neuron: WARNING: parameters',pop_parameter_names,'of population',self.iz,'are not used.')
+            print('opt_neuron: WARNING: attributes',pop_parameter_names,'of population',self.iz,'are not used/initialized.')
         if len(all_vars_names)>0:
             print('opt_neuron: Error: Population',self.iz,'does not contain parameters',all_vars_names,'!')
             quit()
@@ -125,6 +125,7 @@ class opt_neuron:
 
         ### in case of noisy models, here optionally run multiple simulations, to mean the loss
         lossAr = np.zeros(self.num_rep_loss)
+        all_loss_list = []
         for nr_run in range(self.num_rep_loss):
             ### initialize for each run a new rng (--> not always have same noise in case of noisy models/simulations)
             rng = np.random.default_rng()
@@ -135,14 +136,17 @@ class opt_neuron:
             ### get simulation results/loss
             lossAr[nr_run]=m_list[0]
             results_ist=m_list[1]
-        
+            all_loss_list.append(m_list[2])
+        all_loss_arr = np.array(all_loss_list)
         ### calculate mean and std of loss
         if self.num_rep_loss > 1:
             loss = np.mean(lossAr)
             std  = np.std(lossAr)
+            all_loss = np.mean(all_loss_arr,0)
         else:
             loss = lossAr[0]
             std  = None
+            all_loss = all_loss_arr[0]
         
         ### return loss and other things for optimization
         if self.num_rep_loss > 1:
@@ -151,6 +155,7 @@ class opt_neuron:
                 'loss': loss,
                 'loss_variance': std,
                 'std': std,
+                'all_loss': all_loss,
                 'results': results_ist
                 }
         else:
@@ -158,6 +163,7 @@ class opt_neuron:
                 'status': STATUS_OK,
                 'loss': loss,
                 'std': std,
+                'all_loss': all_loss,
                 'results': results_ist
                 }
               
@@ -199,11 +205,16 @@ class opt_neuron:
         results = exp_obj.run(experiment_kwargs)
                 
         ### compute loss
-        loss = self.__get_loss__(results, self.results_soll)
+        all_loss = self.__get_loss__(results, self.results_soll)
+        if isinstance(all_loss,list) or isinstance(all_loss,type(np.zeros(1))):
+            loss = sum(all_loss)
+        else:
+            loss = all_loss
 
         ### "return" loss and other optional things
         m_list[0]=loss
         m_list[1]=results
+        m_list[2]=all_loss
         
         
     def __set_fitting_parameters__(self, fitparams):
@@ -227,8 +238,6 @@ class opt_neuron:
         ### set constant parameters
         for key, val in self.const_params.items():
             setattr(get_population(self.iz), key, val)
-            if key=='v_r':
-                get_population(self.iz).v = val
             
         
     def __test_fit__(self, fitparamsDict):
@@ -255,6 +264,7 @@ class opt_neuron:
                     )
         fit=self.__test_fit__(best)
         best['loss'] = fit['loss']
+        best['all_loss'] = fit['all_loss']
         best['std'] = fit['std']
         best['results'] = fit['results']
         self.results=best

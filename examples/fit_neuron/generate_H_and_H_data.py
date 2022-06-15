@@ -46,7 +46,7 @@ class myexp(Experiment):
         self.reset_function(**self.reset_kwargs)
         self.mon.start()
         my_sim.run({'t1':500, 't2':0, 'a1':0, 'a2':0})
-        my_sim.run({'t1':500, 't2':500, 'a1':-200, 'a2':0})
+        my_sim.run({'t1':500, 't2':500, 'a1':-10, 'a2':0})
         
         ### SIMULATION END
         
