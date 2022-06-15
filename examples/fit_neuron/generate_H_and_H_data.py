@@ -1,7 +1,7 @@
 from CompNeuroPy import generate_model as gm
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy import Experiment
-from CompNeuroPy.models import H_and_H_model_Corbit
+from CompNeuroPy.models import H_and_H_model_Bischop
 from ANNarchy import setup, reset, get_population
 
 
@@ -9,7 +9,7 @@ from ANNarchy import setup, reset, get_population
 setup(dt=0.01)
 
 ### create and compile model
-model = H_and_H_model_Corbit()
+model = H_and_H_model_Bischop()
 population = model.populations[0]
 
 ### define experiment
@@ -24,7 +24,7 @@ class myexp(Experiment):
         
         ### define the simulation
         my_sim = cnp.generate_simulation(cnp.simulation_functions.current_step,
-                                         simulation_kwargs={'pop':population, 't1':200, 't2':500, 'a1':0, 'a2':3},
+                                         simulation_kwargs={'pop':population, 't1':500, 't2':500, 'a1':0, 'a2':100},
                                          name='current_step',
                                          description='simulate two input phases with different durations and inputs for a specified population',
                                          requirements=[{'req':cnp.simulation_requirements.req_pop_attr, 'pop':'simulation_kwargs.pop', 'attr':'I_app'}],
