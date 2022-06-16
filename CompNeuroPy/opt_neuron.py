@@ -119,6 +119,7 @@ class opt_neuron:
             fitparams: list, for description see function simulator
             return: returns dictionary needed for optimization with hyperopt
         """
+        
         ### initialize manager and generate m_list = dictionary to save data
         manager = multiprocessing.Manager()
         m_list = manager.dict()
@@ -126,17 +127,67 @@ class opt_neuron:
         ### in case of noisy models, here optionally run multiple simulations, to mean the loss
         lossAr = np.zeros(self.num_rep_loss)
         all_loss_list = []
+        return_results = False
         for nr_run in range(self.num_rep_loss):
             ### initialize for each run a new rng (--> not always have same noise in case of noisy models/simulations)
             rng = np.random.default_rng()
             ### run simulator with multiprocessign manager
-            proc = Process(target=self.__simulator__,args=(fitparams,rng,m_list))
+            proc = Process(target=self.__simulator__,args=(fitparams,rng,m_list,return_results))
+            proc.start()
+            proc.join()
+            ### get simulation results/loss
+            lossAr[nr_run]=m_list[0]
+            
+        ### calculate mean and std of loss
+        if self.num_rep_loss > 1:
+            loss = np.mean(lossAr)
+            std  = np.std(lossAr)
+        else:
+            loss = lossAr[0]
+            std  = None
+        
+        ### return loss and other things for optimization
+        if self.num_rep_loss > 1:
+            return {
+                'status': STATUS_OK,
+                'loss': loss,
+                'loss_variance': std
+                }
+        else:
+            return {
+                'status': STATUS_OK,
+                'loss': loss
+                }
+                
+                
+    def __run_simulator_with_results__(self, fitparams):
+        """
+            runs the function simulator with the multiprocessing manager (if function is called multiple times this saves memory, otherwise same as calling simulator directly)
+            
+            fitparams: list, for description see function simulator
+            return: returns dictionary needed for optimization with hyperopt
+        """
+        
+        ### initialize manager and generate m_list = dictionary to save data
+        manager = multiprocessing.Manager()
+        m_list = manager.dict()
+
+        ### in case of noisy models, here optionally run multiple simulations, to mean the loss
+        lossAr = np.zeros(self.num_rep_loss)
+        all_loss_list = []
+        return_results = True
+        for nr_run in range(self.num_rep_loss):
+            ### initialize for each run a new rng (--> not always have same noise in case of noisy models/simulations)
+            rng = np.random.default_rng()
+            ### run simulator with multiprocessign manager
+            proc = Process(target=self.__simulator__,args=(fitparams,rng,m_list,return_results))
             proc.start()
             proc.join()
             ### get simulation results/loss
             lossAr[nr_run]=m_list[0]
             results_ist=m_list[1]
             all_loss_list.append(m_list[2])
+            
         all_loss_arr = np.array(all_loss_list)
         ### calculate mean and std of loss
         if self.num_rep_loss > 1:
@@ -185,7 +236,7 @@ class opt_neuron:
             return(self.experiment_function(self, **experiment_kwargs))
              
                 
-    def __simulator__(self, fitparams, rng, m_list=[0,0,0]):
+    def __simulator__(self, fitparams, rng, m_list=[0,0,0], return_results=False):
         """
             fitparams: from hyperopt
                 
@@ -213,8 +264,9 @@ class opt_neuron:
 
         ### "return" loss and other optional things
         m_list[0]=loss
-        m_list[1]=results
-        m_list[2]=all_loss
+        if return_results:
+            m_list[1]=results
+            m_list[2]=all_loss
         
         
     def __set_fitting_parameters__(self, fitparams):
@@ -251,7 +303,7 @@ class opt_neuron:
         
         fitting_vars_names = [self.fv_space[i].pos_args[0].pos_args[0]._obj for i in range(len(self.fv_space))]
         
-        return self.__run_simulator__([fitparamsDict[name] for name in fitting_vars_names])
+        return self.__run_simulator_with_results__([fitparamsDict[name] for name in fitting_vars_names])
         
      
     def run(self, max_evals, results_file_name='best.npy'):

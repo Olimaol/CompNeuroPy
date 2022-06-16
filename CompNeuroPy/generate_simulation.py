@@ -66,13 +66,14 @@ class generate_simulation:
         """
         
         sim_list = []
-        for obj in get_objects():
+        object_list = get_objects()
+        for obj in object_list:
             test=str(obj)
             compare='<CompNeuroPy.generate_simulation.generate_simulation object'
             if len(test)>=len(compare):
                 if compare == test[:len(compare)]:
                     sim_list.append(vars(obj)['name'])
-                    
+        del(object_list)
         return len(sim_list)
         
     def __test_req__(self, simulation_kwargs=None):
