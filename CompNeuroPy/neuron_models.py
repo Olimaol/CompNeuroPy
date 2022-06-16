@@ -171,7 +171,7 @@ Izhikevich2007_Corbit3 = Neuron(
     spike = "v >= v_peak",
     reset = """
         v = c
-        u = u + d*s
+        u = u + d
         s = 1
     """,
     name = "Izhikevich2007_Corbit",
