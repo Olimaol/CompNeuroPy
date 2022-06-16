@@ -1,6 +1,7 @@
 from gc import get_objects
 from ANNarchy import get_time
 from .extra_functions import remove_key
+import numpy as np
 
 class generate_simulation:
 
@@ -106,3 +107,56 @@ class generate_simulation:
                 
             else: #--> only requirement
                 req['req']().run()
+                
+    def get_current_arr(self, dt, flat=False):
+        """
+            function for current_step simulations
+            gets the current array (value for each time step) of all runs
+            it returns a list of arrays (len of list = nr of runs)
+            if flat --> it returns a flattened array --> assumes that all runs are run consecutively without brakes
+        """
+        assert self.simulation_function. __name__ == 'current_step', 'ERROR get_current_arr: Simulation has to be "current_step"!'
+        
+        current_arr = []
+        for run in range(len(self.kwargs)):
+            t1 = self.kwargs[run]['t1']
+            t2 = self.kwargs[run]['t2']
+            a1 = self.kwargs[run]['a1']
+            a2 = self.kwargs[run]['a2']
+            
+            if t1>0 and t2>0:
+                current_arr.append(np.concatenate([np.ones(int(t1/dt))*a1, np.ones(int(t2/dt))*a2]))
+            elif t2>0:
+                current_arr.append(np.ones(int(t2/dt))*a2)
+            else:
+                current_arr.append(np.ones(int(t1/dt))*a1)
+                
+        if flat:
+            return np.concatenate(current_arr)
+        else:
+            return current_arr
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
