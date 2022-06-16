@@ -66,14 +66,15 @@ class generate_model:
         """
         
         not_created_model_list = []
-        for obj in get_objects():
+        object_list=get_objects()
+        for obj in object_list:
             test=str(obj)
             compare='<CompNeuroPy.generate_model.generate_model object'
             if len(test)>=len(compare):
                 if compare == test[:len(compare)]:
                     if vars(obj)['created']==False:
                         not_created_model_list.append(vars(obj)['name'])
-                    
+        del(object_list)
         return not_created_model_list
         
     def __nr_models__(self):
@@ -82,12 +83,13 @@ class generate_model:
         """
         
         model_list = []
-        for obj in get_objects():
+        object_list=get_objects()
+        for obj in object_list:
             test=str(obj)
             compare='<CompNeuroPy.generate_model.generate_model object'
             if len(test)>=len(compare):
                 if compare == test[:len(compare)]:
                     model_list.append(vars(obj)['name'])
-                    
+        del(object_list)    
         return len(model_list)
             

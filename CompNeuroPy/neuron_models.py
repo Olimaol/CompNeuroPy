@@ -142,8 +142,42 @@ Izhikevich2007_Corbit2 = Neuron(
         u = u + d
     """,
     name = "Izhikevich2007_Corbit",
-    description = "Simple neuron model equations from Izhikevich (2007) adjusted to fit Corbit et al. (2016) FSI neuron model."
+    description = "Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking."
 )
+
+
+Izhikevich2007_Corbit3 = Neuron(
+    parameters="""
+        C      = 0 : population # pF
+        k      = 0 : population # 
+        p1     = 0 : population # 
+        p2     = 0 : population # 
+        p3     = 0 : population # 
+        v_r    = 0 : population # mV
+        v_t    = 0 : population # mV
+        a      = 0 : population # ms**-1
+        b      = 0 : population # nS
+        c      = 0 : population # mV
+        d      = 0 : population # pA
+        v_peak = 0 : population # mV
+        I_app  = 0 # pA
+    """,
+    equations="""
+        C * dv/dt = k*(v - v_r)*(v - v_t) - u + s*p1*(v_d - v) + I_app
+        du/dt     = a*(b*(v - v_r) - u)
+        dv_d/dt   = p2*(v - v_d)
+        ds/dt     = p3*(-s) : init=0
+    """,
+    spike = "v >= v_peak",
+    reset = """
+        v = c
+        u = u + d*s
+        s = 1
+    """,
+    name = "Izhikevich2007_Corbit",
+    description = "Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking."
+)
+
 
 H_and_H_Bischop = Neuron(
     parameters="""
