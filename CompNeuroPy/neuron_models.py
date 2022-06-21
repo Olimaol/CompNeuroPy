@@ -153,6 +153,7 @@ Izhikevich2007_Corbit3 = Neuron(
         p1     = 0 : population # 
         p2     = 0 : population # 
         p3     = 0 : population # 
+        k_t    = 0 : population # 
         v_r    = 0 : population # mV
         v_t    = 0 : population # mV
         a      = 0 : population # ms**-1
@@ -163,8 +164,8 @@ Izhikevich2007_Corbit3 = Neuron(
         I_app  = 0 # pA
     """,
     equations="""
-        C * dv/dt = k*(v - v_r)*(v - v_t) - u + s*p1*(v_d - v) + I_app
-        du/dt     = a*(b*(v - v_r) - u)
+        C * dv/dt = k*(v - v_r) + k_t*pos(v - v_t)**2 - u + s*p1*(v_d - v) + I_app
+        du/dt     = a*(b*pos(v - v_t)**2 - u)
         dv_d/dt   = p2*(v - v_d)
         ds/dt     = p3*(-s) : init=0
     """,
@@ -173,6 +174,128 @@ Izhikevich2007_Corbit3 = Neuron(
         v = c
         u = u + d
         s = 1
+    """,
+    name = "Izhikevich2007_Corbit",
+    description = "Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking and adjusted to fit Corbit et al. (2016) FSI neuron model."
+)
+
+Izhikevich2007_Corbit4 = Neuron(
+    parameters="""
+        C      = 0 : population # pF
+        k      = 0 : population # 
+        k_d    = 0 : population # 
+        a_d    = 0 : population # 
+        k_t    = 0 : population # 
+        v_r    = 0 : population # mV
+        v_t    = 0 : population # mV
+        a      = 0 : population # ms**-1
+        b      = 0 : population # nS
+        c      = 0 : population # mV
+        v_peak = 0 : population # mV
+        I_app  = 0 # pA
+    """,
+    equations="""
+        C * dv/dt = k*(v - v_r) + k_t*pos(v - v_t)**2 - u + k_d*(v_d - v) + I_app
+        du/dt     = a*(b*pos(v - v_t)**2 - u)
+        dv_d/dt   = a_d*(v - v_d)
+    """,
+    spike = "v >= v_peak",
+    reset = """
+        v = c
+    """,
+    name = "Izhikevich2007_Corbit",
+    description = "Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking and adjusted to fit Corbit et al. (2016) FSI neuron model."
+)
+
+
+Izhikevich2007_Corbit5 = Neuron(
+    parameters="""
+        C      = 0 : population # pF
+        k      = 0 : population # 
+        k_s    = 0 : population # 
+        a_s    = 0 : population # 
+        a_n    = 0 : population # 
+        #a_d    = 0 : population # 
+        k_t    = 0 : population # 
+        #k_d    = 0 : population # 
+        v_r    = 0 : population # mV
+        v_t    = 0 : population # mV
+        a      = 0 : population # ms**-1
+        b      = 0 : population # nS
+        c      = 0 : population # mV
+        v_peak = 0 : population # mV
+        I_app  = 0 # pA
+    """,
+    equations="""
+        C * dv/dt = k*(v - v_r) + k_t*pos(v - v_t)**2 - u - n + I_app#+ k_d*(v_d - v) + I_app
+        du/dt     = a*(b*pos(v - v_t)**2 - u)
+        #dv_d/dt   = a_d*(v - v_d)
+        ds/dt     = a_s*(u**0.1 - s)
+        #dn/dt     = a_n*(u**0.1 - n)
+        dn/dt     = a_n*(k_s*(u**0.1-s) - n)
+    """,
+    spike = "v >= v_peak",
+    reset = """
+        v = c
+    """,
+    name = "Izhikevich2007_Corbit",
+    description = "Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking and adjusted to fit Corbit et al. (2016) FSI neuron model."
+)
+
+
+
+Izhikevich2007_Corbit6 = Neuron(
+    parameters="""
+        C      = 0 : population # pF
+        k      = 0 : population # 
+        b_n    = 0 : population # 
+        a_s    = 0 : population # 
+        a_n    = 0 : population # 
+        v_r    = 0 : population # mV
+        v_t    = 0 : population # mV
+        a      = 0 : population # ms**-1
+        b      = 0 : population # nS
+        c      = 0 : population # mV
+        v_peak = 0 : population # mV
+        I_app  = 0 # pA
+    """,
+    equations="""
+        C * dv/dt = k*(v - v_r)*(v - v_t) - u - n + I_app
+        du/dt     = a*(b*(v - v_r) - u)
+        ds/dt     = a_s*(pos(u)**0.1 - s)
+        dn/dt     = a_n*(b_n*(pos(u)**0.1-s) - n)
+    """,
+    spike = "v >= v_peak",
+    reset = """
+        v = c
+    """,
+    name = "Izhikevich2007_Corbit",
+    description = "Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking."
+)
+
+
+Izhikevich2007_Corbit7 = Neuron(
+    parameters="""
+        C      = 0 : population # pF
+        k      = 0 : population # 
+        b_n    = 0 : population # 
+        a_s    = 0 : population # 
+        v_r    = 0 : population # mV
+        v_t    = 0 : population # mV
+        a      = 0 : population # ms**-1
+        b      = 0 : population # nS
+        c      = 0 : population # mV
+        v_peak = 0 : population # mV
+        I_app  = 0 # pA
+    """,
+    equations="""
+        C * dv/dt = k*(v - v_r)*(v - v_t) - u - b_n*(pos(u)**0.1-s) + I_app
+        du/dt     = a*(b*(v - v_r) - u)
+        ds/dt     = a_s*(pos(u)**0.1 - s)
+    """,
+    spike = "v >= v_peak",
+    reset = """
+        v = c
     """,
     name = "Izhikevich2007_Corbit",
     description = "Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking."
