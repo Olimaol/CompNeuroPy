@@ -1,5 +1,6 @@
 from ANNarchy import simulate, get_population
 
+    
 def current_step(pop, t1=500, t2=500, a1=0, a2=100):
     """
         stimulates a given population in two periods with two input currents
@@ -27,13 +28,26 @@ def current_step(pop, t1=500, t2=500, a1=0, a2=100):
     ### return some additional information which could be usefull
     return {'duration':t1+t2}
     
+
+def increasing_current(pop,I1):
     
-def increasing_current():
+    step = 10
+
+    for i in range(10):
+       
+        I2 = I1 + step
+        current_step(pop,500,500,I1,I2)
+
+    return()
+
+
+
     ### TODO 
     ### takes pop
     ### step duration
     ### step increase
     ### number steps
     ### for increasing the currents use curretn_step function
-    a=1
-    return a
+   
+
+
