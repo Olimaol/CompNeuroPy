@@ -13,6 +13,7 @@ from CompNeuroPy.analysis_functions import *
 from CompNeuroPy.extra_functions import *
 from CompNeuroPy.model_functions import *
 from CompNeuroPy.neuron_models import *
+from CompNeuroPy.synapse_models import *
 from CompNeuroPy.simulation_functions import *
 from CompNeuroPy.system_functions import *
 from CompNeuroPy.simulation_requirements import *
