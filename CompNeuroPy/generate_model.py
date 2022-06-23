@@ -38,26 +38,29 @@ class generate_model:
         """
             creates a model and optionally compiles it directly
         """
-        initial_existing_model = get_full_model()
-        ### create model populations and projections
-        if self.model_kwargs!=None:
-            self.model_creation_function(**self.model_kwargs)
+        if self.created:
+            print('model',self.name,'already created!')
         else:
-            self.model_creation_function()
-        self.created = True
-            
-        ### check which populations and projections have been added
-        post_existing_model = get_full_model()
-        ### save only added not all projections/populations
-        for initial_pop in initial_existing_model['populations']:
-            post_existing_model['populations'].remove(initial_pop)
-        for initial_proj in initial_existing_model['projections']:
-            post_existing_model['projections'].remove(initial_proj)
-        self.populations = post_existing_model['populations']
-        self.projections = post_existing_model['projections']
-            
-        if do_compile:
-            self.compile(compile_folder_name)
+            initial_existing_model = get_full_model()
+            ### create model populations and projections
+            if self.model_kwargs!=None:
+                self.model_creation_function(**self.model_kwargs)
+            else:
+                self.model_creation_function()
+            self.created = True
+                
+            ### check which populations and projections have been added
+            post_existing_model = get_full_model()
+            ### save only added not all projections/populations
+            for initial_pop in initial_existing_model['populations']:
+                post_existing_model['populations'].remove(initial_pop)
+            for initial_proj in initial_existing_model['projections']:
+                post_existing_model['projections'].remove(initial_proj)
+            self.populations = post_existing_model['populations']
+            self.projections = post_existing_model['projections']
+                
+            if do_compile:
+                self.compile(compile_folder_name)
             
     def __check_if_models_created__(self):
         """
