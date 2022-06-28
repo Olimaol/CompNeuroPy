@@ -377,7 +377,7 @@ Izhikevich2007_Corbit5 = Neuron(
 
 Izhikevich2007_Corbit6 = Neuron(
     parameters="""
-        C      = 0 : population # pF
+        C      = 0 : population # ATTENTION! H&H model is myF/cm^2 --> here also myF/cm^2 and not pF --> current also myF/cm^2 and not pA
         k      = 0 : population # 
         b_n    = 0 : population # 
         a_s    = 0 : population # 
@@ -385,10 +385,10 @@ Izhikevich2007_Corbit6 = Neuron(
         v_r    = 0 : population # mV
         v_t    = 0 : population # mV
         a      = 0 : population # ms**-1
-        b      = 0 : population # nS
+        b      = 0 : population # 
         c      = 0 : population # mV
         v_peak = 0 : population # mV
-        I_app  = 0 # pA
+        I_app  = 0
     """,
     equations="""
         C * dv/dt = k*(v - v_r)*(v - v_t) - u - n + I_app
