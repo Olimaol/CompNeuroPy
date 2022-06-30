@@ -731,7 +731,7 @@ H_and_H_Corbit = Neuron(
         k_h_Kv1 =  -6       # :population #mV
         tau_h_Kv1 = 150     # :population #ms
         
-        I_app  = 0     : population
+        #I_app  = 0     : population
     
     """,
     equations="""
@@ -755,7 +755,7 @@ H_and_H_Corbit = Neuron(
         dh_Kv1/dt = (1.0 / (1.0 + exp((th_h_Kv1 - v) / k_h_Kv1)) - h_Kv1) / tau_h_Kv1 : init=0.5015877164262258
         I_Kv1 = (v - E_Kv1)  * gg_Kv1 * pow(m_Kv1, 3) * h_Kv1 #CHECK
         
-
+        dI_app/dt = 0
         C_m * dv/dt  = -I_L - I_Na - I_Kv3 - I_Kv1 + I_app : init=-70.03810532250634
         
     """,

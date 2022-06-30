@@ -3,6 +3,7 @@ import pylab as plt
 from ANNarchy import raster_plot, dt
 import warnings
 from CompNeuroPy.system_functions import create_dir
+from scipy.interpolate import interp1d
 
 def my_raster_plot(spikes):
     """
@@ -183,6 +184,7 @@ def plot_recordings(figname, recordings, time_lim, idx_lim, shape, plan, dpi=300
         shape: tuple, shape of subplots
         plan: list of strings, strings defin where to plot which data and how
     """
+    assert isinstance(recordings,dict), 'ERROR plot_recordings: Recordings should be a dictionary! Maybe used complete recordings list? (define the chunk of recordings!)'
     
     ### define times and indizes for plots
     print(figname, end=':\t')
@@ -307,3 +309,18 @@ def plot_recordings(figname, recordings, time_lim, idx_lim, shape, plan, dpi=300
         save_dir = '/'.join(figname_parts[:-1])
         create_dir(save_dir)
     plt.savefig(figname, dpi=dpi)
+    
+    
+def sample_data_with_timestep(time_arr, data_arr, timestep):
+    """
+        time_arr: times of data_arr in ms
+        data_arr: array with values
+        timestep: timestep in ms for sampling
+    """
+    interpolate_func = interp1d(time_arr, data_arr, bounds_error=False, fill_value='extrapolate')
+    min_time = round(time_arr[0]/timestep,0)*timestep
+    max_time = round(time_arr[-1]/timestep,0)*timestep
+    new_time_arr = np.arange(min_time, max_time+timestep, timestep)
+    new_data_arr = interpolate_func(new_time_arr)
+    
+    return [new_time_arr, new_data_arr]
