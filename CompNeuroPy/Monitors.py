@@ -38,7 +38,7 @@ class Monitors:
         
         self.timings = mf.pauseMonitors(compartment_list,self.mon,self.timings)
         
-    def get_recordings(self, monDict=[]):
+    def get_recordings(self, monDict=[], reset_call=False):
         ### only if recordings in current chunk and get_recodings was not already called add current chunk to recordings
         if self.__any_recordings_in_current_chunk__() and self.already_got_recordings==False:
             if isinstance(monDict, list):
@@ -47,12 +47,17 @@ class Monitors:
             self.recordings.append(mf.getMonitors(monDict,self.mon))
             ### upade already_got_recordings --> it will not update recordings again
             self.already_got_recordings=True
+            
+            if not(reset_call):
+                if len(self.recordings)==0: print('WARNING get_recordings: no recordings available, empty list returned. Maybe forgot start()?')
             return self.recordings
         else:
+            if not(reset_call):
+                if len(self.recordings)==0: print('WARNING get_recordings: no recordings available, empty list returned. Maybe forgot start()?')
             return self.recordings
             
         
-    def get_recording_times(self, compartment_list=None):
+    def get_recording_times(self, compartment_list=None, reset_call=False):
         if compartment_list==None:
             compartment_list = list(self.monDict.keys())
             
@@ -67,7 +72,7 @@ class Monitors:
             start_idx = [np.sum(diff_timings[0:i]).astype(int) for i in range(diff_timings.size)]
             stop_idx  = [np.sum(diff_timings[0:i+1]).astype(int) for i in range(diff_timings.size)]
             temp_timings[compartment]={'start':{'ms':self.timings[compartment]['start'], 'idx':start_idx}, 'stop':{'ms':self.timings[compartment]['stop'], 'idx':stop_idx}}
-        
+
         ### only append temp_timings of current chunk if there are recordings in current chunk at all and if get_recordings was not already called (double call would add the same chunk again)
         if self.__any_recordings_in_current_chunk__() and self.already_got_recording_times==False:  self.recording_times.append(temp_timings)
             
@@ -77,6 +82,8 @@ class Monitors:
         ### generate a object from recording_times and return this instead of the dict
         recording_times_ob = recording_times_cl(self.recording_times)
         
+        if not(reset_call):
+            if len(self.recording_times)==0: print('WARNING get_recording_times: no recordings available, empty list returned. Maybe forgot start()?')
         return recording_times_ob
         
         
@@ -105,8 +112,8 @@ class Monitors:
         """
             get recordings before emptiing the monitors by reset
         """
-        self.get_recordings()
-        self.get_recording_times()
+        self.get_recordings(reset_call=True)
+        self.get_recording_times(reset_call=True)
         self.already_got_recordings=False ### after reset one can still update recordings
         self.already_got_recording_times=False ### after reset one can still update recording_times
         ### reset timings, after reset, add a zero to start if the monitor is still running (this is not resetted by reset())
@@ -125,9 +132,11 @@ class recording_times_cl:
         self.recording_times_list = recording_times_list
         
     def time_lims(self, chunk=None, compartment=None, period=None):
+        assert len(self.recording_times_list)>0, 'ERROR time_lims(): No recordings/recording_times available.'
         return self.__lims__('ms', chunk, compartment, period)
         
     def idx_lims(self, chunk=None, compartment=None, period=None):
+        assert len(self.recording_times_list)>0, 'ERROR idx_lims(): No recordings/recording_times available.'
         return self.__lims__('idx', chunk, compartment, period)
         
     def all(self):
@@ -143,6 +152,7 @@ class recording_times_cl:
                 sequential: each chunk starts at zero e.g.: [0,100] + [0,250] --> [0, 1, ..., 100, 0, 1, ..., 250]
                 consecutive: each chunk starts at the last stop time of the previous chunk e.g.: [0,100] + [0,250] --> [0, 1, ..., 100, 101, 102, ..., 350]
         """
+        assert len(self.recording_times_list)>0, 'ERROR combine_chunks(): No recordings/recording_times available.'
         
         compartment = recording_data_str.split(';')[0]
         dt = recordings[0]['dt']
