@@ -285,11 +285,13 @@ class opt_neuron:
         fitting_vars_names = [self.fv_space[i].pos_args[0].pos_args[0]._obj for i in range(len(self.fv_space))]
         for idx in range(len(fitparams)):
             setattr(get_population(self.iz), fitting_vars_names[idx], fitparams[idx])
-            if fitting_vars_names[idx]=='v_r':
-                get_population(self.iz).v = fitparams[idx]
+            
         ### set constant parameters
         for key, val in self.const_params.items():
-            setattr(get_population(self.iz), key, val)
+            if isinstance(val,str):
+                setattr(get_population(self.iz), key, fitparams[np.where(np.array(fitting_vars_names)==val)[0][0]])
+            else:
+                setattr(get_population(self.iz), key, val)
             
         
     def __test_fit__(self, fitparamsDict):
