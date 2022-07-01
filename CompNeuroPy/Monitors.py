@@ -18,7 +18,7 @@ class Monitors:
         timings = {}
         for key, val in monDict.items():
             compartmentType, compartment = key.split(';')
-            timings[compartment] = {'currently_paused':False, 'start':[], 'stop':[]}
+            timings[compartment] = {'currently_paused':True, 'start':[], 'stop':[]}
         self.timings = timings
         
         self.recordings=[]
@@ -123,6 +123,23 @@ class Monitors:
             if self.timings[key]['currently_paused']==False: self.timings[key]['start'].append(0)
         if model:
             reset(populations, projections, synapses, monitors, net_id=0)
+            
+    def __current_chunk__(self):
+        ### if recordings are currently active --> return chunk in which these recordings will be saved
+        ### check if there are currently active recordings
+        active_recordings=False
+        for key, val in self.monDict.items():
+            compartmentType, compartment = key.split(';')
+            if not(self.timings[compartment]['currently_paused']):
+                ### tere are currently active recordings
+                active_recordings = True
+        
+        if active_recordings:
+            current_chunk_idx = len(self.recordings)
+            return current_chunk_idx
+        else:
+            ### if currently no recordings are active return None
+            return None
         
         
         

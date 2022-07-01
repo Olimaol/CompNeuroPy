@@ -310,6 +310,15 @@ def plot_recordings(figname, recordings, time_lim, idx_lim, shape, plan, dpi=300
         create_dir(save_dir)
     plt.savefig(figname, dpi=dpi)
     
+
+def get_number_of_zero_decimals(nr):
+    decimals=0
+    while nr < 1:
+        nr=nr*10
+        decimals = decimals + 1
+        
+    return decimals
+    
     
 def sample_data_with_timestep(time_arr, data_arr, timestep):
     """
@@ -318,9 +327,14 @@ def sample_data_with_timestep(time_arr, data_arr, timestep):
         timestep: timestep in ms for sampling
     """
     interpolate_func = interp1d(time_arr, data_arr, bounds_error=False, fill_value='extrapolate')
-    min_time = round(time_arr[0]/timestep,0)*timestep
-    max_time = round(time_arr[-1]/timestep,0)*timestep
+    min_time = round(round(time_arr[0]/timestep,0)*timestep, get_number_of_zero_decimals(timestep))
+    max_time = round(round(time_arr[-1]/timestep,0)*timestep, get_number_of_zero_decimals(timestep))
     new_time_arr = np.arange(min_time, max_time+timestep, timestep)
     new_data_arr = interpolate_func(new_time_arr)
     
     return [new_time_arr, new_data_arr]
+    
+    
+    
+    
+    

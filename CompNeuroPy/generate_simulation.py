@@ -5,7 +5,7 @@ import numpy as np
 
 class generate_simulation:
 
-    def __init__(self, simulation_function, simulation_kwargs=None, name='simulation', description='', requirements=None, kwargs_warning=True):
+    def __init__(self, simulation_function, simulation_kwargs=None, name='simulation', description='', requirements=None, kwargs_warning=True, monitor_object=None):
     
         # set simulaiton function
         self.name = name
@@ -25,6 +25,8 @@ class generate_simulation:
             self.warned = False
         else:
             self.warned = True
+        self.monitor_object = monitor_object
+        if monitor_object != None: self.monitor_chunk = []
 
         ### test initial requirements
         self.__test_req__(simulation_kwargs=simulation_kwargs)
@@ -38,10 +40,14 @@ class generate_simulation:
         
         ### define the current simulation kwargs
         if simulation_kwargs!=None:
-            tmp_kwargs=self.simulation_kwargs.copy()
-            ### not replace initialized kwargs completely but only the kwargs which are given
-            for key, val in simulation_kwargs.items(): tmp_kwargs[key] = val
-            if not(self.warned):
+            if self.simulation_kwargs!=None:
+                ### not replace initialized kwargs completely but only the kwargs which are given
+                tmp_kwargs=self.simulation_kwargs.copy()
+                for key, val in simulation_kwargs.items(): tmp_kwargs[key] = val
+            else:
+                ### there are no initial kwargs --> only use the kwargs which are given
+                tmp_kwargs=simulation_kwargs
+            if not(self.warned) and len(self.requirements)>0:
                 print('\nWARNING! run',self.name,'changed simulation kwargs, initial requirements may no longer be fulfilled!\n')
                 self.warned=True
         else:
@@ -52,6 +58,10 @@ class generate_simulation:
         
         ### and append current simulation kwargs to the kwargs variable
         self.kwargs.append(tmp_kwargs)
+        
+        ### and append the current chunk of the monitors object to the chunk variable
+        if self.monitor_object != None:
+            self.monitor_chunk.append(self.monitor_object.__current_chunk__())
         
         ### run the simulation, store start and end simulation time
         self.start.append(get_time())
@@ -135,13 +145,25 @@ class generate_simulation:
             return np.concatenate(current_arr)
         else:
             return current_arr
+            
+            
+    def simulation_info(self):
+        
+        simulation_info_obj = simulation_info_cl(self.name, self.description, self.simulation_function.__name__, self.start, self.end, self.info, self.kwargs)
+        
+        return simulation_info_obj
         
         
-        
-        
-        
-        
-        
+class simulation_info_cl:
+
+    def __init__(self, name, description, simulation_function, start, end, info, kwargs):
+        self.name = name
+        self.description = description
+        self.simulation_function = simulation_function
+        self.start = start
+        self.end = end
+        self.info = info
+        self.kwargs = kwargs
         
         
         
