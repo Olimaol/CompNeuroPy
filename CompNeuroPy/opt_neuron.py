@@ -289,7 +289,11 @@ class opt_neuron:
         ### set constant parameters
         for key, val in self.const_params.items():
             if isinstance(val,str):
-                setattr(get_population(self.iz), key, fitparams[np.where(np.array(fitting_vars_names)==val)[0][0]])
+                try:
+                    setattr(get_population(self.iz), key, fitparams[np.where(np.array(fitting_vars_names)==val)[0][0]])
+                except:
+                    print('ERROR: during setting const parameter '+key+' value for '+val+' not found in fitting parameters!')
+                    quit()
             else:
                 setattr(get_population(self.iz), key, val)
             
