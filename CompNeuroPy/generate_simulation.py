@@ -26,7 +26,11 @@ class generate_simulation:
         else:
             self.warned = True
         self.monitor_object = monitor_object
-        if monitor_object != None: self.monitor_chunk = []
+        if monitor_object != None:
+            self.monitor_chunk = []
+        else:
+            self.monitor_chunk = None
+            
 
         ### test initial requirements
         self.__test_req__(simulation_kwargs=simulation_kwargs)
@@ -135,11 +139,11 @@ class generate_simulation:
             a2 = self.kwargs[run]['a2']
             
             if t1>0 and t2>0:
-                current_arr.append(np.concatenate([np.ones(int(t1/dt))*a1, np.ones(int(t2/dt))*a2]))
+                current_arr.append(np.concatenate([np.ones(int(round(t1/dt)))*a1, np.ones(int(round(t2/dt)))*a2]))
             elif t2>0:
-                current_arr.append(np.ones(int(t2/dt))*a2)
+                current_arr.append(np.ones(int(round(t2/dt)))*a2)
             else:
-                current_arr.append(np.ones(int(t1/dt))*a1)
+                current_arr.append(np.ones(int(round(t1/dt)))*a1)
                 
         if flat:
             return np.concatenate(current_arr)
@@ -149,14 +153,14 @@ class generate_simulation:
             
     def simulation_info(self):
         
-        simulation_info_obj = simulation_info_cl(self.name, self.description, self.simulation_function.__name__, self.start, self.end, self.info, self.kwargs)
+        simulation_info_obj = simulation_info_cl(self.name, self.description, self.simulation_function.__name__, self.start, self.end, self.info, self.kwargs, self.monitor_chunk)
         
         return simulation_info_obj
         
         
 class simulation_info_cl:
 
-    def __init__(self, name, description, simulation_function, start, end, info, kwargs):
+    def __init__(self, name, description, simulation_function, start, end, info, kwargs, monitor_chunk):
         self.name = name
         self.description = description
         self.simulation_function = simulation_function
@@ -164,6 +168,71 @@ class simulation_info_cl:
         self.end = end
         self.info = info
         self.kwargs = kwargs
+        self.monitor_chunk = monitor_chunk
+        
+        
+    def get_current_arr(self, dt, flat=False):
+        """
+            function for current_step simulations
+            gets the current array (value for each time step) of all runs
+            it returns a list of arrays (len of list = nr of runs)
+            if flat --> it returns a flattened array --> assumes that all runs are run consecutively without brakes
+        """
+        assert self.simulation_function == 'current_step' or self.simulation_function == 'current_stim' or self.simulation_function == 'current_ramp', 'ERROR get_current_arr: Simulation has to be "current_step", "current_stim" or "current_ramp"!'
+        
+        if self.simulation_function == 'current_step':
+            current_arr = []
+            for run in range(len(self.kwargs)):
+                t1 = self.kwargs[run]['t1']
+                t2 = self.kwargs[run]['t2']
+                a1 = self.kwargs[run]['a1']
+                a2 = self.kwargs[run]['a2']
+                
+                if t1>0 and t2>0:
+                    current_arr.append(np.concatenate([np.ones(int(round(t1/dt)))*a1, np.ones(int(round(t2/dt)))*a2]))
+                elif t2>0:
+                    current_arr.append(np.ones(int(round(t2/dt)))*a2)
+                else:
+                    current_arr.append(np.ones(int(round(t1/dt)))*a1)
+                    
+            if flat:
+                return np.concatenate(current_arr)
+            else:
+                return current_arr
+                
+        elif self.simulation_function == 'current_stim':
+            current_arr = []
+            for run in range(len(self.kwargs)):
+                t = self.kwargs[run]['t']
+                a = self.kwargs[run]['a']
+                
+                if t>0:
+                    current_arr.append(np.ones(int(round(t/dt)))*a)
+                    
+            if flat:
+                return np.concatenate(current_arr)
+            else:
+                return current_arr
+                
+        elif self.simulation_function == 'current_ramp':
+            current_arr = []
+            for run in range(len(self.kwargs)):
+            
+                amp = self.kwargs[run]['a0']
+                current_arr_ramp = []
+                for stim_idx in range(self.kwargs[run]['n']):
+                    t = self.info[run]['dur_stim']
+                    a = amp
+                    current_arr_ramp.append(np.ones(int(round(t/dt)))*a)
+                    amp = amp + self.info[run]['da']
+                current_arr.append(list(np.concatenate(current_arr_ramp)))
+                    
+            if flat:
+                return np.concatenate(current_arr)
+            else:
+                return current_arr
+        
+        
         
         
         
