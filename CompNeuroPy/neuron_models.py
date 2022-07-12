@@ -157,6 +157,37 @@ Izhikevich2007 = Neuron(
     description = "Simple neuron model equations from Izhikevich (2007)."
 )
 
+
+Izhikevich2007_record_currents = Neuron(
+    parameters="""
+        C      = 0 : population # pF
+        k      = 0 : population # pS * mV**-1
+        v_r    = 0 : population # mV
+        v_t    = 0 : population # mV
+        a      = 0 : population # ms**-1
+        b      = 0 : population # nS
+        c      = 0 : population # mV
+        d      = 0 : population # pA
+        v_peak = 0 : population # mV
+        I_app  = 0 # pA
+    """,
+    equations="""
+        C * dv/dt  = k*(v - v_r)*(v - v_t) - u + I_app
+        du/dt      = a*(b*(v - v_r) - u)
+        I_u = -u
+        I_k = k*(v - v_r)*(v - v_t)
+        I_a = I_app
+    """,
+    spike = "v >= v_peak",
+    reset = """
+        v = c
+        u = u + d
+    """,
+    name = "Izhikevich2007",
+    description = "Simple neuron model equations from Izhikevich (2007)."
+)
+
+
 Izhikevich2007_voltage_clamp = Neuron(
     parameters="""
         C      = 0 : population # pF
@@ -251,8 +282,8 @@ Izhikevich2007_Corbit2 = Neuron(
     parameters="""
         C      = 0 : population # pF
         k      = 0 : population # 
-        p1     = 0 : population # 
-        p2     = 0 : population # 
+        k_d    = 0 : population # 
+        a_d    = 0 : population # 
         v_r    = 0 : population # mV
         v_t    = 0 : population # mV
         a      = 0 : population # ms**-1
@@ -263,9 +294,9 @@ Izhikevich2007_Corbit2 = Neuron(
         I_app  = 0 # pA
     """,
     equations="""
-        C * dv/dt = k*(v - v_r)*(v - v_t) - u + p1*(v_d - v) + I_app
+        C * dv/dt = k*(v - v_r)*(v - v_t) - u + k_d*(v_d - v) + I_app
         du/dt     = a*(b*(v - v_r) - u)
-        dv_d/dt   = p2*(v - v_d)
+        dv_d/dt   = a_d*(v - v_d)
     """,
     spike = "v >= v_peak",
     reset = """
@@ -274,6 +305,71 @@ Izhikevich2007_Corbit2 = Neuron(
     """,
     name = "Izhikevich2007_Corbit",
     description = "Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking."
+)
+
+Izhikevich2007_Hjorth_2020_ChIN1 = Neuron(
+    parameters="""
+        C      = 0 : population # pF
+        k      = 0 : population # 
+        k_d    = 0 : population # 
+        a_d    = 0 : population # 
+        v_r    = 0 : population # mV
+        v_t_0    = 0 : population # mV
+        a_v_t    = 0 : population # mV
+        a      = 0 : population # ms**-1
+        b      = 0 : population # nS
+        c     = 0 : population # mV
+        d      = 0 : population # pA
+        v_peak = 0 : population # mV
+        I_app  = 0 # pA
+    """,
+    equations="""
+        v_t  = pos(a_v_t*I_app)+v_t_0
+        C * dv/dt = k*(v - v_r)*(v - v_t) - u  + I_app + k_d*(v_d - v)
+        du/dt     = a*(b*(v - v_r) - u)
+        dv_d/dt   = a_d*(v - v_d)
+    """,
+    spike = "v >= v_peak",
+    reset = """
+        v = c
+        u = u + d
+    """,
+    name = "Izhikevich2007_Corbit",
+    description = "Simple neuron model equations from Izhikevich (2007) for fitting tests."
+)
+
+
+Izhikevich2007_Hjorth_2020_ChIN2 = Neuron(
+    parameters="""
+        C      = 0 : population # pF
+        k      = 0 : population # 
+        k_d    = 0 : population # 
+        a_d    = 0 : population # 
+        v_r    = 0 : population # mV
+        v_t    = 0 : population # mV
+        a      = 0 : population # ms**-1
+        b      = 0 : population # nS
+        c_0     = 0 : population # mV
+        a_c     = 0 : population #
+        d_c     = 0 : population #
+        d      = 0 : population # pA
+        v_peak = 0 : population # mV
+        I_app  = 0 # pA
+    """,
+    equations="""
+        C * dv/dt = k*(v - v_r)*(v - v_t) - u  + I_app + k_d*(v_d - v)
+        du/dt     = a*(b*(v - v_r) - u)
+        dv_d/dt   = a_d*(v - v_d)
+        dc/dt     = a_c*(clip((6.0/360.0)*I_app-65.5,-63,-40) - c)
+    """,
+    spike = "v >= v_peak",
+    reset = """
+        v = c
+        u = u + d
+        c = c + d_c
+    """,
+    name = "Izhikevich2007_Corbit",
+    description = "Simple neuron model equations from Izhikevich (2007) for fitting tests."
 )
 
 
@@ -377,7 +473,7 @@ Izhikevich2007_Corbit5 = Neuron(
 
 Izhikevich2007_Corbit6 = Neuron(
     parameters="""
-        C      = 0 : population # ATTENTION! H&H model is myF/cm^2 --> here also myF/cm^2 and not pF --> current also myF/cm^2 and not pA
+        C      = 0 : population # ATTENTION! H&H model is myF/cm^2 --> here also myF/cm^2 and not pF --> current also myA/cm^2 and not pA
         k      = 0 : population # 
         b_n    = 0 : population # 
         a_s    = 0 : population # 
