@@ -130,7 +130,7 @@ class generate_simulation:
             if flat --> it returns a flattened array --> assumes that all runs are run consecutively without brakes
         """
         assert self.simulation_function. __name__ == 'current_step', 'ERROR get_current_arr: Simulation has to be "current_step"!'
-        
+        print('WARNING get_current_arr function will only be available in simulation_info_cl soon.')
         current_arr = []
         for run in range(len(self.kwargs)):
             t1 = self.kwargs[run]['t1']
