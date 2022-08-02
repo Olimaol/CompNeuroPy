@@ -5,23 +5,23 @@ from CompNeuroPy.synapse_models import factor_synapse
 def BGM_v01(self):
     #######   POPULATIONS   ######
     ### cortex / input populations
-    cor_go    = Population(self.params['cor_go__size'],    poisson_neuron_up_down, name="cor_go")
-    cor_pause = Population(self.params['cor_pause__size'], poisson_neuron_up_down, name="cor_pause")
-    cor_stop  = Population(self.params['cor_stop__size'],  poisson_neuron_up_down, name="cor_stop")
+    cor_go    = Population(self.params['cor_go.size'],    poisson_neuron_up_down, name="cor_go")
+    cor_pause = Population(self.params['cor_pause.size'], poisson_neuron_up_down, name="cor_pause")
+    cor_stop  = Population(self.params['cor_stop.size'],  poisson_neuron_up_down, name="cor_stop")
     ### Str Populations
-    str_d1  = Population(self.params['str_d1__size'],  Izhikevich2007_noisy_AMPA, name="str_d1")
-    str_d2  = Population(self.params['str_d2__size'],  Izhikevich2007_noisy_AMPA, name="str_d2")
-    str_fsi = Population(self.params['str_fsi__size'], Izhikevich2007_fsi_noisy_AMPA, name="str_fsi")
+    str_d1  = Population(self.params['str_d1.size'],  Izhikevich2007_noisy_AMPA, name="str_d1")
+    str_d2  = Population(self.params['str_d2.size'],  Izhikevich2007_noisy_AMPA, name="str_d2")
+    str_fsi = Population(self.params['str_fsi.size'], Izhikevich2007_fsi_noisy_AMPA, name="str_fsi")
     ### BG Populations
-    stn       = Population(self.params['stn__size'],       Izhikevich2003_noisy_AMPA, name="stn")
-    snr       = Population(self.params['snr__size'],       Izhikevich2003_noisy_AMPA, name="snr")
-    gpe_proto = Population(self.params['gpe_proto__size'], Izhikevich2003_flexible_noisy_AMPA, name="gpe_proto")
-    gpe_arky  = Population(self.params['gpe_arky__size'],  Izhikevich2003_flexible_noisy_AMPA, name="gpe_arky")
-    gpe_cp    = Population(self.params['gpe_cp__size'],    Izhikevich2003_flexible_noisy_AMPA, name="gpe_cp")
-    thal      = Population(self.params['thal__size'],      Izhikevich2003_noisy_AMPA, name="thal")
+    stn       = Population(self.params['stn.size'],       Izhikevich2003_noisy_AMPA, name="stn")
+    snr       = Population(self.params['snr.size'],       Izhikevich2003_noisy_AMPA, name="snr")
+    gpe_proto = Population(self.params['gpe_proto.size'], Izhikevich2003_flexible_noisy_AMPA, name="gpe_proto")
+    gpe_arky  = Population(self.params['gpe_arky.size'],  Izhikevich2003_flexible_noisy_AMPA, name="gpe_arky")
+    gpe_cp    = Population(self.params['gpe_cp.size'],    Izhikevich2003_flexible_noisy_AMPA, name="gpe_cp")
+    thal      = Population(self.params['thal.size'],      Izhikevich2003_noisy_AMPA, name="thal")
     ### integrator Neurons
-    integrator_go   = Population(self.params['integrator_go__size'],   integrator_neuron, stop_condition="decision == -1", name="integrator_go")
-    integrator_stop = Population(self.params['integrator_stop__size'], integrator_neuron, stop_condition="decision == -1", name="integrator_stop")
+    integrator_go   = Population(self.params['integrator_go.size'],   integrator_neuron, stop_condition="decision == -1", name="integrator_go")
+    integrator_stop = Population(self.params['integrator_stop.size'], integrator_neuron, stop_condition="decision == -1", name="integrator_stop")
 
     ######   PROJECTIONS   ######
     ### cortex go output
