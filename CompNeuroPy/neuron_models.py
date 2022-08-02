@@ -373,6 +373,116 @@ Izhikevich2007_Hjorth_2020_ChIN2 = Neuron(
 )
 
 
+Izhikevich2007_Hjorth_2020_ChIN3 = Neuron(
+    parameters="""
+        C      = 0 : population # pF
+        k      = 0 : population # 
+        k_d    = 0 : population # 
+        a_d    = 0 : population # 
+        v_r    = 0 : population # mV
+        v_t    = 0 : population # mV
+        a      = 0 : population # ms**-1
+        b      = 0 : population # nS
+        c      = 0 : population # mV
+        d      = 0 : population # pA
+        v_peak = 0 : population # mV
+        I_app  = 0 # pA
+        u_t = 0 : population
+        p_1 = 0 : population
+        p_2 = 0 : population
+        f_t = 0 : population
+    """,
+    equations="""
+        du/dt     = a*(b*(v - v_r) - u)
+        dv_d/dt   = a_d*(v - v_d)
+        
+        
+        C * dv/dt = k*(v - v_r)*(v - v_t) - foo(u, u_t, p_1, p_2) + I_app + k_d*(v_d - v)
+        #C * dv/dt = k*(v - v_r)*(v - v_t) - u  + I_app + k_d*(v_d - v)
+    """,
+    spike = "v >= v_peak",
+    reset = """
+        v = c
+        u = u + d
+    """,
+    name = "Izhikevich2007_Corbit",
+    description = "Simple neuron model equations from Izhikevich (2007) for fitting tests.",
+    functions = """
+        foo(x, x_t, p_1, p_2) = x*(p_1 * pos(x - x_t)**p_2 + 1)
+    """
+)
+
+
+Izhikevich2007_Hjorth_2020_ChIN4 = Neuron(
+    parameters="""
+        C      = 0 : population # pF
+        k      = 0 : population # 
+        v_r    = 0 : population # mV
+        v_t    = 0 : population # mV
+        a      = 0 : population # ms**-1
+        a_spike      = 0 : population
+        b      = 0 : population # nS
+        c      = 0 : population # mV
+        d      = 0 : population # pA
+        v_peak = 0 : population # mV
+        I_app  = 0 # pA
+        f_t = 0 : population
+        u_t = 0 : population
+        p_1 = 0 : population
+    """,
+    equations="""
+        du_v/dt     = a*(b*(v - v_r) - u_v)
+        du_spike/dt = -a_spike*u_spike
+        C * dv/dt = k*(v - v_r)*(v - v_t) - u_v - u_spike + foo(I_app, u_spike, u_t, p_1) ### TODO future synaptic current also in foo
+    """,
+    spike = "v >= v_peak",
+    reset = """
+        v = c
+        u_spike = u_spike + d
+    """,
+    name = "Izhikevich2007_Corbit",
+    description = "Simple neuron model equations from Izhikevich (2007) for fitting tests.",
+    functions = """
+        foo(y, x, u_t, p_1) = y * (1.0 - (1.0 / (1.0 + exp(-p_1*(x-u_t)))))
+    """
+)
+
+
+Izhikevich2007_Hjorth_2020_ChIN5 = Neuron(
+    parameters="""
+        C      = 0 : population # pF
+        k      = 0 : population # 
+        v_r    = 0 : population # mV
+        v_t    = 0 : population # mV
+        a      = 0 : population # ms**-1
+        a_spike      = 0 : population
+        b_spike      = 0 : population
+        c_spike      = 0 : population
+        b      = 0 : population # nS
+        c      = 0 : population # mV
+        v_peak = 0 : population # mV
+        I_app  = 0 # pA
+        a_n = 0 : population
+        n_t = 0 : population
+        b_n = 1 : population
+    """,
+    equations="""
+        du_v/dt     = a*(b*(v - v_r) - u_v) : max=0
+        du_spike/dt = -a_spike*u_spike
+        C * dv/dt = k*(v - v_r)*(v - v_t) - u_v - u_spike + I_app
+        dn/dt=-a_n*n
+    """,
+    spike = "v >= v_peak",
+    reset = """
+        v = c
+        n = n + u_spike/(b_spike*(I_app))
+        u_spike = u_spike + (1+b_n*pos(n-n_t))*c_spike*(b_spike*(I_app) - u_spike)### TODO future synaptic current also here
+    """,
+    name = "Izhikevich2007_Corbit",
+    description = "Simple neuron model equations from Izhikevich (2007) for fitting tests."
+)
+
+
 Izhikevich2007_Corbit3 = Neuron(
     parameters="""
         C      = 0 : population # pF
