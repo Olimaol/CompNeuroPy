@@ -1,107 +1,47 @@
 import numpy as np
-from ANNarchy import Population, Projection, get_population, get_projection
+from ANNarchy import get_population, get_projection
 from ANNarchy.core.Random import *
-from CompNeuroPy.neuron_models import poisson_neuron_up_down, poisson_neuron, Izhikevich2007_noisy_AMPA, Izhikevich2007_fsi_noisy_AMPA, Izhikevich2003_noisy_AMPA, Izhikevich2003_flexible_noisy_AMPA, integrator_neuron
-from CompNeuroPy.synapse_models import factor_synapse
 from CompNeuroPy import generate_model
 import csv
 import os
+import importlib
 
 class BGM(generate_model):
     """
         The basal ganglia model based on the model from Goenner et al. (2021)
     """
 
-    def __init__(self, name='BGM_v0_1', do_create=True, do_compile=True, compile_folder_name='annarchy_BGM_v0_1'):
+    def __init__(self, name='BGM_v01_p01', do_create=True, do_compile=True, compile_folder_name=None, seed=None):
         """
             runs the standard init but with already predefined model_creation_function and description
             one can still adjust name, do_compile and compile_folder_name
+            
+            seed: int, default=None, the seed for the random number generator used during model creation
         """
+        ### check if name is correct
+        self._name_split_ = name.split('_')
+        assert len(self._name_split_)==3 and self._name_split_[0]=='BGM' and self._name_split_[1][0]=='v' and self._name_split_[2][0]=='p', 'ERROR generate_model BGM: "name" must have form "BGM_vXX_pXX"'
+        self._model_version_name_ = '_'.join(self._name_split_[:2])
+        
+        ### init default compile_folder_name
+        if compile_folder_name==None: compile_folder_name = 'annarchy_'+self._model_version_name_
+        
+        ### set description
         description = 'The basal ganglia model based on the model from Goenner et al. (2021)'
+        
+        ### init random number generator
+        self.rng = np.random.default_rng(seed)
+        
+        ### get model parameters before init
         self.params = self.__get_params__(name)
+        
+        ### init
         super().__init__(model_creation_function=self.__model_creation_function__, name=name, description=description, do_create=do_create, do_compile=do_compile, compile_folder_name=compile_folder_name)
        
         
     def __model_creation_function__(self):
-        
-        #######   POPULATIONS   ######
-        ### cortex / input populations
-        cor_go    = Population(self.params['cor_go__size'],    poisson_neuron_up_down, name="cor_go")
-        cor_pause = Population(self.params['cor_pause__size'], poisson_neuron_up_down, name="cor_pause")
-        cor_stop  = Population(self.params['cor_stop__size'],  poisson_neuron_up_down, name="cor_stop")
-        ### Str Populations
-        str_d1  = Population(self.params['str_d1__size'],  Izhikevich2007_noisy_AMPA, name="str_d1")
-        str_d2  = Population(self.params['str_d2__size'],  Izhikevich2007_noisy_AMPA, name="str_d2")
-        str_fsi = Population(self.params['str_fsi__size'], Izhikevich2007_fsi_noisy_AMPA, name="str_fsi")
-        ### BG Populations
-        stn       = Population(self.params['stn__size'],       Izhikevich2003_noisy_AMPA, name="stn")
-        snr       = Population(self.params['snr__size'],       Izhikevich2003_noisy_AMPA, name="snr")
-        gpe_proto = Population(self.params['gpe_proto__size'], Izhikevich2003_flexible_noisy_AMPA, name="gpe_proto")
-        gpe_arky  = Population(self.params['gpe_arky__size'],  Izhikevich2003_flexible_noisy_AMPA, name="gpe_arky")
-        gpe_cp    = Population(self.params['gpe_cp__size'],    Izhikevich2003_flexible_noisy_AMPA, name="gpe_cp")
-        thal      = Population(self.params['thal__size'],      Izhikevich2003_noisy_AMPA, name="thal")
-        ### integrator Neurons
-        integrator_go   = Population(self.params['integrator_go__size'],   integrator_neuron, stop_condition="decision == -1", name="integrator_go")
-        integrator_stop = Population(self.params['integrator_stop__size'], integrator_neuron, stop_condition="decision == -1", name="integrator_stop")
-        
-        
-        ######   PROJECTIONS   ######
-        ### cortex go output
-        cor_go__str_d1  = Projection(pre=cor_go, post=str_d1,  target='ampa', synapse=factor_synapse, name='cor_go__str_d1')
-        cor_go__str_d2  = Projection(pre=cor_go, post=str_d2,  target='ampa', synapse=factor_synapse, name='cor_go__str_d2')
-        cor_go__str_fsi = Projection(pre=cor_go, post=str_fsi, target='ampa', synapse=factor_synapse, name='cor_go__str_fsi')
-        cor_go__thal    = Projection(pre=cor_go, post=thal,    target='ampa', synapse=factor_synapse, name='cor_go__thal')
-        ### cortex stop output
-        cor_stop__gpe_arky = Projection(pre=cor_stop, post=gpe_arky, target='ampa', synapse=factor_synapse, name='cor_stop__gpe_arky')
-        cor_stop__gpe_cp   = Projection(pre=cor_stop, post=gpe_cp,   target='ampa', synapse=factor_synapse, name='cor_stop__gpe_cp')
-        ### cortex pause output
-        cor_pause__stn = Projection(pre=cor_pause, post=stn, target='ampa', synapse=factor_synapse, name='cor_pause__stn')
-        ### str d1 output
-        str_d1__snr    = Projection(pre=str_d1, post=snr,    target='gaba', synapse=factor_synapse, name='str_d1__snr')
-        str_d1__gpe_cp = Projection(pre=str_d1, post=gpe_cp, target='gaba', synapse=factor_synapse, name='str_d1__gpe_cp')
-        str_d1__str_d1 = Projection(pre=str_d1, post=str_d1, target='gaba', synapse=factor_synapse, name='str_d1__str_d1')
-        str_d1__str_d2 = Projection(pre=str_d1, post=str_d2, target='gaba', synapse=factor_synapse, name='str_d1__str_d2')
-        ### str d2 output
-        str_d2__gpe_proto = Projection(pre=str_d2, post=gpe_proto, target='gaba', synapse=factor_synapse, name='str_d2__gpe_proto')
-        str_d2__gpe_arky  = Projection(pre=str_d2, post=gpe_arky,  target='gaba', synapse=factor_synapse, name='str_d2__gpe_arky')
-        str_d2__gpe_cp    = Projection(pre=str_d2, post=gpe_cp,    target='gaba', synapse=factor_synapse, name='str_d2__gpe_cp')
-        str_d2__str_d1    = Projection(pre=str_d2, post=str_d1,    target='gaba', synapse=factor_synapse, name='str_d2__str_d1')
-        str_d2__str_d2    = Projection(pre=str_d2, post=str_d2,    target='gaba', synapse=factor_synapse, name='str_d2__str_d2')
-        ### str fsi output
-        str_fsi__str_d1  = Projection(pre=str_fsi, post=str_d1,  target='gaba', synapse=factor_synapse, name='str_fsi__str_d1')
-        str_fsi__str_d2  = Projection(pre=str_fsi, post=str_d2,  target='gaba', synapse=factor_synapse, name='str_fsi__str_d2')
-        str_fsi__str_fsi = Projection(pre=str_fsi, post=str_fsi, target='gaba', synapse=factor_synapse, name='str_fsi__str_fsi')
-        ### stn output
-        stn__snr       = Projection(pre=stn, post=snr,       target='ampa', synapse=factor_synapse, name='stn__snr')
-        stn__gpe_proto = Projection(pre=stn, post=gpe_proto, target='ampa', synapse=factor_synapse, name='stn__gpe_proto')
-        stn__gpe_arky  = Projection(pre=stn, post=gpe_arky,  target='ampa', synapse=factor_synapse, name='stn__gpe_arky')
-        stn__gpe_cp    = Projection(pre=stn, post=gpe_cp,    target='ampa', synapse=factor_synapse, name='stn__gpe_cp')
-        ### gpe proto output
-        gpe_proto__stn      = Projection(pre=gpe_proto, post=stn,      target='gaba', synapse=factor_synapse, name='gpe_proto__stn')
-        gpe_proto__snr      = Projection(pre=gpe_proto, post=snr,      target='gaba', synapse=factor_synapse, name='gpe_proto__snr')
-        gpe_proto__gpe_arky = Projection(pre=gpe_proto, post=gpe_arky, target='gaba', synapse=factor_synapse, name='gpe_proto__gpe_arky')
-        gpe_proto__gpe_cp   = Projection(pre=gpe_proto, post=gpe_cp,   target='gaba', synapse=factor_synapse, name='gpe_proto__gpe_cp')
-        gpe_proto__str_fsi  = Projection(pre=gpe_proto, post=str_fsi,  target='gaba', synapse=factor_synapse, name='gpe_proto__str_fsi')
-        ### gpe arky output
-        gpe_arky__str_d1    = Projection(pre=gpe_arky, post=str_d1,    target='gaba', synapse=factor_synapse, name='gpe_arky__str_d1')
-        gpe_arky__str_d2    = Projection(pre=gpe_arky, post=str_d2,    target='gaba', synapse=factor_synapse, name='gpe_arky__str_d2')
-        gpe_arky__str_fsi   = Projection(pre=gpe_arky, post=str_fsi,   target='gaba', synapse=factor_synapse, name='gpe_arky__str_fsi')
-        gpe_arky__gpe_proto = Projection(pre=gpe_arky, post=gpe_proto, target='gaba', synapse=factor_synapse, name='gpe_arky__gpe_proto')
-        gpe_arky__gpe_cp    = Projection(pre=gpe_arky, post=gpe_cp,    target='gaba', synapse=factor_synapse, name='gpe_arky__gpe_cp')
-        ### gpe cp output
-        gpe_cp__str_d1          = Projection(pre=gpe_cp, post=str_d1,           target='gaba', synapse=factor_synapse, name='gpe_cp__str_d1')
-        gpe_cp__str_d2          = Projection(pre=gpe_cp, post=str_d2,           target='gaba', synapse=factor_synapse, name='gpe_cp__str_d2')
-        gpe_cp__str_fsi         = Projection(pre=gpe_cp, post=str_fsi,          target='gaba', synapse=factor_synapse, name='gpe_cp__str_fsi')
-        gpe_cp__gpe_proto       = Projection(pre=gpe_cp, post=gpe_proto,        target='gaba', synapse=factor_synapse, name='gpe_cp__gpe_proto')
-        gpe_cp__gpe_arky        = Projection(pre=gpe_cp, post=gpe_arky,         target='gaba', synapse=factor_synapse, name='gpe_cp__gpe_arky')
-        gpe_cp__integrator_stop = Projection(pre=gpe_cp, post=integrator_stop,  target='ampa', synapse=factor_synapse, name='gpe_cp__integrator_stop')
-        ### snr output
-        snr__thal = Projection(pre=snr, post=thal, target='gaba', synapse=factor_synapse, name='snr__thal')
-        ### thal output
-        thal__integrator_go = Projection(pre=thal, post=integrator_go, target='ampa', synapse=factor_synapse, name='thal__integrator_go')
-        thal__str_d1        = Projection(pre=thal, post=str_d1,        target='ampa', synapse=factor_synapse, name='thal__str_d1')
-        thal__str_d2        = Projection(pre=thal, post=str_d2,        target='ampa', synapse=factor_synapse, name='thal__str_d2')
-        thal__str_fsi       = Projection(pre=thal, post=str_fsi,       target='ampa', synapse=factor_synapse, name='thal__str_fsi')
+        model_creation_function = eval("importlib.import_module('CompNeuroPy.models.BGM_22.model_creation_functions')."+self._model_version_name_)
+        model_creation_function(self)
         
 
     def create(self, do_compile=True, compile_folder_name=None):
@@ -112,7 +52,7 @@ class BGM(generate_model):
         self.__set_noise_values__()
         self.__set_connections__()
         if do_compile:
-            self.compile(compile_folder_name)
+            super().compile(compile_folder_name)
         
         
     def __set_params__(self):
@@ -121,23 +61,22 @@ class BGM(generate_model):
         """
 
         ### loop over all params
-        for key, val in self.params.items():
-        
-            ### split param key in pop and param name
-            key_split=key.split('__')
-            if len(key_split)>=2:
-                pop_name = key_split[0]
-                param_name = key_split[1]
-                
-                if param_name.split('_')[-1]=='noise':# for noise params separate function
-                    continue
-                
-                if param_name.split('_')[-1]=='init':
-                    param_name='_'.join(param_name.split('_')[:-1])
-                
-                ### if pop is in network --> set param
-                if pop_name in self.populations:
-                    setattr(get_population(pop_name), param_name, val)
+        for key, param_val in self.params.items():
+            ### split key in param object and param name
+            param_object = key.split('.')[0]
+            param_name = key.split('.')[1]
+            
+            ### if param is a noise param --> skip (separate function)
+            if param_name.split('_')[-1]=='noise': continue
+            
+            ### if param name ends with init --> actual param_name (in pop) is without init
+            if param_name.split('_')[-1]=='init': param_name='_'.join(param_name.split('_')[:-1])
+            
+            ### if param_object is a pop in network
+            if param_object in self.populations:
+                ### and the param_name is an attribute of the pop --> set param of pop
+                if param_name in vars(get_population(param_object))['attributes']:
+                    setattr(get_population(param_object), param_name, param_val)
                     
                     
     def __set_noise_values__(self):
@@ -146,28 +85,28 @@ class BGM(generate_model):
         """
 
         ### loop over all params
-        for key, val in self.params.items():
-        
-            ### split param key in pop and param name
-            key_split=key.split('__')
-            if len(key_split)>=2:
-                pop_name = key_split[0]
-                param_name = key_split[1]
-                
-                ### if pop is in network --> set param
-                if pop_name in self.populations and param_name.split('_')[-1]=='noise':
-                    if param_name=='mean_rate_noise':
-                        mean=val
-                        print(pop_name,param_name,val)
-                        try:
-                            sd=self.params[pop_name+'__rate_sd_noise']
-                            get_population(pop_name).rates_noise = np.random.normal(mean, sd, get_population(pop_name).size)
-                        except:
-                            get_population(pop_name).rates_noise = mean
-                    elif param_name=='rate_sd_noise':
-                        continue
-                    else:
-                        setattr(get_population(pop_name), param_name, val)
+        for key, param_val in self.params.items():
+            ### split key in param object and param name
+            param_object = key.split('.')[0]
+            param_name = key.split('.')[1]
+
+            ### if param_object is a pop in network and param_name ends with noise --> set noise param of pop
+            if param_object in self.populations and param_name.split('_')[-1]=='noise':
+                if param_name=='mean_rate_noise':
+                    ### for mean and sd the actual parameter of the pop has to be calculated
+                    mean=param_val
+                    try:
+                        ### noise values defined by mean and sd
+                        sd=self.params[param_object+'.rate_sd_noise']
+                        get_population(param_object).rates_noise = self.rng.normal(mean, sd, get_population(param_object).size)
+                    except:
+                        ### if only mean is available, only set mean
+                        get_population(param_object).rates_noise = mean
+                elif param_name in vars(get_population(param_object))['attributes']:
+                    ### noise parameters which are actual attributes of the pop are simply set
+                    setattr(get_population(param_object), param_name, param_val)
+                else:
+                    continue
                 
                 
     def __set_connections__(self):
@@ -182,38 +121,35 @@ class BGM(generate_model):
         for proj_name in self.projections:
             ### get the type of connectivity for projection
             try:
-                connectivity = self.params[proj_name+'__connectivity']
+                connectivity = self.params[proj_name+'.connectivity']
             except:
-                print('\nERROR: missing connectivity parameter for',proj_name,'\n',proj_name+'__connectivity', 'needed!\n','parameters id:', self.params['general__id'],'\n')
+                print('\nERROR: missing connectivity parameter for',proj_name,'\n',proj_name+'.connectivity', 'needed!\n','parameters id:', self.params['general.id'],'\n')
                 quit()
                 
             if connectivity=='connect_fixed_number_pre':
-                get_projection(proj_name).connect_fixed_number_pre(number=self.params[proj_name+'__nr_con'], weights=eval(str(self.params[proj_name+'__weights'])), delays=eval(str(self.params[proj_name+'__delays'])))
+                get_projection(proj_name).connect_fixed_number_pre(number=self.params[proj_name+'.nr_con'], weights=eval(str(self.params[proj_name+'.weights'])), delays=eval(str(self.params[proj_name+'.delays'])))
                 already_set_params[proj_name] = ['connectivity', 'nr_con', 'weights', 'delays']
             elif connectivity=='connect_all_to_all':
-                get_projection(proj_name).connect_all_to_all(weights=eval(str(self.params[proj_name+'__weights'])), delays=eval(str(self.params[proj_name+'__delays'])))
+                get_projection(proj_name).connect_all_to_all(weights=eval(str(self.params[proj_name+'.weights'])), delays=eval(str(self.params[proj_name+'.delays'])))
                 already_set_params[proj_name] = ['connectivity', 'weights', 'delays']
             elif connectivity=='connect_one_to_one':
-                get_projection(proj_name).connect_one_to_one(weights=eval(str(self.params[proj_name+'__weights'])), delays=eval(str(self.params[proj_name+'__delays'])))
+                get_projection(proj_name).connect_one_to_one(weights=eval(str(self.params[proj_name+'.weights'])), delays=eval(str(self.params[proj_name+'.delays'])))
                 already_set_params[proj_name] = ['connectivity', 'weights', 'delays']
             else:
-                print('\nERROR: wrong connectivity parameter for',proj_name+'__connectivity!\n','parameters id:', params['general__id'],'\n')
+                print('\nERROR: wrong connectivity parameter for',proj_name+'.connectivity!\n','parameters id:', params['general.id'],'\n')
                 quit()
                 
 
         ### set parameters
         ### loop over all params
-        for key, val in self.params.items():
-        
-            ### split param key in proj and param name
-            key_split=key.split('__')
-            if len(key_split)>=3:
-                proj_name = '__'.join(key_split[:2])
-                param_name = key_split[2]
-                            
-                ### if proj is in network --> set param
-                if proj_name in self.projections and not(param_name in already_set_params[proj_name]):
-                    setattr(get_projection(proj_name), param_name, val)
+        for key, param_val in self.params.items():
+            ### split key in param object and param name
+            param_object = key.split('.')[0]
+            param_name = key.split('.')[1]
+                    
+            ### if param_object is proj in network and param not already used and param is an attribute of proj --> set param of proj
+            if param_object in self.projections and not(param_name in already_set_params[param_object]) and param_name in vars(get_projection(param_object))['attributes']:
+                setattr(get_projection(param_object), param_name, param_val)
                     
                     
     def __get_params__(self, name):
@@ -236,13 +172,13 @@ class BGM(generate_model):
         for row in reader:
             if row[0]=='': continue
             fileRows.append(row)
-            if 'general__id'==row[0] and True in [name == row[i] for i in range(1,len(row))]:
+            if 'general.id'==row[0] and True in [name == row[i] for i in range(1,len(row))]:
                 idx = [name == row[i] for i in range(1,len(row))].index(True)+1
-            elif 'general__id'==row[0]:
+            elif 'general.id'==row[0]:
                 print('No Parameters available for given model name '+name+'! (file '+csvPath+')')
                 quit()
         if idx==-1:
-            print('No general__id in parameter csv file!')
+            print('No general.id in parameter csv file!')
             quit()
         ### read the column corresponding to name
         for row in fileRows:
@@ -268,9 +204,9 @@ class BGM(generate_model):
         csvfile.close()
         
         ### ADD additional params
-        params['toRGB']                 = {'blue':np.array([3,67,223])/255., 'cyan':np.array([0,255,255])/255., 'gold':np.array([219,180,12])/255., 'orange':np.array([249,115,6])/255., 'red':np.array([229,0,0])/255., 'purple':np.array([126,30,156])/255., 'grey':np.array([146,149,145])/255., 'light brown':np.array([173,129,80])/255., 'lime':np.array([170,255,50])/255., 'green':np.array([21,176,26])/255., 'yellow':np.array([255,255,20])/255., 'lightgrey':np.array([216,220,214])/255.}
-        params['Fig7_order']            = ['GPeArky', 'StrD1', 'StrD2', 'STN', 'cortexGo', 'GPeCp', 'GPeProto', 'SNr', 'Thal', 'cortexStop', 'StrFSI']
-        params['titles_Code_to_Script'] = {'cortexGo':'cortex-Go', 'cortexStop':'cortex-Stop', 'cortexPause':'cortex-Pause', 'StrD1':'StrD1', 'StrD2':'StrD2', 'StrFSI':'StrFSI', 'GPeProto':'GPe-Proto', 'GPeArky':'GPe-Arky', 'GPeCp':'GPe-Cp', 'STN':'STN', 'SNr':'SNr', 'Thal':'thalamus', 'IntegratorGo':'Integrator-Go', 'IntegratorStop':'Integrator-Stop'}
+        params['extra.toRGB']                 = {'blue':np.array([3,67,223])/255., 'cyan':np.array([0,255,255])/255., 'gold':np.array([219,180,12])/255., 'orange':np.array([249,115,6])/255., 'red':np.array([229,0,0])/255., 'purple':np.array([126,30,156])/255., 'grey':np.array([146,149,145])/255., 'light brown':np.array([173,129,80])/255., 'lime':np.array([170,255,50])/255., 'green':np.array([21,176,26])/255., 'yellow':np.array([255,255,20])/255., 'lightgrey':np.array([216,220,214])/255.}
+        params['extra.Fig7_order']            = ['GPeArky', 'StrD1', 'StrD2', 'STN', 'cortexGo', 'GPeCp', 'GPeProto', 'SNr', 'Thal', 'cortexStop', 'StrFSI']
+        params['extra.titles_Code_to_Script'] = {'cortexGo':'cortex-Go', 'cortexStop':'cortex-Stop', 'cortexPause':'cortex-Pause', 'StrD1':'StrD1', 'StrD2':'StrD2', 'StrFSI':'StrFSI', 'GPeProto':'GPe-Proto', 'GPeArky':'GPe-Arky', 'GPeCp':'GPe-Cp', 'STN':'STN', 'SNr':'SNr', 'Thal':'thalamus', 'IntegratorGo':'Integrator-Go', 'IntegratorStop':'Integrator-Stop'}
 
         
         return params
