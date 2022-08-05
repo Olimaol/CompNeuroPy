@@ -1,5 +1,5 @@
 from ANNarchy import Population, Projection
-from CompNeuroPy.neuron_models import poisson_neuron_up_down, poisson_neuron, Izhikevich2007_noisy_AMPA, Izhikevich2007_fsi_noisy_AMPA, Izhikevich2003_noisy_AMPA, Izhikevich2003_flexible_noisy_AMPA, integrator_neuron
+from CompNeuroPy.neuron_models import poisson_neuron_up_down, poisson_neuron, Izhikevich2007_noisy_AMPA, Izhikevich2007_fsi_noisy_AMPA, Izhikevich2003_noisy_AMPA, Izhikevich2003_flexible_noisy_AMPA, integrator_neuron, integrator_neuron_simple
 from CompNeuroPy.synapse_models import factor_synapse
 
 def BGM_v01(self):
@@ -20,8 +20,8 @@ def BGM_v01(self):
     gpe_cp    = Population(self.params['gpe_cp.size'],    Izhikevich2003_flexible_noisy_AMPA, name="gpe_cp")
     thal      = Population(self.params['thal.size'],      Izhikevich2003_noisy_AMPA, name="thal")
     ### integrator Neurons
-    integrator_go   = Population(self.params['integrator_go.size'],   integrator_neuron, stop_condition="decision == -1", name="integrator_go")
-    integrator_stop = Population(self.params['integrator_stop.size'], integrator_neuron, stop_condition="decision == -1", name="integrator_stop")
+    integrator_go   = Population(self.params['integrator_go.size'],   integrator_neuron, stop_condition="decision < 0 : any", name="integrator_go")
+    integrator_stop = Population(self.params['integrator_stop.size'], integrator_neuron, stop_condition="decision < 0 : any", name="integrator_stop")
 
     ######   PROJECTIONS   ######
     ### cortex go output
@@ -80,3 +80,65 @@ def BGM_v01(self):
     thal__str_d1        = Projection(pre=thal, post=str_d1,        target='ampa', synapse=factor_synapse, name='thal__str_d1')
     thal__str_d2        = Projection(pre=thal, post=str_d2,        target='ampa', synapse=factor_synapse, name='thal__str_d2')
     thal__str_fsi       = Projection(pre=thal, post=str_fsi,       target='ampa', synapse=factor_synapse, name='thal__str_fsi')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

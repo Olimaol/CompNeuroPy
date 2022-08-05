@@ -10,10 +10,26 @@ def print_df(df):
         
 def flatten_list(lst):
     """
-        lst: list of lists
+        lst: list of lists or mixed: values and lists
         retuns flattened list
     """
-    return [item for sublist in lst for item in sublist]
+    
+    ### if lists in lst --> upack them and retunr flatten_list of new list
+    new_lst = []
+    list_in_lst = False
+    for val in lst:
+        if isinstance(val,list):
+            list_in_lst = True
+            for sub_val in val:
+                new_lst.append(sub_val)
+        else:
+            new_lst.append(val)
+            
+    if list_in_lst:
+        return flatten_list(new_lst)
+    ### else return lst
+    else:
+        return lst
     
     
 def remove_key(d, key):

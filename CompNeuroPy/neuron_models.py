@@ -22,6 +22,20 @@ integrator_neuron = Neuron(
 )
 
 
+integrator_neuron_simple = Neuron(        
+    parameters = """
+        tau       = 1 : population
+        neuron_id = 0
+    """,
+    equations = """
+        dg_ampa/dt = - g_ampa / tau
+        r = 0
+    """,
+    name = "integrator_neuron_simple",
+    description = "Integrator Neuron, which integrates incoming spikes with value g_ampa, which can be used as stop condition"
+)
+
+
 poisson_neuron = Neuron(        
     parameters ="""
         rates   = 0
