@@ -1,4 +1,5 @@
 from ANNarchy import Neuron
+import math
 
 
 integrator_neuron = Neuron(        
@@ -429,6 +430,43 @@ Izhikevich2007_Corbit7 = Neuron(
         v = c
     """,
     name = "Izhikevich2007_Corbit",
+    description = "Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking."
+)
+
+Izhikevich2007_Corbit8 = Neuron(
+    parameters="""
+        C      = 0 : population # ATTENTION! H&H model is myF/cm^2 --> here also myF/cm^2 and not pF --> current also myF/cm^2 and not pA
+        k      = 0 : population # 
+        b_n    = 0 : population # 
+        a_s    = 0 : population # 
+        a_n    = 0 : population # 
+        v_r    = 0 : population # mV
+        v_t    = 0 : population # mV
+        a      = 0 : population # ms**-1
+        b      = 0 : population # 
+        d      = 0 : population 
+        c      = 0 : population # mV
+        v_peak = 0 : population # mV
+        I_app  = 0
+        x      = 0                     # exponent = nth root 
+        
+
+    """,
+    equations="""
+      
+         C * dv/dt = k*(v - v_r)*(v - v_t) - u - n + ((abs(I_app))**(1/x))/((I_app+1e-20)/(abs(I_app)+ 1e-20))
+
+
+        du/dt     = a*(b*(v - v_r) - u)
+        ds/dt     = a_s*(pos(u)**0.1 - s)
+        dn/dt     = a_n*(b_n*(pos(u)**0.1-s) - n)
+    """,
+    spike = "v >= v_peak",
+    reset = """
+        v = c
+        u = u + d                           ### new ###
+    """,
+    name = "Izhikevich2007_Corbit8",
     description = "Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking."
 )
 
