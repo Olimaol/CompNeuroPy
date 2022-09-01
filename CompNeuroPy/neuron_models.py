@@ -2,85 +2,85 @@ from ANNarchy import Neuron
 import math
 
 
-integrator_neuron = Neuron(        
-    parameters = """
+integrator_neuron = Neuron(
+    parameters="""
         tau       = 1 : population
         threshold = 0 : population
         neuron_id = 0
     """,
-    equations = """
+    equations="""
         dg_ampa/dt = - g_ampa / tau
         ddecision/dt = 0
     """,
-    spike = """
+    spike="""
         g_ampa >= threshold        
     """,
-    reset = """
+    reset="""
         decision = neuron_id
     """,
-    name = "integrator_neuron",
-    description = "Integrator Neuron, which integrates incoming spikes with value g_ampa and emits a spike when reaching a threshold. After spike decision changes, which can be used as stop condition"
+    name="integrator_neuron",
+    description="Integrator Neuron, which integrates incoming spikes with value g_ampa and emits a spike when reaching a threshold. After spike decision changes, which can be used as stop condition",
 )
 
 
-integrator_neuron_simple = Neuron(        
-    parameters = """
+integrator_neuron_simple = Neuron(
+    parameters="""
         tau       = 1 : population
         neuron_id = 0
     """,
-    equations = """
+    equations="""
         dg_ampa/dt = - g_ampa / tau
         r = 0
     """,
-    name = "integrator_neuron_simple",
-    description = "Integrator Neuron, which integrates incoming spikes with value g_ampa, which can be used as stop condition"
+    name="integrator_neuron_simple",
+    description="Integrator Neuron, which integrates incoming spikes with value g_ampa, which can be used as stop condition",
 )
 
 
-poisson_neuron = Neuron(        
-    parameters ="""
+poisson_neuron = Neuron(
+    parameters="""
         rates   = 0
     """,
-    equations ="""
+    equations="""
         p       = Uniform(0.0, 1.0) * 1000.0 / dt      
     """,
-    spike ="""    
+    spike="""    
         p <= rates
-    """,    
-    reset ="""    
+    """,
+    reset="""    
         p = 0.0
     """,
-    name = "poisson_neuron",
-    description = "Poisson neuron whose rate can be specified and is reached instanteneous."
+    name="poisson_neuron",
+    description="Poisson neuron whose rate can be specified and is reached instanteneous.",
 )
 
 
-poisson_neuron_up_down = Neuron(        
-    parameters ="""
+poisson_neuron_up_down = Neuron(
+    parameters="""
         rates   = 0
         tau_up   = 1 : population
         tau_down = 1 : population
     """,
-    equations ="""
+    equations="""
         p       = Uniform(0.0, 1.0) * 1000.0 / dt
         dact/dt = if (rates - act) > 0:
                       (rates - act) / tau_up
                   else:
                       (rates - act) / tau_down        
     """,
-    spike ="""    
+    spike="""    
         p <= act
-    """,    
-    reset ="""    
+    """,
+    reset="""    
         p = 0.0
     """,
-    name = "poisson_neuron_up_down",
-    description = "Poisson neuron whose rate can be specified and is reached with time constants tau_up and tau_down."
+    name="poisson_neuron_up_down",
+    description="Poisson neuron whose rate can be specified and is reached with time constants tau_up and tau_down.",
 )
 
 
 Izhikevich2003_noisy_AMPA = Neuron(
-    parameters = """    
+    parameters="""    
         a              = 0 : population 
         b              = 0 : population
         c              = 0 : population
@@ -93,26 +93,26 @@ Izhikevich2003_noisy_AMPA = Neuron(
         increase_noise = 0 : population
         rates_noise    = 0
     """,
-    equations = """
+    equations="""
         dg_ampa/dt = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rates_noise, -g_ampa/tau_ampa, -g_ampa/tau_ampa + increase_noise/dt)
         dg_gaba/dt = -g_gaba / tau_gaba     
         dv/dt      = 0.04 * v * v + 5 * v + 140 - u + I_add - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba)
         du/dt      = a * (b * v - u)
     """,
-    spike = """
+    spike="""
         v >= 30
     """,
-    reset = """
+    reset="""
         v = c
         u = u + d
     """,
-    name = "izhikevich2003",
-    description = "Standard neuron model from Izhikevich (2007) with additional conductance based synapses for AMPA and GABA currents with noise in AMPA conductance."
+    name="izhikevich2003",
+    description="Standard neuron model from Izhikevich (2007) with additional conductance based synapses for AMPA and GABA currents with noise in AMPA conductance.",
 )
 
 
 Izhikevich2003_flexible_noisy_AMPA = Neuron(
-    parameters = """    
+    parameters="""    
         a              = 0 : population 
         b              = 0 : population
         c              = 0 : population
@@ -128,21 +128,21 @@ Izhikevich2003_flexible_noisy_AMPA = Neuron(
         increase_noise = 0 : population
         rates_noise    = 0
     """,
-    equations = """
+    equations="""
         dg_ampa/dt = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rates_noise, -g_ampa/tau_ampa, -g_ampa/tau_ampa + increase_noise/dt)
         dg_gaba/dt = -g_gaba / tau_gaba
         dv/dt      = n2 * v * v + n1 * v + n0 - u + I_add - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba)
         du/dt      = a * (b * v - u)
     """,
-    spike = """
+    spike="""
         v >= 30
     """,
-    reset = """
+    reset="""
         v = c
         u = u + d
     """,
-    name = "izhikevich2003_modified",
-    description = "Flexible neuron model from Izhikevich (2003) with additional conductance based synapses for AMPA and GABA currents with noise in AMPA conductance."
+    name="izhikevich2003_modified",
+    description="Flexible neuron model from Izhikevich (2003) with additional conductance based synapses for AMPA and GABA currents with noise in AMPA conductance.",
 )
 
 
@@ -163,13 +163,13 @@ Izhikevich2007 = Neuron(
         C * dv/dt  = k*(v - v_r)*(v - v_t) - u + I_app
         du/dt      = a*(b*(v - v_r) - u)
     """,
-    spike = "v >= v_peak",
-    reset = """
+    spike="v >= v_peak",
+    reset="""
         v = c
         u = u + d
     """,
-    name = "Izhikevich2007",
-    description = "Simple neuron model equations from Izhikevich (2007)."
+    name="Izhikevich2007",
+    description="Simple neuron model equations from Izhikevich (2007).",
 )
 
 
@@ -193,13 +193,13 @@ Izhikevich2007_record_currents = Neuron(
         I_k = k*(v - v_r)*(v - v_t)
         I_a = I_app
     """,
-    spike = "v >= v_peak",
-    reset = """
+    spike="v >= v_peak",
+    reset="""
         v = c
         u = u + d
     """,
-    name = "Izhikevich2007",
-    description = "Simple neuron model equations from Izhikevich (2007)."
+    name="Izhikevich2007",
+    description="Simple neuron model equations from Izhikevich (2007).",
 )
 
 
@@ -221,13 +221,13 @@ Izhikevich2007_voltage_clamp = Neuron(
         du/dt      = a*(b*(v - v_r) - u)
         I_inf      = k*(v - v_r)*(v - v_t) - u + I_app
     """,
-    spike = "v >= v_peak",
-    reset = """
+    spike="v >= v_peak",
+    reset="""
         v = c
         u = u + d
     """,
-    name = "Izhikevich2007_vc",
-    description = "Simple neuron model equations from Izhikevich (2007). With voltage clamp to record I_inf."
+    name="Izhikevich2007_vc",
+    description="Simple neuron model equations from Izhikevich (2007). With voltage clamp to record I_inf.",
 )
 
 Izhikevich2007_syn = Neuron(
@@ -253,13 +253,13 @@ Izhikevich2007_syn = Neuron(
         C * dv/dt  = k*(v - v_r)*(v - v_t) - u + I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba)
         du/dt      = a*(b*(v - v_r) - u)
     """,
-    spike = "v >= v_peak",
-    reset = """
+    spike="v >= v_peak",
+    reset="""
         v = c
         u = u + d
     """,
-    name = "Izhikevich2007_syn",
-    description = "Simple neuron model equations from Izhikevich (2007) with conductance-based AMPA and GABA synapses/currents."
+    name="Izhikevich2007_syn",
+    description="Simple neuron model equations from Izhikevich (2007) with conductance-based AMPA and GABA synapses/currents.",
 )
 
 Izhikevich2007_Corbit = Neuron(
@@ -284,13 +284,13 @@ Izhikevich2007_Corbit = Neuron(
         du/dt     = a*(b*pos(v - v_r)**4 - u)
         dv_d/dt   = p3*(v - v_d)
     """,
-    spike = "v >= v_peak",
-    reset = """
+    spike="v >= v_peak",
+    reset="""
         v = c
         u = u + d
     """,
-    name = "Izhikevich2007_Corbit",
-    description = "Simple neuron model equations from Izhikevich (2007) adjusted to fit Corbit et al. (2016) FSI neuron model."
+    name="Izhikevich2007_Corbit",
+    description="Simple neuron model equations from Izhikevich (2007) adjusted to fit Corbit et al. (2016) FSI neuron model.",
 )
 
 Izhikevich2007_Corbit2 = Neuron(
@@ -313,13 +313,13 @@ Izhikevich2007_Corbit2 = Neuron(
         du/dt     = a*(b*(v - v_r) - u)
         dv_d/dt   = a_d*(v - v_d)
     """,
-    spike = "v >= v_peak",
-    reset = """
+    spike="v >= v_peak",
+    reset="""
         v = c
         u = u + d
     """,
-    name = "Izhikevich2007_Corbit",
-    description = "Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking."
+    name="Izhikevich2007_Corbit",
+    description="Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking.",
 )
 
 Izhikevich2007_Hjorth_2020_ChIN1 = Neuron(
@@ -344,13 +344,13 @@ Izhikevich2007_Hjorth_2020_ChIN1 = Neuron(
         du/dt     = a*(b*(v - v_r) - u)
         dv_d/dt   = a_d*(v - v_d)
     """,
-    spike = "v >= v_peak",
-    reset = """
+    spike="v >= v_peak",
+    reset="""
         v = c
         u = u + d
     """,
-    name = "Izhikevich2007_Corbit",
-    description = "Simple neuron model equations from Izhikevich (2007) for fitting tests."
+    name="Izhikevich2007_Corbit",
+    description="Simple neuron model equations from Izhikevich (2007) for fitting tests.",
 )
 
 
@@ -377,14 +377,14 @@ Izhikevich2007_Hjorth_2020_ChIN2 = Neuron(
         dv_d/dt   = a_d*(v - v_d)
         dc/dt     = a_c*(clip((6.0/360.0)*I_app-65.5,-63,-40) - c)
     """,
-    spike = "v >= v_peak",
-    reset = """
+    spike="v >= v_peak",
+    reset="""
         v = c
         u = u + d
         c = c + d_c
     """,
-    name = "Izhikevich2007_Corbit",
-    description = "Simple neuron model equations from Izhikevich (2007) for fitting tests."
+    name="Izhikevich2007_Corbit",
+    description="Simple neuron model equations from Izhikevich (2007) for fitting tests.",
 )
 
 
@@ -415,16 +415,16 @@ Izhikevich2007_Hjorth_2020_ChIN3 = Neuron(
         C * dv/dt = k*(v - v_r)*(v - v_t) - foo(u, u_t, p_1, p_2) + I_app + k_d*(v_d - v)
         #C * dv/dt = k*(v - v_r)*(v - v_t) - u  + I_app + k_d*(v_d - v)
     """,
-    spike = "v >= v_peak",
-    reset = """
+    spike="v >= v_peak",
+    reset="""
         v = c
         u = u + d
     """,
-    name = "Izhikevich2007_Corbit",
-    description = "Simple neuron model equations from Izhikevich (2007) for fitting tests.",
-    functions = """
+    name="Izhikevich2007_Corbit",
+    description="Simple neuron model equations from Izhikevich (2007) for fitting tests.",
+    functions="""
         foo(x, x_t, p_1, p_2) = x*(p_1 * pos(x - x_t)**p_2 + 1)
-    """
+    """,
 )
 
 
@@ -450,16 +450,16 @@ Izhikevich2007_Hjorth_2020_ChIN4 = Neuron(
         du_spike/dt = -a_spike*u_spike
         C * dv/dt = k*(v - v_r)*(v - v_t) - u_v - u_spike + foo(I_app, u_spike, u_t, p_1) ### TODO future synaptic current also in foo
     """,
-    spike = "v >= v_peak",
-    reset = """
+    spike="v >= v_peak",
+    reset="""
         v = c
         u_spike = u_spike + d
     """,
-    name = "Izhikevich2007_Corbit",
-    description = "Simple neuron model equations from Izhikevich (2007) for fitting tests.",
-    functions = """
+    name="Izhikevich2007_Corbit",
+    description="Simple neuron model equations from Izhikevich (2007) for fitting tests.",
+    functions="""
         foo(y, x, u_t, p_1) = y * (1.0 - (1.0 / (1.0 + exp(-p_1*(x-u_t)))))
-    """
+    """,
 )
 
 
@@ -487,14 +487,212 @@ Izhikevich2007_Hjorth_2020_ChIN5 = Neuron(
         C * dv/dt = k*(v - v_r)*(v - v_t) - u_v - u_spike + I_app
         dn/dt=-a_n*n
     """,
-    spike = "v >= v_peak",
-    reset = """
+    spike="v >= v_peak",
+    reset="""
         v = c
         n = n + u_spike/(b_spike*(I_app))
         u_spike = u_spike + (1+b_n*pos(n-n_t))*c_spike*(b_spike*(I_app) - u_spike)### TODO future synaptic current also here
     """,
-    name = "Izhikevich2007_Corbit",
-    description = "Simple neuron model equations from Izhikevich (2007) for fitting tests."
+    name="Izhikevich2007_Corbit",
+    description="Simple neuron model equations from Izhikevich (2007) for fitting tests.",
+)
+
+
+Izhikevich2007_Hjorth_2020_ChIN6 = Neuron(
+    parameters="""
+        C      = 0 : population # pF
+        k      = 0 : population # 
+        v_r    = 0 : population # mV
+        v_t    = 0 : population # mV
+        a_slow      = 0 : population # ms**-1
+        a_fast      = 0 : population # ms**-1
+        a_brake      = 0 : population # ms**-1
+        b_slow      = 0 : population # nS
+        b_fast      = 0 : population # nS
+        brake_0      = 0 : population # mV
+        d_brake      = 0 : population # mV
+        c      = 0 : population # mV
+        d      = 0 : population # pA
+        d_fast      = 0 : population # pA
+        v_peak = 0 : population # mV
+        I_app  = 0 # pA
+        base   = 0 # pA
+        k_slow=0
+        th_slow=0
+    """,
+    equations="""
+        du_v_slow/dt     = a_slow*(b_slow*(v - v_r) - u_v_slow)  # b_slow positive!
+        du_v_fast/dt     = a_fast*(b_fast*(v - v_r) - u_v_fast)  # b_fast negative!
+        dbrake/dt        = a_brake*(brake_0-brake)
+        
+        C * dv/dt = k*((v - v_r)*(v - v_t) - brake*pos(v-v_r)) - u_v_slow - u_v_fast  + I_app + base # - k_slow*pos(u_v_slow-th_slow)
+    """,
+    spike="v >= v_peak",
+    reset="""
+        v = c
+        brake = brake*d + d_brake
+        u_v_fast = u_v_fast + d_fast
+    """,
+    name="Izhikevich2007_Corbit",
+    description="Simple neuron model equations from Izhikevich (2007) for fitting tests.",
+)
+
+
+Izhikevich2007_Hjorth_2020_ChIN7 = Neuron(
+    parameters="""
+        C      = 0 : population # pF
+        k      = 0 : population # 
+        v_t    = 0 : population # mV
+        a_slow      = 0 : population # ms**-1
+        b_slow      = 0 : population # nS
+        c      = 0 : population # mV
+        d_v_r      = 0 : population # pA
+        delta_v_r      = 0 : population # pA
+        a_v_r      = 0 : population # pA
+        v_r_0      = 0 : population # pA
+        a_d = 0 : population
+        k_d = 0 : population
+        v_peak = 0 : population # mV
+        I_app  = 0 # pA
+        base   = 0 # pA
+        k_slow=0
+        th_slow=0
+    """,
+    equations="""
+    
+        dv_d/dt       = a_d*(v - v_d)
+        du_v_slow/dt  = a_slow*(b_slow*(v - v_r) - u_v_slow)  # b_slow positive!
+        dv_r/dt       = a_v_r*(v_r_0-v_r)
+        
+        C * dv/dt = k*(v - v_r)*(v - v_t) - u_v_slow  + I_app + base + k_d*(v_d - v) # - k_slow*pos(u_v_slow-th_slow)
+    """,
+    spike="v >= v_peak",
+    reset="""
+        v = c
+        v_r = v_r * delta_v_r - d_v_r
+    """,
+    name="Izhikevich2007_Corbit",
+    description="Simple neuron model equations from Izhikevich (2007) for fitting tests.",
+)
+
+
+Izhikevich2007_Hjorth_2020_ChIN8 = Neuron(
+    parameters="""
+        C      = 0 : population # pF
+        k      = 0 : population # 
+        v_t    = 0 : population # mV
+        v_r    = 0 : population # mV
+        a_slow      = 0 : population # ms**-1
+        b_slow      = 0 : population # nS
+        c      = 0 : population # mV
+        a_d = 0 : population
+        k_d = 0 : population
+        v_peak = 0 : population # mV
+        I_app  = 0 # pA
+        base   = 0 : population # pA
+        k_slow=0 : population
+        th_slow=0 : population
+        a_brake = 0 : population
+        brake_0 = 0 : population
+        d_rel = 0 : population
+        d_abs = 0 : population
+        
+    """,
+    equations="""
+    
+        dv_d/dt       = a_d*(v - v_d)
+        du_v_slow/dt  = a_slow*(b_slow*(v - v_r) - u_v_slow)  # b_slow positive!
+        dbrake/dt     = a_brake*(brake_0-brake)
+        
+        f = pos((brake/(v_t-c))*neg(v-v_t)+brake)
+        
+        C * dv/dt = k*((v - v_r)*(v - v_t) - f) - u_v_slow  + I_app + base + k_d*(v_d - v) # - k_slow*pos(u_v_slow-th_slow)
+    """,
+    spike="v >= v_peak",
+    reset="""
+        v = c
+        brake = brake*d_rel + d_abs
+    """,
+    name="Izhikevich2007_Corbit",
+    description="Simple neuron model equations from Izhikevich (2007) for fitting tests.",
+)
+
+
+Izhikevich2007_Hjorth_2020_ChIN9 = Neuron(
+    parameters="""
+        C      = 0 : population # pF
+        k      = 0 : population # 
+        v_r    = 0 : population # mV
+        v_t    = 0 : population # mV
+        a_slow      = 0 : population # ms**-1
+        a_fast      = 0 : population # ms**-1
+        b_slow      = 0 : population # nS
+        b_fast      = 0 : population # nS
+        a_brake      = 0 : population # ms**-1
+        brake_0      = 0 : population # mV
+        brake_max      = 0 : population # mV
+        d_brake      = 0 : population # mV
+        c      = 0 : population # mV
+        d_fast      = 0 : population # pA
+        v_peak = 0 : population # mV
+        I_app  = 0 # pA
+        base   = 0 # pA
+        k_slow=0
+        th_slow=0
+    """,
+    equations="""
+        du_v_slow/dt     = a_slow*(b_slow*(v - v_r) - u_v_slow)  # b_slow positive!
+        du_v_fast/dt     = a_fast*(b_fast*(v - v_r) - u_v_fast)  # b_fast negative!
+        dbrake/dt        = a_brake*(brake_0-brake)
+        
+        f = brake*neg((v - v_r)*(v - v_t))
+        
+        C * dv/dt = k*((v - v_r)*(v - v_t) + f) - u_v_slow - u_v_fast  + I_app + base # - k_slow*pos(u_v_slow-th_slow)
+    """,
+    spike="v >= v_peak",
+    reset="""
+        v = c
+        brake = brake+(brake_max-brake)*d_brake
+        u_v_fast = u_v_fast + d_fast
+    """,
+    name="Izhikevich2007_Corbit",
+    description="Simple neuron model equations from Izhikevich (2007) for fitting tests.",
+)
+
+
+Izhikevich2007_Hjorth_2020_ChIN10 = Neuron(
+    parameters="""
+        C      = 0 : population # pF
+        k      = 0 : population #
+        v_r    = 0 : population # mV
+        v_t    = 0 : population # mV
+        a_slow      = 0 : population # ms**-1
+        b_slow      = 0 : population # nS
+        a_spike      = 0 : population # ms**-1
+        d_spike      = 0 : population # mV
+        c      = 0 : population # mV
+        v_peak = 0 : population # mV
+        I_app  = 0 # pA
+        base   = 0 : population # pA 
+        k_slow=0 : population
+        th_slow=0 : population
+        a_d=0 : population
+        k_d=0 : population
+    """,
+    equations="""
+        du_v_slow/dt  = a_slow*(b_slow*(v - v_r) - u_v_slow)
+        dv_d/dt       = a_d*(v - v_d)
+        du_spike/dt   = - a_spike*u_spike
+        
+        C * dv/dt = k*(v - v_r)*(v - v_t) - u_v_slow - u_spike  + I_app + base + k_d*(v_d - v) # - k_slow*pos(u_v_slow-th_slow)
+    """,
+    spike="v >= v_peak",
+    reset="""
+        v = c
+        u_spike = u_spike + d_spike
+    """,
+    name="Izhikevich2007_Corbit",
+    description="Simple neuron model equations from Izhikevich (2007) for fitting tests.",
 )
 
 
@@ -521,14 +719,14 @@ Izhikevich2007_Corbit3 = Neuron(
         dv_d/dt   = p2*(v - v_d)
         ds/dt     = p3*(-s) : init=0
     """,
-    spike = "v >= v_peak",
-    reset = """
+    spike="v >= v_peak",
+    reset="""
         v = c
         u = u + d
         s = 1
     """,
-    name = "Izhikevich2007_Corbit",
-    description = "Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking and adjusted to fit Corbit et al. (2016) FSI neuron model."
+    name="Izhikevich2007_Corbit",
+    description="Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking and adjusted to fit Corbit et al. (2016) FSI neuron model.",
 )
 
 Izhikevich2007_Corbit4 = Neuron(
@@ -551,12 +749,12 @@ Izhikevich2007_Corbit4 = Neuron(
         du/dt     = a*(b*pos(v - v_t)**2 - u)
         dv_d/dt   = a_d*(v - v_d)
     """,
-    spike = "v >= v_peak",
-    reset = """
+    spike="v >= v_peak",
+    reset="""
         v = c
     """,
-    name = "Izhikevich2007_Corbit",
-    description = "Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking and adjusted to fit Corbit et al. (2016) FSI neuron model."
+    name="Izhikevich2007_Corbit",
+    description="Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking and adjusted to fit Corbit et al. (2016) FSI neuron model.",
 )
 
 
@@ -586,14 +784,13 @@ Izhikevich2007_Corbit5 = Neuron(
         #dn/dt     = a_n*(u**0.1 - n)
         dn/dt     = a_n*(k_s*(u**0.1-s) - n)
     """,
-    spike = "v >= v_peak",
-    reset = """
+    spike="v >= v_peak",
+    reset="""
         v = c
     """,
-    name = "Izhikevich2007_Corbit",
-    description = "Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking and adjusted to fit Corbit et al. (2016) FSI neuron model."
+    name="Izhikevich2007_Corbit",
+    description="Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking and adjusted to fit Corbit et al. (2016) FSI neuron model.",
 )
-
 
 
 Izhikevich2007_Corbit6 = Neuron(
@@ -617,12 +814,12 @@ Izhikevich2007_Corbit6 = Neuron(
         ds/dt     = a_s*(pos(u)**0.1 - s)
         dn/dt     = a_n*(b_n*(pos(u)**0.1-s) - n)
     """,
-    spike = "v >= v_peak",
-    reset = """
+    spike="v >= v_peak",
+    reset="""
         v = c
     """,
-    name = "Izhikevich2007_Corbit",
-    description = "Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking."
+    name="Izhikevich2007_Corbit",
+    description="Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking.",
 )
 
 
@@ -645,12 +842,12 @@ Izhikevich2007_Corbit7 = Neuron(
         du/dt     = a*(b*(v - v_r) - u)
         ds/dt     = a_s*(pos(u)**0.1 - s)
     """,
-    spike = "v >= v_peak",
-    reset = """
+    spike="v >= v_peak",
+    reset="""
         v = c
     """,
-    name = "Izhikevich2007_Corbit",
-    description = "Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking."
+    name="Izhikevich2007_Corbit",
+    description="Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking.",
 )
 
 Izhikevich2007_Corbit8 = Neuron(
@@ -681,13 +878,13 @@ Izhikevich2007_Corbit8 = Neuron(
         ds/dt     = a_s*(pos(u)**0.1 - s)
         dn/dt     = a_n*(b_n*(pos(u)**0.1-s) - n)
     """,
-    spike = "v >= v_peak",
-    reset = """
+    spike="v >= v_peak",
+    reset="""
         v = c
         u = u + d                           ### new ###
     """,
-    name = "Izhikevich2007_Corbit8",
-    description = "Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking."
+    name="Izhikevich2007_Corbit8",
+    description="Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking.",
 )
 
 
@@ -716,13 +913,13 @@ Izhikevich2007_noisy_AMPA = Neuron(
         C * dv/dt  = k*(v - v_r)*(v - v_t) - u + I_add - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba)
         du/dt      = a*(b*(v - v_r) - u)
     """,
-    spike = "v >= v_peak",
-    reset = """
+    spike="v >= v_peak",
+    reset="""
         v = c
         u = u + d
     """,
-    name = "izhikevich2007_standard",
-    description = "Standard neuron model from Izhikevich (2007) with additional conductance based synapses for AMPA and GABA currents with noise in AMPA conductance."
+    name="izhikevich2007_standard",
+    description="Standard neuron model from Izhikevich (2007) with additional conductance based synapses for AMPA and GABA currents with noise in AMPA conductance.",
 )
 
 
@@ -752,13 +949,13 @@ Izhikevich2007_fsi_noisy_AMPA = Neuron(
         C * dv/dt  = k*(v - v_r)*(v - v_t) - u + I_add - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba)
         du/dt      = if v<v_b: -a * u else: a * (b * (v - v_b)**3 - u)
     """,
-    spike = "v >= v_peak",
-    reset = """
+    spike="v >= v_peak",
+    reset="""
         v = c
         u = u + d
     """,
-    name = "izhikevich2007_fsi",
-    description = "Fast spiking cortical interneuron model from Izhikevich (2007) with additional conductance based synapses with noise in AMPA conductance."
+    name="izhikevich2007_fsi",
+    description="Fast spiking cortical interneuron model from Izhikevich (2007) with additional conductance based synapses with noise in AMPA conductance.",
 )
 
 
@@ -818,7 +1015,7 @@ H_and_H_Bischop = Neuron(
         beta_n1      = 0.0043 * exp((44 + v) / 34)
         n1_inf       = alpha_n1 / (alpha_n1 + beta_n1)
         tau_n1       = 1 / (alpha_n1 + beta_n1)
-        dn1/dt       = (n1_inf - n1) / tau_n1        
+        dn1/dt       = (n1_inf - n1) / tau_n1
         I_Kv1        = gg_Kv1 * n1**4 * (v - E_K)
         
         alpha_n3     = (95 - v) / (exp((95 - v) / 11.8) - 1)
@@ -844,10 +1041,10 @@ H_and_H_Bischop = Neuron(
         
         C_m * dv/dt  = -I_L - I_Na - I_Kv1 - I_Kv3 - I_SK - I_Ca + I_app : init=-68
     """,
-    spike = "(v > vt) and (prev_v <= vt)",
-    reset = "",
-    name = "H_and_H_Bischop",
-    description = "H & H model of Bischop et al. (2012)."
+    spike="(v > vt) and (prev_v <= vt)",
+    reset="",
+    name="H_and_H_Bischop",
+    description="H & H model of Bischop et al. (2012).",
 )
 
 
@@ -941,10 +1138,10 @@ H_and_H_Bischop_syn = Neuron(
         
         C_m * dv/dt  = -I_L - I_Na - I_Kv1 - I_Kv3 - I_SK - I_Ca + I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba) : init=-68
     """,
-    spike = "(v > vt) and (prev_v <= vt)",
-    reset = "",
-    name = "H_and_H_Bischop",
-    description = "H & H model of Bischop et al. (2012)."
+    spike="(v > vt) and (prev_v <= vt)",
+    reset="",
+    name="H_and_H_Bischop",
+    description="H & H model of Bischop et al. (2012).",
 )
 
 
@@ -1017,12 +1214,11 @@ H_and_H_Corbit = Neuron(
         C_m * dv/dt  = -I_L - I_Na - I_Kv3 - I_Kv1 + I_app : init=-70.03810532250634
         
     """,
-    spike = "(v > v_t) and (prev_v <= v_t)",
-    reset = "",
-    name = "H_and_H_Corbit",
-    description = "H & H model of Corbit et al. (2016)."
+    spike="(v > v_t) and (prev_v <= v_t)",
+    reset="",
+    name="H_and_H_Corbit",
+    description="H & H model of Corbit et al. (2016).",
 )
-
 
 
 H_and_H_Corbit_voltage_clamp = Neuron(
@@ -1095,10 +1291,10 @@ H_and_H_Corbit_voltage_clamp = Neuron(
         I_inf = -I_L - I_Na - I_Kv3 - I_Kv1 + I_app
         
     """,
-    spike = "(v > v_t) and (prev_v <= v_t)",
-    reset = "",
-    name = "H_and_H_Corbit",
-    description = "H & H model of Corbit et al. (2016)."
+    spike="(v > v_t) and (prev_v <= v_t)",
+    reset="",
+    name="H_and_H_Corbit",
+    description="H & H model of Corbit et al. (2016).",
 )
 
 
@@ -1179,13 +1375,8 @@ H_and_H_Corbit_syn = Neuron(
         C_m * dv/dt  = -I_L - I_Na - I_Kv3 - I_Kv1 + I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba) : init=-70.03810532250634
         
     """,
-    spike = "(v > v_t) and (prev_v <= v_t)",
-    reset = "",
-    name = "H_and_H_Corbit",
-    description = "H & H model of Corbit et al. (2016)."
+    spike="(v > v_t) and (prev_v <= v_t)",
+    reset="",
+    name="H_and_H_Corbit",
+    description="H & H model of Corbit et al. (2016).",
 )
-
-
-
-
-
