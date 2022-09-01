@@ -1,4 +1,6 @@
 import pandas as pd
+from contextlib import contextmanager
+import sys, os
 
 def print_df(df):
     """
@@ -39,3 +41,13 @@ def remove_key(d, key):
     r = dict(d)
     del r[key]
     return r
+
+@contextmanager
+def suppress_stdout():
+    with open(os.devnull, "w") as devnull:
+        old_stdout = sys.stdout
+        sys.stdout = devnull
+        try:  
+            yield
+        finally:
+            sys.stdout = old_stdout

@@ -313,7 +313,7 @@ def plot_recordings(figname, recordings, time_lim, idx_lim, shape, plan, dpi=300
 
 def get_number_of_zero_decimals(nr):
     decimals=0
-    while nr < 1:
+    while abs(nr) < 1:
         nr=nr*10
         decimals = decimals + 1
         
