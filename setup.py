@@ -13,12 +13,14 @@ dependencies = [
     'sympy',
     'hyperopt',
     'ANNarchy',
-    'pandas'
+    'pandas',
+    'sbi',
+    'torch'
 ]
 
 setuptools.setup(
     name="CompNeuroPy",
-    version="0.0.4",
+    version="0.0.5",
     license="MIT",
     author="Oliver Maith",
     author_email="oli_maith@gmx.de",
