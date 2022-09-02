@@ -682,14 +682,14 @@ Izhikevich2007_Hjorth_2020_ChIN10 = Neuron(
     equations="""
         du_v_slow/dt  = a_slow*(b_slow*(v - v_r) - u_v_slow)
         dv_d/dt       = a_d*(v - v_d)
-        du_spike/dt   = - a_spike*u_spike
+        du_spike/dt   = 0#- a_spike*u_spike
         
         C * dv/dt = k*(v - v_r)*(v - v_t) - u_v_slow - u_spike  + I_app + base + k_d*(v_d - v) # - k_slow*pos(u_v_slow-th_slow)
     """,
     spike="v >= v_peak",
     reset="""
-        v = c
-        u_spike = u_spike + d_spike
+        v = -100#c
+        u_spike = u_spike #+ d_spike
     """,
     name="Izhikevich2007_Corbit",
     description="Simple neuron model equations from Izhikevich (2007) for fitting tests.",
