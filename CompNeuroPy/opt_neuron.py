@@ -18,7 +18,6 @@ from sbi import analysis as analysis
 # sbi
 import torch
 from sbi import utils as utils
-from sbi.inference.base import infer
 from sbi.inference import SNPE, prepare_for_sbi, simulate_for_sbi
 
 
@@ -201,10 +200,10 @@ class opt_neuron:
         returns a list of the names of the populations (for later access)
         """
         if isinstance(self.neuron_model, type(nm.Izhikevich2007)):
-            pop = Population(1, neuron=self.neuron_model, name="user_defined_neuron")
+            Population(1, neuron=self.neuron_model, name="user_defined_neuron")
             ret = ["user_defined_neuron"]
         else:
-            pop = Population(1, neuron=nm.Izhikevich2007, name="Iz_neuron")
+            Population(1, neuron=nm.Izhikevich2007, name="Iz_neuron")
             ret = ["Iz_neuron"]
 
         if do_compile:
