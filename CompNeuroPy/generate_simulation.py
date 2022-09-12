@@ -19,7 +19,7 @@ class generate_simulation:
         # set simulaiton function
         self.name = name
         if name == "simulation":
-            self.name = name + str(self.__nr_simulation__())
+            self.name = name + str(self.__nr_simulations__())
         self.description = description
         self.simulation_function = simulation_function
         self.simulation_kwargs = simulation_kwargs
