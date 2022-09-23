@@ -289,14 +289,15 @@ def plot_recordings(figname, recordings, time_lim, idx_lim, shape, plan, dpi=300
         elif variable!='spike' and mode=='line':
             if len(data.shape)==1:
                 plt.plot(times,data[start_step:end_step], color='k')
+                plt.title('Variable '+part+' '+variable+'(1)')
             elif len(data.shape)==2:
                 for idx in range(data.shape[1]):
                     plt.plot(times,data[start_step:end_step,idx], color='k')
+                    plt.title('Variable '+part+' '+variable+'('+str(data.shape[1])+')')
             else:
-                print('\nERROR plot_recordings: only data of 1D neuron populations accepted,',';'.join([part,variable]),'\n')
+                print('\nERROR plot_recordings: only data of 1D neuron populations accepted,',';'.join([part,variable]),'\n')### TODO this seems to not be neccessary, because data of 2D populations have also shape (time, nr_neurons)
             plt.xlim(start_time, end_time)
             plt.xlabel('time [ms]')
-            plt.title('Variable '+part+' '+variable)
         elif variable!='spike' and mode=='mean':
             a=0
         else:
@@ -313,7 +314,7 @@ def plot_recordings(figname, recordings, time_lim, idx_lim, shape, plan, dpi=300
 
 def get_number_of_zero_decimals(nr):
     decimals=0
-    while nr < 1:
+    while abs(nr) < 1:
         nr=nr*10
         decimals = decimals + 1
         

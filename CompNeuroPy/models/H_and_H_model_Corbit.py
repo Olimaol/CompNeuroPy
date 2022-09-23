@@ -20,3 +20,5 @@ class H_and_H_model_Corbit(generate_model):
         pop = Population(1, neuron=H_and_H_Corbit, name='HH_Corbit')
 
 
+
+

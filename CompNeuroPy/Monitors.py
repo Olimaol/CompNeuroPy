@@ -162,6 +162,7 @@ class recording_times_cl:
     def combine_chunks(self, recordings, recording_data_str, mode='sequential'):
         """
             combines the data of all chunks of recordings, only possible if no pauses in between
+            returns a single time array (time values in ms) and a single values array (of the recorded variable)
             
             recordings: recordings array of recording chunks
             recording_data_str: str of compartment + recorded variable
