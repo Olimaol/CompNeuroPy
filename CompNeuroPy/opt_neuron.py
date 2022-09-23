@@ -676,7 +676,23 @@ class opt_neuron:
     def run(
         self, max_evals, results_file_name="best.npy", sbi_plot_file="posterior.svg"
     ):
+        """
+        run the optimization
 
+        Args:
+            max_evals: int
+                number of runs (sample: paramter -> loss) the optimization method performs
+
+            results_file_name: str, optional, default="best.npy"
+                name of the file which is saved. The file contains the optimized and
+                target results, the obtained parameters, the loss, and the SD of the
+                loss (in case of noisy models with multiple runs per loss calculation)
+
+            sbi_plot_file: str, optional, default="posterior.svg"
+                If you use "sbi": the name of the figure which will be saved and shows
+                the posterior.
+
+        """
         if self.method == "hyperopt":
             ### run optimization with hyperopt and return best dict
             best = fmin(
