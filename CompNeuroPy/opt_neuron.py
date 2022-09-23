@@ -127,7 +127,6 @@ class opt_neuron:
             setup(dt=time_step)
 
             ### create and compile model
-            ### TODO if only neuron model : create just one model
             ### if neuron models and target neuron model --> create both models then test, then clear and create only model for neuron model
             model, target_model = self.__generate_models__()
 
@@ -699,6 +698,7 @@ class opt_neuron:
         best["all_loss"] = fit["all_loss"]
         best["std"] = fit["std"]
         best["results"] = fit["results"]
+        best["results_soll"] = self.results_soll
         self.results = best
 
         ### SAVE OPTIMIZED PARAMS AND LOSS
