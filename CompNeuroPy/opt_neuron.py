@@ -29,17 +29,19 @@ class opt_neuron:
         experiment,
         get_loss_function,
         variables_bounds,
+        neuron_model,
         results_soll=None,
         target_neuron_model=None,
         time_step=1,
         compile_folder_name="annarchy_opt_neuron",
         num_rep_loss=1,
-        neuron_model=None,
         method="hyperopt",
         prior=None,
         fv_space=None,
     ):
         """
+        This class prepares the optimization. To run the optimization call opt_neuron.run().
+
         Args:
             experiment: CompNeuroPy Experiment class
                 the experiment class has to contain the 'run' function which defines the simulations and recordings
@@ -50,11 +52,14 @@ class opt_neuron:
             variables_bounds: dict
                 keys = parameter names, values = either list with len=2 (lower and upper bound) or a single value (constant parameter)
 
+            neuron_model: ANNarchy Neuron object
+                the neuron model used during optimization
+
             results_soll: dict, optional, default=None
-                some variable which contains the target data and can be used by the get_loss function (second argumetn of get_loss function)
+                some variable which contains the target data and can be used by the get_loss_function (second argument of get_loss_function)
                 either provide results_soll or a target_neuron_model not both!
 
-            target neuron model: ANNarchy Neuron object, optional, default=None
+            target_neuron_model: ANNarchy Neuron object, optional, default=None
                 the neuron model which produces the target data by running the experiment
                 either provide results_soll or a target_neuron_model not both!
 
@@ -67,9 +72,6 @@ class opt_neuron:
             num_rep_loss: int, default = 1
                 only interesting for noisy simulations/models
                 how often should the model be run to calculate the loss (the defined number of losses is obtained and averaged)
-
-            neuron_model: ANNarchy Neuron object, default = None
-                the neuron model used during optimization
 
             method: str, default = 'hyperopt'
                 either 'sbi' or 'hyperopt'
