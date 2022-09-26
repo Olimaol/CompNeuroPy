@@ -46,7 +46,7 @@ create_dir(save_path)
 
 
 ### define of which file the results should be plotted
-file = ["", "_with_exp"][1]  # either emtpy string or "_with_exp"
+file = ["", "_with_exp"][0]  # either emtpy string or "_with_exp"
 
 
 ### load the saved optimization file

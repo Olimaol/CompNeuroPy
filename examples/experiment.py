@@ -1,4 +1,13 @@
-from CompNeuroPy import Experiment, plot_recordings
+from CompNeuroPy import (
+    Experiment,
+    plot_recordings,
+    generate_simulation,
+    current_step,
+    current_ramp,
+    Monitors,
+)
+from CompNeuroPy.models import H_and_H_model_Bischop
+from ANNarchy import dt, setup
 
 
 ### combine both simulations and recordings in an experiment
@@ -17,18 +26,10 @@ class my_exp(Experiment):
         """
         do the simulations and recordings
 
-        in this example also the model and the simulations are defined here, also all related imports
-        are done here... this is ot neccessary in this example but the original intention of the
+        in this example also the model and the simulations are defined here... this is not
+        neccessary in this example but the original intention of the
         Experiment class was to have everything in one class
         """
-        from CompNeuroPy import (
-            generate_simulation,
-            current_step,
-            current_ramp,
-            Monitors,
-        )
-        from CompNeuroPy.models import H_and_H_model_Bischop
-        from ANNarchy import dt, setup
 
         ### create and compile a model
         setup(dt=0.01)

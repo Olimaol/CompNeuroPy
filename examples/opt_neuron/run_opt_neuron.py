@@ -1,6 +1,12 @@
-from CompNeuroPy import opt_neuron, Experiment
+from CompNeuroPy import (
+    opt_neuron,
+    Experiment,
+    Monitors,
+    generate_simulation,
+    current_step,
+)
 import numpy as np
-from ANNarchy import Neuron
+from ANNarchy import Neuron, dt
 
 
 ### in this example we want to fit a ANNarchy neuron model to some data (which ca be somehow obtained by simulating the neuron and recording variables)
@@ -53,8 +59,6 @@ class my_exp(Experiment):
             self - the experiment object
             population_name - the name of the population which contains a single neuron. this will be automatically provided by opt_neuron
         """
-        from CompNeuroPy import Monitors, generate_simulation, current_step
-        from ANNarchy import dt
 
         ### define recordings
         self.mon = Monitors({"pop;" + population_name: ["r"]})
@@ -72,6 +76,7 @@ class my_exp(Experiment):
             },
             kwargs_warning=False,
             name="test",
+            monitor_object=self.mon,
         )
 
         ### run simulation/recordings
