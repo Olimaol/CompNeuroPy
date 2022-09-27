@@ -6,6 +6,7 @@ except:
     assert False
 
 dependencies = [
+    "torch",
     "numpy",
     "scipy",
     "matplotlib",
@@ -15,7 +16,6 @@ dependencies = [
     "ANNarchy",
     "pandas",
     "sbi",
-    "torch",
 ]
 
 setuptools.setup(
