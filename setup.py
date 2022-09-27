@@ -7,15 +7,15 @@ except:
 
 dependencies = [
     "torch",
-    "numpy",
-    "scipy",
-    "matplotlib",
-    "cython",
-    "sympy",
-    "hyperopt",
-    "ANNarchy",
-    "pandas",
     "sbi",
+    "pandas",
+    "ANNarchy",
+    "hyperopt",
+    "sympy",
+    "cython",
+    "matplotlib",
+    "scipy",    
+    "numpy",
 ]
 
 setuptools.setup(
