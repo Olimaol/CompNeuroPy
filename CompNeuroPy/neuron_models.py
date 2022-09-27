@@ -1,5 +1,4 @@
 from ANNarchy import Neuron
-import math
 
 
 integrator_neuron = Neuron(

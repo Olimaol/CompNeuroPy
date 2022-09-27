@@ -1,9 +1,9 @@
 from ANNarchy import setup, Population, get_population, reset, Neuron, clear
 import numpy as np
 import traceback
-from .system_functions import create_dir, save_data
-from .generate_model import generate_model
-from .extra_functions import suppress_stdout
+from CompNeuroPy import system_functions as sf
+from CompNeuroPy import generate_model as gm
+from CompNeuroPy import extra_functions as ef
 import matplotlib.pyplot as plt
 
 # hyperopt
@@ -156,12 +156,12 @@ class opt_neuron:
 
         if there are already results_soll --> target_model=None
         """
-        with suppress_stdout():
+        with ef.suppress_stdout():
             model = None
             target_model = None
             if self.results_soll is None:
                 ### create two models
-                model = generate_model(
+                model = gm.generate_model(
                     model_creation_function=self.__raw_neuron__,
                     model_kwargs={"neuron": self.neuron_model, "name": "model_neuron"},
                     name="standard_model",
@@ -170,7 +170,7 @@ class opt_neuron:
                     compile_folder_name=self.compile_folder_name,
                 )
 
-                target_model = generate_model(
+                target_model = gm.generate_model(
                     model_creation_function=self.__raw_neuron__,
                     model_kwargs={
                         "neuron": self.target_neuron,
@@ -184,7 +184,7 @@ class opt_neuron:
 
             else:
                 ### create one model
-                model = generate_model(
+                model = gm.generate_model(
                     model_creation_function=self.__raw_neuron__,
                     model_kwargs={"neuron": self.neuron_model, "name": "model_neuron"},
                     name="single_model",
@@ -668,7 +668,7 @@ class opt_neuron:
 
         ### save plot
         folder_test = "/".join(sbi_plot_file.split("/")[:-1])
-        create_dir("/".join(sbi_plot_file.split("/")[:-1]))
+        sf.create_dir("/".join(sbi_plot_file.split("/")[:-1]))
         plt.savefig(sbi_plot_file)
 
         return best
@@ -718,4 +718,4 @@ class opt_neuron:
         self.results = best
 
         ### SAVE OPTIMIZED PARAMS AND LOSS
-        save_data([best], ["parameter_fit/" + results_file_name])
+        sf.save_data([best], ["parameter_fit/" + results_file_name])

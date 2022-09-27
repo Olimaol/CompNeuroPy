@@ -1,8 +1,4 @@
-import CompNeuroPy.neuron_models as nm
 import CompNeuroPy.model_functions as mf
-import CompNeuroPy.simulation_functions as sif
-import CompNeuroPy.system_functions as syf
-import CompNeuroPy.extra_functions as ef
 from ANNarchy import get_time, dt, reset
 import numpy as np
 

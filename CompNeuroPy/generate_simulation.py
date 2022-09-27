@@ -1,6 +1,6 @@
 from gc import get_objects
 from ANNarchy import get_time
-from .extra_functions import remove_key
+from CompNeuroPy import extra_functions as ef
 import numpy as np
 
 
@@ -115,7 +115,7 @@ class generate_simulation:
 
         for req in self.requirements:
             if len(list(req.keys())) > 1:  # --> requirement and arguments
-                req_kwargs = remove_key(req, "req")
+                req_kwargs = ef.remove_key(req, "req")
                 ### check if req_kwargs reference to sim_kwargs, if yes, use the corresponding current sim_kwarg as req_kwarg, if not do not update the initialized requirements kwargs
                 for key, val in req_kwargs.items():
                     if isinstance(val, str):
