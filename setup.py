@@ -9,7 +9,7 @@ dependencies = [
     "torch",
     "sbi",
     "pandas",
-    "ANNarchy",
+    #"ANNarchy",
     "hyperopt",
     "sympy",
     "cython",
