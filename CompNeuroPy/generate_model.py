@@ -45,7 +45,7 @@ class generate_model:
                     + "\n".join(not_created_model_list)
                     + "\n"
                 )
-            compile_in_folder(compile_folder_name)
+            mf.compile_in_folder(compile_folder_name)
         else:
             print("\n")
             assert False, (
