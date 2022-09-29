@@ -1,5 +1,6 @@
 import numpy as np
-import pylab as plt
+import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 from ANNarchy import raster_plot, dt
 import warnings
 from CompNeuroPy import system_functions as sf
@@ -455,7 +456,18 @@ def plot_recordings(figname, recordings, time_lim, idx_lim, shape, plan, dpi=300
                     aspect="auto",
                     vmin=vmin,
                     vmax=vmax,
+                    extent=[
+                        np.min(times) - 0.5,
+                        np.max(times) - 0.5,
+                        data.shape[1] - 0.5,
+                        -0.5,
+                    ],
+                    interpolation="none",
                 )
+                if data.shape[1] == 1:
+                    plt.yticks([0])
+                else:
+                    plt.gca().yaxis.set_major_locator(MaxNLocator(integer=True))
             else:
                 print(
                     "\nERROR plot_recordings: only 2D data accepted,",
