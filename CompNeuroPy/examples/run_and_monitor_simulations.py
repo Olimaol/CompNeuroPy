@@ -17,7 +17,7 @@ my_model.create()
 ### here we record from each population the variable p and spikes
 monitor_dictionary = {
     f"pop;{my_model.populations[0]};10": ["p", "spike"],
-    f"pop;{my_model.populations[1]};10": ["p", "spike"],
+    f"pop;{my_model.populations[1]};15": ["p", "spike"],
 }
 mon = Monitors(monitor_dictionary)
 

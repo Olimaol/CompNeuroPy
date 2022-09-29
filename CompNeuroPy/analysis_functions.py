@@ -227,31 +227,114 @@ def get_pop_rate(
     return ret
 
 
-def plot_recordings(figname, recordings, time_lim, idx_lim, shape, plan, dpi=300):
+def plot_recordings(
+    figname, recordings, recording_times, chunk, time_lim, shape, plan, dpi=300
+):
     """
-    recordings: dict of recordings
+    recordings: list with recordings
     shape: tuple, shape of subplots
     plan: list of strings, strings defin where to plot which data and how
     """
-    assert isinstance(
-        recordings, dict
-    ), "ERROR plot_recordings: Recordings should be a dictionary! Maybe used complete recordings list? (define the chunk of recordings!)"
+    recordings = recordings[chunk]
+    compartment_list = []
+    for plan_str in plan:
+        compartment = plan_str.split(";")[1]
+        if not (compartment in compartment_list):
+            compartment_list.append(compartment)
+
+    ### get idx_lim for all compartments, in parallel check that there are no pauses
+    idx_lim = {}
+    for compartment in compartment_list:
+        idx_lim[compartment] = []
+        nr_periods = recording_times.__get_nr_periods__(
+            chunk=chunk, compartment=compartment
+        )
+        time_lim_list = []
+        idx_lim_list = []
+        for period in range(nr_periods):
+            ### get the time_lim and idx_lim of the period
+            time_lim_list.append(
+                recording_times.time_lims(
+                    chunk=chunk, compartment=compartment, period=period
+                )
+            )
+            idx_lim_list.append(
+                recording_times.idx_lims(
+                    chunk=chunk, compartment=compartment, period=period
+                )
+            )
+        ### check for both time_lim values, in which period they fall
+        for idx_time_lim_val, time_lim_val in enumerate(time_lim):
+            for period in range(nr_periods):
+                ### if period is found --> calculate idx_lim of compartment
+                if (
+                    time_lim_val >= time_lim_list[period][0]
+                    and time_lim_val <= time_lim_list[period][1]
+                ):
+                    calc_i0 = idx_lim_list[period][0]
+                    calc_i1 = idx_lim_list[period][1]
+                    calc_t0 = time_lim_list[period][0]
+                    calc_t1 = time_lim_list[period][1]
+
+                    idx_lim[compartment].append(
+                        (calc_i1 - calc_i0) / (calc_t1 - calc_t0) * time_lim_val
+                        + calc_i0
+                        - calc_t0 * (calc_i1 - calc_i0) / (calc_t1 - calc_t0)
+                    )
+                    if idx_time_lim_val == 0:
+                        ### first index within time limits --> ceil
+                        idx_lim[compartment][-1] = np.ceil(idx_lim[compartment][-1])
+                    else:
+                        ### last index within time limits --> floor
+                        idx_lim[compartment][-1] = np.floor(idx_lim[compartment][-1])
+
+                ### if period is found --> check were first recording step is for compartment --> actual start time
+
+    ### check if there are no pauses between periods
+    # if period < nr_periods - 1:
+    #     this_period_lims = recording_times.time_lims(
+    #         chunk=chunk, compartment=compartment, period=period
+    #     )
+    #     next_period_lims = recording_times.time_lims(
+    #         chunk=chunk, compartment=compartment, period=period + 1
+    #     )
+    #     if this_period_lims[1] != next_period_lims[0]:
+    #         print(
+    #             "ERROR plot_recordings, time_lim and idx_lim do not fit! Maybe multiple periods separated by pauses in recordings?"
+    #         )
+    #         quit()
 
     ### define times and indizes for plots
     print(figname, end=":\t")
-    print(time_lim, end="\t")
-    print(idx_lim)
-    if int(np.diff(time_lim) / recordings["dt"]) != int(np.diff(idx_lim)):
-        print(
-            "ERROR plot_recordings, time_lim and idx_lim do not fit! Maybe multiple periods separated by pauses in recordings?"
-        )
-        quit()
+    print(time_lim)
 
     start_time = time_lim[0]
     end_time = time_lim[1]
-    times = np.arange(start_time, end_time, recordings["dt"])
-    start_step = idx_lim[0]
-    end_step = idx_lim[1]
+    times = {}
+    start_step = {}
+    end_step = {}
+    for compartment in compartment_list:
+        times[compartment] = np.arange(
+            start_time, end_time, recordings[f"{compartment};period"]
+        )
+        start_step[compartment] = int(idx_lim[compartment][0])
+        end_step[compartment] = int(idx_lim[compartment][1])
+
+        ### check if there are pauses between periods:
+        if not (
+            (end_time - start_time) / recordings[f"{compartment};period"]
+            == end_step[compartment] - start_step[compartment]
+        ):
+            print(
+                "ERROR plot_recordings, time_lim and idx_lim do not fit! Maybe multiple periods separated by pauses in recordings?"
+            )
+            # quit()
+        print(f"{compartment} with period {recordings[f'{compartment};period']}")
+        print(f"recordings shape: {recordings[f'{compartment};p'].shape}")
+        print(f"time range: {start_time} - {end_time}")
+        print(f"start step: {start_step[compartment]}")
+        print(f"end step: {end_step[compartment]}")
+        print(f"times shape: {times[compartment].shape}\n")
 
     plt.figure(figsize=([6.4 * shape[1], 4.8 * shape[0]]))
     for subplot in plan:
@@ -324,9 +407,12 @@ def plot_recordings(figname, recordings, time_lim, idx_lim, shape, plan, dpi=300
                 plt.title("Spikes " + part)
         elif variable == "spike" and mode == "mean":
             firing_rate = get_pop_rate(
-                data, end_time - start_time, dt=recordings["dt"], t_start=start_time
+                data,
+                end_time - start_time,
+                dt=recordings["dt"],
+                t_start=start_time,
             )
-            plt.plot(times, firing_rate, color="k")
+            plt.plot(times[part], firing_rate, color="k")
             plt.xlim(start_time, end_time)
             plt.xlabel("time [ms]")
             plt.ylabel("Mean firing rate [Hz]")
@@ -358,9 +444,20 @@ def plot_recordings(figname, recordings, time_lim, idx_lim, shape, plan, dpi=300
                 plt.ylabel("# neurons")
                 ax = plt.gca().twinx()
                 firing_rate = get_pop_rate(
-                    data, end_time - start_time, dt=recordings["dt"], t_start=start_time
+                    data,
+                    end_time - start_time,
+                    dt=recordings["dt"],
+                    t_start=start_time,
                 )
-                ax.plot(times, firing_rate, color="r")
+                ax.plot(
+                    times[part],
+                    firing_rate[
+                        np.arange(
+                            0, firing_rate.shape[0], recordings[f"{part};period"]
+                        ).astype(int)
+                    ],
+                    color="r",
+                )
                 plt.ylabel("Mean firing rate [Hz]", color="r")
                 ax.tick_params(axis="y", colors="r")
                 plt.xlim(start_time, end_time)
@@ -416,11 +513,17 @@ def plot_recordings(figname, recordings, time_lim, idx_lim, shape, plan, dpi=300
                 )
         elif variable != "spike" and mode == "line":
             if len(data.shape) == 1:
-                plt.plot(times, data[start_step:end_step], color="k")
+                plt.plot(
+                    times[part], data[start_step[part] : end_step[part]], color="k"
+                )
                 plt.title("Variable " + part + " " + variable + "(1)")
             elif len(data.shape) == 2:
                 for neuron in range(data.shape[1]):
-                    plt.plot(times, data[start_step:end_step, neuron], color="k")
+                    plt.plot(
+                        times[part],
+                        data[start_step[part] : end_step[part], neuron],
+                        color="k",
+                    )
                     plt.title(
                         "Variable "
                         + part
@@ -444,21 +547,21 @@ def plot_recordings(figname, recordings, time_lim, idx_lim, shape, plan, dpi=300
             # data[start_step:end_step,neuron]
             if len(data.shape) == 2:
 
-                vmin = np.min(data[start_step:end_step, :])
-                vmax = np.max(data[start_step:end_step, :])
+                vmin = np.min(data[start_step[part] : end_step[part], :])
+                vmax = np.max(data[start_step[part] : end_step[part], :])
 
                 plt.title(
                     f"Variable {part} {variable} ({data.shape[1]}) [{ef.sci(vmin)}, {ef.sci(vmax)}]"
                 )
 
                 plt.gca().imshow(
-                    data[start_step:end_step, :].T,
+                    data[start_step[part] : end_step[part], :].T,
                     aspect="auto",
                     vmin=vmin,
                     vmax=vmax,
                     extent=[
-                        np.min(times) - 0.5,
-                        np.max(times) - 0.5,
+                        np.min(times[part]) - 0.5,
+                        np.max(times[part]) - 0.5,
                         data.shape[1] - 0.5,
                         -0.5,
                     ],

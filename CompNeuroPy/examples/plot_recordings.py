@@ -3,14 +3,14 @@ from CompNeuroPy import plot_recordings
 
 
 def make_plot(recordings, recording_timings, chunk, period="all"):
+    print("make plot")
+    print(chunk, period)
     ### with plot_recodings one can easily plot the recodings of one chunk
     ### plot_recordings needs the time limits (in ms) and the idx limits for the data to plot, which can be obtained for example with the recording_timings object (they can of course also be set manually to specific values)
     if period == "all":
         time_lims = recording_timings.time_lims(chunk=chunk)
-        idx_lims = recording_timings.idx_lims(chunk=chunk)
     else:
         time_lims = recording_timings.time_lims(chunk=chunk, period=period)
-        idx_lims = recording_timings.idx_lims(chunk=chunk, period=period)
     ### the last two arguments of plot_recordings define how subplots are arranged and which recordings are shown in which subplot (plot_list)
     structure = (2, 2)
     ### the plot_list entries consist of strings with following format:
@@ -24,9 +24,10 @@ def make_plot(recordings, recording_timings, chunk, period="all"):
 
     plot_recordings(
         figname=f"results/my_two_poissons_chunk_{chunk}_period_{period}.png",
-        recordings=recordings[chunk],
+        recordings=recordings,
+        recording_times=recording_timings,
+        chunk=chunk,
         time_lim=time_lims,
-        idx_lim=idx_lims,
         shape=structure,
         plan=plot_list,
         dpi=300,
@@ -43,6 +44,11 @@ if __name__ == "__main__":
     ).item()
 
     ### plot chunks or periods of chunks
+    make_plot(recordings, recording_timings, 1, 1)
+    ### TODO this does not work
+    ### i think because the first recording value is not actually at the beginning of this period
+    ### find solution
+    quit()
     for chunk in range(len(recordings)):
         try:
             ### plot complete chunk
