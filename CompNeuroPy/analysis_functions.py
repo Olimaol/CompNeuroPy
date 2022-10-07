@@ -450,37 +450,111 @@ def plot_recordings(
         elif variable != "spike" and mode == "line":
             if len(data.shape) == 1:
                 plt.plot(time_arr_dict[part], data, color="k")
-                plt.title("Variable " + part + " " + variable + "(1)")
-            elif len(data.shape) == 2:
+                plt.title(f"Variable {variable} of {part} (1)")
+            elif len(data.shape) == 2 and isinstance(data[0, 0], list) is not True:
+                ### population: data[time,neurons]
                 for neuron in range(data.shape[1]):
                     plt.plot(
                         time_arr_dict[part],
                         data[:, neuron],
                         color="k",
                     )
-                    plt.title(
-                        "Variable "
-                        + part
-                        + " "
-                        + variable
-                        + "("
-                        + str(data.shape[1])
-                        + ")"
-                    )
+                plt.title(f"Variable {variable} of {part} ({data.shape[1]})")
+            elif len(data.shape) == 3 or (
+                len(data.shape) == 2 and isinstance(data[0, 0], list) is True
+            ):
+                if len(data.shape) == 3:
+                    ### projection data: data[time, postneurons, preneurons]
+                    for post_neuron in range(data.shape[1]):
+                        for pre_neuron in range(data.shape[2]):
+                            plt.plot(
+                                time_arr_dict[part],
+                                data[:, post_neuron, pre_neuron],
+                                color="k",
+                            )
+                else:
+                    ### data[time, postneurons][preneurons] (with different number of preneurons)
+                    for post_neuron in range(data.shape[1]):
+                        for pre_neuron in range(len(data[0, post_neuron])):
+                            plt.plot(
+                                time_arr_dict[part],
+                                np.array(
+                                    [
+                                        data[t, post_neuron][pre_neuron]
+                                        for t in range(data.shape[0])
+                                    ]
+                                ),
+                                color="k",
+                            )
+
+                plt.title(f"Variable {variable} of {part} ({data.shape[1]})")
             else:
                 print(
-                    "\nERROR plot_recordings: only data of 1D neuron populations accepted,",
+                    "\nERROR plot_recordings: shape not accepted,",
                     ";".join([part, variable]),
                     "\n",
-                )  ### TODO this seems to not be neccessary, because data of 2D populations have also shape (time, nr_neurons)
+                )
             plt.xlim(start_time, end_time)
             plt.xlabel("time [ms]")
         elif variable != "spike" and mode == "mean":
-            pass
+            if len(data.shape) == 1:
+                plt.plot(time_arr_dict[part], data, color="k")
+                plt.title(f"Variable {variable} of {part} (1)")
+            elif len(data.shape) == 2 and isinstance(data[0, 0], list) is not True:
+                ### population: data[time,neurons]
+                nr_neurons = data.shape[1]
+                data = np.mean(data, 1)
+                plt.plot(
+                    time_arr_dict[part],
+                    data[:],
+                    color="k",
+                )
+                plt.title(f"Variable {variable} of {part} ({nr_neurons}, mean)")
+            elif len(data.shape) == 3 or (
+                len(data.shape) == 2 and isinstance(data[0, 0], list) is True
+            ):
+                if len(data.shape) == 3:
+                    ### projection data: data[time, postneurons, preneurons]
+                    for post_neuron in range(data.shape[1]):
+                        plt.plot(
+                            time_arr_dict[part],
+                            np.mean(data[:, post_neuron, :], 1),
+                            color="k",
+                        )
+                else:
+                    ### data[time, postneurons][preneurons] (with different number of preneurons)
+                    for post_neuron in range(data.shape[1]):
+                        avg_data = []
+                        for pre_neuron in range(len(data[0, post_neuron])):
+                            avg_data.append(
+                                np.array(
+                                    [
+                                        data[t, post_neuron][pre_neuron]
+                                        for t in range(data.shape[0])
+                                    ]
+                                )
+                            )
+                        plt.plot(
+                            time_arr_dict[part],
+                            np.mean(avg_data, 0),
+                            color="k",
+                        )
+
+                plt.title(
+                    f"Variable {variable} of {part}, mean for {data.shape[1]} post neurons"
+                )
+            else:
+                print(
+                    "\nERROR plot_recordings: shape not accepted,",
+                    ";".join([part, variable]),
+                    "\n",
+                )
+            plt.xlim(start_time, end_time)
+            plt.xlabel("time [ms]")
         elif variable != "spike" and mode == "matrix":
             # data[start_step:end_step,neuron]
-            if len(data.shape) == 2:
-
+            if len(data.shape) == 2 and isinstance(data[0, 0], list) is not True:
+                ### data from population [times,neurons]
                 ### get the times and data between time_lims
                 mask = (
                     (time_arr_dict[part] >= start_time).astype(int)
@@ -519,7 +593,7 @@ def plot_recordings(
                     plot_data_arr.T, mask=np.isnan(plot_data_arr.T)
                 )
                 cmap = matplotlib.cm.viridis
-                cmap.set_bad("white", 1.0)
+                cmap.set_bad("red", 1.0)
 
                 plt.title(
                     f"Variable {part} {variable} ({data.shape[1]}) [{ef.sci(vmin)}, {ef.sci(vmax)}]"
@@ -544,9 +618,109 @@ def plot_recordings(
                 else:
                     plt.gca().yaxis.set_major_locator(MaxNLocator(integer=True))
                 plt.xlabel("time [ms]")
+            elif len(data.shape) == 3 or (
+                len(data.shape) == 2 and isinstance(data[0, 0], list) is True
+            ):
+                ### data from projection
+                if len(data.shape) == 3:
+                    ### projection data: data[time, postneurons, preneurons]
+                    ### create a 2D array from the 3D array
+                    data_resh = data.reshape(
+                        (data.shape[0], int(data.shape[1] * data.shape[2]))
+                    )
+                    data_split = np.split(data_resh, data.shape[1], axis=1)
+                    ### separate the post_neurons by nan vectors
+                    data_with_none = np.concatenate(
+                        [
+                            np.concatenate(
+                                [
+                                    data_split[idx],
+                                    np.zeros((data.shape[0], 1)) * np.nan,
+                                ],
+                                axis=1,
+                            )
+                            for idx in range(len(data_split))
+                        ],
+                        axis=1,
+                    )[:, :-1]
+
+                    ### after cerating 2D array --> same procedure as for populations
+                    ### get the times and data between time_lims
+                    mask = (
+                        (time_arr_dict[part] >= start_time).astype(int)
+                        * (time_arr_dict[part] <= end_time).astype(int)
+                    ).astype(bool)
+                    time_arr = time_arr_dict[part][mask]
+                    data_arr = data_with_none[mask, :]
+
+                    ### check with the actual_period and the times array if there is data missing
+                    ###     from time_lims and actual period opne should get all times at which data points should be
+                    actual_period = (
+                        int(recordings[f"{part};period"] / time_step) * time_step
+                    )
+                    actual_start_time = (
+                        np.ceil(start_time / actual_period) * actual_period
+                    )
+                    actual_end_time = (
+                        np.ceil(end_time / actual_period - 1) * actual_period
+                    )
+                    soll_times = np.arange(
+                        actual_start_time,
+                        actual_end_time + actual_period,
+                        actual_period,
+                    )
+
+                    ### check if there are time points, where data is missing
+                    plot_data_arr = np.empty((soll_times.size, data_arr.shape[1]))
+                    plot_data_arr[:] = None
+                    for time_point_idx, time_point in enumerate(soll_times):
+                        if time_point in time_arr:
+                            ### data at time point is available --> use data
+                            idx_available_data = time_arr == time_point
+                            plot_data_arr[time_point_idx, :] = data_arr[
+                                idx_available_data, :
+                            ]
+                        ### if data is not available it stays none
+
+                    vmin = np.nanmin(plot_data_arr)
+                    vmax = np.nanmax(plot_data_arr)
+
+                    masked_array = np.ma.array(
+                        plot_data_arr.T, mask=np.isnan(plot_data_arr.T)
+                    )
+                    cmap = matplotlib.cm.viridis
+                    cmap.set_bad("red", 1.0)
+
+                    plt.title(
+                        f"Variable {variable} of {part} ({data.shape[1]}) [{ef.sci(vmin)}, {ef.sci(vmax)}]"
+                    )
+
+                    plt.gca().imshow(
+                        masked_array,
+                        aspect="auto",
+                        vmin=vmin,
+                        vmax=vmax,
+                        extent=[
+                            np.min(soll_times) - 0.5,
+                            np.max(soll_times) - 0.5,
+                            data.shape[1] - 0.5,
+                            -0.5,
+                        ],
+                        cmap=cmap,
+                        interpolation="none",
+                    )
+                    if data.shape[1] == 1:
+                        plt.yticks([0])
+                    else:
+                        plt.gca().yaxis.set_major_locator(MaxNLocator(integer=True))
+                    plt.xlabel("time [ms]")
+                else:
+                    ### data[time, postneurons][preneurons] (with different number of preneurons)
+                    pass
+
             else:
                 print(
-                    "\nERROR plot_recordings: only 2D data accepted,",
+                    "\nERROR plot_recordings: shape not accepted,",
                     ";".join([part, variable]),
                     "\n",
                 )

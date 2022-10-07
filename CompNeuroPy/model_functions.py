@@ -1,6 +1,7 @@
 from ANNarchy import (
     compile,
     get_population,
+    get_projection,
     Monitor,
     dt,
     get_time,
@@ -36,12 +37,16 @@ def addMonitors(monDict):
     mon = {}
     for key, val in monDict.items():
         compartmentType, compartment, period = ef.unpack_monDict_keys(key)
-        ### check if compartment is pop TODO add period
+        ### check if compartment is pop
         if compartmentType == "pop":
             mon[compartment] = Monitor(
                 get_population(compartment), val, start=False, period=period
             )
-        ### TODO add proj
+        ### check if compartment is proj
+        if compartmentType == "proj":
+            mon[compartment] = Monitor(
+                get_projection(compartment), val, start=False, period=period
+            )
     return mon
 
 
@@ -56,14 +61,16 @@ def startMonitors(compartment_list, mon, timings=None):
     started = {}
     for key in compartment_list:
         compartmentType, compartment, _ = ef.unpack_monDict_keys(key)
-        if compartmentType == "pop":
+        if compartmentType == "pop" or compartmentType == "proj":
             started[compartment] = False
 
     if timings == None:
         ### information about pauses not available, just start
         for key in compartment_list:
             compartmentType, compartment, _ = ef.unpack_monDict_keys(key)
-            if compartmentType == "pop" and started[compartment] == False:
+            if (compartmentType == "pop" or compartmentType == "proj") and started[
+                compartment
+            ] == False:
                 mon[compartment].start()
                 print("start", compartment)
                 started[compartment] = True
@@ -72,7 +79,9 @@ def startMonitors(compartment_list, mon, timings=None):
         ### information about pauses available, start if not paused, resume if paused
         for key in compartment_list:
             compartmentType, compartment, _ = ef.unpack_monDict_keys(key)
-            if compartmentType == "pop" and started[compartment] == False:
+            if (compartmentType == "pop" or compartmentType == "proj") and started[
+                compartment
+            ] == False:
                 if timings[compartment]["currently_paused"]:
                     ### monitor is currently paused --> resume
                     mon[compartment].resume()
@@ -97,12 +106,14 @@ def pauseMonitors(compartment_list, mon, timings=None):
     paused = {}
     for key in compartment_list:
         compartmentType, compartment, _ = ef.unpack_monDict_keys(key)
-        if compartmentType == "pop":
+        if compartmentType == "pop" or compartmentType == "proj":
             paused[compartment] = False
 
     for key in compartment_list:
         compartmentType, compartment, _ = ef.unpack_monDict_keys(key)
-        if compartmentType == "pop" and paused[compartment] == False:
+        if (compartmentType == "pop" or compartmentType == "proj") and paused[
+            compartment
+        ] == False:
             mon[compartment].pause()
             paused[compartment] = True
 
