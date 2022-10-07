@@ -69,7 +69,12 @@ def sci(nr):
 
 def unpack_monDict_keys(s):
     """
-    s : a key of a monDict
+    s : a key of a monDict format:
+        "compartment_type;compartment_name;period" or "compartment_type;compartment_name"
+
+    return compartment_type, compartment_name, period
+
+    if period not provided --> for pop return dt() for proj return dt()*1000
     """
     splitted_s = s.split(";")
     compartment_type = splitted_s[0]
