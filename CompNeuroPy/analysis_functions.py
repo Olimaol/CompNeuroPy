@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
+import matplotlib
 from ANNarchy import raster_plot, dt
 import warnings
 from CompNeuroPy import system_functions as sf
@@ -180,6 +181,7 @@ def get_pop_rate(
 
     returns smoothed population rate from period after rampUp period until duration
     """
+    duration_init = duration
     temp_duration = duration + t_start
     t, n = raster_plot(spikes)
     if len(t) > 1:  # check if there are spikes in population at all
@@ -206,8 +208,11 @@ def get_pop_rate(
         binsCenters = bins[:-1] + binSize // 2
         for idx, key in enumerate(spikes.keys()):
             times = np.array(spikes[key]).astype(int)
+            timeshift_start = -binSize // 2
+            timeshift_end = binSize // 2
+            timeshift_step = np.max([binSize // 10, 1])
             for timeshift in np.arange(
-                -binSize // 2, binSize // 2 + binSize // 10, binSize // 10
+                timeshift_start, timeshift_end, timeshift_step
             ).astype(int):
                 hist, edges = np.histogram(times, bins + timeshift)
                 rate[
@@ -224,7 +229,7 @@ def get_pop_rate(
     else:
         ret = np.zeros(int(duration / dt))
 
-    return ret
+    return [np.arange(t_start, t_start + duration_init, dt), ret]
 
 
 def plot_recordings(
@@ -235,7 +240,10 @@ def plot_recordings(
     shape: tuple, shape of subplots
     plan: list of strings, strings defin where to plot which data and how
     """
+    print(f"generate fig {figname}", end="... ", flush=True)
     recordings = recordings[chunk]
+    start_time = time_lim[0]
+    end_time = time_lim[1]
     compartment_list = []
     for plan_str in plan:
         compartment = plan_str.split(";")[1]
@@ -243,98 +251,27 @@ def plot_recordings(
             compartment_list.append(compartment)
 
     ### get idx_lim for all compartments, in parallel check that there are no pauses
-    idx_lim = {}
+    time_arr_dict = {}
+    time_step = recordings["dt"]
     for compartment in compartment_list:
-        idx_lim[compartment] = []
+        actual_period = int(recordings[f"{compartment};period"] / time_step) * time_step
+
+        time_arr_part = []
+
+        ### loop over periods
         nr_periods = recording_times.__get_nr_periods__(
             chunk=chunk, compartment=compartment
         )
-        time_lim_list = []
-        idx_lim_list = []
         for period in range(nr_periods):
             ### get the time_lim and idx_lim of the period
-            time_lim_list.append(
-                recording_times.time_lims(
-                    chunk=chunk, compartment=compartment, period=period
-                )
+            time_lims = recording_times.time_lims(
+                chunk=chunk, compartment=compartment, period=period
             )
-            idx_lim_list.append(
-                recording_times.idx_lims(
-                    chunk=chunk, compartment=compartment, period=period
-                )
+            time_arr_part.append(
+                np.arange(time_lims[0], time_lims[1] + actual_period, actual_period)
             )
-        ### check for both time_lim values, in which period they fall
-        for idx_time_lim_val, time_lim_val in enumerate(time_lim):
-            for period in range(nr_periods):
-                ### if period is found --> calculate idx_lim of compartment
-                if (
-                    time_lim_val >= time_lim_list[period][0]
-                    and time_lim_val <= time_lim_list[period][1]
-                ):
-                    calc_i0 = idx_lim_list[period][0]
-                    calc_i1 = idx_lim_list[period][1]
-                    calc_t0 = time_lim_list[period][0]
-                    calc_t1 = time_lim_list[period][1]
 
-                    idx_lim[compartment].append(
-                        (calc_i1 - calc_i0) / (calc_t1 - calc_t0) * time_lim_val
-                        + calc_i0
-                        - calc_t0 * (calc_i1 - calc_i0) / (calc_t1 - calc_t0)
-                    )
-                    if idx_time_lim_val == 0:
-                        ### first index within time limits --> ceil
-                        idx_lim[compartment][-1] = np.ceil(idx_lim[compartment][-1])
-                    else:
-                        ### last index within time limits --> floor
-                        idx_lim[compartment][-1] = np.floor(idx_lim[compartment][-1])
-
-                ### if period is found --> check were first recording step is for compartment --> actual start time
-
-    ### check if there are no pauses between periods
-    # if period < nr_periods - 1:
-    #     this_period_lims = recording_times.time_lims(
-    #         chunk=chunk, compartment=compartment, period=period
-    #     )
-    #     next_period_lims = recording_times.time_lims(
-    #         chunk=chunk, compartment=compartment, period=period + 1
-    #     )
-    #     if this_period_lims[1] != next_period_lims[0]:
-    #         print(
-    #             "ERROR plot_recordings, time_lim and idx_lim do not fit! Maybe multiple periods separated by pauses in recordings?"
-    #         )
-    #         quit()
-
-    ### define times and indizes for plots
-    print(figname, end=":\t")
-    print(time_lim)
-
-    start_time = time_lim[0]
-    end_time = time_lim[1]
-    times = {}
-    start_step = {}
-    end_step = {}
-    for compartment in compartment_list:
-        times[compartment] = np.arange(
-            start_time, end_time, recordings[f"{compartment};period"]
-        )
-        start_step[compartment] = int(idx_lim[compartment][0])
-        end_step[compartment] = int(idx_lim[compartment][1])
-
-        ### check if there are pauses between periods:
-        if not (
-            (end_time - start_time) / recordings[f"{compartment};period"]
-            == end_step[compartment] - start_step[compartment]
-        ):
-            print(
-                "ERROR plot_recordings, time_lim and idx_lim do not fit! Maybe multiple periods separated by pauses in recordings?"
-            )
-            # quit()
-        print(f"{compartment} with period {recordings[f'{compartment};period']}")
-        print(f"recordings shape: {recordings[f'{compartment};p'].shape}")
-        print(f"time range: {start_time} - {end_time}")
-        print(f"start step: {start_step[compartment]}")
-        print(f"end step: {end_step[compartment]}")
-        print(f"times shape: {times[compartment].shape}\n")
+        time_arr_dict[compartment] = np.concatenate(time_arr_part)
 
     plt.figure(figsize=([6.4 * shape[1], 4.8 * shape[0]]))
     for subplot in plan:
@@ -354,7 +291,7 @@ def plot_recordings(
                 )
                 quit()
         try:
-            data = recordings[";".join([part, variable])]
+            data = recordings[f"{part};{variable}"]
         except:
             print(
                 "\nWARNING plot_recordings: data",
@@ -374,12 +311,16 @@ def plot_recordings(
         plt.subplot(shape[0], shape[1], nr)
         if variable == "spike" and mode == "raster":
             t, n = my_raster_plot(data)
-            if np.unique(n).size == 0:
+            t = t * time_step  # convert time steps into ms
+            mask = ((t >= start_time).astype(int) * (t <= end_time).astype(int)).astype(
+                bool
+            )
+            if mask.size == 0:
                 plt.title("Spikes " + part)
                 print(
                     "\nWARNING plot_recordings: data",
                     ";".join([part, variable]),
-                    "does not contain any spikes.\n",
+                    "does not contain any spikes in the given time interval.\n",
                 )
                 plt.text(
                     0.5,
@@ -389,10 +330,7 @@ def plot_recordings(
                     ha="center",
                 )
             else:
-                t = t * recordings["dt"]  # convert time steps into ms
-                mask = (
-                    (t >= start_time).astype(int) * (t <= end_time).astype(int)
-                ).astype(bool)
+
                 if style != "":
                     plt.scatter(
                         t[mask], n[mask], color=style, marker=".", s=3, linewidth=0.1
@@ -406,25 +344,29 @@ def plot_recordings(
                 plt.ylabel("# neurons")
                 plt.title("Spikes " + part)
         elif variable == "spike" and mode == "mean":
-            firing_rate = get_pop_rate(
+            time_arr, firing_rate = get_pop_rate(
                 data,
                 end_time - start_time,
-                dt=recordings["dt"],
+                dt=time_step,
                 t_start=start_time,
             )
-            plt.plot(times[part], firing_rate, color="k")
+            plt.plot(time_arr, firing_rate, color="k")
             plt.xlim(start_time, end_time)
             plt.xlabel("time [ms]")
             plt.ylabel("Mean firing rate [Hz]")
             plt.title("Mean firing rate " + part)
         elif variable == "spike" and mode == "hybrid":
             t, n = my_raster_plot(data)
-            if np.unique(n).size == 0:
+            t = t * time_step  # convert time steps into ms
+            mask = ((t >= start_time).astype(int) * (t <= end_time).astype(int)).astype(
+                bool
+            )
+            if mask.size == 0:
                 plt.title("Spikes " + part)
                 print(
                     "\nWARNING plot_recordings: data",
                     ";".join([part, variable]),
-                    "does not contain any spikes.\n",
+                    "does not contain any spikes in the given time interval.\n",
                 )
                 plt.text(
                     0.5,
@@ -434,28 +376,21 @@ def plot_recordings(
                     ha="center",
                 )
             else:
-                t = t * recordings["dt"]  # convert time steps into ms
-                mask = (
-                    (t >= start_time).astype(int) * (t <= end_time).astype(int)
-                ).astype(bool)
+
                 plt.plot(
                     t[mask], n[mask], "k.", markersize=np.sqrt(3), markeredgewidth=0.1
                 )
                 plt.ylabel("# neurons")
                 ax = plt.gca().twinx()
-                firing_rate = get_pop_rate(
+                time_arr, firing_rate = get_pop_rate(
                     data,
                     end_time - start_time,
-                    dt=recordings["dt"],
+                    dt=time_step,
                     t_start=start_time,
                 )
                 ax.plot(
-                    times[part],
-                    firing_rate[
-                        np.arange(
-                            0, firing_rate.shape[0], recordings[f"{part};period"]
-                        ).astype(int)
-                    ],
+                    time_arr,
+                    firing_rate,
                     color="r",
                 )
                 plt.ylabel("Mean firing rate [Hz]", color="r")
@@ -465,12 +400,16 @@ def plot_recordings(
                 plt.title("Activity " + part)
         elif variable == "spike" and mode == "single":
             t, n = my_raster_plot(data)
-            if np.unique(n).size == 0:
+            t = t * time_step  # convert time steps into ms
+            mask = ((t >= start_time).astype(int) * (t <= end_time).astype(int)).astype(
+                bool
+            )
+            if mask.size == 0:
                 plt.title("Spikes " + part)
                 print(
                     "\nWARNING plot_recordings: data",
                     ";".join([part, variable]),
-                    "does not contain any spikes.\n",
+                    "does not contain any spikes in the given time interval.\n",
                 )
                 plt.text(
                     0.5,
@@ -480,10 +419,7 @@ def plot_recordings(
                     ha="center",
                 )
             elif np.unique(n).size == 1:
-                t = t * recordings["dt"]  # convert time steps into ms
-                mask = (
-                    (t >= start_time).astype(int) * (t <= end_time).astype(int)
-                ).astype(bool)
+
                 if style != "":
                     plt.scatter(
                         t[mask], n[mask], color=style, marker="|", s=3000, linewidth=0.1
@@ -513,15 +449,13 @@ def plot_recordings(
                 )
         elif variable != "spike" and mode == "line":
             if len(data.shape) == 1:
-                plt.plot(
-                    times[part], data[start_step[part] : end_step[part]], color="k"
-                )
+                plt.plot(time_arr_dict[part], data, color="k")
                 plt.title("Variable " + part + " " + variable + "(1)")
             elif len(data.shape) == 2:
                 for neuron in range(data.shape[1]):
                     plt.plot(
-                        times[part],
-                        data[start_step[part] : end_step[part], neuron],
+                        time_arr_dict[part],
+                        data[:, neuron],
                         color="k",
                     )
                     plt.title(
@@ -547,30 +481,69 @@ def plot_recordings(
             # data[start_step:end_step,neuron]
             if len(data.shape) == 2:
 
-                vmin = np.min(data[start_step[part] : end_step[part], :])
-                vmax = np.max(data[start_step[part] : end_step[part], :])
+                ### get the times and data between time_lims
+                mask = (
+                    (time_arr_dict[part] >= start_time).astype(int)
+                    * (time_arr_dict[part] <= end_time).astype(int)
+                ).astype(bool)
+                time_arr = time_arr_dict[part][mask]
+                data_arr = data[mask, :]
+
+                ### check with the actual_period and the times array if there is data missing
+                ###     from time_lims and actual period opne should get all times at which data points should be
+                actual_period = (
+                    int(recordings[f"{part};period"] / time_step) * time_step
+                )
+                actual_start_time = np.ceil(start_time / actual_period) * actual_period
+                actual_end_time = np.ceil(end_time / actual_period - 1) * actual_period
+                soll_times = np.arange(
+                    actual_start_time, actual_end_time + actual_period, actual_period
+                )
+
+                ### check if there are time points, where data is missing
+                plot_data_arr = np.empty((soll_times.size, data_arr.shape[1]))
+                plot_data_arr[:] = None
+                for time_point_idx, time_point in enumerate(soll_times):
+                    if time_point in time_arr:
+                        ### data at time point is available --> use data
+                        idx_available_data = time_arr == time_point
+                        plot_data_arr[time_point_idx, :] = data_arr[
+                            idx_available_data, :
+                        ]
+                    ### if data is not available it stays none
+
+                vmin = np.nanmin(plot_data_arr)
+                vmax = np.nanmax(plot_data_arr)
+
+                masked_array = np.ma.array(
+                    plot_data_arr.T, mask=np.isnan(plot_data_arr.T)
+                )
+                cmap = matplotlib.cm.viridis
+                cmap.set_bad("white", 1.0)
 
                 plt.title(
                     f"Variable {part} {variable} ({data.shape[1]}) [{ef.sci(vmin)}, {ef.sci(vmax)}]"
                 )
 
                 plt.gca().imshow(
-                    data[start_step[part] : end_step[part], :].T,
+                    masked_array,
                     aspect="auto",
                     vmin=vmin,
                     vmax=vmax,
                     extent=[
-                        np.min(times[part]) - 0.5,
-                        np.max(times[part]) - 0.5,
+                        np.min(soll_times) - 0.5,
+                        np.max(soll_times) - 0.5,
                         data.shape[1] - 0.5,
                         -0.5,
                     ],
+                    cmap=cmap,
                     interpolation="none",
                 )
                 if data.shape[1] == 1:
                     plt.yticks([0])
                 else:
                     plt.gca().yaxis.set_major_locator(MaxNLocator(integer=True))
+                plt.xlabel("time [ms]")
             else:
                 print(
                     "\nERROR plot_recordings: only 2D data accepted,",
@@ -595,6 +568,7 @@ def plot_recordings(
         save_dir = "/".join(figname_parts[:-1])
         sf.create_dir(save_dir)
     plt.savefig(figname, dpi=dpi)
+    print("Done")
 
 
 def get_number_of_zero_decimals(nr):

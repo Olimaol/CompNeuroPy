@@ -1,6 +1,6 @@
 import CompNeuroPy.model_functions as mf
 from CompNeuroPy import extra_functions as ef
-from ANNarchy import get_time, reset
+from ANNarchy import get_time, reset, dt
 import numpy as np
 
 
@@ -60,6 +60,23 @@ class Monitors:
                     )
             return self.recordings
 
+    def __correct_start_stop__(self, start_time_arr, stop_time_arr, period):
+        """
+        start_time_arr = array with start times of recordings, obtianed with get_time() funciton of ANNarchy
+        stop_time_arr = array with stop times of recordings, obtianed with get_time() funciton of ANNarchy
+        period = time difference between recording values specified by the user
+        returns the actual start and stop time of recorded values and how many recorded values between start and stop
+        """
+
+        actual_period = int(period / dt()) * dt()
+        actual_start_time = np.ceil(start_time_arr / actual_period) * actual_period
+
+        actual_stop_time = np.ceil(stop_time_arr / actual_period - 1) * actual_period
+
+        nr_rec_vals = 1 + (actual_stop_time - actual_start_time) / actual_period
+
+        return [actual_start_time, actual_stop_time, nr_rec_vals]
+
     def get_temp_timings(self, compartment_list):
         """
         generates a timings dictionary with time lims and idx lims for each compartment
@@ -74,22 +91,30 @@ class Monitors:
                 ### was started/resumed but never stoped after --> use current time for stop time
                 self.timings[compartment]["stop"].append(get_time())
             ### calculate the idx of the recorded arrays which correspond to the timings and remove 'currently_paused'
-            ### the length of the periods defines the idx of the arrays, further divide by period (of the monitor)
-            ### to get the idx
-            diff_timings = (
-                np.array(self.timings[compartment]["stop"])
-                - np.array(self.timings[compartment]["start"])
-            ) / period
+            ### get for each start-stop pair the corrected start stop timings (when teh values were actually recorded, depends on period and timestep)
+            ### and also get the number of recorded values for start-stop pair
+            start_time_arr = np.array(self.timings[compartment]["start"])
+            stop_time_arr = np.array(self.timings[compartment]["stop"])
+            (
+                start_time_arr,
+                stop_time_arr,
+                nr_rec_vals_arr,
+            ) = self.__correct_start_stop__(start_time_arr, stop_time_arr, period)
+
+            ### with the number of recorded values -> get start and end idx for each start-stop pair
             start_idx = [
-                np.sum(diff_timings[0:i]).astype(int) for i in range(diff_timings.size)
+                np.sum(nr_rec_vals_arr[0:i]).astype(int)
+                for i in range(nr_rec_vals_arr.size)
             ]
             stop_idx = [
-                np.sum(diff_timings[0 : i + 1]).astype(int)
-                for i in range(diff_timings.size)
+                np.sum(nr_rec_vals_arr[0 : i + 1]).astype(int)
+                for i in range(nr_rec_vals_arr.size)
             ]
+
+            ### return start-stop pair info in timings format
             temp_timings[compartment] = {
-                "start": {"ms": self.timings[compartment]["start"], "idx": start_idx},
-                "stop": {"ms": self.timings[compartment]["stop"], "idx": stop_idx},
+                "start": {"ms": start_time_arr.tolist(), "idx": start_idx},
+                "stop": {"ms": stop_time_arr.tolist(), "idx": stop_idx},
             }
         return temp_timings
 

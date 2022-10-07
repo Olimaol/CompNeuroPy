@@ -3,8 +3,6 @@ from CompNeuroPy import plot_recordings
 
 
 def make_plot(recordings, recording_timings, chunk, period="all"):
-    print("make plot")
-    print(chunk, period)
     ### with plot_recodings one can easily plot the recodings of one chunk
     ### plot_recordings needs the time limits (in ms) and the idx limits for the data to plot, which can be obtained for example with the recording_timings object (they can of course also be set manually to specific values)
     if period == "all":
@@ -43,19 +41,11 @@ if __name__ == "__main__":
         "dataRaw/run_and_monitor_simulations/recording_times.npy", allow_pickle=True
     ).item()
 
-    ### plot chunks or periods of chunks
+    ### plot first chunk (only one period)
+    make_plot(recordings, recording_timings, 0)
+    ### plot second chunk
+    make_plot(recordings, recording_timings, 1)
+    ### plot first period of second chunk
+    make_plot(recordings, recording_timings, 1, 0)
+    ### plot second period of second chunk
     make_plot(recordings, recording_timings, 1, 1)
-    ### TODO this does not work
-    ### i think because the first recording value is not actually at the beginning of this period
-    ### find solution
-    quit()
-    for chunk in range(len(recordings)):
-        try:
-            ### plot complete chunk
-            make_plot(recordings, recording_timings, chunk)
-        except:
-            ### chunks with pauses in recordings at the beginning or at the end are fine
-            ### but pauses in the middle can not be plotted (no data available for the middle of the plot)
-            ### one can specify the periods which should be plotted
-            for period in [0, 1]:
-                make_plot(recordings, recording_timings, chunk, period)

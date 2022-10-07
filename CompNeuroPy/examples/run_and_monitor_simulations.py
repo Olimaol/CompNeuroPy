@@ -12,9 +12,12 @@ my_model.create()
 ### Next we define what should be recorded, i.e., create monitors with the Monitors object from CompNeuroPy
 ### the Monitors object helps to create multiple monitors at once
 ### Monitors takes a monitor_dictionary as argument
-### format: monitor_dictionary = {'what;name':['variables', 'to', 'record']}
+### format: monitor_dictionary = {'what;name;period':['variables', 'to', 'record']}
 ### the Monitors object currently only supports populations, thus, 'what;' has to be 'pop;'
+### period can be a time larget tan the simulation time step and defines how often values are recorded
 ### here we record from each population the variable p and spikes
+### from first population get values every 10 ms, from second population every 15 ms
+### spike recordings are not affected by the period (each spike is recorded)
 monitor_dictionary = {
     f"pop;{my_model.populations[0]};10": ["p", "spike"],
     f"pop;{my_model.populations[1]};15": ["p", "spike"],
@@ -217,11 +220,10 @@ for chunk in range(len(recording_times.all())):
     for key in recording_times.all()[chunk].keys():
         print("   ", key, recording_times.all()[chunk][key])
 
-
 ### console output of this file:
 """
 created model, other parameters: 0 1 2
-annarchy_folders/annarchy_my_model already exists
+Compiling ...  OK 
 
 WARNING! run increase_rates_all_pops changed simulation kwargs, initial requirements may no longer be fulfilled!
 
@@ -250,32 +252,32 @@ kwargs (for each run)
 
 recordings = list with len=2
 --> separate recordings for each chunk (separated by reset)
-e.g., recordings[0]: ['first_poisson;p', 'first_poisson;spike', 'second_poisson;p', 'second_poisson;spike', 'dt']
+e.g., recordings[0]: ['first_poisson;period', 'first_poisson;p', 'first_poisson;spike', 'second_poisson;period', 'second_poisson;p', 'second_poisson;spike', 'dt']
+you can see that for each recorded compartment also a variable 'period' is stored, thats the sampling period of the monitor in ms (e.g. default=dt)
 dt: 1.0
 
 
 recording times of first chunk:
-	 time_lims: [500.0, 3500.0]
-	 idx_lims [0, 3000]
+         time_lims: [500.0, 3490.0]
+         idx_lims [0, 300]
 
 recording times of second chunk:
-	 time_lims: [700.0, 4200.0]
-	 idx_lims [0, 2500] here time_lims and idx_lims do not fit, due to a 1000 ms pause within the chunk --> one can get the limits of the periods
+         time_lims: [700.0, 4190.0]
+         idx_lims [0, 250] here the difference of time_lims and idx_lims does not fit, due to a 1000 ms pause within the chunk --> one can get the limits of the periods
 
 recording times of second chunk first period:
-	 time_lims: [700.0, 2200.0]
-	 idx_lims [0, 1500]
+         time_lims: [700.0, 2190.0]
+         idx_lims [0, 150]
 
 recording times of second chunk second period:
-	 time_lims: [3200.0, 4200.0]
-	 idx_lims [1500, 2500]
+         time_lims: [3200.0, 4190.0]
+         idx_lims [150, 250]
 
 complete recording time information (list of dicts):
 chunk 0
-    first_poisson {'start': {'ms': [500.0], 'idx': [0]}, 'stop': {'ms': [3500.0], 'idx': [3000]}}
-    second_poisson {'start': {'ms': [500.0], 'idx': [0]}, 'stop': {'ms': [3500.0], 'idx': [3000]}}
+    first_poisson {'start': {'ms': [500.0], 'idx': [0]}, 'stop': {'ms': [3490.0], 'idx': [300]}}
+    second_poisson {'start': {'ms': [510.0], 'idx': [0]}, 'stop': {'ms': [3495.0], 'idx': [200]}}
 chunk 1
-    first_poisson {'start': {'ms': [700.0, 3200.0], 'idx': [0, 1500]}, 'stop': {'ms': [2200.0, 4200.0], 'idx': [1500, 2500]}}
-    second_poisson {'start': {'ms': [700.0, 3200.0], 'idx': [0, 1500]}, 'stop': {'ms': [2200.0, 4200.0], 'idx': [1500, 2500]}}
-
+    first_poisson {'start': {'ms': [700.0, 3200.0], 'idx': [0, 150]}, 'stop': {'ms': [2190.0, 4190.0], 'idx': [150, 250]}}
+    second_poisson {'start': {'ms': [705.0, 3210.0], 'idx': [0, 100]}, 'stop': {'ms': [2190.0, 4185.0], 'idx': [100, 166]}}
 """
