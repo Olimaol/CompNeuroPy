@@ -29,3 +29,4 @@ or in development mode:
 ```
 pip install -e .
 ```
+Please install ANNarchy separately. See [here](https://annarchy.github.io/Installation/).
