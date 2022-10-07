@@ -9,7 +9,6 @@ dependencies = [
     "torch",
     "sbi",
     "pandas",
-    #"ANNarchy",
     "hyperopt",
     "sympy",
     "cython",
@@ -20,7 +19,7 @@ dependencies = [
 
 setuptools.setup(
     name="CompNeuroPy",
-    version="0.0.8",
+    version="0.0.9",
     license="MIT",
     author="Oliver Maith",
     author_email="oli_maith@gmx.de",
