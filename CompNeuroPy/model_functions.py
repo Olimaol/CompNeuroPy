@@ -8,8 +8,8 @@ from ANNarchy import (
     projections,
 )
 import os
-import numpy as np
 from CompNeuroPy import system_functions as sf
+from CompNeuroPy import extra_functions as ef
 
 
 def compile_in_folder(folder_name):
@@ -35,10 +35,13 @@ def addMonitors(monDict):
     """
     mon = {}
     for key, val in monDict.items():
-        compartmentType, compartment = key.split(";")
-        ### check if compartment is pop
+        compartmentType, compartment, period = ef.unpack_monDict_keys(key)
+        ### check if compartment is pop TODO add period
         if compartmentType == "pop":
-            mon[compartment] = Monitor(get_population(compartment), val, start=False)
+            mon[compartment] = Monitor(
+                get_population(compartment), val, start=False, period=period
+            )
+        ### TODO add proj
     return mon
 
 
@@ -52,14 +55,14 @@ def startMonitors(compartment_list, mon, timings=None):
     ### for each compartment generate started variable (because compartments can ocure multiple times if multiple variables of them are recorded --> do not start same monitor multiple times)
     started = {}
     for key in compartment_list:
-        compartmentType, compartment = key.split(";")
+        compartmentType, compartment, _ = ef.unpack_monDict_keys(key)
         if compartmentType == "pop":
             started[compartment] = False
 
     if timings == None:
         ### information about pauses not available, just start
         for key in compartment_list:
-            compartmentType, compartment = key.split(";")
+            compartmentType, compartment, _ = ef.unpack_monDict_keys(key)
             if compartmentType == "pop" and started[compartment] == False:
                 mon[compartment].start()
                 print("start", compartment)
@@ -68,7 +71,7 @@ def startMonitors(compartment_list, mon, timings=None):
     else:
         ### information about pauses available, start if not paused, resume if paused
         for key in compartment_list:
-            compartmentType, compartment = key.split(";")
+            compartmentType, compartment, _ = ef.unpack_monDict_keys(key)
             if compartmentType == "pop" and started[compartment] == False:
                 if timings[compartment]["currently_paused"]:
                     ### monitor is currently paused --> resume
@@ -93,12 +96,12 @@ def pauseMonitors(compartment_list, mon, timings=None):
     ### for each compartment generate paused variable (because compartments can ocure multiple times if multiple variables of them are recorded --> do not pause same monitor multiple times)
     paused = {}
     for key in compartment_list:
-        compartmentType, compartment = key.split(";")
+        compartmentType, compartment, _ = ef.unpack_monDict_keys(key)
         if compartmentType == "pop":
             paused[compartment] = False
 
     for key in compartment_list:
-        compartmentType, compartment = key.split(";")
+        compartmentType, compartment, _ = ef.unpack_monDict_keys(key)
         if compartmentType == "pop" and paused[compartment] == False:
             mon[compartment].pause()
             paused[compartment] = True
@@ -130,32 +133,13 @@ def getMonitors(monDict, mon):
     """
     recordings = {}
     for key, val in monDict.items():
-        compartmentType, compartment = key.split(";")
+        _, compartment, period = ef.unpack_monDict_keys(key)
+        recordings[f"{compartment};period"] = period
         for val_val in val:
             temp = mon[compartment].get(val_val)
-            recordings[compartment + ";" + val_val] = temp
+            recordings[f"{compartment};{val_val}"] = temp
     recordings["dt"] = dt()
     return recordings
-
-
-def get_monitor_times(
-    monDict, mon
-):  # TODO: currently not used, object Monitors uses self-defined timings
-    """
-    get recording times of monitors in ms
-
-    monitors and recorded values defined by monDict
-    """
-    times = {}
-    for key, val in monDict.items():
-        compartmentType, compartment = key.split(";")
-        print(mon[compartment].times())
-        for val_val in val:
-            times["start"] = (
-                np.array(mon[compartment].times()[val_val]["start"]) * dt()
-            )  # ANNarchy returns times for each recorded variable of Monitor, in CompNeuroPy they are usually startet and ended all at the same time... only return single start/end times
-            times["stop"] = np.array(mon[compartment].times()[val_val]["stop"]) * dt()
-    return times
 
 
 def get_full_model():

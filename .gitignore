@@ -7,3 +7,4 @@ dist/
 *.png
 *.svg
 *annarchy/
+*tmp.py

@@ -1,5 +1,6 @@
 import CompNeuroPy.model_functions as mf
-from ANNarchy import get_time, dt, reset
+from CompNeuroPy import extra_functions as ef
+from ANNarchy import get_time, reset, dt
 import numpy as np
 
 
@@ -11,7 +12,7 @@ class Monitors:
 
         timings = {}
         for key, val in monDict.items():
-            compartmentType, compartment = key.split(";")
+            _, compartment, _ = ef.unpack_monDict_keys(key)
             timings[compartment] = {"currently_paused": True, "start": [], "stop": []}
         self.timings = timings
 
@@ -36,7 +37,7 @@ class Monitors:
         ### only if recordings in current chunk and get_recodings was not already called add current chunk to recordings
         if (
             self.__any_recordings_in_current_chunk__()
-            and self.already_got_recordings == False
+            and self.already_got_recordings is False
         ):
             if isinstance(monDict, list):
                 monDict = self.monDict
@@ -59,39 +60,74 @@ class Monitors:
                     )
             return self.recordings
 
-    def get_recording_times(self, compartment_list=None, reset_call=False):
-        if compartment_list == None:
-            compartment_list = list(self.monDict.keys())
+    def __correct_start_stop__(self, start_time_arr, stop_time_arr, period):
+        """
+        start_time_arr = array with start times of recordings, obtianed with get_time() funciton of ANNarchy
+        stop_time_arr = array with stop times of recordings, obtianed with get_time() funciton of ANNarchy
+        period = time difference between recording values specified by the user
+        returns the actual start and stop time of recorded values and how many recorded values between start and stop
+        """
 
+        actual_period = int(period / dt()) * dt()
+        actual_start_time = np.ceil(start_time_arr / actual_period) * actual_period
+
+        actual_stop_time = np.ceil(stop_time_arr / actual_period - 1) * actual_period
+
+        nr_rec_vals = 1 + (actual_stop_time - actual_start_time) / actual_period
+
+        return [actual_start_time, actual_stop_time, nr_rec_vals]
+
+    def get_temp_timings(self, compartment_list):
+        """
+        generates a timings dictionary with time lims and idx lims for each compartment
+        calculates the idx lims of the recordings based on the time lims
+        """
         temp_timings = {}
         for key in compartment_list:
-            compartmentType, compartment = key.split(";")
+            _, compartment, period = ef.unpack_monDict_keys(key)
             if len(self.timings[compartment]["start"]) > len(
                 self.timings[compartment]["stop"]
             ):
                 ### was started/resumed but never stoped after --> use current time for stop time
                 self.timings[compartment]["stop"].append(get_time())
             ### calculate the idx of the recorded arrays which correspond to the timings and remove 'currently_paused'
-            diff_timings = (
-                np.array(self.timings[compartment]["stop"])
-                - np.array(self.timings[compartment]["start"])
-            ) / dt()  ## the length of the periods defines the idx of the arrays + dt
+            ### get for each start-stop pair the corrected start stop timings (when teh values were actually recorded, depends on period and timestep)
+            ### and also get the number of recorded values for start-stop pair
+            start_time_arr = np.array(self.timings[compartment]["start"])
+            stop_time_arr = np.array(self.timings[compartment]["stop"])
+            (
+                start_time_arr,
+                stop_time_arr,
+                nr_rec_vals_arr,
+            ) = self.__correct_start_stop__(start_time_arr, stop_time_arr, period)
+
+            ### with the number of recorded values -> get start and end idx for each start-stop pair
             start_idx = [
-                np.sum(diff_timings[0:i]).astype(int) for i in range(diff_timings.size)
+                np.sum(nr_rec_vals_arr[0:i]).astype(int)
+                for i in range(nr_rec_vals_arr.size)
             ]
             stop_idx = [
-                np.sum(diff_timings[0 : i + 1]).astype(int)
-                for i in range(diff_timings.size)
+                np.sum(nr_rec_vals_arr[0 : i + 1]).astype(int)
+                for i in range(nr_rec_vals_arr.size)
             ]
+
+            ### return start-stop pair info in timings format
             temp_timings[compartment] = {
-                "start": {"ms": self.timings[compartment]["start"], "idx": start_idx},
-                "stop": {"ms": self.timings[compartment]["stop"], "idx": stop_idx},
+                "start": {"ms": start_time_arr.tolist(), "idx": start_idx},
+                "stop": {"ms": stop_time_arr.tolist(), "idx": stop_idx},
             }
+        return temp_timings
+
+    def get_recording_times(self, compartment_list=None, reset_call=False):
+        if compartment_list is None:
+            compartment_list = list(self.monDict.keys())
+
+        temp_timings = self.get_temp_timings(compartment_list)
 
         ### only append temp_timings of current chunk if there are recordings in current chunk at all and if get_recordings was not already called (double call would add the same chunk again)
         if (
             self.__any_recordings_in_current_chunk__()
-            and self.already_got_recording_times == False
+            and self.already_got_recording_times is False
         ):
             self.recording_times.append(temp_timings)
 
@@ -109,33 +145,10 @@ class Monitors:
         return recording_times_ob
 
     def __any_recordings_in_current_chunk__(self, compartment_list=None):
-        if compartment_list == None:
+        if compartment_list is None:
             compartment_list = list(self.monDict.keys())
 
-        temp_timings = {}
-        for key in compartment_list:
-            compartmentType, compartment = key.split(";")
-            if len(self.timings[compartment]["start"]) > len(
-                self.timings[compartment]["stop"]
-            ):
-                ### was started/resumed but never stoped after --> use current time for stop time
-                self.timings[compartment]["stop"].append(get_time())
-            ### calculate the idx of the recorded arrays which correspond to the timings and remove 'currently_paused'
-            diff_timings = (
-                np.array(self.timings[compartment]["stop"])
-                - np.array(self.timings[compartment]["start"])
-            ) / dt()  ## the length of the periods defines the idx of the arrays + dt
-            start_idx = [
-                np.sum(diff_timings[0:i]).astype(int) for i in range(diff_timings.size)
-            ]
-            stop_idx = [
-                np.sum(diff_timings[0 : i + 1]).astype(int)
-                for i in range(diff_timings.size)
-            ]
-            temp_timings[compartment] = {
-                "start": {"ms": self.timings[compartment]["start"], "idx": start_idx},
-                "stop": {"ms": self.timings[compartment]["stop"], "idx": stop_idx},
-            }
+        temp_timings = self.get_temp_timings(compartment_list)
 
         ### generate a temp object of temp timings to check if there were recordings at all
         recording_times_ob_temp = recording_times_cl([temp_timings])
@@ -175,7 +188,7 @@ class Monitors:
         ### check if there are currently active recordings
         active_recordings = False
         for key, val in self.monDict.items():
-            compartmentType, compartment = key.split(";")
+            _, compartment, _ = ef.unpack_monDict_keys(key)
             if not (self.timings[compartment]["currently_paused"]):
                 ### tere are currently active recordings
                 active_recordings = True
@@ -223,7 +236,7 @@ class recording_times_cl:
         ), "ERROR combine_chunks(): No recordings/recording_times available."
 
         compartment = recording_data_str.split(";")[0]
-        dt = recordings[0]["dt"]
+        period_time = recordings[0][f"{compartment};period"]
         nr_chunks = self.__get_nr_chunks__()
         data_list = []
         time_list = []
@@ -231,9 +244,11 @@ class recording_times_cl:
 
         ### first test, if there are pauses in between
         for chunk in range(nr_chunks):
-            time_lim = self.time_lims(chunk=chunk, compartment=compartment)
+            time_lim = self.time_lims(
+                chunk=chunk, compartment=compartment
+            )  # TODO what id multiple consecutive periods? only first period is checked
             idx_lim = self.idx_lims(chunk=chunk, compartment=compartment)
-            if int(np.diff(time_lim) / dt) != int(np.diff(idx_lim)):
+            if int(np.diff(time_lim) / period_time) != int(np.diff(idx_lim)):
                 assert (
                     False
                 ), "ERROR combine_chunks, time_lim and idx_lim do not fit! Maybe multiple periods separated by pauses in recordings?"
@@ -271,7 +286,7 @@ class recording_times_cl:
                     self.recording_times_list[chunk][compartment]["stop"]["ms"][period]
                     + chunk_start_time
                 )
-                times = np.arange(start_time, end_time, dt)
+                times = np.arange(start_time, end_time, period_time)
                 time_list.append(times)
 
         ### flatten the two lists
@@ -325,7 +340,7 @@ class recording_times_cl:
         return [period_0, period_1]
 
     def __check_chunk__(self, chunk):
-        if chunk == None:
+        if chunk is None:
             ### by default use first chunk
             chunk = 0
         elif chunk < self.__get_nr_chunks__():
