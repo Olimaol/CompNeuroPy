@@ -32,7 +32,7 @@ def make_plot(recordings, recording_timings, chunk, period="all"):
     )
 
 
-if __name__ == "__main__":
+def main():
     ### load data generated with script "run_and_monitor_simulations.py"
     recordings = np.load(
         "dataRaw/run_and_monitor_simulations/recordings.npy", allow_pickle=True
@@ -49,3 +49,9 @@ if __name__ == "__main__":
     make_plot(recordings, recording_timings, 1, 0)
     ### plot second period of second chunk
     make_plot(recordings, recording_timings, 1, 1)
+
+    return 1
+
+
+if __name__ == "__main__":
+    main()
