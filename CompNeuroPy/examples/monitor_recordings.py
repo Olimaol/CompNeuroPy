@@ -6,6 +6,7 @@ import numpy as np
 setup(dt=0.1)
 create_dir("results")
 
+
 ### first we create a simple model, consisting of two populaitons, each consist of 1 neuron
 def create_model():
     a = Population(1, neuron=Izhikevich(), name="my_pop1")
@@ -85,24 +86,36 @@ start_time = recording_times.time_lims(chunk=0, compartment="my_pop1")[0]
 start_idx = recording_times.idx_lims(chunk=0, compartment="my_pop1")[0]
 end_time = recording_times.time_lims(chunk=0, compartment="my_pop1")[1]
 end_idx = recording_times.idx_lims(chunk=0, compartment="my_pop1")[1]
-x1 = np.arange(start_time, end_time, recordings[0]["my_pop1;period"])
-v1 = y1[start_idx:end_idx, 0]
+x1 = np.arange(
+    start_time,
+    end_time + recordings[0]["my_pop1;period"],
+    recordings[0]["my_pop1;period"],
+)
+v1 = y1[start_idx : end_idx + 1, 0]
 
 ### same thing again for the 2nd chunk 1st period of my_pop1
 start_time = recording_times.time_lims(chunk=1, period=0, compartment="my_pop1")[0]
 start_idx = recording_times.idx_lims(chunk=1, period=0, compartment="my_pop1")[0]
 end_time = recording_times.time_lims(chunk=1, period=0, compartment="my_pop1")[1]
 end_idx = recording_times.idx_lims(chunk=1, period=0, compartment="my_pop1")[1]
-x2 = np.arange(start_time, end_time, recordings[0]["my_pop1;period"])
-v2 = y2[start_idx:end_idx, 0]
+x2 = np.arange(
+    start_time,
+    end_time + recordings[0]["my_pop1;period"],
+    recordings[0]["my_pop1;period"],
+)
+v2 = y2[start_idx : end_idx + 1, 0]
 
 ### and finally for the 2nd chunk 2nd period of my_pop1
 start_time = recording_times.time_lims(chunk=1, period=1, compartment="my_pop1")[0]
 start_idx = recording_times.idx_lims(chunk=1, period=1, compartment="my_pop1")[0]
 end_time = recording_times.time_lims(chunk=1, period=1, compartment="my_pop1")[1]
 end_idx = recording_times.idx_lims(chunk=1, period=1, compartment="my_pop1")[1]
-x3 = np.arange(start_time, end_time, recordings[0]["my_pop1;period"])
-v3 = y2[start_idx:end_idx, 0]
+x3 = np.arange(
+    start_time,
+    end_time + recordings[0]["my_pop1;period"],
+    recordings[0]["my_pop1;period"],
+)
+v3 = y2[start_idx : end_idx + 1, 0]
 
 
 ### plot the data of my_pop1
@@ -119,11 +132,12 @@ plt.tight_layout()
 plt.savefig("results/monitor_recordings.svg")
 
 
-### if there are no pauses in between recordings one can combine recordings of multiple chunks, here for example for my_pop2
-### the combine_chunks function of the recording_times object directly returns an array with time values and an array with
-### values of the recorded variable
+### one can combine recordings of multiple chunks, here for example for my_pop1
+### the combine_chunks function of the recording_times object directly returns
+### an array with time values and an array with values of the recorded variable
+### recording pauses are filled with nan values
 times, data_arr = recording_times.combine_chunks(
-    recordings, "my_pop2;v", mode="consecutive"
+    recordings, "my_pop1;v", mode="consecutive"
 )
 
 
@@ -138,14 +152,14 @@ plt.axvline(
 )
 plt.text(
     recording_times.time_lims(chunk=0, compartment="my_pop2")[1],
-    np.max(data_arr),
+    np.nanmax(data_arr),
     "1st chunk ",
     ha="right",
     va="top",
 )
 plt.text(
     recording_times.time_lims(chunk=0, compartment="my_pop2")[1],
-    np.max(data_arr),
+    np.nanmax(data_arr),
     " 2nd chunk",
     ha="left",
     va="top",
