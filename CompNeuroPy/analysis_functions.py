@@ -289,7 +289,7 @@ def plot_recordings(
     time_arr_dict = {}
     time_step = recordings["dt"]
     for compartment in compartment_list:
-        actual_period = int(recordings[f"{compartment};period"] / time_step) * time_step
+        actual_period = recordings[f"{compartment};period"]
 
         time_arr_part = []
 
@@ -563,9 +563,7 @@ def plot_recordings(
 
                     ### check with the actual_period and the times array if there is data missing
                     ###     from time_lims and actual period opne should get all times at which data points should be
-                    actual_period = (
-                        int(recordings[f"{part};period"] / time_step) * time_step
-                    )
+                    actual_period = recordings[f"{part};period"]
                     actual_start_time = (
                         np.ceil(start_time / actual_period) * actual_period
                     )
@@ -651,9 +649,7 @@ def plot_recordings(
 
                     ### check with the actual_period and the times array if there is data missing
                     ###     from time_lims and actual period opne should get all times at which data points should be
-                    actual_period = (
-                        int(recordings[f"{part};period"] / time_step) * time_step
-                    )
+                    actual_period = recordings[f"{part};period"]
                     actual_start_time = (
                         np.ceil(start_time / actual_period) * actual_period
                     )
@@ -737,9 +733,7 @@ def plot_recordings(
 
                 ### check with the actual_period and the times array if there is data missing
                 ###     from time_lims and actual period opne should get all times at which data points should be
-                actual_period = (
-                    int(recordings[f"{part};period"] / time_step) * time_step
-                )
+                actual_period = recordings[f"{part};period"]
                 actual_start_time = np.ceil(start_time / actual_period) * actual_period
                 actual_end_time = np.ceil(end_time / actual_period - 1) * actual_period
                 soll_times = np.arange(
@@ -827,9 +821,7 @@ def plot_recordings(
 
                     ### check with the actual_period and the times array if there is data missing
                     ###     from time_lims and actual period opne should get all times at which data points should be
-                    actual_period = (
-                        int(recordings[f"{part};period"] / time_step) * time_step
-                    )
+                    actual_period = recordings[f"{part};period"]
                     actual_start_time = (
                         np.ceil(start_time / actual_period) * actual_period
                     )
@@ -918,6 +910,17 @@ def plot_recordings(
 
 
 def get_number_of_zero_decimals(nr):
+    decimals = 0
+    if nr != 0:
+        while abs(nr) < 1:
+            nr = nr * 10
+            decimals = decimals + 1
+
+    return decimals
+
+
+def get_number_of_decimals(nr):
+    nr = nr - int(nr)
     decimals = 0
     if nr != 0:
         while abs(nr) < 1:

@@ -88,4 +88,6 @@ def unpack_monDict_keys(s):
         period = float(splitted_s[2])
     else:
         period = {"pop": dt(), "proj": dt() * 1000}[compartment_type]
+
+    period = int(period / dt()) * dt()
     return compartment_type, compartment_name, period

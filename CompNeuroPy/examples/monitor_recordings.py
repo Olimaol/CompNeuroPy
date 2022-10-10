@@ -86,24 +86,36 @@ start_time = recording_times.time_lims(chunk=0, compartment="my_pop1")[0]
 start_idx = recording_times.idx_lims(chunk=0, compartment="my_pop1")[0]
 end_time = recording_times.time_lims(chunk=0, compartment="my_pop1")[1]
 end_idx = recording_times.idx_lims(chunk=0, compartment="my_pop1")[1]
-x1 = np.arange(start_time, end_time, recordings[0]["my_pop1;period"])
-v1 = y1[start_idx:end_idx, 0]
+x1 = np.arange(
+    start_time,
+    end_time + recordings[0]["my_pop1;period"],
+    recordings[0]["my_pop1;period"],
+)
+v1 = y1[start_idx : end_idx + 1, 0]
 
 ### same thing again for the 2nd chunk 1st period of my_pop1
 start_time = recording_times.time_lims(chunk=1, period=0, compartment="my_pop1")[0]
 start_idx = recording_times.idx_lims(chunk=1, period=0, compartment="my_pop1")[0]
 end_time = recording_times.time_lims(chunk=1, period=0, compartment="my_pop1")[1]
 end_idx = recording_times.idx_lims(chunk=1, period=0, compartment="my_pop1")[1]
-x2 = np.arange(start_time, end_time, recordings[0]["my_pop1;period"])
-v2 = y2[start_idx:end_idx, 0]
+x2 = np.arange(
+    start_time,
+    end_time + recordings[0]["my_pop1;period"],
+    recordings[0]["my_pop1;period"],
+)
+v2 = y2[start_idx : end_idx + 1, 0]
 
 ### and finally for the 2nd chunk 2nd period of my_pop1
 start_time = recording_times.time_lims(chunk=1, period=1, compartment="my_pop1")[0]
 start_idx = recording_times.idx_lims(chunk=1, period=1, compartment="my_pop1")[0]
 end_time = recording_times.time_lims(chunk=1, period=1, compartment="my_pop1")[1]
 end_idx = recording_times.idx_lims(chunk=1, period=1, compartment="my_pop1")[1]
-x3 = np.arange(start_time, end_time, recordings[0]["my_pop1;period"])
-v3 = y2[start_idx:end_idx, 0]
+x3 = np.arange(
+    start_time,
+    end_time + recordings[0]["my_pop1;period"],
+    recordings[0]["my_pop1;period"],
+)
+v3 = y2[start_idx : end_idx + 1, 0]
 
 
 ### plot the data of my_pop1

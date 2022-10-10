@@ -68,13 +68,12 @@ class Monitors:
         period = time difference between recording values specified by the user
         returns the actual start and stop time of recorded values and how many recorded values between start and stop
         """
+        # actual_period = int(period / dt()) * dt()
+        actual_start_time = np.ceil(start_time_arr / period) * period
 
-        actual_period = int(period / dt()) * dt()
-        actual_start_time = np.ceil(start_time_arr / actual_period) * actual_period
+        actual_stop_time = np.ceil(stop_time_arr / period - 1) * period
 
-        actual_stop_time = np.ceil(stop_time_arr / actual_period - 1) * actual_period
-
-        nr_rec_vals = 1 + (actual_stop_time - actual_start_time) / actual_period
+        nr_rec_vals = 1 + (actual_stop_time - actual_start_time) / period
 
         return [actual_start_time, actual_stop_time, nr_rec_vals]
 
@@ -116,13 +115,13 @@ class Monitors:
             temp_timings[compartment] = {
                 "start": {
                     "ms": np.round(
-                        start_time_arr, af.get_number_of_zero_decimals(dt())
+                        start_time_arr, af.get_number_of_decimals(dt())
                     ).tolist(),
                     "idx": start_idx,
                 },
                 "stop": {
                     "ms": np.round(
-                        stop_time_arr, af.get_number_of_zero_decimals(dt())
+                        stop_time_arr, af.get_number_of_decimals(dt())
                     ).tolist(),
                     "idx": stop_idx,
                 },
@@ -293,10 +292,8 @@ class recording_times_cl:
                     ]
                     + chunk_start_time
                 )
-                start_time = round(
-                    start_time, af.get_number_of_zero_decimals(time_step)
-                )
-                end_time = round(end_time, af.get_number_of_zero_decimals(time_step))
+                start_time = round(start_time, af.get_number_of_decimals(time_step))
+                end_time = round(end_time, af.get_number_of_decimals(time_step))
                 times = np.arange(start_time, end_time + period_time, period_time)
                 time_list.append(times)
 
