@@ -1,5 +1,6 @@
 import CompNeuroPy.model_functions as mf
 from CompNeuroPy import extra_functions as ef
+from CompNeuroPy import analysis_functions as af
 from ANNarchy import get_time, reset, dt
 import numpy as np
 
@@ -107,14 +108,24 @@ class Monitors:
                 for i in range(nr_rec_vals_arr.size)
             ]
             stop_idx = [
-                np.sum(nr_rec_vals_arr[0 : i + 1]).astype(int)
+                np.sum(nr_rec_vals_arr[0 : i + 1]).astype(int) - 1
                 for i in range(nr_rec_vals_arr.size)
             ]
 
             ### return start-stop pair info in timings format
             temp_timings[compartment] = {
-                "start": {"ms": start_time_arr.tolist(), "idx": start_idx},
-                "stop": {"ms": stop_time_arr.tolist(), "idx": stop_idx},
+                "start": {
+                    "ms": np.round(
+                        start_time_arr, af.get_number_of_zero_decimals(dt())
+                    ).tolist(),
+                    "idx": start_idx,
+                },
+                "stop": {
+                    "ms": np.round(
+                        stop_time_arr, af.get_number_of_zero_decimals(dt())
+                    ).tolist(),
+                    "idx": stop_idx,
+                },
             }
         return temp_timings
 
@@ -237,21 +248,11 @@ class recording_times_cl:
 
         compartment = recording_data_str.split(";")[0]
         period_time = recordings[0][f"{compartment};period"]
+        time_step = recordings[0]["dt"]
         nr_chunks = self.__get_nr_chunks__()
         data_list = []
         time_list = []
         pre_chunk_start_time = 0
-
-        ### first test, if there are pauses in between
-        for chunk in range(nr_chunks):
-            time_lim = self.time_lims(
-                chunk=chunk, compartment=compartment
-            )  # TODO what id multiple consecutive periods? only first period is checked
-            idx_lim = self.idx_lims(chunk=chunk, compartment=compartment)
-            if int(np.diff(time_lim) / period_time) != int(np.diff(idx_lim)):
-                assert (
-                    False
-                ), "ERROR combine_chunks, time_lim and idx_lim do not fit! Maybe multiple periods separated by pauses in recordings?"
 
         for chunk in range(nr_chunks):
             ### append data list with data of all periods of this chunk
@@ -270,7 +271,9 @@ class recording_times_cl:
                     last_stop_time = self.recording_times_list[chunk - 1][compartment][
                         "stop"
                     ]["ms"][-1]
-                    chunk_start_time = pre_chunk_start_time + last_stop_time
+                    chunk_start_time = (
+                        pre_chunk_start_time + last_stop_time + period_time
+                    )
                     pre_chunk_start_time = chunk_start_time
             else:
                 print("ERROR recording_times.combine_data, Wrong mode.")
@@ -279,19 +282,32 @@ class recording_times_cl:
             ### append the time list with all times of the periods
             for period in range(nr_periods):
                 start_time = (
-                    self.recording_times_list[chunk][compartment]["start"]["ms"][period]
+                    self.time_lims(chunk=chunk, compartment=compartment, period=period)[
+                        0
+                    ]
                     + chunk_start_time
                 )
                 end_time = (
-                    self.recording_times_list[chunk][compartment]["stop"]["ms"][period]
+                    self.time_lims(chunk=chunk, compartment=compartment, period=period)[
+                        1
+                    ]
                     + chunk_start_time
                 )
-                times = np.arange(start_time, end_time, period_time)
+                start_time = round(
+                    start_time, af.get_number_of_zero_decimals(time_step)
+                )
+                end_time = round(end_time, af.get_number_of_zero_decimals(time_step))
+                times = np.arange(start_time, end_time + period_time, period_time)
                 time_list.append(times)
 
         ### flatten the two lists
         data_arr = np.concatenate(data_list, 0)
         time_arr = np.concatenate(time_list, 0)
+
+        ### check if there are gaps in the time array
+        ### fill them with the corersponding times and
+        ### the data array with nan values
+        time_arr, data_arr = af.time_data_add_nan(time_arr, data_arr)
 
         return [time_arr, data_arr]
 

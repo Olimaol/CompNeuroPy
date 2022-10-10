@@ -237,9 +237,43 @@ def plot_recordings(
     figname, recordings, recording_times, chunk, time_lim, shape, plan, dpi=300
 ):
     """
-    recordings: list with recordings
-    shape: tuple, shape of subplots
-    plan: list of strings, strings defin where to plot which data and how
+    Plots the recordings for the given recording_times specified in plan.
+
+    Args:
+        figname: str
+            path + name of figure (e.g. "figures/my_figure.png")
+
+        recordings: list
+            a recordings list from CompNeuroPy obtained with the function
+            get_recordings() from a Monitors object.
+
+        recording_times: object
+            recording_times object from CompNeuroPy obtained with the
+            function get_recording_times() from a Monitors object.
+
+        chunk: int
+            which chunk of recordings should be used (the index of chunk)
+
+        time_lim: list
+            Defines the x-axis for all subplots. The list contains two
+            numbers: start and end time in ms. The times have to be
+            within the chunk.
+
+        shape: tuple
+            Defines the subplot arrangement e.g. (3,2) = 3 rows, 2 columns
+
+        plan: list of strings
+            Defines which recordings are plotted in which subplot and how.
+            Entries of the list have the structure: "subplot_nr;model_component_name;variable_to_plot;format",
+            e.g. "1,my_pop1;v;line".
+            mode: defines how the data is plotted, available modes:
+                - for spike data: raster, mean, hybrid
+                - for other data: line, mean, matrix
+                - only for projection data: matrix_mean
+
+        dpi: int, optional, default=300
+            The dpi of the saved figure
+
     """
     print(f"generate fig {figname}", end="... ", flush=True)
     recordings = recordings[chunk]
@@ -310,7 +344,9 @@ def plot_recordings(
             continue
 
         plt.subplot(shape[0], shape[1], nr)
-        if variable == "spike" and mode == "raster":
+        if variable == "spike" and (
+            mode == "raster" or mode == "single"
+        ):  # "single" only for down compatibility
             t, n = my_raster_plot(data)
             t = t * time_step  # convert time steps into ms
             mask = ((t >= start_time).astype(int) * (t <= end_time).astype(int)).astype(
@@ -331,15 +367,18 @@ def plot_recordings(
                     ha="center",
                 )
             else:
-
-                if style != "":
-                    plt.scatter(
-                        t[mask], n[mask], color=style, marker=".", s=3, linewidth=0.1
-                    )
+                if np.unique(n).size == 1:
+                    marker, size = ["|", 3000]
                 else:
-                    plt.scatter(
-                        t[mask], n[mask], color="k", marker=".", s=3, linewidth=0.1
-                    )
+                    marker, size = [".", 3]
+                if style != "":
+                    color = style
+                else:
+                    color = "k"
+
+                plt.scatter(
+                    t[mask], n[mask], color=color, marker=marker, s=size, linewidth=0.1
+                )
                 plt.xlim(start_time, end_time)
                 plt.xlabel("time [ms]")
                 plt.ylabel("# neurons")
@@ -399,55 +438,6 @@ def plot_recordings(
                 plt.xlim(start_time, end_time)
                 plt.xlabel("time [ms]")
                 plt.title("Activity " + part)
-        elif variable == "spike" and mode == "single":
-            t, n = my_raster_plot(data)
-            t = t * time_step  # convert time steps into ms
-            mask = ((t >= start_time).astype(int) * (t <= end_time).astype(int)).astype(
-                bool
-            )
-            if mask.size == 0:
-                plt.title("Spikes " + part)
-                print(
-                    "\nWARNING plot_recordings: data",
-                    ";".join([part, variable]),
-                    "does not contain any spikes in the given time interval.\n",
-                )
-                plt.text(
-                    0.5,
-                    0.5,
-                    " ".join([part, variable]) + " does not contain any spikes.",
-                    va="center",
-                    ha="center",
-                )
-            elif np.unique(n).size == 1:
-
-                if style != "":
-                    plt.scatter(
-                        t[mask], n[mask], color=style, marker="|", s=3000, linewidth=0.1
-                    )
-                else:
-                    plt.scatter(
-                        t[mask], n[mask], color="k", marker="|", s=3000, linewidth=0.1
-                    )
-                plt.xlim(start_time, end_time)
-                plt.xlabel("time [ms]")
-                plt.ylabel("# neurons")
-                plt.title("Spikes " + part)
-            else:
-                plt.title("Spikes " + part)
-                print(
-                    "\nWARNING plot_recordings: data",
-                    ";".join([part, variable]),
-                    'multiple neurons. Mode "single" not available.\n',
-                )
-                plt.text(
-                    0.5,
-                    0.5,
-                    " ".join([part, variable])
-                    + ' multiple neurons. Mode "single" not available.',
-                    va="center",
-                    ha="center",
-                )
         elif variable != "spike" and mode == "line":
             if len(data.shape) == 1:
                 plt.plot(time_arr_dict[part], data, color="k")
@@ -958,3 +948,33 @@ def sample_data_with_timestep(time_arr, data_arr, timestep):
     new_data_arr = interpolate_func(new_time_arr)
 
     return [new_time_arr, new_data_arr]
+
+
+def time_data_add_nan(time_arr, data_arr):
+    """
+    if there are gaps in time_arr --> fill them with respecitve time values
+    fill the corresponding data_arr values with nan
+    time_arr = 1D array
+    data_arr = nD array
+    both have same first dimension size!
+    """
+
+    time_diff_arr = np.diff(time_arr)
+    time_diff_unique_arr = np.unique(time_diff_arr, return_counts=True)
+    print(time_diff_unique_arr)
+    period_time = time_diff_unique_arr[0][np.argmax(time_diff_unique_arr[1])]
+    print(period_time)
+
+    time = time_arr[0]
+    idx = 0
+    while time < time_arr[-1]:
+        if time != time_arr[idx]:
+            ### time_arr of idx did not increase by period_time
+            time_arr = np.insert(time_arr, idx, time_arr[idx - 1] + period_time)
+            data_arr = np.insert(
+                data_arr, idx, np.nan * np.zeros(data_arr.shape[1:]), axis=0
+            )
+        idx = idx + 1
+        time = time + period_time
+
+    return [time_arr, data_arr]
