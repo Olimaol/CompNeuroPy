@@ -7,6 +7,7 @@ import warnings
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy import extra_functions as ef
 from scipy.interpolate import interp1d
+from torch import var
 
 
 def my_raster_plot(spikes):
@@ -551,6 +552,187 @@ def plot_recordings(
                 )
             plt.xlim(start_time, end_time)
             plt.xlabel("time [ms]")
+
+        elif variable != "spike" and mode == "matrix_mean":
+
+            if len(data.shape) == 3 or (
+                len(data.shape) == 2 and isinstance(data[0, 0], list) is True
+            ):
+                if len(data.shape) == 3:
+                    ### average over pre neurons --> get 2D array [time, postneuron]
+                    data_avg = np.mean(data, 2)
+
+                    ### after cerating 2D array --> same procedure as for populations
+                    ### get the times and data between time_lims
+                    mask = (
+                        (time_arr_dict[part] >= start_time).astype(int)
+                        * (time_arr_dict[part] <= end_time).astype(int)
+                    ).astype(bool)
+                    time_arr = time_arr_dict[part][mask]
+                    data_arr = data_avg[mask, :]
+
+                    ### check with the actual_period and the times array if there is data missing
+                    ###     from time_lims and actual period opne should get all times at which data points should be
+                    actual_period = (
+                        int(recordings[f"{part};period"] / time_step) * time_step
+                    )
+                    actual_start_time = (
+                        np.ceil(start_time / actual_period) * actual_period
+                    )
+                    actual_end_time = (
+                        np.ceil(end_time / actual_period - 1) * actual_period
+                    )
+                    soll_times = np.arange(
+                        actual_start_time,
+                        actual_end_time + actual_period,
+                        actual_period,
+                    )
+
+                    ### check if there are time points, where data is missing
+                    plot_data_arr = np.empty((soll_times.size, data_arr.shape[1]))
+                    plot_data_arr[:] = None
+                    for time_point_idx, time_point in enumerate(soll_times):
+                        if time_point in time_arr:
+                            ### data at time point is available --> use data
+                            idx_available_data = time_arr == time_point
+                            plot_data_arr[time_point_idx, :] = data_arr[
+                                idx_available_data, :
+                            ]
+                        ### if data is not available it stays none
+
+                    vmin = np.nanmin(plot_data_arr)
+                    vmax = np.nanmax(plot_data_arr)
+
+                    masked_array = np.ma.array(
+                        plot_data_arr.T, mask=np.isnan(plot_data_arr.T)
+                    )
+                    cmap = matplotlib.cm.viridis
+                    cmap.set_bad("red", 1.0)
+
+                    plt.title(
+                        f"Variable {variable} of {part} ({data.shape[1]}) [{ef.sci(vmin)}, {ef.sci(vmax)}]"
+                    )
+
+                    plt.gca().imshow(
+                        masked_array,
+                        aspect="auto",
+                        vmin=vmin,
+                        vmax=vmax,
+                        extent=[
+                            np.min(soll_times) - 0.5,
+                            np.max(soll_times) - 0.5,
+                            data.shape[1] - 0.5,
+                            -0.5,
+                        ],
+                        cmap=cmap,
+                        interpolation="none",
+                    )
+                    if data.shape[1] == 1:
+                        plt.yticks([0])
+                    else:
+                        plt.gca().yaxis.set_major_locator(MaxNLocator(integer=True))
+                    plt.xlabel("time [ms]")
+
+                else:
+                    ### data[time, postneurons][preneurons] (with different number of preneurons)
+                    ### average over pre neurons --> get 2D array [time, postneuron]
+                    data_avg = np.empty((data.shape[0], data.shape[1]))
+                    for post_neuron in range(data.shape[1]):
+                        avg_post = []
+                        for pre_neuron in range(len(data[0, post_neuron])):
+                            avg_post.append(
+                                np.array(
+                                    [
+                                        data[t, post_neuron][pre_neuron]
+                                        for t in range(data.shape[0])
+                                    ]
+                                )
+                            )
+                        data_avg[:, post_neuron] = np.mean(avg_post, 0)
+
+                    ### after cerating 2D array --> same procedure as for populations
+                    ### get the times and data between time_lims
+                    mask = (
+                        (time_arr_dict[part] >= start_time).astype(int)
+                        * (time_arr_dict[part] <= end_time).astype(int)
+                    ).astype(bool)
+                    time_arr = time_arr_dict[part][mask]
+                    data_arr = data_avg[mask, :]
+
+                    ### check with the actual_period and the times array if there is data missing
+                    ###     from time_lims and actual period opne should get all times at which data points should be
+                    actual_period = (
+                        int(recordings[f"{part};period"] / time_step) * time_step
+                    )
+                    actual_start_time = (
+                        np.ceil(start_time / actual_period) * actual_period
+                    )
+                    actual_end_time = (
+                        np.ceil(end_time / actual_period - 1) * actual_period
+                    )
+                    soll_times = np.arange(
+                        actual_start_time,
+                        actual_end_time + actual_period,
+                        actual_period,
+                    )
+
+                    ### check if there are time points, where data is missing
+                    plot_data_arr = np.empty((soll_times.size, data_arr.shape[1]))
+                    plot_data_arr[:] = None
+                    for time_point_idx, time_point in enumerate(soll_times):
+                        if time_point in time_arr:
+                            ### data at time point is available --> use data
+                            idx_available_data = time_arr == time_point
+                            plot_data_arr[time_point_idx, :] = data_arr[
+                                idx_available_data, :
+                            ]
+                        ### if data is not available it stays none
+
+                    vmin = np.nanmin(plot_data_arr)
+                    vmax = np.nanmax(plot_data_arr)
+
+                    masked_array = np.ma.array(
+                        plot_data_arr.T, mask=np.isnan(plot_data_arr.T)
+                    )
+                    cmap = matplotlib.cm.viridis
+                    cmap.set_bad("red", 1.0)
+
+                    plt.title(
+                        f"Variable {variable} of {part} ({data.shape[1]}) [{ef.sci(vmin)}, {ef.sci(vmax)}]"
+                    )
+
+                    plt.gca().imshow(
+                        masked_array,
+                        aspect="auto",
+                        vmin=vmin,
+                        vmax=vmax,
+                        extent=[
+                            np.min(soll_times) - 0.5,
+                            np.max(soll_times) - 0.5,
+                            data.shape[1] - 0.5,
+                            -0.5,
+                        ],
+                        cmap=cmap,
+                        interpolation="none",
+                    )
+                    if data.shape[1] == 1:
+                        plt.yticks([0])
+                    else:
+                        plt.gca().yaxis.set_major_locator(MaxNLocator(integer=True))
+                    plt.xlabel("time [ms]")
+
+                plt.title(
+                    f"Variable {variable} of {part}, mean for {data.shape[1]} post neurons [{ef.sci(vmin)}, {ef.sci(vmax)}]"
+                )
+            else:
+                print(
+                    "\nERROR plot_recordings: shape not accepted,",
+                    ";".join([part, variable]),
+                    "\n",
+                )
+            plt.xlim(start_time, end_time)
+            plt.xlabel("time [ms]")
+
         elif variable != "spike" and mode == "matrix":
             # data[start_step:end_step,neuron]
             if len(data.shape) == 2 and isinstance(data[0, 0], list) is not True:
