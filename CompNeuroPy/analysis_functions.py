@@ -964,9 +964,7 @@ def time_data_add_nan(time_arr, data_arr):
 
     time_diff_arr = np.diff(time_arr)
     time_diff_unique_arr = np.unique(time_diff_arr, return_counts=True)
-    print(time_diff_unique_arr)
     period_time = time_diff_unique_arr[0][np.argmax(time_diff_unique_arr[1])]
-    print(period_time)
 
     time = time_arr[0]
     idx = 0
