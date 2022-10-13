@@ -232,139 +232,96 @@ def get_pop_rate_old(
     return [np.arange(t_start, t_start + duration_init, dt), ret]
 
 
-def get_pop_rate_new1(
-    spikes, duration, dt=1, t_start=0, t_smooth_ms=-1
-):  # TODO: maybe makes errors with few/no spikes... check this TODO: automatically detect t_smooth does not work for strongly varying activity... implement something different
-    """
-    spikes: spikes dictionary from ANNarchy
-    duration: duration of period after (optional) initial period (t_start) from which rate is calculated in ms
-    dt: timestep of simulation
-    t_start: starting simulation time, from which rates should be calculated
-    t_smooth_ms: time window size for rate calculation in ms, optional, standard = -1 which means automatic window size
-
-    returns smoothed population rate from period after rampUp period until duration
-    """
-
-    t, _ = raster_plot(spikes)
-    if len(t) > 1:  # check if there are spikes in population at all
-        ### convert spike time lists into a single spike time array
-        ### get the number of spikes
-        ### get the time of first and last spike --> later set rates before and after to zero
-        ### split the spike time array into equal arrays --> paramter = how many arrays
-        ### for each sub array compute: time_span, time_average, population_rate
-        ### later use time_average values and population_rate values to interpolate over whole time
-        spike_arr = dt * np.sort(
-            np.concatenate(
-                [np.array(spikes[neuron]).astype(int) for neuron in spikes.keys()]
-            )
-        )
-        first_spike = spike_arr.min()
-        last_spike = spike_arr.max()
-        nr_splits = np.min([20, spike_arr.size // 2])
-        nr_neurons = len(list(spikes.keys()))
-        split_arr_list = np.array_split(spike_arr, nr_splits)
-        time_span = np.zeros(len(split_arr_list))
-        time_average = np.zeros(len(split_arr_list))
-        population_rate = np.zeros(len(split_arr_list))
-        for idx in range(len(split_arr_list)):
-            time_span[idx] = np.max(
-                [split_arr_list[idx].max() - split_arr_list[idx].min(), dt]
-            )
-            if split_arr_list[idx].max() == split_arr_list[idx].min():
-                print("same min max", split_arr_list[idx])
-            time_average[idx] = np.mean(split_arr_list[idx])
-            population_rate[idx] = split_arr_list[idx].size / (
-                nr_neurons * (time_span[idx] / 1000.0)
-            )
-
-        time_before = np.arange(t_start, first_spike, dt)
-        time_after = np.arange(last_spike + dt, t_start + duration, dt)
-        time_average = np.concatenate([time_before, time_average, time_after])
-        population_rate = np.concatenate(
-            [
-                np.zeros(time_before.size),
-                population_rate,
-                np.zeros(time_after.size),
-            ]
-        )
-
-        time_arr = np.arange(t_start, t_start + duration, dt)
-
-        interpolate_func = interp1d(
-            time_average, population_rate, bounds_error=False, fill_value="extrapolate"
-        )
-
-        population_rate = interpolate_func(time_arr)
-
-        ret = population_rate
-    else:
-        ret = np.zeros(int(duration / dt))
-
-    return [np.arange(t_start, t_start + duration, dt), ret]
-
-
-def recursive_rate(spike_arr, t0, t1, duration_init, nr_neurons, nr_spikes):
+def recursive_rate(
+    spike_arr,
+    t0,
+    t1,
+    duration_init,
+    nr_neurons,
+    nr_spikes,
+    c_pre=np.inf,
+    bin_nr_best_pre=1,
+):
     """
     spike_arr: spike times in s
     t0, t1: start/end of period in s
     duration_init: full duration in s
     nr_neurons: number of neurons
+    time_step: simulation_timestep in s
     """
     duration = t1 - t0
-    try:
-        threshold_nr_spikes = np.max([0.1 * nr_spikes, 10])
-        threshold_duration = 20 / 1000
 
-        ### first calculate histogram of period
-        ### if histogramm very variable --> split it further
-        ### if histogram homogen --> return rate of period
-        nr_bins = 10  # np.max([2, spike_arr.size // 2])
-        hist, edges = np.histogram(spike_arr, nr_bins, range=(t0, t1))
+    threshold_nr_spikes = 5  # np.max([0.1 * nr_spikes, 10])
+    threshold_duration = 5 / 1000.0
 
-        rel = (hist.min() + 1) / (hist.max() + 1)
-        print(rel)
-        # print(diff)
+    nr_sub_divide = 10
 
-        if spike_arr.size < threshold_nr_spikes or duration < threshold_duration:
-            # if rel < 2:
-            rate = spike_arr.size / (duration * nr_neurons)
-            return np.array([t0 + (t1 - t0) * (2 / 4), rate])
-            # return [
-            #     np.array([t0 + (t1 - t0) * (1 / 4), rate]),
-            #     np.array([t0 + (t1 - t0) * (2 / 4), rate]),
-            #     np.array([t0 + (t1 - t0) * (3 / 4), rate]),
-            # ]
+    ### go up the nr_bins until threshold duration is reached with bin_size
+    ### for each bin_size collect c
+    ### collect min c --> c_min
+
+    bin_nr_temp = 2
+    bin_size = duration / bin_nr_temp
+    c = c_pre + 1
+    c_min = c_pre + 1
+    bin_nr_best = 0
+    while bin_size > threshold_duration:
+        hist, edges = np.histogram(spike_arr, bin_nr_temp, range=(t0, t1))
+        bin_size = duration / bin_nr_temp
+        c = (2 * np.mean(hist) - np.var(hist)) / (duration) ** 2
+        if c < c_min:
+            c_min = c
+            bin_nr_best = bin_nr_temp
+        bin_nr_temp = bin_nr_temp + 1
+
+    ### if c_min better than c_pre --> continue subsplitting /2
+    ### if c_min worse than c_pre --> stop subsplitting and split the current spike array with the previous best bin size
+    ### split the spike_array with bin_nr/nr_sub_divide (because the bin_nr is from the previous run, where the duration was nr_sub_divide times larger)
+    ### if spike_arr.size < threshold_nr_spikes or duration < threshold_duration:
+    if c_pre < c_min or (
+        spike_arr.size < threshold_nr_spikes or duration < threshold_duration
+    ):
+        bin_nr_best_final = bin_nr_best_pre // nr_sub_divide
+        if bin_nr_best_final < 2:
+            rate = [spike_arr.size / (duration * nr_neurons)]
+            time = [t0 + (t1 - t0) * (1 / 2.0)]
         else:
-            ### get spike_sub_arr from histogramm
-            spike_sub_arr_list = []
-            t0_t1_list = []
-            for idx in range(hist.size):
-                if idx < hist.size - 1:
-                    mask = (spike_arr >= edges[idx]).astype(int) * (
-                        spike_arr < edges[idx + 1]
-                    ).astype(int)
-                else:
-                    mask = (spike_arr >= edges[idx]).astype(int) * (
-                        spike_arr <= edges[idx + 1]
-                    ).astype(int)
-                spike_sub_arr_list.append(spike_arr[mask.astype(bool)])
-                t0_t1_list.append([edges[idx], edges[idx + 1]])
+            hist, edges = np.histogram(spike_arr, bin_nr_best_final, range=(t0, t1))
+            bin_size = duration / (bin_nr_best_final)
+            rate = [hist[idx] / (bin_size * nr_neurons) for idx in range(hist.size)]
+            time = [t0 + bin_size * idx + bin_size / 2 for idx in range(hist.size)]
+        return [np.array([time[idx], rate[idx]]) for idx in range(len(rate))]
+    else:
+        ### continue sub dividing
+        ###  get spike_sub_arr from histogramm
+        hist, edges = np.histogram(spike_arr, nr_sub_divide, range=(t0, t1))
+        spike_sub_arr_list = []
+        t0_t1_list = []
+        for idx in range(hist.size):
+            if idx < hist.size - 1:
+                mask = (spike_arr >= edges[idx]).astype(int) * (
+                    spike_arr < edges[idx + 1]
+                ).astype(int)
+            else:
+                mask = (spike_arr >= edges[idx]).astype(int) * (
+                    spike_arr <= edges[idx + 1]
+                ).astype(int)
+            spike_sub_arr_list.append(spike_arr[mask.astype(bool)])
+            t0_t1_list.append([edges[idx], edges[idx + 1]])
 
-            return [
-                recursive_rate(
-                    spike_sub_arr_list[idx],
-                    t0=t0_t1_list[idx][0],
-                    t1=t0_t1_list[idx][1],
-                    duration_init=duration_init,
-                    nr_neurons=nr_neurons,
-                    nr_spikes=nr_spikes,
-                )
-                for idx in range(hist.size)
-            ]
-    except:
-        print("error: threshold_nr_spikes")
-        print(spike_arr, "\n\n")
-        quit()
+        return [
+            recursive_rate(
+                spike_sub_arr_list[idx],
+                t0=t0_t1_list[idx][0],
+                t1=t0_t1_list[idx][1],
+                duration_init=duration_init,
+                nr_neurons=nr_neurons,
+                nr_spikes=nr_spikes,
+                c_pre=c_min,
+                bin_nr_best_pre=bin_nr_best,
+            )
+            for idx in range(hist.size)
+        ]
 
 
 def get_pop_rate(
@@ -380,35 +337,14 @@ def get_pop_rate(
     returns smoothed population rate from period after rampUp period until duration
     """
 
-    """
-
-    check time averages of arr_splits
-    if they are equally distributed --> large tsmooth
-    if they are sparsely distributed --> smaller tsmooth
-
-    maybe: tsmooth = 1/sparsenes(diff(time_average))
-
-    or use variance of time_average:
-    low variance --> large tsmooth
-    high variance --> small tsmooth
-        tsmooth = 1/variance(diff(time_average))
-
-    or use smallest time_average difference:
-
-    generate bins from spike array, at least 10
-    generate bins from bins which are higher then x% of spikes
-
-
-    """
+    if t_smooth_ms > 0:
+        return get_pop_rate_old(
+            spikes, duration, dt=dt, t_start=t_start, t_smooth_ms=t_smooth_ms
+        )
 
     t, _ = raster_plot(spikes)
     if len(t) > 1:  # check if there are spikes in population at all
-        ### convert spike time lists into a single spike time array
-        ### get the number of spikes
-        ### get the time of first and last spike --> later set rates before and after to zero
-        ### split the spike time array into equal arrays --> paramter = how many arrays
-        ### for each sub array compute: time_span, time_average, population_rate
-        ### later use time_average values and population_rate values to interpolate over whole time
+        ### concatenate all spike times and sort them
         spike_arr = dt * np.sort(
             np.concatenate(
                 [np.array(spikes[neuron]).astype(int) for neuron in spikes.keys()]
@@ -417,6 +353,9 @@ def get_pop_rate(
         nr_neurons = len(list(spikes.keys()))
         nr_spikes = spike_arr.size
 
+        ### use recursive_rate to get firing rate
+        ### spike array is splitted in time bins
+        ### time bins widths are automatically found
         rate = recursive_rate(
             spike_arr / 1000.0,
             t0=t_start / 1000.0,
@@ -425,45 +364,34 @@ def get_pop_rate(
             nr_neurons=nr_neurons,
             nr_spikes=nr_spikes,
         )
+        ### returns lists of lists --> needs to be flattened
         rate = np.array(ef.flatten_list(rate))
+        ### returns time values and rate values
         time_population_rate, population_rate = [rate[:, 0], rate[:, 1]]
-        time_population_rate = (
-            time_population_rate * 1000
-        )  # time_population_rate was returned in s --> transform it into ms
+        ### time_population_rate was returned in s --> transform it into ms
+        time_population_rate = time_population_rate * 1000
 
-        try:
-            time_before = np.arange(t_start, time_population_rate[0], dt)
-        except:
-            print("error: time_before =")
-            print(t_start, time_population_rate[0], dt)
-        time_after = np.arange(time_population_rate[-1] + dt, t_start + duration, dt)
-        time_population_rate = np.concatenate(
-            [time_before, time_population_rate, time_after]
-        )
-        population_rate = np.concatenate(
-            [
-                np.zeros(time_before.size),
-                population_rate,
-                np.zeros(time_after.size),
-            ]
-        )
-
-        time_arr = np.arange(t_start, t_start + duration, dt)
-
+        ### interpolate all 5 ms linear
+        time_arr0 = np.arange(t_start, t_start + duration, 5)
         interpolate_func = interp1d(
             time_population_rate,
             population_rate,
             kind="linear",
             bounds_error=False,
-            fill_value=(population_rate[0], population_rate[-1]),  # "extrapolate",
+            fill_value=(population_rate[0], population_rate[-1]),
         )
-        try:
-            population_rate = interpolate_func(time_arr)
-        except:
-            print("error: population_rate =")
-            print(time_arr[0], time_arr[-1])
-            print(time_population_rate[0], time_population_rate[-1])
-            quit()
+        population_rate = interpolate_func(time_arr0)
+
+        ### interpolate all dt quadratic
+        time_arr = np.arange(t_start, t_start + duration, dt)
+        interpolate_func = interp1d(
+            time_arr0,
+            population_rate,
+            kind="quadratic",
+            bounds_error=False,
+            fill_value=(population_rate[0], population_rate[-1]),
+        )
+        population_rate = interpolate_func(time_arr)
 
         ret = population_rate
     else:
@@ -668,6 +596,7 @@ def plot_recordings(
                     end_time - start_time,
                     dt=time_step,
                     t_start=start_time,
+                    t_smooth_ms=-1,
                 )
                 ax.plot(
                     time_arr,
