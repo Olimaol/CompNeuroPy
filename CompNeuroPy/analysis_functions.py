@@ -7,7 +7,6 @@ import warnings
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy import extra_functions as ef
 from scipy.interpolate import interp1d
-from torch import var
 
 
 def my_raster_plot(spikes):
@@ -170,7 +169,7 @@ def get_power_spektrum_from_time_array(
         return [frequenzen[2 : int(fftSize / 2)], spektrum[2 : int(fftSize / 2)]]
 
 
-def get_pop_rate(
+def get_pop_rate_old(
     spikes, duration, dt=1, t_start=0, t_smooth_ms=-1
 ):  # TODO: maybe makes errors with few/no spikes... check this TODO: automatically detect t_smooth does not work for strongly varying activity... implement something different
     """
@@ -207,11 +206,11 @@ def get_pop_rate(
         binSize = int(t_smooth_ms / dt)
         bins = np.arange(0, int(temp_duration / dt) + binSize, binSize)
         binsCenters = bins[:-1] + binSize // 2
+        timeshift_start = -binSize // 2
+        timeshift_end = binSize // 2
+        timeshift_step = np.max([binSize // 10, 1])
         for idx, key in enumerate(spikes.keys()):
             times = np.array(spikes[key]).astype(int)
-            timeshift_start = -binSize // 2
-            timeshift_end = binSize // 2
-            timeshift_step = np.max([binSize // 10, 1])
             for timeshift in np.arange(
                 timeshift_start, timeshift_end, timeshift_step
             ).astype(int):
@@ -233,8 +232,176 @@ def get_pop_rate(
     return [np.arange(t_start, t_start + duration_init, dt), ret]
 
 
+def recursive_rate(
+    spike_arr,
+    t0,
+    t1,
+    duration_init,
+    nr_neurons,
+    nr_spikes,
+    c_pre=np.inf,
+    bin_nr_best_pre=1,
+):
+    """
+    spike_arr: spike times in s
+    t0, t1: start/end of period in s
+    duration_init: full duration in s
+    nr_neurons: number of neurons
+    time_step: simulation_timestep in s
+    """
+    duration = t1 - t0
+
+    threshold_nr_spikes = 5  # np.max([0.1 * nr_spikes, 10])
+    threshold_duration = 5 / 1000.0
+
+    nr_sub_divide = 10
+
+    ### go up the nr_bins until threshold duration is reached with bin_size
+    ### for each bin_size collect c
+    ### collect min c --> c_min
+
+    bin_nr_temp = 2
+    bin_size = duration / bin_nr_temp
+    c = c_pre + 1
+    c_min = c_pre + 1
+    bin_nr_best = 0
+    while bin_size > threshold_duration:
+        hist, edges = np.histogram(spike_arr, bin_nr_temp, range=(t0, t1))
+        bin_size = duration / bin_nr_temp
+        c = (2 * np.mean(hist) - np.var(hist)) / (duration) ** 2
+        if c < c_min:
+            c_min = c
+            bin_nr_best = bin_nr_temp
+        bin_nr_temp = bin_nr_temp + 1
+
+    ### if c_min better than c_pre --> continue subsplitting /2
+    ### if c_min worse than c_pre --> stop subsplitting and split the current spike array with the previous best bin size
+    ### split the spike_array with bin_nr/nr_sub_divide (because the bin_nr is from the previous run, where the duration was nr_sub_divide times larger)
+    ### if spike_arr.size < threshold_nr_spikes or duration < threshold_duration:
+    if c_pre < c_min or (
+        spike_arr.size < threshold_nr_spikes or duration < threshold_duration
+    ):
+        bin_nr_best_final = bin_nr_best_pre // nr_sub_divide
+        if bin_nr_best_final < 2:
+            rate = [spike_arr.size / (duration * nr_neurons)]
+            time = [t0 + (t1 - t0) * (1 / 2.0)]
+        else:
+            hist, edges = np.histogram(spike_arr, bin_nr_best_final, range=(t0, t1))
+            bin_size = duration / (bin_nr_best_final)
+            rate = [hist[idx] / (bin_size * nr_neurons) for idx in range(hist.size)]
+            time = [t0 + bin_size * idx + bin_size / 2 for idx in range(hist.size)]
+        return [np.array([time[idx], rate[idx]]) for idx in range(len(rate))]
+    else:
+        ### continue sub dividing
+        ###  get spike_sub_arr from histogramm
+        hist, edges = np.histogram(spike_arr, nr_sub_divide, range=(t0, t1))
+        spike_sub_arr_list = []
+        t0_t1_list = []
+        for idx in range(hist.size):
+            if idx < hist.size - 1:
+                mask = (spike_arr >= edges[idx]).astype(int) * (
+                    spike_arr < edges[idx + 1]
+                ).astype(int)
+            else:
+                mask = (spike_arr >= edges[idx]).astype(int) * (
+                    spike_arr <= edges[idx + 1]
+                ).astype(int)
+            spike_sub_arr_list.append(spike_arr[mask.astype(bool)])
+            t0_t1_list.append([edges[idx], edges[idx + 1]])
+
+        return [
+            recursive_rate(
+                spike_sub_arr_list[idx],
+                t0=t0_t1_list[idx][0],
+                t1=t0_t1_list[idx][1],
+                duration_init=duration_init,
+                nr_neurons=nr_neurons,
+                nr_spikes=nr_spikes,
+                c_pre=c_min,
+                bin_nr_best_pre=bin_nr_best,
+            )
+            for idx in range(hist.size)
+        ]
+
+
+def get_pop_rate(
+    spikes, duration, dt=1, t_start=0, t_smooth_ms=-1
+):  # TODO: maybe makes errors with few/no spikes... check this TODO: automatically detect t_smooth does not work for strongly varying activity... implement something different
+    """
+    spikes: spikes dictionary from ANNarchy
+    duration: duration of period after (optional) initial period (t_start) from which rate is calculated in ms
+    dt: timestep of simulation
+    t_start: starting simulation time, from which rates should be calculated
+    t_smooth_ms: time window size for rate calculation in ms, optional, standard = -1 which means automatic window size
+
+    returns smoothed population rate from period after rampUp period until duration
+    """
+
+    if t_smooth_ms > 0:
+        return get_pop_rate_old(
+            spikes, duration, dt=dt, t_start=t_start, t_smooth_ms=t_smooth_ms
+        )
+
+    t, _ = raster_plot(spikes)
+    if len(t) > 1:  # check if there are spikes in population at all
+        ### concatenate all spike times and sort them
+        spike_arr = dt * np.sort(
+            np.concatenate(
+                [np.array(spikes[neuron]).astype(int) for neuron in spikes.keys()]
+            )
+        )
+        nr_neurons = len(list(spikes.keys()))
+        nr_spikes = spike_arr.size
+
+        ### use recursive_rate to get firing rate
+        ### spike array is splitted in time bins
+        ### time bins widths are automatically found
+        rate = recursive_rate(
+            spike_arr / 1000.0,
+            t0=t_start / 1000.0,
+            t1=(t_start + duration) / 1000.0,
+            duration_init=duration / 1000.0,
+            nr_neurons=nr_neurons,
+            nr_spikes=nr_spikes,
+        )
+        ### returns lists of lists --> needs to be flattened
+        rate = np.array(ef.flatten_list(rate))
+        ### returns time values and rate values
+        time_population_rate, population_rate = [rate[:, 0], rate[:, 1]]
+        ### time_population_rate was returned in s --> transform it into ms
+        time_population_rate = time_population_rate * 1000
+
+        ### interpolate all 5 ms linear
+        time_arr0 = np.arange(t_start, t_start + duration, 5)
+        interpolate_func = interp1d(
+            time_population_rate,
+            population_rate,
+            kind="linear",
+            bounds_error=False,
+            fill_value=(population_rate[0], population_rate[-1]),
+        )
+        population_rate = interpolate_func(time_arr0)
+
+        ### interpolate all dt quadratic
+        time_arr = np.arange(t_start, t_start + duration, dt)
+        interpolate_func = interp1d(
+            time_arr0,
+            population_rate,
+            kind="quadratic",
+            bounds_error=False,
+            fill_value=(population_rate[0], population_rate[-1]),
+        )
+        population_rate = interpolate_func(time_arr)
+
+        ret = population_rate
+    else:
+        ret = np.zeros(int(duration / dt))
+
+    return [np.arange(t_start, t_start + duration, dt), ret]
+
+
 def plot_recordings(
-    figname, recordings, recording_times, chunk, time_lim, shape, plan, dpi=300
+    figname, recordings, recording_times, chunk, shape, plan, time_lim=[], dpi=300
 ):
     """
     Plots the recordings for the given recording_times specified in plan.
@@ -254,11 +421,6 @@ def plot_recordings(
         chunk: int
             which chunk of recordings should be used (the index of chunk)
 
-        time_lim: list
-            Defines the x-axis for all subplots. The list contains two
-            numbers: start and end time in ms. The times have to be
-            within the chunk.
-
         shape: tuple
             Defines the subplot arrangement e.g. (3,2) = 3 rows, 2 columns
 
@@ -271,12 +433,19 @@ def plot_recordings(
                 - for other data: line, mean, matrix
                 - only for projection data: matrix_mean
 
-        dpi: int, optional, default=300
+        time_lim: list, optional, default = time lims of chunk
+            Defines the x-axis for all subplots. The list contains two
+            numbers: start and end time in ms. The times have to be
+            within the chunk.
+
+        dpi: int, optional, default = 300
             The dpi of the saved figure
 
     """
     print(f"generate fig {figname}", end="... ", flush=True)
     recordings = recordings[chunk]
+    if len(time_lim) == 0:
+        time_lim = recording_times.time_lims(chunk=chunk)
     start_time = time_lim[0]
     end_time = time_lim[1]
     compartment_list = []
@@ -427,6 +596,7 @@ def plot_recordings(
                     end_time - start_time,
                     dt=time_step,
                     t_start=start_time,
+                    t_smooth_ms=-1,
                 )
                 ax.plot(
                     time_arr,
