@@ -11,7 +11,7 @@ class BGM(generate_model):
         The basal ganglia model based on the model from Goenner et al. (2021)
     """
 
-    def __init__(self, name='BGM_v01_p01', do_create=True, do_compile=True, compile_folder_name=None, seed=None):
+    def __init__(self, name='BGM_v02_p01', do_create=True, do_compile=True, compile_folder_name=None, seed=None):                       ########### BGM v02 with new Izhikevich FSI model based on Corbit et al 2016
         """
             runs the standard init but with already predefined model_creation_function and description
             one can still adjust name, do_compile and compile_folder_name
@@ -168,8 +168,12 @@ class BGM(generate_model):
         reader = csv.reader(csvfile, delimiter=',')
         fileRows = []
         idx = -1
+        #zaehler = 0            ####### test #####
         ### check if name is in the .csv file
         for row in reader:
+          #  print(np.size(row)) ####### test #####
+           # print('row 0',row[0]) ####### test #####
+            #zaehler+=1 ####### test #####
             if row[0]=='': continue
             fileRows.append(row)
             if 'general.id'==row[0] and True in [name == row[i] for i in range(1,len(row))]:
@@ -177,7 +181,8 @@ class BGM(generate_model):
             elif 'general.id'==row[0]:
                 print('No Parameters available for given model name '+name+'! (file '+csvPath+')')
                 quit()
-        if idx==-1:
+
+        if idx==-1:  
             print('No general.id in parameter csv file!')
             quit()
         ### read the column corresponding to name
@@ -200,6 +205,8 @@ class BGM(generate_model):
                 else:
                     ### value is some other string
                     params[row[0]] = value
+
+        
 
         csvfile.close()
         
