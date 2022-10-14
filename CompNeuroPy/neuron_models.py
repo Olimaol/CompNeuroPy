@@ -886,6 +886,87 @@ Izhikevich2007_Corbit8 = Neuron(
     description="Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking.",
 )
 
+Izhikevich2007_Corbit_final = Neuron(
+    parameters="""
+        C      = 0 : population # ATTENTION! H&H model is myF/cm^2 --> here also myF/cm^2 and not pF --> current also myF/cm^2 and not pA
+        k      = 0 : population # 
+        b_n    = 0 : population # 
+        a_s    = 0 : population # 
+        a_n    = 0 : population # 
+        v_r    = 0 : population # mV
+        v_t    = 0 : population # mV
+        a      = 0 : population # ms**-1
+        b      = 0 : population # 
+        d      = 0 : population 
+        c      = 0 : population # mV
+        v_peak = 0 : population # mV
+        I_app  = 0
+        x      = 0                     # exponent = nth root 
+        tau_ampa       = 1 : population
+        tau_gaba       = 1 : population
+        E_ampa         = 0 : population
+        E_gaba         = 0 : population
+        increase_noise = 0 : population
+        rates_noise    = 0
+        
+
+    """,
+    equations="""
+
+        dg_ampa/dt = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rates_noise, -g_ampa/tau_ampa, -g_ampa/tau_ampa + increase_noise/dt)
+        dg_gaba/dt = -g_gaba/tau_gaba
+        I = I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba)
+      
+        C * dv/dt = k*(v - v_r)*(v - v_t) - u - n + ((abs(I))**(1/x))/((I+1e-20)/(abs(I)+ 1e-20))
+
+
+        du/dt     = a*(b*(v - v_r) - u)
+        ds/dt     = a_s*(pos(u)**0.1 - s)
+        dn/dt     = a_n*(b_n*(pos(u)**0.1-s) - n)
+    """,
+    spike = "v >= v_peak",
+    reset = """
+        v = c
+        u = u + d                           ### new ###
+    """,
+    name = "Izhikevich2007_Corbit_final",
+    description = "Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking."
+)
+
+Izhikevich2007_Corbit9 = Neuron(
+    parameters="""
+        C      = 0 : population # ATTENTION! H&H model is myF/cm^2 --> here also myF/cm^2 and not pF --> current also myF/cm^2 and not pA
+        k      = 0 : population # 
+        b_n    = 0 : population # 
+        a_s    = 0 : population # 
+        a_n    = 0 : population # 
+        v_r    = 0 : population # mV
+        v_t    = 0 : population # mV
+        a      = 0 : population # ms**-1
+        b      = 0 : population # 
+        c      = 0 : population # mV
+        v_peak = 0 : population # mV
+        I_app  = 0
+        x      = 0                     # exponent = nth root 
+        
+
+    """,
+    equations="""
+      
+         C * dv/dt = k*(v - v_r)*(v - v_t) - u - n + ((abs(I_app))**(1/x))/((I_app+1e-20)/(abs(I_app)+ 1e-20))
+
+
+        du/dt     = a*(b*(v - v_r) - u)
+        ds/dt     = a_s*(pos(u)**0.1 - s)
+        dn/dt     = a_n*(b_n*(pos(u)**0.1-s) - n)
+    """,
+    spike = "v >= v_peak",
+    reset = """
+        v = c
+    """,
+    name = "Izhikevich2007_Corbit9",
+    description = "Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking. Combination of Corbit6 and Corbit8 without parameter d, but x "
+)
 
 Izhikevich2007_noisy_AMPA = Neuron(
     parameters="""
