@@ -111,17 +111,17 @@ def get_population_power_spectrum(
             ### sampling steps array, one if there was a spike at sampling step = spike train
             spiketrain[idx] = 1
 
-            ###generate multiple overlapping sequences out of the spike trains
+            ### generate multiple overlapping sequences out of the spike trains
             spiketrainSequences = hanning_split_overlap(
                 spiketrain, fftSize, int(fftSize / 2)
             )
 
-            ###generate power spectrum
+            ### generate power spectrum
             spektrum[neuron] = get_nanmean(
                 np.abs(np.fft.fft(spiketrainSequences)) ** 2, 0
             )
 
-        ###mean spectrum over all neurons
+        ### mean spectrum over all neurons
         spektrum = get_nanmean(spektrum, 0)
 
         frequenzen = np.fft.fftfreq(fftSize, 1.0 / spikesSamplingfrequency)
@@ -156,12 +156,12 @@ def get_power_spektrum_from_time_array(
         ### sampling steps array
         sampling_arr = arr[0 :: int((1 / samplingfrequency) * 1000 / simulation_dt)]
 
-        ###generate multiple overlapping sequences
+        ### generate multiple overlapping sequences
         sampling_arr_sequences = hanning_split_overlap(
             sampling_arr, fftSize, int(fftSize / 2)
         )
 
-        ###generate power spectrum
+        ### generate power spectrum
         spektrum = get_nanmean(np.abs(np.fft.fft(sampling_arr_sequences)) ** 2, 0)
 
         frequenzen = np.fft.fftfreq(fftSize, 1.0 / samplingfrequency)

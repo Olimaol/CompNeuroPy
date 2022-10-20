@@ -4,6 +4,9 @@ import sys
 import os
 from CompNeuroPy import analysis_functions as af
 from ANNarchy import dt
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+from matplotlib import cm
 
 
 def print_df(df):
@@ -91,3 +94,22 @@ def unpack_monDict_keys(s):
 
     period = int(period / dt()) * dt()
     return compartment_type, compartment_name, period
+
+
+class Cmap:
+    def __init__(self, cmap_name, vmin, vmax):
+        self.cmap_name = cmap_name
+        self.cmap = plt.get_cmap(cmap_name)
+        self.norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+        self.scalarMap = cm.ScalarMappable(norm=self.norm, cmap=self.cmap)
+
+    def get_rgb(self, val):
+        return self.scalarMap.to_rgba(val)
+
+    def __call__(self, x, alpha=1):
+        vals = self.get_rgb(x)
+        if isinstance(vals, tuple):
+            vals = vals[:3] + (alpha,)
+        else:
+            vals[:, -1] = alpha
+        return vals
