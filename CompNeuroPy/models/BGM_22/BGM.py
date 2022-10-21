@@ -11,6 +11,7 @@ from ANNarchy.core.Random import (
 from CompNeuroPy import generate_model
 import csv
 import os
+import importlib
 
 
 class BGM(generate_model):
@@ -327,13 +328,14 @@ class BGM(generate_model):
 
         return params
 
-    def get_possible_random_distributions(self):
-        for dist in [
+    def needed_imports(self):
+        for import_val in [
             Uniform,
             DiscreteUniform,
             Normal,
             LogNormal,
             Exponential,
             Gamma,
+            importlib,
         ]:
-            print(dist)
+            print(import_val)
