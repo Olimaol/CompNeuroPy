@@ -113,3 +113,18 @@ class Cmap:
         else:
             vals[:, -1] = alpha
         return vals
+
+
+class data_obj(object):
+    def __init__(self) -> None:
+        pass
+
+    def __setattr__(self, name: str, value) -> None:
+        super().__setattr__(name, value)
+
+    def __getattribute__(self, __name: str):
+        try:
+            return super().__getattribute__(__name)
+        except:
+            self.__setattr__(__name, data_obj())
+            return super().__getattribute__(__name)

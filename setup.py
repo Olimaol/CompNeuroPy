@@ -19,7 +19,7 @@ dependencies = [
 
 setuptools.setup(
     name="CompNeuroPy",
-    version="0.0.10",
+    version="0.0.11",
     license="MIT",
     author="Oliver Maith",
     author_email="oli_maith@gmx.de",
@@ -27,4 +27,6 @@ setuptools.setup(
     url="https://github.com/Olimaol/compneuropy",
     packages=setuptools.find_packages(),
     install_requires=dependencies,
+    include_package_data=True,
+    package_data={'': ['*.csv']},
 )
