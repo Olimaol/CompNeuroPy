@@ -7,6 +7,7 @@ import warnings
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy import extra_functions as ef
 from scipy.interpolate import interp1d
+from multiprocessing import Process
 
 
 def my_raster_plot(spikes):
@@ -401,6 +402,56 @@ def get_pop_rate(
 
 
 def plot_recordings(
+    figname, recordings, recording_times, chunk, shape, plan, time_lim=[], dpi=300
+):
+    """
+    Plots the recordings for the given recording_times specified in plan.
+
+    Args:
+        figname: str
+            path + name of figure (e.g. "figures/my_figure.png")
+
+        recordings: list
+            a recordings list from CompNeuroPy obtained with the function
+            get_recordings() from a Monitors object.
+
+        recording_times: object
+            recording_times object from CompNeuroPy obtained with the
+            function get_recording_times() from a Monitors object.
+
+        chunk: int
+            which chunk of recordings should be used (the index of chunk)
+
+        shape: tuple
+            Defines the subplot arrangement e.g. (3,2) = 3 rows, 2 columns
+
+        plan: list of strings
+            Defines which recordings are plotted in which subplot and how.
+            Entries of the list have the structure: "subplot_nr;model_component_name;variable_to_plot;format",
+            e.g. "1,my_pop1;v;line".
+            mode: defines how the data is plotted, available modes:
+                - for spike data: raster, mean, hybrid
+                - for other data: line, mean, matrix
+                - only for projection data: matrix_mean
+
+        time_lim: list, optional, default = time lims of chunk
+            Defines the x-axis for all subplots. The list contains two
+            numbers: start and end time in ms. The times have to be
+            within the chunk.
+
+        dpi: int, optional, default = 300
+            The dpi of the saved figure
+
+    """
+    proc = Process(
+        target=__plot_recordings,
+        args=(figname, recordings, recording_times, chunk, shape, plan, time_lim, dpi),
+    )
+    proc.start()
+    proc.join()
+
+
+def __plot_recordings(
     figname, recordings, recording_times, chunk, shape, plan, time_lim=[], dpi=300
 ):
     """
@@ -1076,6 +1127,7 @@ def plot_recordings(
         save_dir = "/".join(figname_parts[:-1])
         sf.create_dir(save_dir)
     plt.savefig(figname, dpi=dpi)
+    plt.close()
     print("Done")
 
 
