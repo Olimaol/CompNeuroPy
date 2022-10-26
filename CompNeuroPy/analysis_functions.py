@@ -67,66 +67,108 @@ def hanning_split_overlap(seq, size, overlap):
 
 def get_population_power_spectrum(
     spikes,
-    presimulationTime,
-    simulationTime,
-    simulation_dt,
-    spikesSamplingfrequency=250,
-    fftSize=1024,
+    time_step,
+    t_start=None,
+    t_end=None,
+    fft_size=None,
 ):
     """
-    generates power spectrum of population spikes
-    using the Welch methode (Welch,1967)
+    generates power spectrum of population spikes, returns list with [frequency_arr, power_spectrum]
+    using the Welch methode from: Welch, P. (1967). The use of fast Fourier transform for the estimation of power spectra: a method based on time averaging over short, modified periodograms. IEEE Transactions on audio and electroacoustics, 15(2), 70-73.
 
-    spikes: ANNarchy spike dict of one population
-    presimulationTime: simulation time which will not be analyzed
-    simulationTime: analyzed simulation time
+    The spike arrays are splitted into multiple arrays and then multiple FFTs are performed and the results are averaged.
 
-    spikesSamplingfrequency: to sample the spike times, in Hz --> max frequency = samplingfrequency / 2
-    fftSize: signal size for FFT, duration (in s) = fftSize / samplingfrequency --> frequency resolution = samplingfrequency / fftSize
+    Size of splitted signals and the time step of the simulation determine the frequency resolution and the maximum frequency:
+        maximum frequency [Hz] = 500 / time_step
+        frequency resolution [Hz] = 1000 / (time_step * fftSize)
+
+    Args:
+        spikes: dicitonary
+            ANNarchy spike dict of one population
+
+        time_step: float
+            time step of the simulation in ms
+
+        t_start: float or int, optional, default = time of first spike
+            start time of analyzed data in ms
+
+        t_end: float or int, optional, default = time of last spike
+            end time of analyzed data in ms
+
+        fft_size: int, optional, default = maximum
+            signal size for the FFT (size of splitted arrays)
+            has to be a power of 2
     """
-    populationSize = len(list(spikes.keys()))
+    populations_size = len(list(spikes.keys()))
 
-    if (simulationTime / 1000) < (fftSize / spikesSamplingfrequency):
+    def ms_to_s(x):
+        return x / 1000
+
+    simulation_time = t_end - t_start  # in ms
+    sampling_frequency = 1 / ms_to_s(time_step)  # in Hz
+
+    ### get fft_size
+    ### if None --> as large as possible
+    if fft_size is None:
+        pow = 1
+        while (2 ** (pow + 1)) / sampling_frequency < ms_to_s(simulation_time):
+            pow = pow + 1
+        fft_size = 2**pow
+
+    if ms_to_s(simulation_time) < (fft_size / sampling_frequency):
+        ### catch a too large fft_size
         print(
-            "Simulation time has to be >=",
-            fftSize / spikesSamplingfrequency,
-            "s for FFT!",
+            f"Too large fft_size {fft_size} for duration {simulation_time} ms. FFT_size has to be smaller than {int(ms_to_s(simulation_time)*sampling_frequency)}!"
         )
-        return [np.zeros(int(fftSize / 2 - 2)), np.zeros(int(fftSize / 2 - 2))]
+        return [np.zeros(int(fft_size / 2 - 2)), np.zeros(int(fft_size / 2 - 2))]
+    elif (np.log2(fft_size) - int(np.log2(fft_size))) != 0:
+        ### catch fft_size if its not power of 2
+        print("FFT_size hast to be power of 2!")
+        return [np.zeros(int(fft_size / 2 - 2)), np.zeros(int(fft_size / 2 - 2))]
     else:
-        spektrum = np.zeros((populationSize, fftSize))
-        for neuron in range(populationSize):
+        print(
+            f"power sepctrum, min = {1000 / (time_step * fft_size)}, max = {500 / time_step}"
+        )
+        ### calculate frequency powers
+        spectrum = np.zeros((populations_size, fft_size))
+        for neuron in range(populations_size):
             ### sampling steps array
             spiketrain = np.zeros(
-                int((simulationTime / 1000.0) * spikesSamplingfrequency)
+                int(np.round(ms_to_s(simulation_time) * sampling_frequency))
             )
             ### spike times as sampling steps
             idx = (
-                ((np.array(spikes[neuron]) * simulation_dt) / 1000.0)
-                * spikesSamplingfrequency
+                np.round(
+                    ms_to_s((np.array(spikes[neuron]) * time_step)) * sampling_frequency
+                )
             ).astype(np.int32)
-            ### cut the spikes from presimulation
-            idx = idx - (presimulationTime / 1000.0) * spikesSamplingfrequency
-            idx = idx[idx >= 0].astype(np.int32)
-            ### sampling steps array, one if there was a spike at sampling step = spike train
+            ### cut the spikes before t_start and after t_end
+            idx_start = ms_to_s(t_start) * sampling_frequency
+            idx_end = ms_to_s(t_end) * sampling_frequency
+            mask = ((idx > idx_start).astype(int) * (idx < idx_end).astype(int)).astype(
+                bool
+            )
+            idx = (idx[mask] - idx_start).astype(np.int32)
+
+            ### set spiketrain array to one if there was a spike at sampling step
             spiketrain[idx] = 1
 
             ### generate multiple overlapping sequences out of the spike trains
-            spiketrainSequences = hanning_split_overlap(
-                spiketrain, fftSize, int(fftSize / 2)
+            spiketrain_sequences = hanning_split_overlap(
+                spiketrain, fft_size, int(fft_size / 2)
             )
 
             ### generate power spectrum
-            spektrum[neuron] = get_nanmean(
-                np.abs(np.fft.fft(spiketrainSequences)) ** 2, 0
+            spectrum[neuron] = get_nanmean(
+                np.abs(np.fft.fft(spiketrain_sequences)) ** 2, 0
             )
 
         ### mean spectrum over all neurons
-        spektrum = get_nanmean(spektrum, 0)
+        spectrum = get_nanmean(spectrum, 0)
 
-        frequenzen = np.fft.fftfreq(fftSize, 1.0 / spikesSamplingfrequency)
+        frequency_arr = np.fft.fftfreq(fft_size, 1.0 / sampling_frequency)
 
-        return [frequenzen[2 : int(fftSize / 2)], spektrum[2 : int(fftSize / 2)]]
+        return [frequency_arr[2 : int(fft_size / 2)], spectrum[2 : int(fft_size / 2)]]
 
 
 def get_power_spektrum_from_time_array(

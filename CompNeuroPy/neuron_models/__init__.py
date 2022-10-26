@@ -46,4 +46,5 @@ from .final_models.artificial_nm import (
     integrator_neuron_simple,
     poisson_neuron,
     poisson_neuron_up_down,
+    poisson_neuron_sin,
 )
