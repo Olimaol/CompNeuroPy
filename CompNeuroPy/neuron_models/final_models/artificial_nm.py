@@ -89,7 +89,7 @@ poisson_neuron_sin = Neuron(
         phase = 0 # in sec
     """,
     equations="""
-        rates = amplitude * sin(((2*pi)/frequency)*(t/1000-phase)) + base
+        rates = amplitude * sin((2*pi*frequency)*(t/1000-phase)) + base
         p     = Uniform(0.0, 1.0) * 1000.0 / dt
     """,
     spike="""
