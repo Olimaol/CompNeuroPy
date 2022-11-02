@@ -1,10 +1,11 @@
-from gc import get_objects
 from ANNarchy import get_time
 from CompNeuroPy import extra_functions as ef
 import numpy as np
 
 
 class generate_simulation:
+    initialized_simulations = []
+
     def __init__(
         self,
         simulation_function,
@@ -20,6 +21,7 @@ class generate_simulation:
         self.name = name
         if name == "simulation":
             self.name = name + str(self.__nr_simulations__())
+        self.initialized_simulations.append(self.name)
         self.description = description
         self.simulation_function = simulation_function
         self.simulation_kwargs = simulation_kwargs
@@ -93,17 +95,7 @@ class generate_simulation:
         """
         returns the current number of initialized CompNeuroPy simulations
         """
-
-        sim_list = []
-        object_list = get_objects()
-        for obj in object_list:
-            test = str(obj)
-            compare = "<CompNeuroPy.generate_simulation.generate_simulation object"
-            if len(test) >= len(compare):
-                if compare == test[: len(compare)]:
-                    sim_list.append(vars(obj)["name"])
-        del object_list
-        return len(sim_list)
+        return len(self.initialized_simulations)
 
     def __test_req__(self, simulation_kwargs=None):
         """

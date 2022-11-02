@@ -1,8 +1,9 @@
 from CompNeuroPy import model_functions as mf
-from gc import get_objects
 
 
 class generate_model:
+    initialized_models = {}
+
     def __init__(
         self,
         model_creation_function,
@@ -16,6 +17,7 @@ class generate_model:
         self.name = name
         if name == "model":
             self.name = name + str(self.__nr_models__())
+        self.initialized_models[self.name] = False
         self.description = description
         self.model_creation_function = model_creation_function
         self.compile_folder_name = compile_folder_name
@@ -79,6 +81,8 @@ class generate_model:
             self.populations = post_existing_model["populations"]
             self.projections = post_existing_model["projections"]
 
+            self.initialized_models[self.name] = True
+
             if do_compile:
                 self.compile(compile_folder_name)
 
@@ -87,31 +91,15 @@ class generate_model:
         checks which CompNeuroPy models are created
         returns a list with all initialized CompNeuroPy models which are not created yet
         """
-
         not_created_model_list = []
-        object_list = get_objects()
-        for obj in object_list:
-            test = str(obj)
-            compare = "<CompNeuroPy.generate_model.generate_model object"
-            if len(test) >= len(compare):
-                if compare == test[: len(compare)]:
-                    if vars(obj)["created"] == False:
-                        not_created_model_list.append(vars(obj)["name"])
-        del object_list
+        for key in self.initialized_models.keys():
+            if self.initialized_models[key] == False:
+                not_created_model_list.append(key)
+
         return not_created_model_list
 
     def __nr_models__(self):
         """
         returns the current number of initialized (not considering "created") CompNeuroPy models
         """
-
-        model_list = []
-        object_list = get_objects()
-        for obj in object_list:
-            test = str(obj)
-            compare = "<CompNeuroPy.generate_model.generate_model object"
-            if len(test) >= len(compare):
-                if compare == test[: len(compare)]:
-                    model_list.append(vars(obj)["name"])
-        del object_list
-        return len(model_list)
+        return len(list(self.initialized_models.keys()))
