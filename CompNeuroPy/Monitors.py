@@ -191,7 +191,7 @@ class Monitors:
             if self.timings[key]["currently_paused"] == False:
                 self.timings[key]["start"].append(0)
         if model:
-            reset(populations, projections, synapses, monitors, net_id=0)
+            reset(populations, projections, synapses, monitors, net_id=net_id)
 
     def __current_chunk__(self):
         ### if recordings are currently active --> return chunk in which these recordings will be saved
