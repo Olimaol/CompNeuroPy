@@ -1323,7 +1323,6 @@ def get_number_of_decimals(nr):
     """
 
     if nr != int(nr):
-        print(nr)
         decimals = len(str(nr).split(".")[1])
     else:
         decimals = 0
