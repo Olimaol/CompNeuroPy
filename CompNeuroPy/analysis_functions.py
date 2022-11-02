@@ -23,7 +23,25 @@ def my_raster_plot(spikes):
 
 def get_nanmean(a, axis=None, dtype=None):
     """
-    np.nanmean without warnings
+    np.nanmean without printing warnings
+
+
+    Args:
+        a : array_like
+            Array containing numbers whose mean is desired. If `a` is not an
+            array, a conversion is attempted.
+        axis : None or int or tuple of ints, optional
+            Axis or axes along which the means are computed. The default is to
+            compute the mean of the flattened array.
+
+            .. numpy versionadded:: 1.7.0
+
+            If this is a tuple of ints, a mean is performed over multiple axes,
+            instead of a single axis or all the axes as before.
+        dtype : data-type, optional
+            Type to use in computing the mean.  For integer inputs, the default
+            is `float64`; for floating point inputs, it is the same as the
+            input dtype.
     """
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
@@ -33,7 +51,23 @@ def get_nanmean(a, axis=None, dtype=None):
 
 def get_nanstd(a, axis=None, dtype=None):
     """
-    np.nanstd without warnings
+    np.nanstd without printing warnings
+
+    Args:
+        a : array_like
+            Calculate the standard deviation of these values.
+        axis : None or int or tuple of ints, optional
+            Axis or axes along which the standard deviation is computed. The
+            default is to compute the standard deviation of the flattened array.
+
+            .. numpy versionadded:: 1.7.0
+
+            If this is a tuple of ints, a standard deviation is performed over
+            multiple axes, instead of a single axis or all the axes as before.
+        dtype : dtype, optional
+            Type to use in computing the standard deviation. For arrays of
+            integer type the default is float64, for arrays of float types it is
+            the same as the array type.
     """
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
@@ -441,72 +475,80 @@ def recursive_rate(
     return time_rate_arr[:, time_unique_idx_arr]
 
 
-def get_pop_rate(
-    spikes, duration, dt=1, t_start=0, t_smooth_ms=-1
-):  # TODO: maybe makes errors with few/no spikes... check this TODO: automatically detect t_smooth does not work for strongly varying activity... implement something different
+def get_pop_rate(spikes, t_start=None, t_end=None, time_step=1, t_smooth_ms=-1):
     """
-    spikes: spikes dictionary from ANNarchy
-    duration: duration of period after (optional) initial period (t_start) from which rate is calculated in ms
-    dt: timestep of simulation
-    t_start: starting simulation time, from which rates should be calculated
-    t_smooth_ms: time window size for rate calculation in ms, optional, standard = -1 which means automatic window size
+    Generates a smoothed population firing rate. Returns a list containing a time array and a firing rate array.
 
-    returns smoothed population rate from period after rampUp period until duration
+    Args:
+        spikes: dictionary
+            ANNarchy spike dict of one population
+
+        t_start: float or int, optional, default = time of first spike
+            start time of analyzed data in ms
+
+        t_end: float or int, optional, default = time of last spike
+            end time of analyzed data in ms
+
+        time_step: float or int, optional, default = 1
+            time step of the simulation in ms
+
+        t_smooth_ms: float or int, optional, default = -1
+            time window for firing rate calculation in ms, if -1 --> time window sizes are automatically detected
     """
+    duration = t_end - t_start
+    dt = time_step
 
-    if t_smooth_ms > 0:
-        return get_pop_rate_old(
-            spikes, duration, dt=dt, t_start=t_start, t_smooth_ms=t_smooth_ms
-        )
+    t, _ = my_raster_plot(spikes)
 
-    t, _ = raster_plot(spikes)
-    if len(t) > 1:  # check if there are spikes in population at all
-        ### concatenate all spike times and sort them
-        spike_arr = dt * np.sort(
-            np.concatenate(
-                [np.array(spikes[neuron]).astype(int) for neuron in spikes.keys()]
+    ### check if there are spikes in population at all
+    if len(t) > 1:
+
+        if t_start == None:
+            t_start = t.min() * time_step
+        if t_end == None:
+            t_end = t.max() * time_step
+
+        ### if t_smooth is given --> use classic time_window method
+        if t_smooth_ms > 0:
+            return get_pop_rate_old(
+                spikes, duration, dt=dt, t_start=t_start, t_smooth_ms=t_smooth_ms
             )
-        )
-        nr_neurons = len(list(spikes.keys()))
-        nr_spikes = spike_arr.size
+        else:
+            ### concatenate all spike times and sort them
+            spike_arr = dt * np.sort(
+                np.concatenate(
+                    [np.array(spikes[neuron]).astype(int) for neuron in spikes.keys()]
+                )
+            )
+            nr_neurons = len(list(spikes.keys()))
+            nr_spikes = spike_arr.size
 
-        ### use recursive_rate to get firing rate
-        ### spike array is splitted in time bins
-        ### time bins widths are automatically found
-        time_population_rate, population_rate = recursive_rate(
-            spike_arr / 1000.0,
-            t0=t_start / 1000.0,
-            t1=(t_start + duration) / 1000.0,
-            duration_init=duration / 1000.0,
-            nr_neurons=nr_neurons,
-            nr_spikes=nr_spikes,
-        )
-        ### time_population_rate was returned in s --> transform it into ms
-        time_population_rate = time_population_rate * 1000
+            ### use recursive_rate to get firing rate
+            ### spike array is splitted in time bins
+            ### time bins widths are automatically found
+            time_population_rate, population_rate = recursive_rate(
+                spike_arr / 1000.0,
+                t0=t_start / 1000.0,
+                t1=(t_start + duration) / 1000.0,
+                duration_init=duration / 1000.0,
+                nr_neurons=nr_neurons,
+                nr_spikes=nr_spikes,
+            )
+            ### time_population_rate was returned in s --> transform it into ms
+            time_population_rate = time_population_rate * 1000
 
-        ### interpolate all 5 ms linear
-        time_arr0 = np.arange(t_start, t_start + duration, dt)
-        interpolate_func = interp1d(
-            time_population_rate,
-            population_rate,
-            kind="linear",
-            bounds_error=False,
-            fill_value=(population_rate[0], population_rate[-1]),
-        )
-        population_rate = interpolate_func(time_arr0)
+            ### interpolate
+            time_arr0 = np.arange(t_start, t_start + duration, dt)
+            interpolate_func = interp1d(
+                time_population_rate,
+                population_rate,
+                kind="linear",
+                bounds_error=False,
+                fill_value=(population_rate[0], population_rate[-1]),
+            )
+            population_rate = interpolate_func(time_arr0)
 
-        # ### interpolate all dt quadratic
-        # time_arr = np.arange(t_start, t_start + duration, dt)
-        # interpolate_func = interp1d(
-        #     time_arr0,
-        #     population_rate,
-        #     kind="quadratic",
-        #     bounds_error=False,
-        #     fill_value=(population_rate[0], population_rate[-1]),
-        # )
-        # population_rate = interpolate_func(time_arr)
-
-        ret = population_rate
+            ret = population_rate
     else:
         ret = np.zeros(int(duration / dt))
 
@@ -719,10 +761,10 @@ def __plot_recordings(
                 plt.title("Spikes " + part)
         elif variable == "spike" and mode == "mean":
             time_arr, firing_rate = get_pop_rate(
-                data,
-                end_time - start_time,
-                dt=time_step,
+                spikes=data,
                 t_start=start_time,
+                t_end=end_time,
+                time_step=time_step,
             )
             plt.plot(time_arr, firing_rate, color="k")
             plt.xlim(start_time, end_time)
@@ -757,11 +799,10 @@ def __plot_recordings(
                 plt.ylabel("# neurons")
                 ax = plt.gca().twinx()
                 time_arr, firing_rate = get_pop_rate(
-                    data,
-                    end_time - start_time,
-                    dt=time_step,
+                    spikes=data,
                     t_start=start_time,
-                    t_smooth_ms=-1,
+                    t_end=end_time,
+                    time_step=time_step,
                 )
                 ax.plot(
                     time_arr,
@@ -1246,6 +1287,19 @@ def __plot_recordings(
 
 
 def get_number_of_zero_decimals(nr):
+    """
+    for numbers which are smaller than zero get the number of digits after
+    the decimal point which are zero (plus 1). For the number 0 or numbers
+    >=1 return zero, e.g.:
+
+     0.12 --> 1
+    0.012 --> 2
+    1.012 --> 0
+
+    Args:
+        nr: float or int
+            the number from which the number of digits are obtained
+    """
     decimals = 0
     if nr != 0:
         while abs(nr) < 1:
@@ -1256,32 +1310,51 @@ def get_number_of_zero_decimals(nr):
 
 
 def get_number_of_decimals(nr):
-    nr = nr - int(nr)
-    decimals = 0
-    if nr != 0:
-        while abs(nr) < 1:
-            nr = nr * 10
-            decimals = decimals + 1
+    """
+    get number of digits after the decimal point, e.g.:
+
+         5 --> 0
+       5.1 --> 1
+    0.0101 --> 4
+
+    Args:
+        nr: float or int
+            the number from which the number of digits are obtained
+    """
+
+    if nr != int(nr):
+        print(nr)
+        decimals = len(str(nr).split(".")[1])
+    else:
+        decimals = 0
 
     return decimals
 
 
 def sample_data_with_timestep(time_arr, data_arr, timestep):
     """
-    time_arr: times of data_arr in ms
-    data_arr: array with values
-    timestep: timestep in ms for sampling
+    samples a data array each timestep using interpolation
+
+    Args:
+        time_arr: array
+            times of data_arr in ms
+
+        data_arr: array
+            array with data values from which will be sampled
+
+        timestep: float or int
+            timestep in ms for sampling
     """
     interpolate_func = interp1d(
         time_arr, data_arr, bounds_error=False, fill_value="extrapolate"
     )
     min_time = round(
         round(time_arr[0] / timestep, 0) * timestep,
-        get_number_of_zero_decimals(timestep),
+        get_number_of_decimals(timestep),
     )
     max_time = round(
         round(time_arr[-1] / timestep, 0) * timestep,
-        get_number_of_zero_decimals(timestep),
+        get_number_of_decimals(timestep),
     )
     new_time_arr = np.arange(min_time, max_time + timestep, timestep)
     new_data_arr = interpolate_func(new_time_arr)
@@ -1291,12 +1364,20 @@ def sample_data_with_timestep(time_arr, data_arr, timestep):
 
 def time_data_add_nan(time_arr, data_arr):
     """
-    if there are gaps in time_arr --> fill them with respecitve time values
+    if there are gaps in time_arr --> fill them with respective time values
     fill the corresponding data_arr values with nan
+
+
+    Args:
+        time_arr: array
+            times of data_arr in ms
+
     time_arr = 1D array
     data_arr = nD array
     both have same first dimension size!
     """
+    time_arr = time_arr.astype(float)
+    data_arr = data_arr.astype(float)
 
     time_diff_arr = np.diff(time_arr)
     time_diff_unique_arr = np.unique(time_diff_arr, return_counts=True)
@@ -1309,7 +1390,68 @@ def time_data_add_nan(time_arr, data_arr):
             ### time_arr of idx did not increase by period_time
             time_arr = np.insert(time_arr, idx, time_arr[idx - 1] + period_time)
             data_arr = np.insert(
-                data_arr, idx, np.nan * np.zeros(data_arr.shape[1:]), axis=0
+                data_arr,
+                idx,
+                np.nan * np.zeros(data_arr.shape[1:]).astype(float),
+                axis=0,
+            )
+        idx = idx + 1
+        time = time + period_time
+
+    return [time_arr, data_arr]
+
+
+def time_data_add_nan_new(time_arr, data_arr):  # TODO
+    """
+    if there are gaps in time_arr --> fill them with respective time values
+    fill the corresponding data_arr values with nan
+
+
+    Args:
+        time_arr: array
+            times of data_arr in ms
+
+    time_arr = 1D array
+    data_arr = nD array
+    both have same first dimension size!
+    """
+    time_arr = time_arr.astype(float)
+    data_arr = data_arr.astype(float)
+
+    ### find gaps
+    time_diff_arr = np.diff(time_arr)
+    time_diff_min = time_diff_arr.min()
+    gaps_arr = time_diff_arr != time_diff_min
+
+    ### split arrays at gaps
+    time_arr_split = np.split(
+        time_arr, indices_or_sections=np.where(gaps_arr)[0] + 1, axis=0
+    )
+    data_arr_split = np.split(
+        data_arr, indices_or_sections=np.where(gaps_arr)[0] + 1, axis=0
+    )
+
+    ### fill gaps between splits
+    for split_arr_idx in range(len(time_arr_split) - 1):
+        current_end = time_arr_split[split_arr_idx][-1]
+        next_start = time_arr_split[split_arr_idx + 1][0]
+        print(current_end, next_start)
+    quit()
+
+    time_diff_unique_arr = np.unique(time_diff_arr, return_counts=True)
+    period_time = time_diff_unique_arr[0][np.argmax(time_diff_unique_arr[1])]
+
+    time = time_arr[0]
+    idx = 0
+    while time < time_arr[-1]:
+        if time != time_arr[idx]:
+            ### time_arr of idx did not increase by period_time
+            time_arr = np.insert(time_arr, idx, time_arr[idx - 1] + period_time)
+            data_arr = np.insert(
+                data_arr,
+                idx,
+                np.nan * np.zeros(data_arr.shape[1:]).astype(float),
+                axis=0,
             )
         idx = idx + 1
         time = time + period_time
