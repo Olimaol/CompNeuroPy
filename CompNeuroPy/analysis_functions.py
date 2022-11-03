@@ -1361,61 +1361,33 @@ def sample_data_with_timestep(time_arr, data_arr, timestep):
     return [new_time_arr, new_data_arr]
 
 
-def time_data_add_nan(time_arr, data_arr):
+def time_data_add_nan(time_arr, data_arr, axis=0):
     """
     if there are gaps in time_arr --> fill them with respective time values
     fill the corresponding data_arr values with nan
 
+    it is tried to fill the time array with continuously increasing times based on the smallest time difference found
+    there can still be discontinuities after filling the arrays (because existing time values are not changed)
 
     Args:
-        time_arr: array
+        time_arr: 1D array
             times of data_arr in ms
 
-    time_arr = 1D array
-    data_arr = nD array
-    both have same first dimension size!
+        data_arr: nD array
+            the size of the specified dimension of data array must have the same length as time_arr
+
+        axis: int
+            which dimension of the data_arr belongs to the time_arr
     """
     time_arr = time_arr.astype(float)
     data_arr = data_arr.astype(float)
+    data_arr_shape = data_arr.shape
 
-    time_diff_arr = np.diff(time_arr)
-    time_diff_unique_arr = np.unique(time_diff_arr, return_counts=True)
-    period_time = time_diff_unique_arr[0][np.argmax(time_diff_unique_arr[1])]
-
-    time = time_arr[0]
-    idx = 0
-    while time < time_arr[-1]:
-        if time != time_arr[idx]:
-            ### time_arr of idx did not increase by period_time
-            time_arr = np.insert(time_arr, idx, time_arr[idx - 1] + period_time)
-            data_arr = np.insert(
-                data_arr,
-                idx,
-                np.nan * np.zeros(data_arr.shape[1:]).astype(float),
-                axis=0,
-            )
-        idx = idx + 1
-        time = time + period_time
-
-    return [time_arr, data_arr]
-
-
-def time_data_add_nan_new(time_arr, data_arr):  # TODO
-    """
-    if there are gaps in time_arr --> fill them with respective time values
-    fill the corresponding data_arr values with nan
-
-
-    Args:
-        time_arr: array
-            times of data_arr in ms
-
-    time_arr = 1D array
-    data_arr = nD array
-    both have same first dimension size!
-    """
-    time_arr = time_arr.astype(float)
-    data_arr = data_arr.astype(float)
+    if data_arr_shape[axis] != time_arr.size:
+        print(
+            "ERROR time_data_add_nan: time_arr must have same length as specified axis of data_arr!"
+        )
+        quit()
 
     ### find gaps
     time_diff_arr = np.diff(time_arr)
@@ -1427,32 +1399,35 @@ def time_data_add_nan_new(time_arr, data_arr):  # TODO
         time_arr, indices_or_sections=np.where(gaps_arr)[0] + 1, axis=0
     )
     data_arr_split = np.split(
-        data_arr, indices_or_sections=np.where(gaps_arr)[0] + 1, axis=0
+        data_arr, indices_or_sections=np.where(gaps_arr)[0] + 1, axis=axis
     )
 
     ### fill gaps between splits
+    data_arr_append_shape = list(data_arr_shape)
     for split_arr_idx in range(len(time_arr_split) - 1):
+        ### get gaps boundaries
         current_end = time_arr_split[split_arr_idx][-1]
         next_start = time_arr_split[split_arr_idx + 1][0]
-        print(current_end, next_start)
-    quit()
+        ### create gap filling arrays
+        time_arr_append = np.arange(
+            current_end + time_diff_min, next_start, time_diff_min
+        )
+        data_arr_append_shape[axis] = time_arr_append.size
+        data_arr_append = np.zeros(tuple(data_arr_append_shape)) * np.nan
+        ### append gap filling arrays to splitted arrays
+        time_arr_split[split_arr_idx] = np.append(
+            arr=time_arr_split[split_arr_idx],
+            values=time_arr_append,
+            axis=0,
+        )
+        data_arr_split[split_arr_idx] = np.append(
+            arr=data_arr_split[split_arr_idx],
+            values=data_arr_append,
+            axis=axis,
+        )
 
-    time_diff_unique_arr = np.unique(time_diff_arr, return_counts=True)
-    period_time = time_diff_unique_arr[0][np.argmax(time_diff_unique_arr[1])]
-
-    time = time_arr[0]
-    idx = 0
-    while time < time_arr[-1]:
-        if time != time_arr[idx]:
-            ### time_arr of idx did not increase by period_time
-            time_arr = np.insert(time_arr, idx, time_arr[idx - 1] + period_time)
-            data_arr = np.insert(
-                data_arr,
-                idx,
-                np.nan * np.zeros(data_arr.shape[1:]).astype(float),
-                axis=0,
-            )
-        idx = idx + 1
-        time = time + period_time
+    ### combine splitted arrays again
+    time_arr = np.concatenate(time_arr_split, axis=0)
+    data_arr = np.concatenate(data_arr_split, axis=axis)
 
     return [time_arr, data_arr]

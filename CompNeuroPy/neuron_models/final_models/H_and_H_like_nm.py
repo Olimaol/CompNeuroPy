@@ -7,7 +7,7 @@ from CompNeuroPy import extra_functions as ef
 ### striatal FSI neuron of Bischop et al. (2012)
 ### Bischop, D. P., Orduz, D., Lambot, L., Schiffmann, S., & Gall, D. (2012). Control of Neuronal Excitability by Calcium Binding Proteins: A New Mathematical Model for Striatal Fast-Spiking Interneurons. Frontiers in Molecular Neuroscience, 5. https://www.frontiersin.org/articles/10.3389/fnmol.2012.00078
 HHB = ef.data_obj()
-
+### HHB parameters
 HHB.parameters.base = """
     C_m      = 30 : population # pF
     
@@ -43,16 +43,19 @@ HHB.parameters.base = """
     
     I_app    = 0 # pA
 """
+HHB.parameters.conductance = (
+    HHB.parameters.base
+    + """
+        tau_ampa = 10  : population # ms
+        tau_gaba = 10  : population # ms
+        E_ampa   = 0   : population # mV
+        E_gaba   = -90 : population # mV
+    """
+)
 
-HHB.parameters.conductance = """
-    tau_ampa = 10  : population # ms
-    tau_gaba = 10  : population # ms
-    E_ampa   = 0   : population # mV
-    E_gaba   = -90 : population # mV
-"""
-
+### HHB equations
 HHB.equations.base = """
-    prev_v = v
+    prev_v       = v
     
     I_L          = gg_L * (v - E_L)
     
@@ -95,18 +98,18 @@ HHB.equations.base = """
     a            = a_inf
     I_Ca         = gg_Ca * a**2 * (v - E_Ca)
 """
-
-HHB.equations.conductance = """
-dg_ampa/dt = -g_ampa/tau_ampa
-dg_gaba/dt = -g_gaba/tau_gaba
-"""
-
+HHB.equations.conductance = (
+    """
+        dg_ampa/dt   = -g_ampa/tau_ampa
+        dg_gaba/dt   = -g_gaba/tau_gaba
+    """
+    + HHB.equations.base
+)
 HHB.equations.membrane.base = """
-C_m * dv/dt  = -I_L - I_Na - I_Kv1 - I_Kv3 - I_SK - I_Ca + I_app : init=-68
+    C_m * dv/dt  = -I_L - I_Na - I_Kv1 - I_Kv3 - I_SK - I_Ca + I_app : init=-68
 """
-
 HHB.equations.membrane.conductance = """
-C_m * dv/dt  = -I_L - I_Na - I_Kv1 - I_Kv3 - I_SK - I_Ca + I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba) : init=-68
+    C_m * dv/dt  = -I_L - I_Na - I_Kv1 - I_Kv3 - I_SK - I_Ca + I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba) : init=-68
 """
 
 
@@ -121,10 +124,8 @@ H_and_H_Bischop = Neuron(
 
 
 H_and_H_Bischop_syn = Neuron(
-    parameters=HHB.parameters.base + HHB.parameters.conductance,
-    equations=HHB.equations.conductance
-    + HHB.equations.base
-    + HHB.equations.membrane.conductance,
+    parameters=HHB.parameters.conductance,
+    equations=HHB.equations.conductance + HHB.equations.membrane.conductance,
     spike="(v > vt) and (prev_v <= vt)",
     reset="",
     name="H_and_H_Bischop_syn",
@@ -135,239 +136,121 @@ H_and_H_Bischop_syn = Neuron(
 ### striatal FSI neuron of Corbit et al. (2016)
 ### Corbit, V. L., Whalen, T. C., Zitelli, K. T., Crilly, S. Y., Rubin, J. E., & Gittis, A. H. (2016). Pallidostriatal Projections Promote β Oscillations in a Dopamine-Depleted Biophysical Network Model. Journal of Neuroscience, 36(20), 5556–5571. https://doi.org/10.1523/JNEUROSCI.0339-16.2016
 ### based on: Golomb, D., Donner, K., Shacham, L., Shlosberg, D., Amitai, Y., & Hansel, D. (2007). Mechanisms of Firing Patterns in Fast-Spiking Cortical Interneurons. PLOS Computational Biology, 3(8), e156. https://doi.org/10.1371/journal.pcbi.0030156
+HHC = ef.data_obj()
+### HHC parameters
+HHC.paramters.base = """
+    v_t = 0             # :population #mV (see Corbit et al.,2016 under "Model analysis")
+    C_m =  1.0          # :population #myF/cm^2
+    v_L = -70           # :population # mV
+    gg_L = 0.25         # :population # mS/cm^2
+
+    E_Na     = 50       # :population # mV
+    gg_Na     = 112.5   # :population # mS/cm^2
+    th_m_Na  = -24.0    # :population # mV
+    k_m_Na   = 11.5     # :population # mV
+    tau_0_m_Na = 0      # :population # ms default value (Corbit et al., 2016 description table 1)
+    tau_1_m_Na = 0      # :population # ms default value (Corbit et al., 2016 description table 1)
+    sigma_0_m_Na = 1    # :population # mV default value (Corbit et al., 2016 description table 1)
+    th_h_Na  = -58.3    # :population # mV
+    k_h_Na   = -6.7      # :population # mV
+    phi_h_Na = -60      # :population # mV
+    sigma_0_h_Na = -12.0# :population # mV
+    tau_0_h_Na = 0.5    # :population # ms
+    tau_1_h_Na = 13.5   # :population # ms
+
+    E_Kv3 = -90         # :population # mV
+    gg_Kv3 = 225.0      # :population # mS/cm^2
+    th_n_Kv3 = -12.4    # :population # mV
+    k_n_Kv3 = 6.8       # :population # mV
+    tau_0_n_Kv3 = 0.087 # :population # ms
+    tau_1_n_Kv3 = 11.313# :population # ms
+    phi_a_n_Kv3 = -14.6 # :population # mV
+    phi_b_n_Kv3 = 1.3   # :population # mV
+    sigma_0_a_n_Kv3 = -8.6  # :population #mV
+    sigma_0_b_n_Kv3 = 18.7  # :population #mV
+
+    E_Kv1 = -90         # :population #mV
+    gg_Kv1 = 0.39       # :population #mS/cm^2 in Corbit et al. (2016) they use 0.1, but they say they use delayed-tonic firing which is 0.39 in Golomb (2007), 0.39 fits also better to Figure in Corbit et al. (2016)
+    th_m_Kv1 = -50      # :population #mV
+    k_m_Kv1 =  20       # :population #mV
+    tau_m_Kv1 = 2       # :population #ms
+    th_h_Kv1 = -70      # :population #mV
+    k_h_Kv1 =  -6       # :population #mV
+    tau_h_Kv1 = 150     # :population #ms
+
+    I_app  = 0     : population
+"""
+HHC.parameters.conductance = """
+    tau_ampa = 10  : population # ms
+    tau_gaba = 10  : population # ms
+    E_ampa   = 0   : population # mV
+    E_gaba   = -90 : population # mV
+"""
+### HHC equations
+HHC.equations.base = """
+    prev_v = v
+
+    I_L = gg_L * (v - v_L) #CHECK
+        
+    # Na current with h particle and instantaneous m:
+    m_Na = 1.0 / (1.0 + exp((th_m_Na - v) / k_m_Na))
+    dh_Na/dt = (1.0 / (1.0 + exp((th_h_Na - v) / k_h_Na)) - h_Na) / (tau_0_h_Na + (tau_1_h_Na + tau_0_h_Na) / (1.0 + exp((phi_h_Na - v) / sigma_0_h_Na))) : init=0.8521993432343666 #CHECK, in paper: tau_1-tau_0 in numerator, in code: tau_1+tau_0 (= 14) in numerator, in paper: exp + exp in denominator, in code: exp + 1 in denominator, for MSNs they set the term to 0... maybe for FSIs they set it to 1
+    I_Na = (v - E_Na) * gg_Na * pow(m_Na,3) * h_Na #CHECK
+      
+    # Kv3 current with n particle (but in Corbit et al., 2016 paper version h):
+    n_Kv3_inf = 1.0 / (1.0 + exp((th_n_Kv3 - v) / k_n_Kv3)) #CHECK
+    tau_n_Kv3_inf = (tau_0_n_Kv3 + (tau_0_n_Kv3 + tau_1_n_Kv3) / (1.0 + exp((phi_a_n_Kv3 - v) / sigma_0_a_n_Kv3)))*(tau_0_n_Kv3 + (tau_0_n_Kv3 + tau_1_n_Kv3) / (1.0 + exp((phi_b_n_Kv3 - v) / sigma_0_b_n_Kv3))) # CHECK
+    dn_Kv3/dt = (n_Kv3_inf - n_Kv3) / tau_n_Kv3_inf : init=0.00020832726857419512
+    I_Kv3 = (v - E_Kv3) * gg_Kv3 * pow(n_Kv3,2) #CHECK
+    
+    # Kv1 current with m, h particle:
+    dm_Kv1/dt = (1.0 / (1.0 + exp((th_m_Kv1 - v) / k_m_Kv1)) - m_Kv1) / tau_m_Kv1 : init=0.2685669882630486
+    dh_Kv1/dt = (1.0 / (1.0 + exp((th_h_Kv1 - v) / k_h_Kv1)) - h_Kv1) / tau_h_Kv1 : init=0.5015877164262258
+    I_Kv1 = (v - E_Kv1)  * gg_Kv1 * pow(m_Kv1, 3) * h_Kv1 #CHECK
+"""
+HHC.equations.conductance = (
+    """
+        dg_ampa/dt = -g_ampa/tau_ampa
+        dg_gaba/dt = -g_gaba/tau_gaba
+    """
+    + HHC.equations.base
+)
+HHC.equations.membrane.base = """
+    C_m * dv/dt  = -I_L - I_Na - I_Kv3 - I_Kv1 + I_app : init=-70.03810532250634
+"""
+HHC.equations.membrane.voltage_clamp = """
+    C_m * dv/dt  = 0 : init=-70.03810532250634
+    I_inf = -I_L - I_Na - I_Kv3 - I_Kv1 + I_app
+"""
+HHC.equations.membrane.conductance = """
+    C_m * dv/dt  = -I_L - I_Na - I_Kv3 - I_Kv1 + I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba) : init=-70.03810532250634
+"""
 
 H_and_H_Corbit = Neuron(
-    parameters="""
-        v_t = 0             # :population #mV (see Corbit et al.,2016 under "Model analysis")
-        C_m =  1.0          # :population #myF/cm^2
-        v_L = -70           # :population # mV
-        gg_L = 0.25         # :population # mS/cm^2
-    
-        E_Na     = 50       # :population # mV
-        gg_Na     = 112.5   # :population # mS/cm^2
-        th_m_Na  = -24.0    # :population # mV
-        k_m_Na   = 11.5     # :population # mV
-        tau_0_m_Na = 0      # :population # ms default value (Corbit et al., 2016 description table 1)
-        tau_1_m_Na = 0      # :population # ms default value (Corbit et al., 2016 description table 1)
-        sigma_0_m_Na = 1    # :population # mV default value (Corbit et al., 2016 description table 1)
-        th_h_Na  = -58.3    # :population # mV
-        k_h_Na   = -6.7      # :population # mV
-        phi_h_Na = -60      # :population # mV
-        sigma_0_h_Na = -12.0# :population # mV
-        tau_0_h_Na = 0.5    # :population # ms
-        tau_1_h_Na = 13.5   # :population # ms
-
-        E_Kv3 = -90         # :population # mV
-        gg_Kv3 = 225.0      # :population # mS/cm^2
-        th_n_Kv3 = -12.4    # :population # mV
-        k_n_Kv3 = 6.8       # :population # mV
-        tau_0_n_Kv3 = 0.087 # :population # ms
-        tau_1_n_Kv3 = 11.313# :population # ms
-        phi_a_n_Kv3 = -14.6 # :population # mV
-        phi_b_n_Kv3 = 1.3   # :population # mV
-        sigma_0_a_n_Kv3 = -8.6  # :population #mV
-        sigma_0_b_n_Kv3 = 18.7  # :population #mV
-        
-        E_Kv1 = -90         # :population #mV
-        gg_Kv1 = 0.39       # :population #mS/cm^2 in Corbit et al. (2016) they use 0.1, but they say they use delayed-tonic firing which is 0.39 in Golomb (2007), 0.39 fits also better to Figure in Corbit et al. (2016)
-        th_m_Kv1 = -50      # :population #mV
-        k_m_Kv1 =  20       # :population #mV
-        tau_m_Kv1 = 2       # :population #ms
-        th_h_Kv1 = -70      # :population #mV
-        k_h_Kv1 =  -6       # :population #mV
-        tau_h_Kv1 = 150     # :population #ms
-        
-        #I_app  = 0     : population
-    
-    """,
-    equations="""
-        prev_v = v
-        
-        I_L = gg_L * (v - v_L) #CHECK
-        
-  # Na current with h particle and instantaneous m:
-        m_Na = 1.0 / (1.0 + exp((th_m_Na - v) / k_m_Na))
-        dh_Na/dt = (1.0 / (1.0 + exp((th_h_Na - v) / k_h_Na)) - h_Na) / (tau_0_h_Na + (tau_1_h_Na + tau_0_h_Na) / (1.0 + exp((phi_h_Na - v) / sigma_0_h_Na))) : init=0.8521993432343666 #CHECK, in paper: tau_1-tau_0 in numerator, in code: tau_1+tau_0 (= 14) in numerator, in paper: exp + exp in denominator, in code: exp + 1 in denominator, for MSNs they set the term to 0... maybe for FSIs they set it to 1                                                      
-        I_Na = (v - E_Na) * gg_Na * pow(m_Na,3) * h_Na #CHECK
-      
-  # Kv3 current with n particle (but in Corbit et al., 2016 paper version h): 
-        n_Kv3_inf = 1.0 / (1.0 + exp((th_n_Kv3 - v) / k_n_Kv3)) #CHECK
-        tau_n_Kv3_inf = (tau_0_n_Kv3 + (tau_0_n_Kv3 + tau_1_n_Kv3) / (1.0 + exp((phi_a_n_Kv3 - v) / sigma_0_a_n_Kv3)))*(tau_0_n_Kv3 + (tau_0_n_Kv3 + tau_1_n_Kv3) / (1.0 + exp((phi_b_n_Kv3 - v) / sigma_0_b_n_Kv3))) # CHECK
-        dn_Kv3/dt = (n_Kv3_inf - n_Kv3) / tau_n_Kv3_inf : init=0.00020832726857419512
-        I_Kv3 = (v - E_Kv3) * gg_Kv3 * pow(n_Kv3,2) #CHECK
-    
-  # Kv1 current with m, h particle : 
-        dm_Kv1/dt = (1.0 / (1.0 + exp((th_m_Kv1 - v) / k_m_Kv1)) - m_Kv1) / tau_m_Kv1 : init=0.2685669882630486
-        dh_Kv1/dt = (1.0 / (1.0 + exp((th_h_Kv1 - v) / k_h_Kv1)) - h_Kv1) / tau_h_Kv1 : init=0.5015877164262258
-        I_Kv1 = (v - E_Kv1)  * gg_Kv1 * pow(m_Kv1, 3) * h_Kv1 #CHECK
-        
-        dI_app/dt = 0
-        C_m * dv/dt  = -I_L - I_Na - I_Kv3 - I_Kv1 + I_app : init=-70.03810532250634
-        
-    """,
+    parameters=HHC.paramters.base,
+    equations=HHC.equations.base + HHC.equations.membrane.base,
     spike="(v > v_t) and (prev_v <= v_t)",
     reset="",
     name="H_and_H_Corbit",
-    description="H & H model of Corbit et al. (2016).",
+    description="Hodgkin Huxley neuron model for striatal FSI from Corbit et al. (2016).",
 )
 
 
 H_and_H_Corbit_voltage_clamp = Neuron(
-    parameters="""
-        v_t = 0             # :population #mV (see Corbit et al.,2016 under "Model analysis")
-        C_m =  1.0          # :population #myF/cm^2
-        v_L = -70           # :population # mV
-        gg_L = 0.25         # :population # mS/cm^2
-    
-        E_Na     = 50       # :population # mV
-        gg_Na     = 112.5   # :population # mS/cm^2
-        th_m_Na  = -24.0    # :population # mV
-        k_m_Na   = 11.5     # :population # mV
-        tau_0_m_Na = 0      # :population # ms default value (Corbit et al., 2016 description table 1)
-        tau_1_m_Na = 0      # :population # ms default value (Corbit et al., 2016 description table 1)
-        sigma_0_m_Na = 1    # :population # mV default value (Corbit et al., 2016 description table 1)
-        th_h_Na  = -58.3    # :population # mV
-        k_h_Na   = -6.7      # :population # mV
-        phi_h_Na = -60      # :population # mV
-        sigma_0_h_Na = -12.0# :population # mV
-        tau_0_h_Na = 0.5    # :population # ms
-        tau_1_h_Na = 13.5   # :population # ms
-
-        E_Kv3 = -90         # :population # mV
-        gg_Kv3 = 225.0      # :population # mS/cm^2
-        th_n_Kv3 = -12.4    # :population # mV
-        k_n_Kv3 = 6.8       # :population # mV
-        tau_0_n_Kv3 = 0.087 # :population # ms
-        tau_1_n_Kv3 = 11.313# :population # ms
-        phi_a_n_Kv3 = -14.6 # :population # mV
-        phi_b_n_Kv3 = 1.3   # :population # mV
-        sigma_0_a_n_Kv3 = -8.6  # :population #mV
-        sigma_0_b_n_Kv3 = 18.7  # :population #mV
-        
-        E_Kv1 = -90         # :population #mV
-        gg_Kv1 = 0.39       # :population #mS/cm^2 in Corbit et al. (2016) they use 0.1, but they say they use delayed-tonic firing which is 0.39 in Golomb (2007), 0.39 fits also better to Figure in Corbit et al. (2016)
-        th_m_Kv1 = -50      # :population #mV
-        k_m_Kv1 =  20       # :population #mV
-        tau_m_Kv1 = 2       # :population #ms
-        th_h_Kv1 = -70      # :population #mV
-        k_h_Kv1 =  -6       # :population #mV
-        tau_h_Kv1 = 150     # :population #ms
-        
-        I_app  = 0     : population
-    
-    """,
-    equations="""
-        prev_v = v
-        
-        I_L = gg_L * (v - v_L) #CHECK
-        
-  # Na current with h particle and instantaneous m:
-        m_Na = 1.0 / (1.0 + exp((th_m_Na - v) / k_m_Na))
-        dh_Na/dt = (1.0 / (1.0 + exp((th_h_Na - v) / k_h_Na)) - h_Na) / (tau_0_h_Na + (tau_1_h_Na + tau_0_h_Na) / (1.0 + exp((phi_h_Na - v) / sigma_0_h_Na))) : init=0.8521993432343666 #CHECK, in paper: tau_1-tau_0 in numerator, in code: tau_1+tau_0 (= 14) in numerator, in paper: exp + exp in denominator, in code: exp + 1 in denominator, for MSNs they set the term to 0... maybe for FSIs they set it to 1                                                      
-        I_Na = (v - E_Na) * gg_Na * pow(m_Na,3) * h_Na #CHECK
-      
-  # Kv3 current with n particle (but in Corbit et al., 2016 paper version h): 
-        n_Kv3_inf = 1.0 / (1.0 + exp((th_n_Kv3 - v) / k_n_Kv3)) #CHECK
-        tau_n_Kv3_inf = (tau_0_n_Kv3 + (tau_0_n_Kv3 + tau_1_n_Kv3) / (1.0 + exp((phi_a_n_Kv3 - v) / sigma_0_a_n_Kv3)))*(tau_0_n_Kv3 + (tau_0_n_Kv3 + tau_1_n_Kv3) / (1.0 + exp((phi_b_n_Kv3 - v) / sigma_0_b_n_Kv3))) # CHECK
-        dn_Kv3/dt = (n_Kv3_inf - n_Kv3) / tau_n_Kv3_inf : init=0.00020832726857419512
-        I_Kv3 = (v - E_Kv3) * gg_Kv3 * pow(n_Kv3,2) #CHECK
-    
-  # Kv1 current with m, h particle : 
-        dm_Kv1/dt = (1.0 / (1.0 + exp((th_m_Kv1 - v) / k_m_Kv1)) - m_Kv1) / tau_m_Kv1 : init=0.2685669882630486
-        dh_Kv1/dt = (1.0 / (1.0 + exp((th_h_Kv1 - v) / k_h_Kv1)) - h_Kv1) / tau_h_Kv1 : init=0.5015877164262258
-        I_Kv1 = (v - E_Kv1)  * gg_Kv1 * pow(m_Kv1, 3) * h_Kv1 #CHECK
-        
-
-        C_m * dv/dt  = 0 : init=-70.03810532250634
-        I_inf = -I_L - I_Na - I_Kv3 - I_Kv1 + I_app
-        
-    """,
+    parameters=HHC.paramters.base,
+    equations=HHC.equations.base + HHC.equations.membrane.voltage_clamp,
     spike="(v > v_t) and (prev_v <= v_t)",
     reset="",
-    name="H_and_H_Corbit",
-    description="H & H model of Corbit et al. (2016).",
+    name="H_and_H_Corbit_voltage_clamp",
+    description="Hodgkin Huxley neuron model for striatal FSI from Corbit et al. (2016). Membrane potential v is clamped and I_inf can be recorded.",
 )
 
 
 H_and_H_Corbit_syn = Neuron(
-    parameters="""
-        v_t = 0             # :population #mV (see Corbit et al.,2016 under "Model analysis")
-        C_m =  1.0          # :population #myF/cm^2
-        v_L = -70           # :population # mV
-        gg_L = 0.25         # :population # mS/cm^2
-    
-        E_Na     = 50       # :population # mV
-        gg_Na     = 112.5   # :population # mS/cm^2
-        th_m_Na  = -24.0    # :population # mV
-        k_m_Na   = 11.5     # :population # mV
-        tau_0_m_Na = 0      # :population # ms default value (Corbit et al., 2016 description table 1)
-        tau_1_m_Na = 0      # :population # ms default value (Corbit et al., 2016 description table 1)
-        sigma_0_m_Na = 1    # :population # mV default value (Corbit et al., 2016 description table 1)
-        th_h_Na  = -58.3    # :population # mV
-        k_h_Na   = -6.7      # :population # mV
-        phi_h_Na = -60      # :population # mV
-        sigma_0_h_Na = -12.0# :population # mV
-        tau_0_h_Na = 0.5    # :population # ms
-        tau_1_h_Na = 13.5   # :population # ms
-
-        E_Kv3 = -90         # :population # mV
-        gg_Kv3 = 225.0      # :population # mS/cm^2
-        th_n_Kv3 = -12.4    # :population # mV
-        k_n_Kv3 = 6.8       # :population # mV
-        tau_0_n_Kv3 = 0.087 # :population # ms
-        tau_1_n_Kv3 = 11.313# :population # ms
-        phi_a_n_Kv3 = -14.6 # :population # mV
-        phi_b_n_Kv3 = 1.3   # :population # mV
-        sigma_0_a_n_Kv3 = -8.6  # :population #mV
-        sigma_0_b_n_Kv3 = 18.7  # :population #mV
-        
-        E_Kv1 = -90         # :population #mV
-        gg_Kv1 = 0.39       # :population #mS/cm^2 in Corbit et al. (2016) they use 0.1, but they say they use delayed-tonic firing which is 0.39 in Golomb (2007), 0.39 fits also better to Figure in Corbit et al. (2016)
-        th_m_Kv1 = -50      # :population #mV
-        k_m_Kv1 =  20       # :population #mV
-        tau_m_Kv1 = 2       # :population #ms
-        th_h_Kv1 = -70      # :population #mV
-        k_h_Kv1 =  -6       # :population #mV
-        tau_h_Kv1 = 150     # :population #ms
-        
-        I_app  = 0     : population
-        
-        tau_ampa = 10  : population # ms
-        tau_gaba = 10  : population # ms
-        E_ampa   = 0   : population # mV
-        E_gaba   = -90 : population # mV
-    
-    """,
-    equations="""
-        dg_ampa/dt = -g_ampa/tau_ampa
-        dg_gaba/dt = -g_gaba/tau_gaba
-        
-        prev_v = v
-        
-        I_L = gg_L * (v - v_L) #CHECK
-        
-  # Na current with h particle and instantaneous m:
-        m_Na = 1.0 / (1.0 + exp((th_m_Na - v) / k_m_Na))
-        dh_Na/dt = (1.0 / (1.0 + exp((th_h_Na - v) / k_h_Na)) - h_Na) / (tau_0_h_Na + (tau_1_h_Na + tau_0_h_Na) / (1.0 + exp((phi_h_Na - v) / sigma_0_h_Na))) : init=0.8521993432343666 #CHECK, in paper: tau_1-tau_0 in numerator, in code: tau_1+tau_0 (= 14) in numerator, in paper: exp + exp in denominator, in code: exp + 1 in denominator, for MSNs they set the term to 0... maybe for FSIs they set it to 1                                                      
-        I_Na = (v - E_Na) * gg_Na * pow(m_Na,3) * h_Na #CHECK
-      
-  # Kv3 current with n particle (but in Corbit et al., 2016 paper version h): 
-        n_Kv3_inf = 1.0 / (1.0 + exp((th_n_Kv3 - v) / k_n_Kv3)) #CHECK
-        tau_n_Kv3_inf = (tau_0_n_Kv3 + (tau_0_n_Kv3 + tau_1_n_Kv3) / (1.0 + exp((phi_a_n_Kv3 - v) / sigma_0_a_n_Kv3)))*(tau_0_n_Kv3 + (tau_0_n_Kv3 + tau_1_n_Kv3) / (1.0 + exp((phi_b_n_Kv3 - v) / sigma_0_b_n_Kv3))) # CHECK
-        dn_Kv3/dt = (n_Kv3_inf - n_Kv3) / tau_n_Kv3_inf : init=0.00020832726857419512
-        I_Kv3 = (v - E_Kv3) * gg_Kv3 * pow(n_Kv3,2) #CHECK
-    
-  # Kv1 current with m, h particle : 
-        dm_Kv1/dt = (1.0 / (1.0 + exp((th_m_Kv1 - v) / k_m_Kv1)) - m_Kv1) / tau_m_Kv1 : init=0.2685669882630486
-        dh_Kv1/dt = (1.0 / (1.0 + exp((th_h_Kv1 - v) / k_h_Kv1)) - h_Kv1) / tau_h_Kv1 : init=0.5015877164262258
-        I_Kv1 = (v - E_Kv1)  * gg_Kv1 * pow(m_Kv1, 3) * h_Kv1 #CHECK
-        
-
-        C_m * dv/dt  = -I_L - I_Na - I_Kv3 - I_Kv1 + I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba) : init=-70.03810532250634
-        
-    """,
+    parameters=HHC.parameters.conductance,
+    equations=HHC.equations.conductance + HHC.equations.membrane.conductance,
     spike="(v > v_t) and (prev_v <= v_t)",
     reset="",
-    name="H_and_H_Corbit",
-    description="H & H model of Corbit et al. (2016).",
+    name="H_and_H_Corbit_syn",
+    description="Hodgkin Huxley neuron model for striatal FSI from Corbit et al. (2016) with conductance-based synapses/currents for AMPA and GABA..",
 )

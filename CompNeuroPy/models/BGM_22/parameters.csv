@@ -84,7 +84,7 @@ str_fsi.C,80.0, 1.0,80.0
 str_fsi.k,1.0,0.038,1.0
 str_fsi.v_r,-70,-70.04,-70
 str_fsi.v_t,-50,-62.846,-50
-str_fsi.v_b,-55,0,-55
+str_fsi.v_b,-55,,-55
 str_fsi.a,0.2,0.3715,0.2
 str_fsi.a_n,,0.0175,
 str_fsi.a_s,,0.0237,

@@ -55,7 +55,7 @@ Izhikevich2007_record_currents = Neuron(
         v = c
         u = u + d
     """,
-    name="Izhikevich2007",
+    name="Izhikevich2007_record_currents",
     description="Simple neuron model equations from Izhikevich (2007). The individual currents are separate variable which can be recorded.",
 )
 
@@ -84,7 +84,7 @@ Izhikevich2007_voltage_clamp = Neuron(
         u = u + d
     """,
     name="Izhikevich2007_voltage_clamp",
-    description="Simple neuron model equations from Izhikevich (2007). With voltage clamp (varaible v can be set and will not change) to record I_inf. I_inf contains the slow u-current.",
+    description="Simple neuron model equations from Izhikevich (2007). With voltage clamp (variable v can be set and will not change) to record I_inf. I_inf also contains the slow u-current.",
 )
 
 Izhikevich2007_syn = Neuron(
@@ -189,28 +189,29 @@ Izhikevich2007_fsi_noisy_AMPA = Neuron(
     description="Fast spiking cortical interneuron model from Izhikevich (2007) with additional conductance based synapses with noise in AMPA conductance.",
 )
 
+
 Izhikevich2007_Corbit_FSI_noisy_AMPA = Neuron(
     parameters="""
-        C      = 0 : population # ATTENTION! H&H model is myF/cm^2 --> here also myF/cm^2 and not pF --> current also myF/cm^2 and not pA
-        k      = 0 : population #
-        b_n    = 0 : population #
-        a_s    = 0 : population #
-        a_n    = 0 : population #
-        v_r    = 0 : population # mV
-        v_t    = 0 : population # mV
-        a      = 0 : population # ms**-1
-        b      = 0 : population #
-        d      = 0 : population
-        c      = 0 : population # mV
-        v_peak = 0 : population # mV
-        x      = 0 : population # exponent = nth root
-        I_app  = 0
+        C              = 0 : population # myF/cm^2
+        k              = 0 : population #
+        b_n            = 0 : population #
+        a_s            = 0 : population #
+        a_n            = 0 : population #
+        v_r            = 0 : population # mV
+        v_t            = 0 : population # mV
+        a              = 0 : population # ms**-1
+        b              = 0 : population #
+        d              = 0 : population
+        c              = 0 : population # mV
+        v_peak         = 0 : population # mV
+        x              = 0 : population
         tau_ampa       = 1 : population
         tau_gaba       = 1 : population
         E_ampa         = 0 : population
         E_gaba         = 0 : population
         increase_noise = 0 : population
         rates_noise    = 0
+        I_app          = 0 # yA/cm^2
     """,
     equations="""
         dg_ampa/dt = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rates_noise, -g_ampa/tau_ampa, -g_ampa/tau_ampa + increase_noise/dt)
@@ -219,7 +220,6 @@ Izhikevich2007_Corbit_FSI_noisy_AMPA = Neuron(
       
         C * dv/dt = k*(v - v_r)*(v - v_t) - u - n + ((abs(I))**(1/x))/((I+1e-20)/(abs(I)+ 1e-20))
 
-
         du/dt     = a*(b*(v - v_r) - u)
         ds/dt     = a_s*(pos(u)**0.1 - s)
         dn/dt     = a_n*(b_n*(pos(u)**0.1-s) - n)
@@ -227,8 +227,8 @@ Izhikevich2007_Corbit_FSI_noisy_AMPA = Neuron(
     spike="v >= v_peak",
     reset="""
         v = c
-        u = u + d                           ### new ###
+        u = u + d
     """,
-    name="Izhikevich2007_Corbit_final",
-    description="Simple neuron model equations from Izhikevich (2007) adjusted version should be able to produce late spiking.",
+    name="Izhikevich2007_Corbit_FSI_noisy_AMPA",
+    description="Simple neuron model equations from Izhikevich (2007) adjusted version to fit the striatal FSI neuron model from Corbit et al. (2016) should be able to produce late spiking.",
 )
