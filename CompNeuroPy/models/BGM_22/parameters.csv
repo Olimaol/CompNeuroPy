@@ -3,24 +3,10 @@ general.id,BGM_v01_p01,BGM_v02_p01,BGM_vTEST_pTEST
 ### POPULATIONS AND NEURON PARAMS,,,
 ### CORTEX-GO PARAMS,,,
 cor_go.size,100.0,100.0,100.0
-cor_go.rates,400.0,400.0,
-cor_go.rates_sd,0.0,0.0,0.0
-cor_go.tau_up,200.0,200.0,
-cor_go.tau_down,10.0,10.0,
 ### CORTEX-PAUSE PARAMS,,,
 cor_pause.size,100.0,100.0,100.0
-cor_pause.rates_go,500.0,500.0,500.0
-cor_pause.rates_stop,600.0,600.0,600.0
-cor_pause.rates_sd,0.0,0.0,0.0
-cor_pause.tau_up,1.0,1.0,1.0
-cor_pause.tau_down,150.0,150.0,150.0
 ### CORTEX-STOP PARAMS,,,
 cor_stop.size,100,100,100
-cor_stop.rates_cue,400.0,400.0,400.0
-cor_stop.rates_motor,400.0,400.0,400.0
-cor_stop.rates_sd,0.0,0.0,0.0
-cor_stop.tau_up,1.0,1.0,1.0
-cor_stop.tau_down,70.0,70.0,70.0
 ### STRIATUM D1 PARAMS,,,
 str_d1.size,100.0,100.0,100.0
 str_d1.C,50.0,50.0,50.0
