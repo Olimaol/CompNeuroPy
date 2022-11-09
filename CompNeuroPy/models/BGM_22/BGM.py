@@ -281,51 +281,6 @@ class BGM(generate_model):
                     params[row[0]] = value
         csvfile.close()
 
-        ### ADD additional params
-        params["extra.toRGB"] = {
-            "blue": np.array([3, 67, 223]) / 255.0,
-            "cyan": np.array([0, 255, 255]) / 255.0,
-            "gold": np.array([219, 180, 12]) / 255.0,
-            "orange": np.array([249, 115, 6]) / 255.0,
-            "red": np.array([229, 0, 0]) / 255.0,
-            "purple": np.array([126, 30, 156]) / 255.0,
-            "grey": np.array([146, 149, 145]) / 255.0,
-            "light brown": np.array([173, 129, 80]) / 255.0,
-            "lime": np.array([170, 255, 50]) / 255.0,
-            "green": np.array([21, 176, 26]) / 255.0,
-            "yellow": np.array([255, 255, 20]) / 255.0,
-            "lightgrey": np.array([216, 220, 214]) / 255.0,
-        }
-        params["extra.Fig7_order"] = [
-            "GPeArky",
-            "StrD1",
-            "StrD2",
-            "STN",
-            "cortexGo",
-            "GPeCp",
-            "GPeProto",
-            "SNr",
-            "Thal",
-            "cortexStop",
-            "StrFSI",
-        ]
-        params["extra.titles_Code_to_Script"] = {
-            "cortexGo": "cortex-Go",
-            "cortexStop": "cortex-Stop",
-            "cortexPause": "cortex-Pause",
-            "StrD1": "StrD1",
-            "StrD2": "StrD2",
-            "StrFSI": "StrFSI",
-            "GPeProto": "GPe-Proto",
-            "GPeArky": "GPe-Arky",
-            "GPeCp": "GPe-Cp",
-            "STN": "STN",
-            "SNr": "SNr",
-            "Thal": "thalamus",
-            "IntegratorGo": "Integrator-Go",
-            "IntegratorStop": "Integrator-Stop",
-        }
-
         return params
 
     def needed_imports(self):

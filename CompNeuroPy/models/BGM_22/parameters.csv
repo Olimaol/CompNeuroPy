@@ -1,20 +1,5 @@
 ### GENERAL PARAMS,,,
 general.id,BGM_v01_p01,BGM_v02_p01,BGM_vTEST_pTEST
-general.overlap_go_stop,1.0,1.0,1.0
-general.dt,0.1,0.1,0.1
-general.threads,1.0,1.0,1.0
-general.ms_smooth,20.0,20.0,20.0
-### SIMULATION TIME PARAMS,,,
-sim.t_init,600.0,600.0,600.0
-sim.t_SSD,250.0,250.0,250.0
-sim.t_decay,300.0,300.0,300.0
-sim.t_cortexPauseDuration,5.0,5.0,5.0
-sim.t_delayGo,75.0,75.0,75.0
-sim.t_delayGoSD,0.0,0.0,0.0
-sim.t_delayStopAfterCue,50.0,50.0,50.0
-sim.t_delayStopAfterAction,50.0,50.0,50.0
-sim.t_cortexStopDurationAfterCue,5.0,5.0,5.0
-sim.t_cortexStopDurationAfterAction,200.0,200.0,200.0
 ### POPULATIONS AND NEURON PARAMS,,,
 ### CORTEX-GO PARAMS,,,
 cor_go.size,100.0,100.0,100.0
