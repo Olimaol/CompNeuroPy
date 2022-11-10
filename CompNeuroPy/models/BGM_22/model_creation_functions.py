@@ -13,6 +13,10 @@ from CompNeuroPy.synapse_models import factor_synapse
 
 
 def BGM_v01(self):
+    """
+    original model structure from Goenner et al. (2021)
+    Goenner, L., Maith, O., Koulouri, I., Baladron, J., & Hamker, F. H. (2021). A spiking model of basal ganglia dynamics in stopping behavior supported by arkypallidal neurons. European Journal of Neuroscience, 53(7), 2296-2321.
+    """
     #######   POPULATIONS   ######
     ### cortex / input populations
     cor_go = Population(
@@ -373,6 +377,12 @@ def BGM_v01(self):
 
 
 def BGM_v02(self):
+    """
+    difference to Goenner et al. (2021):
+    str_fsi neuron model:
+        new neuron model = fit to Hodgkin and Huxley neuron model from Corbit et al. (2016)
+        Corbit, V. L., Whalen, T. C., Zitelli, K. T., Crilly, S. Y., Rubin, J. E., & Gittis, A. H. (2016). Pallidostriatal projections promote β oscillations in a dopamine-depleted biophysical network model. Journal of Neuroscience, 36(20), 5556-5571.
+    """
     #######   POPULATIONS   ######
     ### cortex / input populations
     cor_go = Population(
@@ -735,6 +745,12 @@ def BGM_v02(self):
 
 
 def BGM_vTEST(self):
+    """
+    difference to Goenner et al. (2021):
+    cor_go neuron model:
+        instead of poisson_neuron_up down it's poisson_neuron_sin
+        --> can specify sinus oscillation as cor_go activity
+    """
     #######   POPULATIONS   ######
     ### cortex / input populations
     cor_go = Population(self.params["cor_go.size"], poisson_neuron_sin, name="cor_go")

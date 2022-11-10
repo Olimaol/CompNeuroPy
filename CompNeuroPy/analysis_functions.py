@@ -134,13 +134,36 @@ def get_population_power_spectrum(
             signal size for the FFT (size of splitted arrays)
             has to be a power of 2
     """
-    populations_size = len(list(spikes.keys()))
 
     def ms_to_s(x):
         return x / 1000
 
-    simulation_time = t_end - t_start  # in ms
+    ### get population_size / sampling_frequency
+    populations_size = len(list(spikes.keys()))
     sampling_frequency = 1 / ms_to_s(time_step)  # in Hz
+
+    ### check if there are spikes in data
+    t, _ = my_raster_plot(spikes)
+    if len(t) < 2:
+        ### there are no 2 spikes
+        print("<2 spikes")
+        ### --> return None or zeros
+        if fft_size == None:
+            return [None, None]
+        else:
+            frequency_arr = np.fft.fftfreq(fft_size, 1.0 / sampling_frequency)
+            frequency_arr_ret = frequency_arr[2 : int(fft_size / 2)]
+            spectrum_ret = np.zeros(frequency_arr_ret.shape)
+            return [frequency_arr_ret, spectrum_ret]
+
+    ### check if t_start / t_end are None
+    if t_start == None:
+        t_start = round(t.min() * time_step, get_number_of_decimals(time_step))
+    if t_end == None:
+        t_end = round(t.max() * time_step, get_number_of_decimals(time_step))
+
+    ### calculate time
+    simulation_time = round(t_end - t_start, get_number_of_decimals(time_step))  # in ms
 
     ### get fft_size
     ### if None --> as large as possible
@@ -495,7 +518,6 @@ def get_pop_rate(spikes, t_start=None, t_end=None, time_step=1, t_smooth_ms=-1):
         t_smooth_ms: float or int, optional, default = -1
             time window for firing rate calculation in ms, if -1 --> time window sizes are automatically detected
     """
-    duration = t_end - t_start
     dt = time_step
 
     t, _ = my_raster_plot(spikes)
@@ -504,9 +526,11 @@ def get_pop_rate(spikes, t_start=None, t_end=None, time_step=1, t_smooth_ms=-1):
     if len(t) > 1:
 
         if t_start == None:
-            t_start = t.min() * time_step
+            t_start = round(t.min() * time_step, get_number_of_decimals(time_step))
         if t_end == None:
-            t_end = t.max() * time_step
+            t_end = round(t.max() * time_step, get_number_of_decimals(time_step))
+
+        duration = round(t_end - t_start, get_number_of_decimals(time_step))
 
         ### if t_smooth is given --> use classic time_window method
         if t_smooth_ms > 0:
@@ -550,7 +574,11 @@ def get_pop_rate(spikes, t_start=None, t_end=None, time_step=1, t_smooth_ms=-1):
 
             ret = population_rate
     else:
-        ret = np.zeros(int(duration / dt))
+        if t_start == None or t_end == None:
+            return None
+        else:
+            duration = t_end - t_start
+            ret = np.zeros(int(duration / dt))
 
     return [np.arange(t_start, t_start + duration, dt), ret]
 

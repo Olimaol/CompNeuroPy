@@ -232,3 +232,4 @@ Izhikevich2007_Corbit_FSI_noisy_AMPA = Neuron(
     name="Izhikevich2007_Corbit_FSI_noisy_AMPA",
     description="Simple neuron model equations from Izhikevich (2007) adjusted version to fit the striatal FSI neuron model from Corbit et al. (2016) should be able to produce late spiking.",
 )
+# Corbit, V. L., Whalen, T. C., Zitelli, K. T., Crilly, S. Y., Rubin, J. E., & Gittis, A. H. (2016). Pallidostriatal projections promote β oscillations in a dopamine-depleted biophysical network model. Journal of Neuroscience, 36(20), 5556-5571.
