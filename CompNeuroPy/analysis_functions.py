@@ -146,10 +146,13 @@ def get_population_power_spectrum(
     t, _ = my_raster_plot(spikes)
     if len(t) < 2:
         ### there are no 2 spikes
-        print("<2 spikes")
+        print("WARNING: get_population_power_spectrum: <2 spikes!")
         ### --> return None or zeros
         if fft_size == None:
-            return [None, None]
+            print(
+                "ERROR: get_population_power_spectrum: <2 spikes and no fft_size given!"
+            )
+            quit()
         else:
             frequency_arr = np.fft.fftfreq(fft_size, 1.0 / sampling_frequency)
             frequency_arr_ret = frequency_arr[2 : int(fft_size / 2)]
