@@ -325,7 +325,7 @@ str_fsi__str_d2.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 1
 ### STRFSI - STRFSI PROJECTION PARAMS,,,
 str_fsi__str_fsi.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre
 str_fsi__str_fsi.nr_con,10.0,10.0,10.0
-str_fsi__str_fsi.mod_factor,0.8,0.8,0.8
+str_fsi__str_fsi.mod_factor,0.8,0.08,0.8
 str_fsi__str_fsi.max_trans,1120,1120,1120
 str_fsi__str_fsi.weights,1.0,1.0,1.0
 str_fsi__str_fsi.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)"
