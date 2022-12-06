@@ -7,6 +7,9 @@ from ANNarchy import dt
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import cm
+from matplotlib.colors import LinearSegmentedColormap, to_rgba_array
+import numpy as np
+from collections.abc import Sized
 
 
 def print_df(df):
@@ -128,3 +131,61 @@ class data_obj(object):
         except:
             self.__setattr__(__name, data_obj())
             return super().__getattribute__(__name)
+
+
+def create_cm(colors, name="my_cmap", N=256, gamma=1.0):
+    """
+    Create a `LinearSegmentedColormap` from a list of colors.
+
+    Parameters
+    ----------
+    name : str
+        The name of the colormap.
+    colors : array-like of colors or array-like of (value, color)
+        If only colors are given, they are equidistantly mapped from the
+        range :math:`[0, 1]`; i.e. 0 maps to ``colors[0]`` and 1 maps to
+        ``colors[-1]``.
+        If (value, color) pairs are given, the mapping is from *value*
+        to *color*. This can be used to divide the range unevenly.
+    N : int
+        The number of rgb quantization levels.
+    gamma : float
+    """
+    if not np.iterable(colors):
+        raise ValueError("colors must be iterable")
+
+    if (
+        isinstance(colors[0], Sized)
+        and len(colors[0]) == 2
+        and not isinstance(colors[0], str)
+    ):
+        # List of value, color pairs
+        vals, colors = zip(*colors)
+    else:
+        vals = np.linspace(0, 1, len(colors))
+
+    r_g_b_a = np.zeros((len(colors), 4))
+    for color_idx, color in enumerate(colors):
+        if isinstance(color, str):
+            ### color given by name
+            r_g_b_a[color_idx] = to_rgba_array(color)
+        else:
+            ### color given by rgb value
+            color = np.array(color)
+            if color.max() > 1:
+                ### assume that max value is 255
+                color = color / 255
+            r_g_b_a[color_idx] = np.concatenate([color, np.array([1])])
+    r = r_g_b_a[:, 0]
+    g = r_g_b_a[:, 1]
+    b = r_g_b_a[:, 2]
+    a = r_g_b_a[:, 3]
+
+    cdict = {
+        "red": np.column_stack([vals, r, r]),
+        "green": np.column_stack([vals, g, g]),
+        "blue": np.column_stack([vals, b, b]),
+        "alpha": np.column_stack([vals, a, a]),
+    }
+
+    return LinearSegmentedColormap(name, cdict, N, gamma)
