@@ -189,3 +189,77 @@ def create_cm(colors, name="my_cmap", N=256, gamma=1.0):
     }
 
     return LinearSegmentedColormap(name, cdict, N, gamma)
+
+
+class decision_tree:
+    def __init__(self):
+        """ """
+        ### node list is a list of lists
+        ### first idx = level of tree
+        ### second idx = all nodes in the level
+        self.node_list = [[]]
+        pass
+
+    def node(self, parent=None, prob=0, name=None):
+        """ """
+        ### create new node
+        new_node = self.node_cl(tree=self, parent=parent, prob=prob, name=name)
+        ### add it to node_list
+        if len(self.node_list) == new_node.level:
+            self.node_list.append([])
+        self.node_list[new_node.level].append(new_node)
+        ### return the node object
+        return new_node
+
+    def get_path_prod(self, name):
+        """ """
+        ### search for all nodes with name
+        ### start from behind
+        search_node_list = []
+        path_list = []
+        path_prod_list = []
+        for level in range(len(self.node_list) - 1, -1, -1):
+            for node in self.node_list[level]:
+                if node.name == name:
+                    search_node_list.append(node)
+        ### get the paths and path products for the found nodes
+        for node in search_node_list:
+            path, path_prod = self.__get_path_prod_rec__(node)
+            path_list.append(path)
+            path_prod_list.append(path_prod)
+        ### return the paths and path products
+        return [
+            [path_list[idx], path_prod_list[idx]]
+            for idx in range(len(search_node_list))
+        ]
+
+    def __get_path_prod_rec__(self, node):
+        """ """
+        if node.parent == None:
+            return ["/" + node.name, node.prob]
+        else:
+            path_str, prob = self.__get_path_prod_rec__(node.parent)
+            return [path_str + "/" + node.name, prob * node.prob]
+
+    class node_cl:
+        id_counter = 0
+
+        def __init__(self, tree, parent=None, prob=0, name=""):
+            self.tree = tree
+            self.parent = parent
+            self.prob = prob
+            self.name = name
+            self.id = int(self.id_counter)
+            self.id_counter += 1
+            if parent != None:
+                self.level = int(parent.level + 1)
+            else:
+                self.level = int(0)
+
+        def get_path_prod(self):
+            """ """
+            return self.tree.__get_path_prod_rec__(self)
+
+        def add(self, name, prob):
+            """ """
+            return self.tree.node(parent=self, prob=prob, name=name)
