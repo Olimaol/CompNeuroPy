@@ -179,10 +179,10 @@ class Monitors:
         self.get_recordings(reset_call=True)
         self.get_recording_times(reset_call=True)
         self.already_got_recordings = (
-            False  ### after reset one can still update recordings
+            False  # after reset one can still update recordings
         )
         self.already_got_recording_times = (
-            False  ### after reset one can still update recording_times
+            False  # after reset one can still update recording_times
         )
         ### reset timings, after reset, add a zero to start if the monitor is still running (this is not resetted by reset())
         for key in self.timings.keys():
@@ -229,6 +229,19 @@ class recording_times_cl:
 
     def all(self):
         return self.recording_times_list
+
+    def nr_periods(self, chunk=None, compartment=None):
+        """
+        Get the number of recording periods (start-pause) of a specified chunk/model compartment.
+
+        chunk: int, optional, default=first chunk
+            idx of the chunk
+        compartment: str, optional, default=first model compartment from monitor
+            name of the compartment
+        """
+        chunk = self.__check_chunk__(chunk)
+        compartment = self.__check_compartment__(compartment, chunk)
+        return self.__get_nr_periods__(chunk, compartment)
 
     def combine_chunks(self, recordings, recording_data_str, mode="sequential"):
         """
