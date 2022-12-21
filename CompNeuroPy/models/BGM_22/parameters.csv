@@ -52,17 +52,17 @@ str_d2.u_init,0.0,0.0,0.0
 ### STRIATUM FSI PARAMS,,,
 str_fsi.size,100.0,100.0,100.0
 str_fsi.C,80.0, 1.0,80.0
-str_fsi.k,1.0,0.038,1.0
+str_fsi.k,1.0,0.06583963677366121,1.0
 str_fsi.v_r,-70,-70.04,-70
-str_fsi.v_t,-50,-62.846,-50
+str_fsi.v_t,-50,-62.978664531308496,-50
 str_fsi.v_b,-55,,-55
-str_fsi.a,0.2,0.3715,0.2
-str_fsi.a_n,,0.0175,
-str_fsi.a_s,,0.0237,
-str_fsi.b,0.025,0.02687,0.025
-str_fsi.b_n,,0.5407,
-str_fsi.c,-60.0,-72.847,-60.0
-str_fsi.d,0.0,0.096,0.0
+str_fsi.a,0.2,0.3920799898889739,0.2
+str_fsi.a_n,,0.00839718024601107,
+str_fsi.a_s,,0.008634047286600421,
+str_fsi.b,0.025,0.1924761718877654,0.025
+str_fsi.b_n,,0.8582265026999014,
+str_fsi.c,-60.0,-76.85523437197861,-60.0
+str_fsi.d,0.0,1.9341071763119118,0.0
 str_fsi.v_peak,25.0,30.0,25.0
 str_fsi.tau_ampa,10.0,10.0,10.0
 str_fsi.tau_gaba,20.0,20.0,20.0
@@ -71,12 +71,12 @@ str_fsi.E_gaba,-90,-90,-90
 str_fsi.I_app,0.0,0.0,0.0
 str_fsi.mean_rate_noise,10.0,10.0,10.0
 str_fsi.rate_sd_noise,2.0,2.0,2.0
-str_fsi.increase_noise,64,6.4,64
+str_fsi.increase_noise,64,64,64
 str_fsi.v_init,-70,-70,-70
 str_fsi.u_init,0.0,0.0,0.0
 str_fsi.s_init,,0.0,
 str_fsi.n_init,,0.0,
-str_fsi.x,,1.8,
+str_fsi.x,,2.057807159546473,
 ### STN PARAMS,,,
 stn.size,100.0,100.0,100.0
 stn.a,0.005,0.005,0.005
@@ -213,7 +213,7 @@ cor_go__str_d2.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10
 ### CORTEX GO - STR FSI PROJECTION PARAMS,,,
 cor_go__str_fsi.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre
 cor_go__str_fsi.nr_con,1,1,1
-cor_go__str_fsi.mod_factor,2.8,0.28,2.8
+cor_go__str_fsi.mod_factor,2.8,2.8,2.8
 cor_go__str_fsi.max_trans,700,700,700
 cor_go__str_fsi.weights,1.0,1.0,1.0
 cor_go__str_fsi.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)"
@@ -325,7 +325,7 @@ str_fsi__str_d2.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 1
 ### STRFSI - STRFSI PROJECTION PARAMS,,,
 str_fsi__str_fsi.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre
 str_fsi__str_fsi.nr_con,10.0,10.0,10.0
-str_fsi__str_fsi.mod_factor,0.8,0.08,0.8
+str_fsi__str_fsi.mod_factor,0.8,0.8,0.8
 str_fsi__str_fsi.max_trans,1120,1120,1120
 str_fsi__str_fsi.weights,1.0,1.0,1.0
 str_fsi__str_fsi.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)"
@@ -381,7 +381,7 @@ gpe_proto__gpe_arky.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.
 ### GPE-PROTO - STRFSI PROJECTION PARAMS,,,
 gpe_proto__str_fsi.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre
 gpe_proto__str_fsi.nr_con,10.0,10.0,10.0
-gpe_proto__str_fsi.mod_factor,1.6,0.16,1.6
+gpe_proto__str_fsi.mod_factor,1.6,1.6,1.6
 gpe_proto__str_fsi.max_trans,1120,1120,1120
 gpe_proto__str_fsi.weights,1.0,1.0,1.0
 gpe_proto__str_fsi.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)"
@@ -416,7 +416,7 @@ gpe_arky__gpe_proto.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.
 ### GPE-ARKY - STRFSI PROJECTION PARAMS,,,
 gpe_arky__str_fsi.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre
 gpe_arky__str_fsi.nr_con,10.0,10.0,10.0
-gpe_arky__str_fsi.mod_factor,6.4,0.64,6.4
+gpe_arky__str_fsi.mod_factor,6.4,6.4,6.4
 gpe_arky__str_fsi.max_trans,1120,1120,1120
 gpe_arky__str_fsi.weights,1.0,1.0,1.0
 gpe_arky__str_fsi.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)"
@@ -451,7 +451,7 @@ gpe_cp__str_d2.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10
 ### GPE-CP - STRFSI PROJECTION PARAMS,,,
 gpe_cp__str_fsi.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre
 gpe_cp__str_fsi.nr_con,10.0,10.0,10.0
-gpe_cp__str_fsi.mod_factor,0.8,0.08,0.8
+gpe_cp__str_fsi.mod_factor,0.8,0.8,0.8
 gpe_cp__str_fsi.max_trans,1120,1120,1120
 gpe_cp__str_fsi.weights,1.0,1.0,1.0
 gpe_cp__str_fsi.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)"
@@ -498,7 +498,7 @@ thal__str_d2.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0
 ### THAL - STRFSI PROJECTION PARAMS,,,
 thal__str_fsi.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre
 thal__str_fsi.nr_con,10.0,10.0,10.0
-thal__str_fsi.mod_factor,9.6,0.96,9.6
+thal__str_fsi.mod_factor,9.6,9.6,9.6
 thal__str_fsi.max_trans,1120,1120,1120
 thal__str_fsi.weights,1.0,1.0,1.0
 thal__str_fsi.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)"
