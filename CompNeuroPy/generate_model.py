@@ -1,4 +1,7 @@
 from CompNeuroPy import model_functions as mf
+from ANNarchy import get_population, get_projection
+import numpy as np
+import pandas as pd
 
 
 class generate_model:
@@ -83,6 +86,12 @@ class generate_model:
 
             self.initialized_models[self.name] = True
 
+            ### check if names of populations and projections are unique
+            self.__check_double_compartments__()
+
+            ### create parameter dictionary
+            self.attribute_df = self.__get_attribute_df__()
+
             if do_compile:
                 self.compile(compile_folder_name)
 
@@ -103,3 +112,131 @@ class generate_model:
         returns the current number of initialized (not considering "created") CompNeuroPy models
         """
         return len(list(self.initialized_models.keys()))
+
+    def set_param(self, compartment, parameter_name, parameter_value):
+        """
+        sets the specified parameter of the specified compartment
+
+        args:
+            compartment: str
+                name of model compartment
+            parameter_name: str
+                name of parameter of the compartment
+            parameter_value: number or array-like with shape of compartment geometry
+                the value or values of the parameter
+        """
+        ### cach if model is not created, only if created populations and projections are available
+        assert (
+            self.created == True
+        ), f"ERROR set_param: model {self.name} has to be created before setting parameters!"
+
+        ### check if compartment is in populations or projections
+        comp_in_pop = compartment in self.populations
+        comp_in_proj = compartment in self.projections
+
+        if comp_in_pop:
+            comp_obj = get_population(compartment)
+        elif comp_in_proj:
+            comp_obj = get_projection(compartment)
+        else:
+            assert (
+                comp_obj or comp_obj
+            ), f"ERROR set_param: setting parameter {parameter_name} of compartment {compartment}. The compartment is neither a population nor a projection of the model {self.name}!"
+
+        ### set the parameter value
+        setattr(comp_obj, parameter_name, parameter_value)
+
+        ### update the model attribute_df
+        self.__update_attribute_df__(compartment, parameter_name, parameter_value)
+
+    def __update_attribute_df__(self, compartment, parameter_name, parameter_value):
+        """updates the attribute df for a specific paramter"""
+        paramter_mask = (
+            (self.attribute_df["compartment_name"] == compartment).astype(int)
+            * (self.attribute_df["attribute_name"] == parameter_name).astype(int)
+        ).astype(bool)
+        parameter_idx = np.arange(paramter_mask.size).astype(int)[paramter_mask][0]
+        min_val = np.array([parameter_value] + [parameter_value]).min()
+        max_val = np.array([parameter_value] + [parameter_value]).max()
+        if min_val != max_val:
+            self.attribute_df.at[parameter_idx, "value"] = f"[{min_val}, {max_val}]"
+        else:
+            self.attribute_df.at[parameter_idx, "value"] = str(min_val)
+        self.attribute_df.at[parameter_idx, "definition"] = "modified"
+
+    def __check_double_compartments__(self):
+        """
+        goes over all compartments of the model and checks if compartment is only a population or a projection
+        """
+        ### cach if model is not created, only if created populations and projections are available
+        assert (
+            self.created == True
+        ), f"ERROR model {self.name}: model has to be created before checking for double compartments!"
+        ### only have to go over populations and check if they are also projections (go over projections not neccessary)
+        pop_in_projections_list = []
+        pop_in_projections = False
+        for pop_name in self.populations:
+            if pop_name in self.projections:
+                pop_in_projections_list.append(pop_name)
+                pop_in_projections = True
+
+        assert (
+            pop_in_projections == False
+        ), f"ERROR model {self.name}: One or multiple compartments are both population and projection ({pop_in_projections_list}). Rename them!"
+
+    def __get_attribute_df__(self):
+        """
+        creates a dataframe containing the attributes of all model compartments
+        """
+        ### cach if model is not created, only if created populations and projections are available
+        assert (
+            self.created == True
+        ), f"ERROR model {self.name}: model has to be created before creating paramteer dictionary!"
+
+        ### create empty paramteter dict
+        attribute_dict = {
+            "compartment_type": [],
+            "compartment_name": [],
+            "attribute_name": [],
+            "value": [],
+            "definition": [],
+        }
+
+        ### fill paramter dict with population attributes
+        for pop in self.populations:
+            for attribute in vars(get_population(pop))["attributes"]:
+                ### store min and max of attribute
+                ### create numpy array with getattr to use numpy min max function
+                values = np.array(
+                    [getattr(get_population(pop), attribute)]
+                    + [getattr(get_population(pop), attribute)]
+                )
+                attribute_dict["compartment_type"].append("population")
+                attribute_dict["compartment_name"].append(pop)
+                attribute_dict["attribute_name"].append(attribute)
+                if values.min() != values.max():
+                    attribute_dict["value"].append(f"[{values.min()}, {values.max()}]")
+                else:
+                    attribute_dict["value"].append(str(values.min()))
+                attribute_dict["definition"].append("init")
+
+        ### fill paramter dict with projection attributes
+        for proj in self.projections:
+            for attribute in vars(get_projection(proj))["attributes"]:
+                ### store min and max of attribute
+                ### create numpy array with getattr to use numpy min max function
+                values = np.array(
+                    [getattr(get_projection(proj), attribute)]
+                    + [getattr(get_projection(proj), attribute)]
+                )
+                attribute_dict["compartment_type"].append("projection")
+                attribute_dict["compartment_name"].append(proj)
+                attribute_dict["attribute_name"].append(attribute)
+                if values.min() != values.max():
+                    attribute_dict["value"].append(f"[{values.min()}, {values.max()}]")
+                else:
+                    attribute_dict["value"].append(values.min())
+                attribute_dict["definition"].append("init")
+
+        ### return dataframe
+        return pd.DataFrame(attribute_dict)

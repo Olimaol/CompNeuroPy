@@ -82,8 +82,25 @@ class BGM(generate_model):
         self.__set_params__()
         self.__set_noise_values__()
         self.__set_connections__()
+
         if do_compile:
-            super().compile(compile_folder_name)
+            self.compile(compile_folder_name)
+
+    def compile(self, compile_folder_name=None):
+        ### just run the standard compile
+        super().compile(compile_folder_name)
+
+        ### and update the weights in the attribute_df
+        ### for each projection there has to be a connectivity parameter (otherwise error occurs)
+        ### and for each projections the weights are modified
+        ### thus just update weights of all projections
+        ### loop over all projections
+        for proj_name in self.projections:
+            ### update the model attribute_df
+            values = get_projection(proj_name).w
+            self.__update_attribute_df__(
+                compartment=proj_name, parameter_name="w", parameter_value=values
+            )
 
     def __set_params__(self):
         """
@@ -108,7 +125,11 @@ class BGM(generate_model):
             if param_object in self.populations:
                 ### and the param_name is an attribute of the pop --> set param of pop
                 if param_name in vars(get_population(param_object))["attributes"]:
-                    setattr(get_population(param_object), param_name, param_val)
+                    self.set_param(
+                        compartment=param_object,
+                        parameter_name=param_name,
+                        parameter_value=param_val,
+                    )
 
     def __set_noise_values__(self):
         """
@@ -132,15 +153,30 @@ class BGM(generate_model):
                     try:
                         ### noise values defined by mean and sd
                         sd = self.params[param_object + ".rate_sd_noise"]
-                        get_population(param_object).rates_noise = self.rng.normal(
-                            mean, sd, get_population(param_object).size
-                        )
                     except:
                         ### if only mean is available, only set mean
-                        get_population(param_object).rates_noise = mean
+                        sd = 0
+                    if sd != 0:
+                        self.set_param(
+                            compartment=param_object,
+                            parameter_name="rates_noise",
+                            parameter_value=self.rng.normal(
+                                mean, sd, get_population(param_object).size
+                            ),
+                        )
+                    else:
+                        self.set_param(
+                            compartment=param_object,
+                            parameter_name="rates_noise",
+                            parameter_value=mean,
+                        )
                 elif param_name in vars(get_population(param_object))["attributes"]:
                     ### noise parameters which are actual attributes of the pop are simply set
-                    setattr(get_population(param_object), param_name, param_val)
+                    self.set_param(
+                        compartment=param_object,
+                        parameter_name=param_name,
+                        parameter_value=param_val,
+                    )
                 else:
                     continue
 
@@ -149,9 +185,8 @@ class BGM(generate_model):
         sets the connectivity and parameters of all projections
         """
 
-        already_set_params = (
-            {}
-        )  # dict for each projection, which params were already set during connectivity definition
+        ### dict for each projection, which params were already set during connectivity definition
+        already_set_params = {}
 
         ### set connectivity
         ### loop over all projections
@@ -219,7 +254,11 @@ class BGM(generate_model):
                 and not (param_name in already_set_params[param_object])
                 and param_name in vars(get_projection(param_object))["attributes"]
             ):
-                setattr(get_projection(param_object), param_name, param_val)
+                self.set_param(
+                    compartment=param_object,
+                    parameter_name=param_name,
+                    parameter_value=param_val,
+                )
 
     def __get_params__(self, name):
         """
