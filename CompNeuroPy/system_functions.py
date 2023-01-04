@@ -1,11 +1,31 @@
 import os
 import sys
 import numpy as np
-import marshal, types
+import marshal
+import types
 import gc
+import traceback
+import shutil
 
 
-def create_dir(path, print_info=0):
+def clear_dir(path):
+    """
+    deletes all files in the specified folder
+    """
+    for filename in os.listdir(path):
+        file_path = os.path.join(path, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception:
+            print(traceback.format_exc())
+            print(f"Failed to clear {path} because failed to delete {file_path}")
+            quit()
+
+
+def create_dir(path, print_info=False, clear=False):
     """
     creates a directory path
     """
@@ -15,11 +35,27 @@ def create_dir(path, print_info=0):
                 os.makedirs(path)
         else:
             print("create_dir, ERROR: path is no str")
-    except:
+    except Exception:
         if os.path.isdir(path):
             if print_info:
                 print(path + " already exists")
+            if clear:
+                ### clear folder
+                ### do you really want?
+                answer = input(f"Do you really want to clear {path} (y/n):")
+                while answer != "y" and answer != "n":
+                    print("please enter y or n")
+                    answer = input(f"Do you really want to clear {path} (y/n):")
+                ### clear or not depending on answer
+                if answer == "y":
+                    clear_dir(path)
+                    if print_info:
+                        print(path + " already exists and was cleared.")
+                else:
+                    if print_info:
+                        print(path + " already exists and was not cleared.")
         else:
+            print(traceback.format_exc())
             print("could not create " + path + " folder")
             quit()
 
