@@ -64,7 +64,7 @@ def save_data(data_list, path_list):
     """
     data_list: list of variables (e.g. numpy arrays)
 
-    path_list: save path for each variable of the data_list
+    path_list: save path for each variable of the data_list, everything is saved under ./dataRaw/defined_path
     """
     for idx in range(len(data_list)):
         ### split file path into path and file name

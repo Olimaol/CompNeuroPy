@@ -667,7 +667,6 @@ class opt_neuron:
         )
 
         ### save plot
-        folder_test = "/".join(sbi_plot_file.split("/")[:-1])
         sf.create_dir("/".join(sbi_plot_file.split("/")[:-1]))
         plt.savefig(sbi_plot_file)
 
