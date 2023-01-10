@@ -1462,3 +1462,19 @@ def time_data_add_nan(time_arr, data_arr, axis=0):
     data_arr = np.concatenate(data_arr_split, axis=axis)
 
     return [time_arr, data_arr]
+
+
+def rmse(a, b):
+    """
+    calculates the root-mean-square error between two arrays
+    """
+
+    return np.sqrt(np.mean((a - b) ** 2))
+
+
+def rsse(a, b):
+    """
+    calculates the root-sum-square error between two arrays
+    """
+
+    return np.sqrt(np.sum((a - b) ** 2))
