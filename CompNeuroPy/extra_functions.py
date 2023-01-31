@@ -133,7 +133,7 @@ class data_obj(object):
             return super().__getattribute__(__name)
 
 
-def create_cm(colors, name="my_cmap", N=256, gamma=1.0):
+def create_cm(colors, name="my_cmap", N=256, gamma=1.0, vmin=0, vmax=1):
     """
     Create a `LinearSegmentedColormap` from a list of colors.
 
@@ -161,8 +161,23 @@ def create_cm(colors, name="my_cmap", N=256, gamma=1.0):
     ):
         # List of value, color pairs
         vals, colors = zip(*colors)
+        vals = np.array(vals).astype(float)
+        colors = list(colors)
+        ### insert values for 0 and 1 if not given
+        ### they equal the colors of the borders of the given range
+        if vals.min() != 0.0:
+            colors = [colors[np.argmin(vals)]] + colors
+            vals = np.insert(vals, 0, 0.0)
+        if vals.max() != 1.0:
+            colors = colors + [colors[np.argmax(vals)]]
+            vals = np.insert(vals, len(vals), 1.0)
     else:
         vals = np.linspace(0, 1, len(colors))
+
+    ### sort values and colors, they have to increase
+    sort_idx = np.argsort(vals)
+    vals = vals[sort_idx]
+    colors = [colors[idx] for idx in sort_idx]
 
     r_g_b_a = np.zeros((len(colors), 4))
     for color_idx, color in enumerate(colors):
@@ -170,12 +185,22 @@ def create_cm(colors, name="my_cmap", N=256, gamma=1.0):
             ### color given by name
             r_g_b_a[color_idx] = to_rgba_array(color)
         else:
-            ### color given by rgb value
-            color = np.array(color)
+            ### color given by rgb(maybe a) value
+            color = np.array(color).astype(float)
+            ### check color size
+            if len(color) != 3 and len(color) != 4:
+                raise ValueError(
+                    "colors must be names or consist of 3 (rgb) or 4 (rgba) numbers"
+                )
             if color.max() > 1:
                 ### assume that max value is 255
-                color = color / 255
-            r_g_b_a[color_idx] = np.concatenate([color, np.array([1])])
+                color[:3] = color[:3] / 255
+            if len(color) == 4:
+                ### gamma already given
+                r_g_b_a[color_idx] = color
+            else:
+                ### add gamma
+                r_g_b_a[color_idx] = np.concatenate([color, np.array([gamma])])
     r = r_g_b_a[:, 0]
     g = r_g_b_a[:, 1]
     b = r_g_b_a[:, 2]
@@ -188,7 +213,43 @@ def create_cm(colors, name="my_cmap", N=256, gamma=1.0):
         "alpha": np.column_stack([vals, a, a]),
     }
 
-    return LinearSegmentedColormap(name, cdict, N, gamma)
+    return my_linear_cmap_obj(name, cdict, N, gamma, vmin, vmax)
+
+
+class my_linear_cmap_obj(LinearSegmentedColormap):
+    def __init__(self, name, segmentdata, N=..., gamma=..., vmin=0, vmax=1) -> None:
+        self.my_vmin = vmin
+        self.my_vmax = vmax
+        super().__init__(name, segmentdata, N, gamma)
+
+    def __call__(self, X, alpha=None, bytes=False):
+        """
+        Parameters
+        ----------
+        X : scalar, ndarray
+            The data value(s) to convert to RGBA.
+            For floats, X should be in the interval ``[0.0, 1.0]`` to
+            return the RGBA values ``X*100`` percent along the Colormap line.
+            For integers, X should be in the interval ``[0, Colormap.N)`` to
+            return RGBA values *indexed* from the Colormap with index ``X``.
+        alpha : float, None
+            Alpha must be a scalar between 0 and 1, or None.
+        bytes : bool
+            If False (default), the returned RGBA values will be floats in the
+            interval ``[0, 1]`` otherwise they will be uint8s in the interval
+            ``[0, 255]``.
+
+        Returns
+        -------
+        Tuple of RGBA values if X is scalar, otherwise an array of
+        RGBA values with a shape of ``X.shape + (4, )``.
+
+        """
+        ### rescale X in the range [0,1]
+        ### using vmin and vmax
+        if self.my_vmin != 0 or self.my_vmax != 1:
+            X = (X - self.my_vmin) / (self.my_vmax - self.my_vmin)
+        return super().__call__(X, alpha, bytes)
 
 
 class decision_tree:
