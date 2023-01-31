@@ -433,7 +433,10 @@ def recursive_rate(
         c_pre=c_pre,
     )
 
-    bin_times_list = np.array(ef.flatten_list(bin_times_list))
+    bin_times_arr = np.array(ef.flatten_list(bin_times_list))
+    if len(bin_times_arr.shape) == 1:
+        ### only a single bin --> need to reshape array
+        bin_times_arr = bin_times_arr[None, :]
 
     ### get borders for spikes
     time_first_spike = spike_arr.min()
@@ -445,7 +448,7 @@ def recursive_rate(
     rate_list = []
     time_list = []
     ### for loop over bins
-    for rec_bin in bin_times_list:
+    for rec_bin in bin_times_arr:
         t0_bin = rec_bin[0]
         t1_bin = rec_bin[1]
         dur_bin = np.diff(rec_bin)[0]
@@ -754,6 +757,7 @@ def __plot_recordings(
         if variable == "spike" and (
             mode == "raster" or mode == "single"
         ):  # "single" only for down compatibility
+            nr_neurons = len(list(data.keys()))
             t, n = my_raster_plot(data)
             t = t * time_step  # convert time steps into ms
             mask = ((t >= start_time).astype(int) * (t <= end_time).astype(int)).astype(
@@ -787,6 +791,7 @@ def __plot_recordings(
                     t[mask], n[mask], color=color, marker=marker, s=size, linewidth=0.1
                 )
                 plt.xlim(start_time, end_time)
+                plt.ylim(0, nr_neurons)
                 plt.xlabel("time [ms]")
                 plt.ylabel("# neurons")
                 plt.title("Spikes " + part)
@@ -803,6 +808,7 @@ def __plot_recordings(
             plt.ylabel("Mean firing rate [Hz]")
             plt.title("Mean firing rate " + part)
         elif variable == "spike" and mode == "hybrid":
+            nr_neurons = len(list(data.keys()))
             t, n = my_raster_plot(data)
             t = t * time_step  # convert time steps into ms
             mask = ((t >= start_time).astype(int) * (t <= end_time).astype(int)).astype(
@@ -828,6 +834,7 @@ def __plot_recordings(
                     t[mask], n[mask], "k.", markersize=np.sqrt(3), markeredgewidth=0.1
                 )
                 plt.ylabel("# neurons")
+                plt.ylim(0, nr_neurons)
                 ax = plt.gca().twinx()
                 time_arr, firing_rate = get_pop_rate(
                     spikes=data,
