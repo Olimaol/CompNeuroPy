@@ -37,6 +37,7 @@ from .final_models.izhikevich_2007_like_nm import (
     Izhikevich2007_Corbit_FSI_noisy_AMPA,
     Izhikevich2007_fsi_noisy_AMPA,
     Izhikevich2007_noisy_AMPA,
+    Izhikevich2007_noisy_AMPA_oscillating,
     Izhikevich2007_record_currents,
     Izhikevich2007_syn,
     Izhikevich2007_voltage_clamp,
