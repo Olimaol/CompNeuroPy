@@ -233,3 +233,38 @@ Izhikevich2007_Corbit_FSI_noisy_AMPA = Neuron(
     description="Simple neuron model equations from Izhikevich (2007) adjusted version to fit the striatal FSI neuron model from Corbit et al. (2016) should be able to produce late spiking.",
 )
 # Corbit, V. L., Whalen, T. C., Zitelli, K. T., Crilly, S. Y., Rubin, J. E., & Gittis, A. H. (2016). Pallidostriatal projections promote β oscillations in a dopamine-depleted biophysical network model. Journal of Neuroscience, 36(20), 5556-5571.
+
+Izhikevich2007_noisy_AMPA_oscillating = Neuron(
+    parameters="""
+        C              = 0 : population
+        k              = 0 : population
+        v_r            = 0 : population
+        v_t            = 0 : population
+        a              = 0 : population
+        b              = 0 : population
+        c              = 0 : population
+        d              = 0 : population
+        v_peak         = 0 : population
+        tau_ampa       = 1 : population
+        tau_gaba       = 1 : population
+        E_ampa         = 0 : population
+        E_gaba         = 0 : population
+        I_app          = 0
+        increase_noise = 0 : population
+        rates_noise    = 0
+        freq           = 0 : population 
+    """,
+    equations="""
+        dg_ampa/dt = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rates_noise, -g_ampa/tau_ampa, -g_ampa/tau_ampa + increase_noise/dt)
+        dg_gaba/dt = -g_gaba/tau_gaba
+        C * dv/dt  = k*(v - v_r)*(v - v_t) - u + I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba) + (0.001*(sin(2*pi*freq)))
+        du/dt      = a*(b*(v - v_r) - u)
+    """,
+    spike="v >= v_peak",
+    reset="""
+        v = c
+        u = u + d
+    """,
+    name="Izhikevich2007_noisy_AMPA_oscillating",
+    description="Standard neuron model from Izhikevich (2007) with additional conductance based synapses for AMPA and GABA currents with noise in AMPA conductance.",
+)
