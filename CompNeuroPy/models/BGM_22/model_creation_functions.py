@@ -10,7 +10,7 @@ from CompNeuroPy.neuron_models import (
     poisson_neuron_sin,
     Izhikevich2007_noisy_AMPA_oscillating,
     Izhikevich2003_flexible_noisy_AMPA_oscillating,
-    H_and_H_Corbit
+    H_and_H_Corbit,
 )
 from CompNeuroPy.synapse_models import factor_synapse
 
@@ -1118,7 +1118,7 @@ def BGM_v03(self):
         new neuron model = fit to Hodgkin and Huxley neuron model from Corbit et al. (2016)
         Corbit, V. L., Whalen, T. C., Zitelli, K. T., Crilly, S. Y., Rubin, J. E., & Gittis, A. H. (2016). Pallidostriatal projections promote β oscillations in a dopamine-depleted biophysical network model. Journal of Neuroscience, 36(20), 5556-5571.
 
-    difference to BGM_02 : added oscillation-term in Izhikevich2007_noisy_AMPA_oscillating-> replaced in str_d1 and str_d2 based on 
+    difference to BGM_02 : added oscillation-term in Izhikevich2007_noisy_AMPA_oscillating-> replaced in str_d1 and str_d2 based on
     Corbit, V. L., Whalen, T. C., Zitelli, K. T., Crilly, S. Y., Rubin, J. E., & Gittis, A. H. (2016). Pallidostriatal projections promote β oscillations in a dopamine-depleted biophysical network model. Journal of Neuroscience, 36(20), 5556-5571.
     """
     #######   POPULATIONS   ######
@@ -1134,10 +1134,14 @@ def BGM_v03(self):
     )
     ### Str Populations
     str_d1 = Population(
-        self.params["str_d1.size"], Izhikevich2007_noisy_AMPA_oscillating, name="str_d1"            # NEW NEURON MODEL
+        self.params["str_d1.size"],
+        Izhikevich2007_noisy_AMPA_oscillating,
+        name="str_d1",  # NEW NEURON MODEL
     )
     str_d2 = Population(
-        self.params["str_d2.size"], Izhikevich2007_noisy_AMPA_oscillating, name="str_d2"            # NEW NEURON MODEL
+        self.params["str_d2.size"],
+        Izhikevich2007_noisy_AMPA_oscillating,
+        name="str_d2",  # NEW NEURON MODEL
     )
     str_fsi = Population(
         self.params["str_fsi.size"],
@@ -1481,6 +1485,7 @@ def BGM_v03(self):
         name="thal__str_fsi",
     )
 
+
 def BGM_v04(self):
     """
     replication of small pallido-striatal network by Corbit et al.(2016) with noise -> switched off other connections
@@ -1498,10 +1503,10 @@ def BGM_v04(self):
     )
     ### Str Populations
     str_d1 = Population(
-        self.params["str_d1.size"], Izhikevich2007_noisy_AMPA, name="str_d1" 
-    )           
+        self.params["str_d1.size"], Izhikevich2007_noisy_AMPA, name="str_d1"
+    )
     str_d2 = Population(
-        self.params["str_d2.size"], Izhikevich2007_noisy_AMPA, name="str_d2"            
+        self.params["str_d2.size"], Izhikevich2007_noisy_AMPA, name="str_d2"
     )
     str_fsi = Population(
         self.params["str_fsi.size"],
@@ -1525,7 +1530,7 @@ def BGM_v04(self):
         self.params["gpe_cp.size"], Izhikevich2003_flexible_noisy_AMPA, name="gpe_cp"
     )
     thal = Population(self.params["thal.size"], Izhikevich2003_noisy_AMPA, name="thal")
-   ### integrator Neurons
+    ### integrator Neurons
     integrator_go = Population(
         self.params["integrator_go.size"],
         integrator_neuron,
@@ -1585,7 +1590,7 @@ def BGM_v04(self):
         name="cor_stop__gpe_cp",
     )
 
-    cor_stop__gpe_proto = Projection(                 # NEW !
+    cor_stop__gpe_proto = Projection(  # NEW !
         pre=cor_stop,
         post=gpe_proto,
         target="ampa",
@@ -1734,7 +1739,7 @@ def BGM_v04(self):
         name="gpe_proto__gpe_cp",
     )
 
-    gpe_proto__gpe_proto = Projection(                      
+    gpe_proto__gpe_proto = Projection(
         pre=gpe_proto,
         post=gpe_proto,
         target="gaba",
@@ -1742,7 +1747,7 @@ def BGM_v04(self):
         name="gpe_proto__gpe_proto",
     )
 
-    gpe_arky__gpe_arky = Projection(                      # NEW, not in original BGM 
+    gpe_arky__gpe_arky = Projection(  # NEW, not in original BGM
         pre=gpe_arky,
         post=gpe_arky,
         target="gaba",
@@ -1870,10 +1875,89 @@ def BGM_v04(self):
         name="thal__str_fsi",
     )
 
+
+def BGM_v04oliver(self):
+    """
+    replication of small pallido-striatal network by Corbit et al.(2016) with noise -> switched off other connections
+    """
+    #######   POPULATIONS   ######
+    ### Str Populations
+    str_d2 = Population(
+        self.params["str_d2.size"],
+        Izhikevich2007_noisy_AMPA,
+        name="str_d2",
+    )
+    str_fsi = Population(
+        self.params["str_fsi.size"],
+        Izhikevich2007_Corbit_FSI_noisy_AMPA,
+        name="str_fsi",
+    )
+    ### BG Populations
+    gpe_arky = Population(
+        self.params["gpe_arky.size"],
+        Izhikevich2003_flexible_noisy_AMPA,
+        name="gpe_arky",
+    )
+
+    ######   PROJECTIONS   ######
+    ### str d2 output
+    str_d2__gpe_arky = Projection(
+        pre=str_d2,
+        post=gpe_arky,
+        target="gaba",
+        synapse=factor_synapse,
+        name="str_d2__gpe_arky",
+    )
+    str_d2__str_d2 = Projection(
+        pre=str_d2,
+        post=str_d2,
+        target="gaba",
+        synapse=factor_synapse,
+        name="str_d2__str_d2",
+    )
+    ### str fsi output
+    str_fsi__str_d2 = Projection(
+        pre=str_fsi,
+        post=str_d2,
+        target="gaba",
+        synapse=factor_synapse,
+        name="str_fsi__str_d2",
+    )
+    str_fsi__str_fsi = Projection(
+        pre=str_fsi,
+        post=str_fsi,
+        target="gaba",
+        synapse=factor_synapse,
+        name="str_fsi__str_fsi",
+    )
+    ### gpe arky output
+    gpe_arky__str_d2 = Projection(
+        pre=gpe_arky,
+        post=str_d2,
+        target="gaba",
+        synapse=factor_synapse,
+        name="gpe_arky__str_d2",
+    )
+    gpe_arky__str_fsi = Projection(
+        pre=gpe_arky,
+        post=str_fsi,
+        target="gaba",
+        synapse=factor_synapse,
+        name="gpe_arky__str_fsi",
+    )
+    gpe_arky__gpe_arky = Projection(  # NEW, not in original BGM
+        pre=gpe_arky,
+        post=gpe_arky,
+        target="gaba",
+        synapse=factor_synapse,
+        name="gpe_arky__gpe_arky",
+    )
+
+
 def BGM_v05(self):
     """
     replication of small pallido-striatal network by Corbit et al.(2016) with noise -> switched off other connections
-    NEW : oscillation term in STR_D2, GPe Proto 
+    NEW : oscillation term in STR_D2, GPe Proto
     """
     #######   POPULATIONS   ######
     ### cortex / input populations
@@ -1888,10 +1972,14 @@ def BGM_v05(self):
     )
     ### Str Populations
     str_d1 = Population(
-        self.params["str_d1.size"], Izhikevich2007_noisy_AMPA_oscillating, name="str_d1"            # NEW NEURON MODEL
+        self.params["str_d1.size"],
+        Izhikevich2007_noisy_AMPA_oscillating,
+        name="str_d1",  # NEW NEURON MODEL
     )
     str_d2 = Population(
-        self.params["str_d2.size"], Izhikevich2007_noisy_AMPA_oscillating, name="str_d2"            # NEW NEURON MODEL
+        self.params["str_d2.size"],
+        Izhikevich2007_noisy_AMPA_oscillating,
+        name="str_d2",  # NEW NEURON MODEL
     )
     str_fsi = Population(
         self.params["str_fsi.size"],
@@ -1903,7 +1991,7 @@ def BGM_v05(self):
     snr = Population(self.params["snr.size"], Izhikevich2003_noisy_AMPA, name="snr")
     gpe_proto = Population(
         self.params["gpe_proto.size"],
-        Izhikevich2003_flexible_noisy_AMPA,                                         # NEW NEURON MODEL 
+        Izhikevich2003_flexible_noisy_AMPA,  # NEW NEURON MODEL
         name="gpe_proto",
     )
     gpe_arky = Population(
@@ -1915,7 +2003,7 @@ def BGM_v05(self):
         self.params["gpe_cp.size"], Izhikevich2003_flexible_noisy_AMPA, name="gpe_cp"
     )
     thal = Population(self.params["thal.size"], Izhikevich2003_noisy_AMPA, name="thal")
-   ### integrator Neurons
+    ### integrator Neurons
     integrator_go = Population(
         self.params["integrator_go.size"],
         integrator_neuron,
@@ -1975,7 +2063,7 @@ def BGM_v05(self):
         name="cor_stop__gpe_cp",
     )
 
-    cor_stop__gpe_proto = Projection(                 # NEW !
+    cor_stop__gpe_proto = Projection(  # NEW !
         pre=cor_stop,
         post=gpe_proto,
         target="ampa",
@@ -2124,7 +2212,7 @@ def BGM_v05(self):
         name="gpe_proto__gpe_cp",
     )
 
-    gpe_proto__gpe_proto = Projection(                      # NEW, not in original BGM 
+    gpe_proto__gpe_proto = Projection(  # NEW, not in original BGM
         pre=gpe_proto,
         post=gpe_proto,
         target="gaba",
@@ -2132,7 +2220,7 @@ def BGM_v05(self):
         name="gpe_proto__gpe_proto",
     )
 
-    gpe_arky__gpe_arky = Projection(                      # NEW, not in original BGM 
+    gpe_arky__gpe_arky = Projection(  # NEW, not in original BGM
         pre=gpe_arky,
         post=gpe_arky,
         target="gaba",
@@ -2260,6 +2348,7 @@ def BGM_v05(self):
         name="thal__str_fsi",
     )
 
+
 def BGM_v06(self):
     """
     replication of small pallido-striatal network by Corbit et al.(2016) with noise -> switched off other connections
@@ -2267,9 +2356,7 @@ def BGM_v06(self):
     """
     #######   POPULATIONS   ######
     ### cortex / input populations
-    cor_go = Population(
-        self.params["cor_go.size"], poisson_neuron_sin, name="cor_go"
-    )
+    cor_go = Population(self.params["cor_go.size"], poisson_neuron_sin, name="cor_go")
     cor_pause = Population(
         self.params["cor_pause.size"], poisson_neuron_up_down, name="cor_pause"
     )
@@ -2278,10 +2365,14 @@ def BGM_v06(self):
     )
     ### Str Populations
     str_d1 = Population(
-        self.params["str_d1.size"], Izhikevich2007_noisy_AMPA, name="str_d1"            # NEW NEURON MODEL
+        self.params["str_d1.size"],
+        Izhikevich2007_noisy_AMPA,
+        name="str_d1",  # NEW NEURON MODEL
     )
     str_d2 = Population(
-        self.params["str_d2.size"], Izhikevich2007_noisy_AMPA, name="str_d2"            # NEW NEURON MODEL
+        self.params["str_d2.size"],
+        Izhikevich2007_noisy_AMPA,
+        name="str_d2",  # NEW NEURON MODEL
     )
     str_fsi = Population(
         self.params["str_fsi.size"],
@@ -2293,7 +2384,7 @@ def BGM_v06(self):
     snr = Population(self.params["snr.size"], Izhikevich2003_noisy_AMPA, name="snr")
     gpe_proto = Population(
         self.params["gpe_proto.size"],
-        Izhikevich2003_flexible_noisy_AMPA,                                         # NEW NEURON MODEL 
+        Izhikevich2003_flexible_noisy_AMPA,  # NEW NEURON MODEL
         name="gpe_proto",
     )
     gpe_arky = Population(
@@ -2305,7 +2396,7 @@ def BGM_v06(self):
         self.params["gpe_cp.size"], Izhikevich2003_flexible_noisy_AMPA, name="gpe_cp"
     )
     thal = Population(self.params["thal.size"], Izhikevich2003_noisy_AMPA, name="thal")
-   ### integrator Neurons
+    ### integrator Neurons
     integrator_go = Population(
         self.params["integrator_go.size"],
         integrator_neuron,
@@ -2365,7 +2456,7 @@ def BGM_v06(self):
         name="cor_stop__gpe_cp",
     )
 
-    cor_stop__gpe_proto = Projection(                 # NEW !
+    cor_stop__gpe_proto = Projection(  # NEW !
         pre=cor_stop,
         post=gpe_proto,
         target="ampa",
@@ -2514,7 +2605,7 @@ def BGM_v06(self):
         name="gpe_proto__gpe_cp",
     )
 
-    gpe_proto__gpe_proto = Projection(                      # NEW, not in original BGM 
+    gpe_proto__gpe_proto = Projection(  # NEW, not in original BGM
         pre=gpe_proto,
         post=gpe_proto,
         target="gaba",
@@ -2522,7 +2613,7 @@ def BGM_v06(self):
         name="gpe_proto__gpe_proto",
     )
 
-    gpe_arky__gpe_arky = Projection(                      # NEW, not in original BGM 
+    gpe_arky__gpe_arky = Projection(  # NEW, not in original BGM
         pre=gpe_arky,
         post=gpe_arky,
         target="gaba",
