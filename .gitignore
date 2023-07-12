@@ -8,3 +8,4 @@ dist/
 *.svg
 *annarchy/
 *tmp.py
+*.~lock*
