@@ -86,10 +86,11 @@ Izhikevich2003_flexible_noisy_AMPA_oscillating = Neuron(
         I_app          = 0
         increase_noise = 0 : population
         rates_noise    = 0
-        freq           = 0 : population
+        freq           = 0
+        amp            = 6
     """,
     equations="""
-        osc  = 6*sin(t*2*pi*(freq/1000))
+        osc        = amp * sin(t * 2 * pi * (freq / 1000))
         dg_ampa/dt = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rates_noise, -g_ampa/tau_ampa, -g_ampa/tau_ampa + increase_noise/dt)
         dg_gaba/dt = -g_gaba / tau_gaba
         dv/dt      = n2 * v * v + n1 * v + n0 - u + I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba) + osc

@@ -31,6 +31,7 @@ from .final_models.H_and_H_like_nm import (
 from .final_models.izhikevich_2003_like_nm import (
     Izhikevich2003_flexible_noisy_AMPA,
     Izhikevich2003_noisy_AMPA,
+    Izhikevich2003_flexible_noisy_AMPA_oscillating,
 )
 from .final_models.izhikevich_2007_like_nm import (
     Izhikevich2007,
