@@ -12,6 +12,9 @@ from CompNeuroPy import generate_model
 import csv
 import os
 import importlib
+import inspect
+import traceback
+import sys
 
 
 class BGM(generate_model):
@@ -190,6 +193,8 @@ class BGM(generate_model):
 
         ### set connectivity
         ### loop over all projections
+        set_con_failed = False
+        error_message_list = []
         for proj_name in self.projections:
             ### get the type of connectivity for projection
             try:
@@ -207,39 +212,51 @@ class BGM(generate_model):
                 )
                 quit()
 
-            if connectivity == "connect_fixed_number_pre":
-                get_projection(proj_name).connect_fixed_number_pre(
-                    number=self.params[proj_name + ".nr_con"],
-                    weights=eval(str(self.params[proj_name + ".weights"])),
-                    delays=eval(str(self.params[proj_name + ".delays"])),
-                )
-                already_set_params[proj_name] = [
-                    "connectivity",
-                    "nr_con",
-                    "weights",
-                    "delays",
-                ]
-            elif connectivity == "connect_all_to_all":
-                get_projection(proj_name).connect_all_to_all(
-                    weights=eval(str(self.params[proj_name + ".weights"])),
-                    delays=eval(str(self.params[proj_name + ".delays"])),
-                )
-                already_set_params[proj_name] = ["connectivity", "weights", "delays"]
-            elif connectivity == "connect_one_to_one":
-                get_projection(proj_name).connect_one_to_one(
-                    weights=eval(str(self.params[proj_name + ".weights"])),
-                    delays=eval(str(self.params[proj_name + ".delays"])),
-                )
-                already_set_params[proj_name] = ["connectivity", "weights", "delays"]
+            possible_con_list = [
+                "connect_fixed_number_pre",
+                "connect_all_to_all",
+                "connect_one_to_one",
+                "connect_fixed_probability",
+            ]
+            if connectivity in possible_con_list:
+                try:
+                    # get all possible parameters of the connectivity function
+                    con_func = eval(f"get_projection(proj_name).{connectivity}")
+                    possible_con_params_list = list(
+                        inspect.signature(con_func).parameters.keys()
+                    )
+                    # check if paramters are given in the params dict and create the kwargs for the connectivity function
+                    con_kwargs = {}
+                    for con_param_key in possible_con_params_list:
+                        if proj_name + "." + con_param_key in self.params:
+                            con_kwargs[con_param_key] = eval(
+                                str(self.params[proj_name + "." + con_param_key])
+                            )
+                    # call the connectivity function with the obtained kwargs
+                    con_func(**con_kwargs)
+                    # store which parameters have been set
+                    already_set_params[proj_name] = list(con_kwargs.keys())
+                except:
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+                    error_message = traceback.format_exception_only(exc_type, exc_value)
+                    error_message_list.append([f"ERROR: {proj_name}"] + error_message)
+                    set_con_failed = True
             else:
                 print(
                     "\nERROR: wrong connectivity parameter for",
                     proj_name + ".connectivity!\n",
                     "parameters id:",
                     self.params["general.id"],
+                    "possible:",
+                    possible_con_list,
                     "\n",
                 )
                 quit()
+        if set_con_failed:
+            print("\n")
+            for error_message in error_message_list:
+                print(" ".join(error_message))
+            raise TypeError("Setting connectivities failed")
 
         ### set parameters
         ### loop over all params
