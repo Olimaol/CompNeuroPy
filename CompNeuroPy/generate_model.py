@@ -140,7 +140,7 @@ class generate_model:
             comp_obj = get_projection(compartment)
         else:
             assert (
-                comp_obj or comp_obj
+                comp_in_pop or comp_in_proj
             ), f"ERROR set_param: setting parameter {parameter_name} of compartment {compartment}. The compartment is neither a population nor a projection of the model {self.name}!"
 
         ### set the parameter value
