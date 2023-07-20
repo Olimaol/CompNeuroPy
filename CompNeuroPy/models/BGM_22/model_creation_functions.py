@@ -12,7 +12,7 @@ from CompNeuroPy.neuron_models import (
     Izhikevich2003_flexible_noisy_AMPA_oscillating,
     H_and_H_Corbit,
 )
-from CompNeuroPy.synapse_models import factor_synapse
+from CompNeuroPy.synapse_models import factor_synapse, factor_synapse_without_max
 
 
 def BGM_v01(self):
@@ -1905,14 +1905,14 @@ def BGM_v04oliver(self):
         pre=str_d2,
         post=gpe_arky,
         target="gaba",
-        synapse=factor_synapse,
+        synapse=factor_synapse_without_max,
         name="str_d2__gpe_arky",
     )
     str_d2__str_d2 = Projection(
         pre=str_d2,
         post=str_d2,
         target="gaba",
-        synapse=factor_synapse,
+        synapse=factor_synapse_without_max,
         name="str_d2__str_d2",
     )
     ### str fsi output
@@ -1920,36 +1920,29 @@ def BGM_v04oliver(self):
         pre=str_fsi,
         post=str_d2,
         target="gaba",
-        synapse=factor_synapse,
+        synapse=factor_synapse_without_max,
         name="str_fsi__str_d2",
     )
     str_fsi__str_fsi = Projection(
         pre=str_fsi,
         post=str_fsi,
         target="gaba",
-        synapse=factor_synapse,
+        synapse=factor_synapse_without_max,
         name="str_fsi__str_fsi",
     )
     ### gpe arky output
-    gpe_arky__str_d2 = Projection(
-        pre=gpe_arky,
-        post=str_d2,
-        target="gaba",
-        synapse=factor_synapse,
-        name="gpe_arky__str_d2",
-    )
     gpe_arky__str_fsi = Projection(
         pre=gpe_arky,
         post=str_fsi,
         target="gaba",
-        synapse=factor_synapse,
+        synapse=factor_synapse_without_max,
         name="gpe_arky__str_fsi",
     )
     gpe_arky__gpe_arky = Projection(  # NEW, not in original BGM
         pre=gpe_arky,
         post=gpe_arky,
         target="gaba",
-        synapse=factor_synapse,
+        synapse=factor_synapse_without_max,
         name="gpe_arky__gpe_arky",
     )
 
