@@ -1485,3 +1485,35 @@ def rsse(a, b):
     """
 
     return np.sqrt(np.sum((a - b) ** 2))
+
+
+def get_minimum(input_data):
+    if isinstance(input_data, (list, np.ndarray, tuple)):
+        # If the input is a list, numpy array, or tuple, we handle them as follows
+        flattened_list = [
+            item
+            for sublist in input_data
+            for item in (
+                sublist if isinstance(sublist, (list, np.ndarray, tuple)) else [sublist]
+            )
+        ]
+        return min(flattened_list)
+    else:
+        # If the input is a single value, return it as the minimum
+        return input_data
+
+
+def get_maximum(input_data):
+    if isinstance(input_data, (list, np.ndarray, tuple)):
+        # If the input is a list, numpy array, or tuple, we handle them as follows
+        flattened_list = [
+            item
+            for sublist in input_data
+            for item in (
+                sublist if isinstance(sublist, (list, np.ndarray, tuple)) else [sublist]
+            )
+        ]
+        return max(flattened_list)
+    else:
+        # If the input is a single value, return it as the maximum
+        return input_data

@@ -12,6 +12,9 @@ from CompNeuroPy import generate_model
 import csv
 import os
 import importlib
+import inspect
+import traceback
+import sys
 
 
 class BGM(generate_model):
@@ -26,6 +29,7 @@ class BGM(generate_model):
         do_compile=True,
         compile_folder_name=None,
         seed=None,
+        name_appendix=None,
     ):
         """
         runs the standard init but with already predefined model_creation_function and description
@@ -43,6 +47,18 @@ class BGM(generate_model):
         ), 'ERROR generate_model BGM: "name" must have form "BGM_vXX_pXX"'
         self._model_version_name_ = "_".join(self._name_split_[:2])
 
+        ### set name_appendix
+        if isinstance(name_appendix, type(None)):
+            self.name_appendix = ""
+            name = name + self.name_appendix
+        elif isinstance(name_appendix, type("txt")):
+            name_appendix = ":" + name_appendix
+            self.name_appendix = name_appendix
+            name = name + self.name_appendix
+        else:
+            raise TypeError("name_appendix has to be string")
+            quit()
+
         ### init default compile_folder_name
         if compile_folder_name == None:
             compile_folder_name = "annarchy_" + self._model_version_name_
@@ -55,8 +71,8 @@ class BGM(generate_model):
         ### init random number generator
         self.rng = np.random.default_rng(seed)
 
-        ### get model parameters before init
-        self.params = self.__get_params__(name)
+        ### get model parameters before init, ignore name_appendix
+        self.params = self.__get_params__(name.split(":")[0])
 
         ### init
         super().__init__(
@@ -67,6 +83,40 @@ class BGM(generate_model):
             do_compile=do_compile,
             compile_folder_name=compile_folder_name,
         )
+
+    def __add_name_appendix__(self):
+        """
+        all model compartments names end with the name_appendix --> for setting the parameters you need to change the names of the model compartments in the paramter keys
+        """
+        ### update the attribute_df of the model object (it still contains the original names of the model creation)
+        self.attribute_df["compartment_name"] = (
+            self.attribute_df["compartment_name"] + self.name_appendix
+        )
+        ### rename populations and projections
+        populations_new = []
+        for pop_name in self.populations:
+            populations_new.append(pop_name + self.name_appendix)
+            get_population(pop_name).name = pop_name + self.name_appendix
+        self.populations = populations_new
+        projections_new = []
+        for proj_name in self.projections:
+            projections_new.append(proj_name + self.name_appendix)
+            get_projection(proj_name).name = proj_name + self.name_appendix
+        self.projections = projections_new
+        ### rename parameters
+        params_new = {}
+        for key, param_val in self.params.items():
+            param_object = key.split(".")[0]
+            param_name = key.split(".")[1]
+
+            if param_object == "general":
+                params_new[key] = param_val
+                continue
+
+            param_object = param_object + self.name_appendix
+            key_new = param_object + "." + param_name
+            params_new[key_new] = param_val
+        self.params = params_new
 
     def __model_creation_function__(self):
         model_creation_function = eval(
@@ -79,6 +129,8 @@ class BGM(generate_model):
         super().create(do_compile=False, compile_folder_name=compile_folder_name)
         ### after creating the model, self.populations and self.projections are available --> now set the parameters
         ### do not compile during create but after setting parameters --> parameter values are included in compilation state
+        ### before setting parameters add name_appendix to model compartments and parameters
+        self.__add_name_appendix__()
         self.__set_params__()
         self.__set_noise_values__()
         self.__set_connections__()
@@ -190,6 +242,8 @@ class BGM(generate_model):
 
         ### set connectivity
         ### loop over all projections
+        set_con_failed = False
+        error_message_list = []
         for proj_name in self.projections:
             ### get the type of connectivity for projection
             try:
@@ -207,39 +261,51 @@ class BGM(generate_model):
                 )
                 quit()
 
-            if connectivity == "connect_fixed_number_pre":
-                get_projection(proj_name).connect_fixed_number_pre(
-                    number=self.params[proj_name + ".nr_con"],
-                    weights=eval(str(self.params[proj_name + ".weights"])),
-                    delays=eval(str(self.params[proj_name + ".delays"])),
-                )
-                already_set_params[proj_name] = [
-                    "connectivity",
-                    "nr_con",
-                    "weights",
-                    "delays",
-                ]
-            elif connectivity == "connect_all_to_all":
-                get_projection(proj_name).connect_all_to_all(
-                    weights=eval(str(self.params[proj_name + ".weights"])),
-                    delays=eval(str(self.params[proj_name + ".delays"])),
-                )
-                already_set_params[proj_name] = ["connectivity", "weights", "delays"]
-            elif connectivity == "connect_one_to_one":
-                get_projection(proj_name).connect_one_to_one(
-                    weights=eval(str(self.params[proj_name + ".weights"])),
-                    delays=eval(str(self.params[proj_name + ".delays"])),
-                )
-                already_set_params[proj_name] = ["connectivity", "weights", "delays"]
+            possible_con_list = [
+                "connect_fixed_number_pre",
+                "connect_all_to_all",
+                "connect_one_to_one",
+                "connect_fixed_probability",
+            ]
+            if connectivity in possible_con_list:
+                try:
+                    # get all possible parameters of the connectivity function
+                    con_func = eval(f"get_projection(proj_name).{connectivity}")
+                    possible_con_params_list = list(
+                        inspect.signature(con_func).parameters.keys()
+                    )
+                    # check if paramters are given in the params dict and create the kwargs for the connectivity function
+                    con_kwargs = {}
+                    for con_param_key in possible_con_params_list:
+                        if proj_name + "." + con_param_key in self.params:
+                            con_kwargs[con_param_key] = eval(
+                                str(self.params[proj_name + "." + con_param_key])
+                            )
+                    # call the connectivity function with the obtained kwargs
+                    con_func(**con_kwargs)
+                    # store which parameters have been set
+                    already_set_params[proj_name] = list(con_kwargs.keys())
+                except:
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+                    error_message = traceback.format_exception_only(exc_type, exc_value)
+                    error_message_list.append([f"ERROR: {proj_name}"] + error_message)
+                    set_con_failed = True
             else:
                 print(
                     "\nERROR: wrong connectivity parameter for",
                     proj_name + ".connectivity!\n",
                     "parameters id:",
                     self.params["general.id"],
+                    "possible:",
+                    possible_con_list,
                     "\n",
                 )
                 quit()
+        if set_con_failed:
+            print("\n")
+            for error_message in error_message_list:
+                print(" ".join(error_message))
+            raise TypeError("Setting connectivities failed")
 
         ### set parameters
         ### loop over all params
@@ -247,6 +313,9 @@ class BGM(generate_model):
             ### split key in param object and param name
             param_object = key.split(".")[0]
             param_name = key.split(".")[1]
+
+            if param_object == "general":
+                continue
 
             ### if param_object is proj in network and param not already used and param is an attribute of proj --> set param of proj
             if (
