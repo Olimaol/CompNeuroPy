@@ -55,8 +55,8 @@ Izhikevich2003_flexible_noisy_AMPA = Neuron(
     """,
     equations="""
         dg_ampa/dt = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rates_noise, -g_ampa/tau_ampa, -g_ampa/tau_ampa + increase_noise/dt)
-        dg_gaba/dt = -g_gaba / tau_gaba                                                                                   
-        dv/dt      = n2 * v * v + n1 * v + n0 - u + I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba) 
+        dg_gaba/dt = -g_gaba / tau_gaba
+        dv/dt      = n2 * v * v + n1 * v + n0 - u + I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba)
         du/dt      = a * (b * v - u)
     """,
     spike="""
