@@ -1,4 +1,5 @@
 from CompNeuroPy import model_functions as mf
+from CompNeuroPy import analysis_functions as af
 from ANNarchy import get_population, get_projection
 import numpy as np
 import pandas as pd
@@ -156,8 +157,8 @@ class generate_model:
             * (self.attribute_df["attribute_name"] == parameter_name).astype(int)
         ).astype(bool)
         parameter_idx = np.arange(paramter_mask.size).astype(int)[paramter_mask][0]
-        min_val = np.array([parameter_value] + [parameter_value]).min()
-        max_val = np.array([parameter_value] + [parameter_value]).max()
+        min_val = af.get_minimum(parameter_value)
+        max_val = af.get_maximum(parameter_value)
         if min_val != max_val:
             self.attribute_df.at[parameter_idx, "value"] = f"[{min_val}, {max_val}]"
         else:
