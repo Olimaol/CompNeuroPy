@@ -11,8 +11,11 @@ class Monitors:
         self.mon = mf.addMonitors(monDict)
         self.monDict = monDict
 
+        self._init_internals()
+
+    def _init_internals(self):
         timings = {}
-        for key, val in monDict.items():
+        for key, val in self.monDict.items():
             _, compartment, _ = ef.unpack_monDict_keys(key)
             timings[compartment] = {"currently_paused": True, "start": [], "stop": []}
         self.timings = timings
@@ -60,6 +63,11 @@ class Monitors:
                         "WARNING get_recordings: no recordings available, empty list returned. Maybe forgot start()?"
                     )
             return self.recordings
+
+    def get_recordings_and_clear(self):
+        ret = self.get_recordings()
+        self._init_internals()
+        return ret
 
     def __correct_start_stop__(self, start_time_arr, stop_time_arr, period):
         """
