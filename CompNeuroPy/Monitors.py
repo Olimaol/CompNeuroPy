@@ -65,9 +65,15 @@ class Monitors:
             return self.recordings
 
     def get_recordings_and_clear(self):
-        ret = self.get_recordings()
+        """
+        returns a list with recordings and recording_times
+        clears the Monitors object (initialization state)
+        The classic get_recordings function is called at the end of the simulation. This function here allows to get several times recordings with the same monitor object and to simulate it again and again. Each time after this function is called, the network should be reset.
+        """
+        ret0 = self.get_recordings()
+        ret1 = self.get_recording_times()
         self._init_internals()
-        return ret
+        return [ret0, ret1]
 
     def __correct_start_stop__(self, start_time_arr, stop_time_arr, period):
         """
