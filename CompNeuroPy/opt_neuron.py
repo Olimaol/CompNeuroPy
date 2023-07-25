@@ -4,6 +4,7 @@ import traceback
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy import generate_model as gm
 from CompNeuroPy import extra_functions as ef
+from CompNeuroPy.Monitors import Monitors
 import matplotlib.pyplot as plt
 
 # hyperopt
@@ -38,6 +39,7 @@ class opt_neuron:
         method="hyperopt",
         prior=None,
         fv_space=None,
+        record=[],
     ):
         """
         This class prepares the optimization. To run the optimization call opt_neuron.run().
@@ -83,6 +85,9 @@ class opt_neuron:
             fv_space: list, default = None
                 the search space for hyperopt
                 if none is given, uniform distributions between the variable bounds are assumed
+
+            record: list, default = []
+                list of strings which define what variables of the simulated neuron should be recorded
         """
 
         if len(self.opt_created) > 0:
@@ -97,6 +102,7 @@ class opt_neuron:
 
             ### set object variables
             self.opt_created.append(1)
+            self.record = record
             self.results_soll = results_soll
             self.experiment = experiment
             self.variables_bounds = variables_bounds
@@ -128,13 +134,14 @@ class opt_neuron:
 
             ### create and compile model
             ### if neuron models and target neuron model --> create both models then test, then clear and create only model for neuron model
-            model, target_model = self.__generate_models__()
+            model, target_model, monitors = self.__generate_models__()
 
             self.pop = model.populations[0]
             if target_model is not None:
                 self.pop_target = target_model.populations[0]
             else:
                 self.pop_target = None
+            self.monitors = monitors
 
             ### check variables of model
             self.__test_variables__()
@@ -146,7 +153,8 @@ class opt_neuron:
             ### after checking neuron models, experiment, get_loss
             ### if two models exist --> clear ANNarchy and create/compile again only standard model
             clear()
-            model, _ = self.__generate_models__()
+            model, _, monitors = self.__generate_models__()
+            self.monitors = monitors
 
     def __generate_models__(self):
         """
@@ -159,6 +167,7 @@ class opt_neuron:
         with ef.suppress_stdout():
             model = None
             target_model = None
+            monitors = None
             if self.results_soll is None:
                 ### create two models
                 model = gm.generate_model(
@@ -182,6 +191,18 @@ class opt_neuron:
                     compile_folder_name=self.compile_folder_name,
                 )
 
+                ### create monitors
+                if len(self.record) > 0:
+                    monitors = Monitors(
+                        {
+                            f"pop;{pop_name}": self.record
+                            for pop_name in [
+                                model.populations[0],
+                                target_model.populations[0],
+                            ]
+                        }
+                    )
+
             else:
                 ### create one model
                 model = gm.generate_model(
@@ -192,7 +213,11 @@ class opt_neuron:
                     do_compile=True,
                     compile_folder_name=self.compile_folder_name,
                 )
-        return [model, target_model]
+                ### create monitors
+                if len(self.record) > 0:
+                    monitors = Monitors({f"pop;{model.populations[0]}": self.record})
+
+        return [model, target_model, monitors]
 
     def __check_neuron_models__(self):
         if not (isinstance(self.neuron_model, type(Neuron()))) or (
@@ -494,7 +519,9 @@ class opt_neuron:
         reset_kwargs = {"fitparams": fitparams, "pop": pop}
 
         exp_obj = self.experiment(
-            reset_function=reset_function, reset_kwargs=reset_kwargs
+            monitors=self.monitors,
+            reset_function=reset_function,
+            reset_kwargs=reset_kwargs,
         )
         results = exp_obj.run(pop)
 

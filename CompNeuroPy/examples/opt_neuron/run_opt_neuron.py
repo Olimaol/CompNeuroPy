@@ -1,7 +1,6 @@
 from CompNeuroPy import (
     opt_neuron,
     Experiment,
-    Monitors,
     generate_simulation,
     current_step,
 )
@@ -60,9 +59,6 @@ class my_exp(Experiment):
             population_name - the name of the population which contains a single neuron. this will be automatically provided by opt_neuron
         """
 
-        ### define recordings
-        self.mon = Monitors({"pop;" + population_name: ["r"]})
-
         ### define simulation
         ### you don't have to use the CompNeuroPy generate_simulation object
         sim_step = generate_simulation(
@@ -90,9 +86,8 @@ class my_exp(Experiment):
         self.data["sim"] = sim_step.simulation_info()
         self.data["population_name"] = population_name
         self.data["time_step"] = dt()
-        self.data["recording_times"] = self.mon.get_recording_times()
 
-        ### return results, use the object's self.results() function which automatically returns an object with "recordings", "monDict", and "data"
+        ### return results, use the object's self.results() function which automatically returns an object with "recordings", "recording_times", "monDict", and "data"
         return self.results()
 
 
@@ -146,6 +141,7 @@ opt = opt_neuron(
     compile_folder_name="annarchy_opt_neuron_example",
     neuron_model=my_neuron,
     method="hyperopt",
+    record=["r"],
 )
 
 ### run the optimization, define how often the experiment should be repeated

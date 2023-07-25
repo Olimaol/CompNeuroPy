@@ -3,9 +3,12 @@ class Experiment:
     import ANNarchy as ann
     import CompNeuroPy as cnp
 
-    def __init__(self, reset_function=None, reset_kwargs={}):
+    def __init__(self, monitors, reset_function=None, reset_kwargs={}):
         """
         Args:
+            monitors: object
+                Monitors object for recordings
+
             reset_function: function
                 a function which resets the ANNarchy model
 
@@ -13,7 +16,7 @@ class Experiment:
                 arguments of the reset_function
         """
         self.recordings = {}  # save dict for monitor recordings
-        self.mon = self.cnp.Monitors()  # dict for monitors
+        self.mon = monitors
         self.data = {}  # dict for optional data
 
         ### check function to reset network
@@ -42,7 +45,7 @@ class Experiment:
             "data" has to be defined by yourself during the experiment
         """
         obj = self.return_cl()
-        obj.recordings = self.mon.get_recordings()
+        obj.recordings, obj.recording_times = self.mon.get_recordings_and_clear()
         obj.monDict = self.mon.monDict
         obj.data = self.data
 
