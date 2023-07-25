@@ -14,8 +14,8 @@ from ANNarchy import dt, setup
 class my_exp(Experiment):
     """
     parent class Experiment provides the variables:
-        self.mon = self.cnp.Monitors() --> a CompNeuroPy Monitors object to do recordings
-        self.data = {}                 --> a dictionary with any optional data
+        self.mon = []) --> define during init, a CompNeuroPy Monitors object to do recordings
+        self.data = {} --> a dictionary with any optional data
     and the functions:
         self.reset()   --> resets the model and monitors
         self.results() --> returns a results object (with recordings and optional data from self.data)
@@ -25,15 +25,7 @@ class my_exp(Experiment):
     def run(self):
         """
         do the simulations and recordings
-
-        in this example also the model and the simulations are defined here... this is not
-        neccessary in this example but the original intention of the
-        Experiment class was to have everything in one class
         """
-
-        ### create and compile a model
-        setup(dt=0.01)
-        model = H_and_H_model_Bischop()
 
         ### define some simulations
         sim_step = generate_simulation(
@@ -57,10 +49,6 @@ class my_exp(Experiment):
             },
         )
 
-        ### define recordings
-        ### store them in self.mon
-        self.mon = Monitors({f"pop;{model.populations[0]}": ["v"]})
-
         ### run simulations/recordings
         self.mon.start()
         sim_step.run()
@@ -75,28 +63,36 @@ class my_exp(Experiment):
         self.data["sim"] = [sim_step.simulation_info(), sim_ramp.simulation_info()]
         self.data["population_name"] = model.populations[0]
         self.data["time_step"] = dt()
-        self.data["recording_times"] = self.mon.get_recording_times()
 
         ### return results, use the object's self.results() function which automatically
-        ### returns an object with "recordings", "monDict", and "data"
+        ### returns an object with "recordings", "recording_times", "monDict", and "data"
         return self.results()
 
 
-### run the experiment
-experiment_obj = my_exp()
-results = experiment_obj.run()
+if __name__ == "__main__":
 
-print("recordings:\n", results.recordings, "\n\n")
-print("data:\n", results.data, "\n\n")
-print("monDict:\n", results.monDict, "\n\n")
+    ### create and compile a model
+    setup(dt=0.01)
+    model = H_and_H_model_Bischop()
 
-### quick plot of the membrane potential from the first chunk
-chunk = 0
-plot_recordings(
-    figname="example_experiment.svg",
-    recordings=results.recordings[chunk],
-    time_lim=results.data["recording_times"].time_lims(chunk=chunk),
-    idx_lim=results.data["recording_times"].idx_lims(chunk=chunk),
-    shape=(1, 1),
-    plan=[f"1;{results.data['population_name']};v;line"],
-)
+    ### define recordings before experiment
+    monitors = Monitors({f"pop;{model.populations[0]}": ["v"]})
+
+    ### run the experiment
+    experiment_obj = my_exp(monitors=monitors)
+    results = experiment_obj.run()
+
+    print("recordings:\n", results.recordings, "\n\n")
+    print("data:\n", results.data, "\n\n")
+    print("monDict:\n", results.monDict, "\n\n")
+
+    ### quick plot of the membrane potential from the first chunk
+    chunk = 0
+    plot_recordings(
+        figname="example_experiment.svg",
+        recordings=results.recordings,
+        recording_times=results.recording_times,
+        chunk=chunk,
+        shape=(1, 1),
+        plan=[f"1;{results.data['population_name']};v;line"],
+    )

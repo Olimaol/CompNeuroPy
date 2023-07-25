@@ -21,6 +21,7 @@ from .experimental_models.fit_Hjorth_nm import (
     _Izhikevich2007_Hjorth_2020_ChIN9,
     _Izhikevich2007_Hjorth_2020_ChIN10,
 )
+from .experimental_models.fit_Bogacz_nm import _fit_Bogacz
 from .final_models.H_and_H_like_nm import (
     H_and_H_Bischop,
     H_and_H_Bischop_syn,

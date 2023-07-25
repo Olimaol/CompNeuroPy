@@ -1,7 +1,6 @@
 from CompNeuroPy import (
     opt_neuron,
     Experiment,
-    Monitors,
     generate_simulation,
     current_step,
 )
@@ -60,9 +59,6 @@ class my_exp(Experiment):
             self - the experiment object
             population_name - the name of the population which contains a single neuron. this will be automatically provided by opt_neuron
         """
-
-        ### define recordings
-        self.mon = Monitors({"pop;" + population_name: ["r"]})
 
         ### define simulation
         ### you don't have to use the CompNeuroPy generate_simulation object
@@ -139,7 +135,6 @@ def get_loss(results_ist, results_soll):
 ### now we need to define which variables should be optimized and between which bounds (min and max values)
 variables_bounds = {"a": [-10, 10], "b": [-10, 10]}
 
-
 ### run optimization
 opt = opt_neuron(
     experiment=my_exp,
@@ -150,6 +145,7 @@ opt = opt_neuron(
     neuron_model=simple_neuron,
     target_neuron_model=complex_neuron,
     method="hyperopt",
+    record=["r"],
 )
 
 ### run the optimization, define how often the experiment should be repeated
