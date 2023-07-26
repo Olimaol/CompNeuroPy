@@ -11,6 +11,7 @@ from CompNeuroPy.neuron_models import (
     Izhikevich2007_noisy_AMPA_oscillating,
     Izhikevich2003_flexible_noisy_AMPA_oscillating,
     H_and_H_Corbit,
+    Izhikevich2003_flexible_noisy_AMPA_nonlin,
 )
 from CompNeuroPy.synapse_models import factor_synapse, factor_synapse_without_max
 
@@ -1944,6 +1945,80 @@ def BGM_v04oliver(self):
         target="gaba",
         synapse=factor_synapse_without_max,
         name="gpe_arky__gpe_arky",
+    )
+
+
+def BGM_v04newgpe(self):
+    """
+    replication of small pallido-striatal network by Corbit et al.(2016)
+
+    new gpe neuron model without refractory! (refitted data as in Goenner et al. 2021)
+    also use now gpe_proto and not arky (based on more recent literatur about connectivity, see Lindi et al. 2023)
+    """
+    #######   POPULATIONS   ######
+    ### Str Populations
+    str_d2 = Population(
+        self.params["str_d2.size"],
+        Izhikevich2007_noisy_AMPA,
+        name="str_d2",
+    )
+    str_fsi = Population(
+        self.params["str_fsi.size"],
+        Izhikevich2007_Corbit_FSI_noisy_AMPA,
+        name="str_fsi",
+    )
+    ### BG Populations
+    gpe_proto = Population(
+        self.params["gpe_proto.size"],
+        Izhikevich2003_flexible_noisy_AMPA_nonlin,
+        name="gpe_proto",
+    )
+
+    ######   PROJECTIONS   ######
+    ### str d2 output
+    str_d2__gpe_proto = Projection(
+        pre=str_d2,
+        post=gpe_proto,
+        target="gaba",
+        synapse=factor_synapse_without_max,
+        name="str_d2__gpe_proto",
+    )
+    str_d2__str_d2 = Projection(
+        pre=str_d2,
+        post=str_d2,
+        target="gaba",
+        synapse=factor_synapse_without_max,
+        name="str_d2__str_d2",
+    )
+    ### str fsi output
+    str_fsi__str_d2 = Projection(
+        pre=str_fsi,
+        post=str_d2,
+        target="gaba",
+        synapse=factor_synapse_without_max,
+        name="str_fsi__str_d2",
+    )
+    str_fsi__str_fsi = Projection(
+        pre=str_fsi,
+        post=str_fsi,
+        target="gaba",
+        synapse=factor_synapse_without_max,
+        name="str_fsi__str_fsi",
+    )
+    ### gpe proto output
+    gpe_proto__str_fsi = Projection(
+        pre=gpe_proto,
+        post=str_fsi,
+        target="gaba",
+        synapse=factor_synapse_without_max,
+        name="gpe_proto__str_fsi",
+    )
+    gpe_proto__gpe_proto = Projection(  # NEW, not in original BGM
+        pre=gpe_proto,
+        post=gpe_proto,
+        target="gaba",
+        synapse=factor_synapse_without_max,
+        name="gpe_proto__gpe_proto",
     )
 
 
