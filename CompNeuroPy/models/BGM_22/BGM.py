@@ -177,11 +177,32 @@ class BGM(generate_model):
             if param_object in self.populations:
                 ### and the param_name is an attribute of the pop --> set param of pop
                 if param_name in vars(get_population(param_object))["attributes"]:
+                    ### if parameter values are given as distribution --> get numpy array
+                    if isinstance(param_val, str):
+                        if (
+                            "Uniform" in param_val
+                            or "DiscreteUniform" in param_val
+                            or "Normal" in param_val
+                            or "LogNormal" in param_val
+                            or "Exponential" in param_val
+                            or "Gamma" in param_val
+                        ):
+                            distribution = eval(param_val)
+                            param_val = distribution.get_values(
+                                shape=get_population(param_object).geometry
+                            )
                     self.set_param(
                         compartment=param_object,
                         parameter_name=param_name,
                         parameter_value=param_val,
                     )
+                    ### if parameter base_mean --> also set I_base
+                    if param_name == "base_mean":
+                        self.set_param(
+                            compartment=param_object,
+                            parameter_name="I_base",
+                            parameter_value=param_val,
+                        )
 
     def __set_noise_values__(self):
         """
