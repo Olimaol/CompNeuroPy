@@ -109,6 +109,47 @@ Izhikevich2003_flexible_noisy_AMPA_nonlin = Neuron(
     description="Flexible neuron model from Izhikevich (2003). Flexible means, the 3 factors of the quadratic equation can be changed. With additional conductance based synapses for AMPA and GABA currents with noise in AMPA conductance. With nonlinear function for external current.",
 )
 
+Izhikevich2003_flexible_noisy_I_nonlin = Neuron(
+    parameters="""
+        a               = 0 : population
+        b               = 0 : population
+        c               = 0 : population
+        d               = 0 : population
+        n2              = 0 : population
+        n1              = 0 : population
+        n0              = 0 : population
+        tau_ampa        = 1 : population
+        tau_gaba        = 1 : population
+        E_ampa          = 0 : population
+        E_gaba          = 0 : population
+        I_app           = 0
+        base_mean       = 0
+        base_noise      = 0
+        rate_base_noise = 0
+        nonlin          = 1 : population
+    """,
+    equations="""
+        dg_ampa/dt = -g_ampa/tau_ampa
+        dg_gaba/dt = -g_gaba / tau_gaba
+        I_base = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rate_base_noise, I_base, Normal(0, 1) * base_noise + base_mean)
+        I = I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba)
+        dv/dt      = n2 * v * v + n1 * v + n0 - u + f(I,nonlin) + I_base
+        du/dt      = a * (b * v - u)
+    """,
+    spike="""
+        v >= 30
+    """,
+    reset="""
+        v = c
+        u = u + d
+    """,
+    functions="""
+        f(x,y)=((abs(x))**(1/y))/((x+1e-20)/(abs(x)+ 1e-20))
+    """,
+    name="Izhikevich2003_flexible_noisy_I_nonlin",
+    description="Flexible neuron model from Izhikevich (2003). Flexible means, the 3 factors of the quadratic equation can be changed. With additional conductance based synapses for AMPA and GABA currents and a noisy baseline current. With nonlinear function for external current.",
+)
+
 Izhikevich2003_flexible_noisy_AMPA_oscillating = Neuron(
     parameters="""
         a              = 0 : population

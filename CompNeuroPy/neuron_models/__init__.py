@@ -34,12 +34,15 @@ from .final_models.izhikevich_2003_like_nm import (
     Izhikevich2003_noisy_AMPA,
     Izhikevich2003_flexible_noisy_AMPA_oscillating,
     Izhikevich2003_flexible_noisy_AMPA_nonlin,
+    Izhikevich2003_flexible_noisy_I_nonlin,
 )
 from .final_models.izhikevich_2007_like_nm import (
     Izhikevich2007,
     Izhikevich2007_Corbit_FSI_noisy_AMPA,
+    Izhikevich2007_Corbit_FSI_noisy_I,
     Izhikevich2007_fsi_noisy_AMPA,
     Izhikevich2007_noisy_AMPA,
+    Izhikevich2007_noisy_I,
     Izhikevich2007_noisy_AMPA_oscillating,
     Izhikevich2007_record_currents,
     Izhikevich2007_syn,
