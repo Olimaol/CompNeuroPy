@@ -2,16 +2,17 @@ from ANNarchy import Population, Projection
 from CompNeuroPy.neuron_models import (
     poisson_neuron_up_down,
     Izhikevich2007_noisy_AMPA,
+    Izhikevich2007_noisy_I,
     Izhikevich2007_fsi_noisy_AMPA,
     Izhikevich2003_noisy_AMPA,
     Izhikevich2003_flexible_noisy_AMPA,
     integrator_neuron,
     Izhikevich2007_Corbit_FSI_noisy_AMPA,
+    Izhikevich2007_Corbit_FSI_noisy_I,
     poisson_neuron_sin,
     Izhikevich2007_noisy_AMPA_oscillating,
     Izhikevich2003_flexible_noisy_AMPA_oscillating,
-    H_and_H_Corbit,
-    Izhikevich2003_flexible_noisy_AMPA_nonlin,
+    Izhikevich2003_flexible_noisy_I_nonlin,
 )
 from CompNeuroPy.synapse_models import factor_synapse, factor_synapse_without_max
 
@@ -1959,18 +1960,18 @@ def BGM_v04newgpe(self):
     ### Str Populations
     str_d2 = Population(
         self.params["str_d2.size"],
-        Izhikevich2007_noisy_AMPA,
+        Izhikevich2007_noisy_I,
         name="str_d2",
     )
     str_fsi = Population(
         self.params["str_fsi.size"],
-        Izhikevich2007_Corbit_FSI_noisy_AMPA,
+        Izhikevich2007_Corbit_FSI_noisy_I,
         name="str_fsi",
     )
     ### BG Populations
     gpe_proto = Population(
         self.params["gpe_proto.size"],
-        Izhikevich2003_flexible_noisy_AMPA_nonlin,
+        Izhikevich2003_flexible_noisy_I_nonlin,
         name="gpe_proto",
     )
 

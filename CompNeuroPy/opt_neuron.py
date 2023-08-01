@@ -312,7 +312,7 @@ class opt_neuron:
         print("checking neuron_models, experiment, get_loss...", end="")
 
         fitparams = []
-        for bounds in self.variables_bounds:
+        for bounds in self.variables_bounds.values():
             if isinstance(bounds, list):
                 fitparams.append(bounds[0])
 
@@ -595,7 +595,7 @@ class opt_neuron:
                         ### or name of variable in other const parameters
                         setattr(get_population(pop), key, self.const_params[val])
                     except:
-                        print(
+                        raise ValueError(
                             "ERROR: during setting const parameter "
                             + key
                             + " value for "
