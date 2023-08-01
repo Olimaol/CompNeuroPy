@@ -129,12 +129,13 @@ Izhikevich2003_flexible_noisy_I_nonlin = Neuron(
         nonlin          = 1 : population
     """,
     equations="""
-        dg_ampa/dt = -g_ampa/tau_ampa
-        dg_gaba/dt = -g_gaba / tau_gaba
-        I_base = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rate_base_noise, I_base, Normal(0, 1) * base_noise + base_mean)
-        I = I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba)
-        dv/dt      = n2 * v * v + n1 * v + n0 - u + f(I,nonlin) + I_base
-        du/dt      = a * (b * v - u)
+        dg_ampa/dt  = -g_ampa/tau_ampa
+        dg_gaba/dt  = -g_gaba / tau_gaba
+        offset_base = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rate_base_noise, offset_base, Normal(0, 1) * base_noise)
+        I_base      = base_mean + offset_base
+        I           = I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba)
+        dv/dt       = n2 * v * v + n1 * v + n0 - u + f(I,nonlin) + I_base
+        du/dt       = a * (b * v - u)
     """,
     spike="""
         v >= 30
