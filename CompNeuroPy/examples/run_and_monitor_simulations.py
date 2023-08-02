@@ -15,7 +15,7 @@ def main():
     ### Monitors takes a monitor_dictionary as argument
     ### format: monitor_dictionary = {'what;name;period':['variables', 'to', 'record']}
     ### the Monitors object currently only supports populations, thus, 'what;' has to be 'pop;'
-    ### period can be a time larget tan the simulation time step and defines how often values are recorded
+    ### period can be a time larger than the simulation time step and defines how often values are recorded
     ### here we record from each population the variable p and spikes
     ### from first population get values every 10 ms, from second population every 15 ms
     ### spike recordings are not affected by the period (each spike is recorded)
@@ -37,7 +37,7 @@ def main():
         get_population(pop).rates = rates
         simulate(duration)
 
-    ### the set_rates function is already a perfectly fine simulation_function, but let's create something more complex using it
+    ### the set_rates function is already a complete simulation_function, but let's create something more complex using it
     def increase_rates(pop, rate_step=0, time_step=0, nr_steps=0):
         """
         increase rates variable of pop, if pop == list --> increase rates variable of multiple populations
@@ -153,7 +153,7 @@ def main():
     ### one could directly analyze/plot recordings here but we first save them with CompNeuroPy save_data function
     ### one can save different things, given in a list + for each thing the corresponding save folder + name, also given in a list
     ### all things are saved in the directory dataRaw/
-    ### we her save, for example, the two simulation objects which contain usefull information for later analyses and the recordings and recording_times
+    ### we here save, for example, the two simulation objects which contain usefull information for later analyses and the recordings and recording_times
     folder = "run_and_monitor_simulations/"
     save_data(
         [
@@ -170,22 +170,24 @@ def main():
     print("\n\nA simulation object contains:")
     for var in ["name", "description", "start", "end", "info", "kwargs"]:
         if var in ["start", "end", "info", "kwargs"]:
-            print(
-                var,
-                "(for each run)",
-                "\n",
-                eval("increase_rates_all_pops." + var),
-                "\n",
-            )
+            print(f'{var} (for each run)\n {eval("increase_rates_all_pops." + var)}\n')
         else:
-            print(var, "\n", eval("increase_rates_all_pops." + var), "\n")
+            print(f'{var}\n {eval("increase_rates_all_pops." + var)}\n')
 
     ### this is the structure of recordings:
     print("\n\nrecordings = list with len=" + str(len(recordings)))
     print("--> separate recordings for each chunk (separated by reset)")
     print("e.g., recordings[0]:", list(recordings[0].keys()))
     print(
-        "you can see that for each recorded compartment also a variable 'period' is stored, thats the sampling period of the monitor in ms (e.g. default=dt)"
+        "you can see that for each recorded compartment also a variable 'period' is stored, thats the sampling period of the monitor in ms (e.g. if no period is given durign monitor initialization default=dt)"
+    )
+    print(
+        f"period of {my_model.populations[0]}:",
+        recordings[0][f"{my_model.populations[0]};period"],
+    )
+    print(
+        f"period of {my_model.populations[1]}:",
+        recordings[0][f"{my_model.populations[1]};period"],
     )
     print("dt:", recordings[0]["dt"])
 
@@ -193,23 +195,23 @@ def main():
     ### it provides all the times (in ms) and indizes (for the arrays of recordings) for simulation chunks and periods
     ### here for example the first chunk:
     print("\n\nrecording times of first chunk:")
-    print("\t time_lims:", recording_times.time_lims(chunk=0))
-    print("\t idx_lims", recording_times.idx_lims(chunk=0))
+    print("     time_lims:", recording_times.time_lims(chunk=0))
+    print("     idx_lims", recording_times.idx_lims(chunk=0))
     ### and the second chunk
     print("\nrecording times of second chunk:")
-    print("\t time_lims:", recording_times.time_lims(chunk=1))
+    print("     time_lims:", recording_times.time_lims(chunk=1))
     print(
-        "\t idx_lims",
+        "     idx_lims",
         recording_times.idx_lims(chunk=1),
         "here the difference of time_lims and idx_lims does not fit, due to a 1000 ms pause within the chunk --> one can get the limits of the periods",
     )
     ### and the individual periods of the second chunk
-    print("\nrecording times of second chunk first period:")
-    print("\t time_lims:", recording_times.time_lims(chunk=1, period=0))
-    print("\t idx_lims", recording_times.idx_lims(chunk=1, period=0))
-    print("\nrecording times of second chunk second period:")
-    print("\t time_lims:", recording_times.time_lims(chunk=1, period=1))
-    print("\t idx_lims", recording_times.idx_lims(chunk=1, period=1))
+    print("\nrecording times of second chunk, first period:")
+    print("     time_lims:", recording_times.time_lims(chunk=1, period=0))
+    print("     idx_lims", recording_times.idx_lims(chunk=1, period=0))
+    print("\nrecording times of second chunk, second period:")
+    print("     time_lims:", recording_times.time_lims(chunk=1, period=1))
+    print("     idx_lims", recording_times.idx_lims(chunk=1, period=1))
     ### one could also specifiy a specific model compartment (here, e.g., 'first_poisson') to get its recording times
     ### by default the first compartment is used
     ### here this is not useful, because all compartments are started and paused at the same times
@@ -229,61 +231,63 @@ if __name__ == "__main__":
 ### console output of this file:
 """
 created model, other parameters: 0 1 2
-Compiling ...  OK 
+Compiling ...  OK
 
 WARNING! run increase_rates_all_pops changed simulation kwargs, initial requirements may no longer be fulfilled!
 
 
 
 A simulation object contains:
-name 
- increase_rates_all_pops 
+name
+ increase_rates_all_pops
 
-description 
- increase rates variable of all pops 
+description
+ increase rates variable of all pops
 
-start (for each run) 
- [2000.0, 700.0, 3200.0] 
+start (for each run)
+ [2000.0, 700.0, 3200.0]
 
-end (for each run) 
- [3500.0, 2200.0, 4200.0] 
+end (for each run)
+ [3500.0, 2200.0, 4200.0]
 
-info (for each run) 
- [{'duration': 1500, 'd_rates': 150}, {'duration': 1500, 'd_rates': 150}, {'duration': 1000, 'd_rates': 100}] 
+info (for each run)
+ [{'duration': 1500, 'd_rates': 150}, {'duration': 1500, 'd_rates': 150}, {'duration': 1000, 'd_rates': 100}]
 
-kwargs (for each run) 
- [{'pop': ['first_poisson', 'second_poisson'], 'rate_step': 10, 'time_step': 100, 'nr_steps': 15}, {'pop': ['first_poisson', 'second_poisson'], 'rate_step': 10, 'time_step': 100, 'nr_steps': 15}, {'pop': ['first_poisson', 'second_poisson'], 'rate_step': 50, 'time_step': 500, 'nr_steps': 2}] 
+kwargs (for each run)
+ [{'pop': ['first_poisson', 'second_poisson'], 'rate_step': 10, 'time_step': 100, 'nr_steps': 15}, {'pop': ['first_poisson', 'second_poisson'], 'rate_step': 10, 'time_step': 100, 'nr_steps': 15}, {'pop': ['first_poisson', 'second_poisson'], 'rate_step': 50, 'time_step': 500, 'nr_steps': 2}]
 
 
 
 recordings = list with len=2
 --> separate recordings for each chunk (separated by reset)
 e.g., recordings[0]: ['first_poisson;period', 'first_poisson;p', 'first_poisson;spike', 'second_poisson;period', 'second_poisson;p', 'second_poisson;spike', 'dt']
-you can see that for each recorded compartment also a variable 'period' is stored, thats the sampling period of the monitor in ms (e.g. default=dt)
+you can see that for each recorded compartment also a variable 'period' is stored, thats the sampling period of the monitor in ms (e.g. if no period is given durign monitor initialization default=dt)
+period of first_poisson: 10.0
+period of second_poisson: 15.0
 dt: 1.0
 
 
 recording times of first chunk:
-         time_lims: [500.0, 3490.0]
-         idx_lims [0, 300]
+     time_lims: [500.0, 3490.0]
+     idx_lims [0, 299]
 
 recording times of second chunk:
-         time_lims: [700.0, 4190.0]
-         idx_lims [0, 250] here the difference of time_lims and idx_lims does not fit, due to a 1000 ms pause within the chunk --> one can get the limits of the periods
+     time_lims: [700.0, 4190.0]
+     idx_lims [0, 249] here the difference of time_lims and idx_lims does not fit, due to a 1000 ms pause within the chunk --> one can get the limits of the periods
 
-recording times of second chunk first period:
-         time_lims: [700.0, 2190.0]
-         idx_lims [0, 150]
+recording times of second chunk, first period:
+     time_lims: [700.0, 2190.0]
+     idx_lims [0, 149]
 
-recording times of second chunk second period:
-         time_lims: [3200.0, 4190.0]
-         idx_lims [150, 250]
+recording times of second chunk, second period:
+     time_lims: [3200.0, 4190.0]
+     idx_lims [150, 249]
 
 complete recording time information (list of dicts):
 chunk 0
-    first_poisson {'start': {'ms': [500.0], 'idx': [0]}, 'stop': {'ms': [3490.0], 'idx': [300]}}
-    second_poisson {'start': {'ms': [510.0], 'idx': [0]}, 'stop': {'ms': [3495.0], 'idx': [200]}}
+    first_poisson {'start': {'ms': [500.0], 'idx': [0]}, 'stop': {'ms': [3490.0], 'idx': [299]}}
+    second_poisson {'start': {'ms': [510.0], 'idx': [0]}, 'stop': {'ms': [3495.0], 'idx': [199]}}
 chunk 1
-    first_poisson {'start': {'ms': [700.0, 3200.0], 'idx': [0, 150]}, 'stop': {'ms': [2190.0, 4190.0], 'idx': [150, 250]}}
-    second_poisson {'start': {'ms': [705.0, 3210.0], 'idx': [0, 100]}, 'stop': {'ms': [2190.0, 4185.0], 'idx': [100, 166]}}
+    first_poisson {'start': {'ms': [700.0, 3200.0], 'idx': [0, 150]}, 'stop': {'ms': [2190.0, 4190.0], 'idx': [149, 249]}}
+    second_poisson {'start': {'ms': [705.0, 3210.0], 'idx': [0, 100]}, 'stop': {'ms': [2190.0, 4185.0], 'idx': [99, 165]}}
 """

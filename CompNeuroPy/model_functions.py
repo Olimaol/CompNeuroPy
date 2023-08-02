@@ -58,7 +58,6 @@ def startMonitors(compartment_list, mon, timings=None):
     currently_paused: dict with key=compartment+variable name and val=if currently paused
     """
     ### for each compartment generate started variable (because compartments can ocure multiple times if multiple variables of them are recorded --> do not start same monitor multiple times)
-    # print("startMonitors!")
     started = {}
     for key in compartment_list:
         compartmentType, compartment, _ = ef.unpack_monDict_keys(key)
@@ -83,17 +82,13 @@ def startMonitors(compartment_list, mon, timings=None):
             if (compartmentType == "pop" or compartmentType == "proj") and started[
                 compartment
             ] == False:
-                # print(len(timings[compartment]["start"]))
-                if (
-                    timings[compartment]["currently_paused"]
-                    and len(timings[compartment]["start"]) == 0
-                ):
-                    ### monitor is currently paused --> resume TODO: first call of start also causes resume, because currently paused is intialized with True, one should check timings and if timings["start"] is emtpy --> call start() rather than resume
-                    mon[compartment].resume()
-                    # print("resume")
-                else:
-                    mon[compartment].start()
-                    # print("start")
+                if timings[compartment]["currently_paused"]:
+                    if len(timings[compartment]["start"]) > 0:
+                        ### resume
+                        mon[compartment].resume()
+                    else:
+                        ### initial start
+                        mon[compartment].start()
                 started[compartment] = True
                 ### update currently_paused
                 timings[compartment]["currently_paused"] = False

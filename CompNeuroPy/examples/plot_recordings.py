@@ -42,13 +42,13 @@ def main():
     ).item()
 
     ### plot first chunk (only one period)
-    make_plot(recordings, recording_timings, 0)
+    make_plot(recordings, recording_timings, chunk=0)
     ### plot second chunk
-    make_plot(recordings, recording_timings, 1)
+    make_plot(recordings, recording_timings, chunk=1)
     ### plot first period of second chunk
-    make_plot(recordings, recording_timings, 1, 0)
+    make_plot(recordings, recording_timings, chunk=1, period=0)
     ### plot second period of second chunk
-    make_plot(recordings, recording_timings, 1, 1)
+    make_plot(recordings, recording_timings, chunk=1, period=1)
 
     return 1
 
