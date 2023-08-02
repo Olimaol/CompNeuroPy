@@ -316,14 +316,14 @@ recording time limits of my_pop1
 1st chunk, nr periods = 1
 2nd chunk, nr periods = 2
                           in ms              as index (dt=0.1 ms but recording period=2 ms)
-1st chunk                 [100.0, 198.0]     [0, 49]           
-2nd chunk, 1st period     [0.0, 98.0]        [0, 49]           
-2nd chunk, 2nd period     [200.0, 298.0]     [50, 99]          
+1st chunk                 [100.0, 198.0]     [0, 49]
+2nd chunk, 1st period     [0.0, 98.0]        [0, 49]
+2nd chunk, 2nd period     [200.0, 298.0]     [50, 99]
 
 recording time limits of my_pop2
 1st chunk, nr periods = 1
 2nd chunk, nr periods = 1
                           in ms              as index (dt=0.1 ms and recording period=dt)
-1st chunk                 [100.0, 199.9]     [0, 999]          
+1st chunk                 [100.0, 199.9]     [0, 999]
 2nd chunk                 [0.0, 299.9]       [0, 2999]
 """
