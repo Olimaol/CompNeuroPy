@@ -791,7 +791,7 @@ def __plot_recordings(
                     t[mask], n[mask], color=color, marker=marker, s=size, linewidth=0.1
                 )
                 plt.xlim(start_time, end_time)
-                plt.ylim(0, nr_neurons)
+                plt.ylim(0 - 0.5, nr_neurons - 0.5)
                 plt.xlabel("time [ms]")
                 plt.ylabel("# neurons")
                 plt.title("Spikes " + part)
@@ -829,12 +829,16 @@ def __plot_recordings(
                     ha="center",
                 )
             else:
+                if np.unique(n).size == 1:
+                    marker, size = ["|", np.sqrt(3000)]
+                else:
+                    marker, size = [".", np.sqrt(3)]
 
                 plt.plot(
-                    t[mask], n[mask], "k.", markersize=np.sqrt(3), markeredgewidth=0.1
+                    t[mask], n[mask], f"k{marker}", markersize=size, markeredgewidth=0.1
                 )
                 plt.ylabel("# neurons")
-                plt.ylim(0, nr_neurons)
+                plt.ylim(0 - 0.5, nr_neurons - 0.5)
                 ax = plt.gca().twinx()
                 time_arr, firing_rate = get_pop_rate(
                     spikes=data,
