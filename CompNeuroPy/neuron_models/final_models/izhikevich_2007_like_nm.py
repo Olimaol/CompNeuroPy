@@ -176,7 +176,8 @@ Izhikevich2007_noisy_I = Neuron(
     equations="""
         dg_ampa/dt = -g_ampa/tau_ampa
         dg_gaba/dt = -g_gaba/tau_gaba
-        I_base = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rate_base_noise, I_base, Normal(0, 1) * base_noise + base_mean)
+        offset_base = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rate_base_noise, offset_base, Normal(0, 1) * base_noise)
+        I_base      = base_mean + offset_base
         C * dv/dt  = k*(v - v_r)*(v - v_t) - u + I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba) + I_base
         du/dt      = a*(b*(v - v_r) - u)
     """,
@@ -297,7 +298,8 @@ Izhikevich2007_Corbit_FSI_noisy_I = Neuron(
     equations="""
         dg_ampa/dt = -g_ampa/tau_ampa
         dg_gaba/dt = -g_gaba/tau_gaba
-        I_base = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rate_base_noise, I_base, Normal(0, 1) * base_noise + base_mean)
+        offset_base = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rate_base_noise, offset_base, Normal(0, 1) * base_noise)
+        I_base      = base_mean + offset_base
         I = I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba)
         C * dv/dt = k*(v - v_r)*(v - v_t) - u - n + ((abs(I))**(1/x))/((I+1e-20)/(abs(I)+ 1e-20)) + I_base
 

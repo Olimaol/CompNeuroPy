@@ -560,6 +560,7 @@ class opt_neuron:
         """
         if pop is None:
             pop = self.pop
+
         ### reset model to compilation state
         reset(
             populations=populations,
@@ -568,43 +569,45 @@ class opt_neuron:
             monitors=monitors,
         )
 
-        ### set fitting parameters
-        for idx in range(len(fitparams)):
-            setattr(
-                get_population(pop),
-                self.fitting_variables_name_list[idx],
-                fitparams[idx],
-            )
+        ### only set parameters of the fitted neuron model (in case target neuron model is given)
+        if pop == self.pop:
+            ### set fitting parameters
+            for idx in range(len(fitparams)):
+                setattr(
+                    get_population(pop),
+                    self.fitting_variables_name_list[idx],
+                    fitparams[idx],
+                )
 
-        ### set constant parameters
-        for key, val in self.const_params.items():
-            if isinstance(val, str):
-                try:
-                    ### value is str --> name of variable in fitting parameters
-                    setattr(
-                        get_population(pop),
-                        key,
-                        fitparams[
-                            np.where(np.array(self.fitting_variables_name_list) == val)[
-                                0
-                            ][0]
-                        ],
-                    )
-                except:
+            ### set constant parameters
+            for key, val in self.const_params.items():
+                if isinstance(val, str):
                     try:
-                        ### or name of variable in other const parameters
-                        setattr(get_population(pop), key, self.const_params[val])
-                    except:
-                        raise ValueError(
-                            "ERROR: during setting const parameter "
-                            + key
-                            + " value for "
-                            + val
-                            + " not found in fitting parameters or other const parameters!"
+                        ### value is str --> name of variable in fitting parameters
+                        setattr(
+                            get_population(pop),
+                            key,
+                            fitparams[
+                                np.where(
+                                    np.array(self.fitting_variables_name_list) == val
+                                )[0][0]
+                            ],
                         )
-                        quit()
-            else:
-                setattr(get_population(pop), key, val)
+                    except:
+                        try:
+                            ### or name of variable in other const parameters
+                            setattr(get_population(pop), key, self.const_params[val])
+                        except:
+                            raise ValueError(
+                                "ERROR: during setting const parameter "
+                                + key
+                                + " value for "
+                                + val
+                                + " not found in fitting parameters or other const parameters!"
+                            )
+                            quit()
+                else:
+                    setattr(get_population(pop), key, val)
 
     def __test_fit__(self, fitparamsDict):
         """
