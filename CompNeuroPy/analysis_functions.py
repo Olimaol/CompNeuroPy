@@ -1399,13 +1399,15 @@ def sample_data_with_timestep(time_arr, data_arr, timestep):
     return [new_time_arr, new_data_arr]
 
 
-def time_data_add_nan(time_arr, data_arr, axis=0):
+def time_data_add_nan(time_arr, data_arr, fill_time_step=None, axis=0):
     """
     if there are gaps in time_arr --> fill them with respective time values
     fill the corresponding data_arr values with nan
 
-    it is tried to fill the time array with continuously increasing times based on the smallest time difference found
+    by default it is tried to fill the time array with continuously increasing times based on the smallest time difference found
     there can still be discontinuities after filling the arrays (because existing time values are not changed)
+
+    but one can also give a fixed fill time step
 
     Args:
         time_arr: 1D array
@@ -1416,6 +1418,9 @@ def time_data_add_nan(time_arr, data_arr, axis=0):
 
         axis: int
             which dimension of the data_arr belongs to the time_arr
+
+        fill_time_step: number, optional, default=None
+            if there are gaps they are filled with this time step
     """
     time_arr = time_arr.astype(float)
     data_arr = data_arr.astype(float)
@@ -1423,14 +1428,17 @@ def time_data_add_nan(time_arr, data_arr, axis=0):
 
     if data_arr_shape[axis] != time_arr.size:
         print(
-            "ERROR time_data_add_nan: time_arr must have same length as specified axis of data_arr!"
+            "ERROR time_data_add_nan: time_arr must have same length as specified axis (default=0) of data_arr!"
         )
         quit()
 
     ### find gaps
-    time_diff_arr = np.diff(time_arr)
-    time_diff_min = time_diff_arr.min()
-    gaps_arr = time_diff_arr != time_diff_min
+    time_diff_arr = np.round(np.diff(time_arr), 6)
+    if isinstance(fill_time_step, type(None)):
+        time_diff_min = time_diff_arr.min()
+    else:
+        time_diff_min = fill_time_step
+    gaps_arr = time_diff_arr > time_diff_min
 
     ### split arrays at gaps
     time_arr_split = np.split(

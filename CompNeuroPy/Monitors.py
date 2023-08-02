@@ -263,7 +263,7 @@ class recording_times_cl:
         returns a single time array (time values in ms) and a single values array (of the recorded variable)
 
         recordings: recordings array of recording chunks
-        recording_data_str: str of compartment + recorded variable
+        recording_data_str: str of compartment + recorded variable separated by ";"
         mode: how should the time array be generated
             sequential: each chunk starts at zero e.g.: [0,100] + [0,250] --> [0, 1, ..., 100, 0, 1, ..., 250]
             consecutive: each chunk starts at the last stop time of the previous chunk e.g.: [0,100] + [0,250] --> [0, 1, ..., 100, 101, 102, ..., 350]
@@ -331,7 +331,11 @@ class recording_times_cl:
         ### check if there are gaps in the time array
         ### fill them with the corersponding times and
         ### the data array with nan values
-        time_arr, data_arr = af.time_data_add_nan(time_arr, data_arr)
+        time_arr, data_arr = af.time_data_add_nan(
+            time_arr,
+            data_arr,
+            fill_time_step=period_time,
+        )
 
         return [time_arr, data_arr]
 
