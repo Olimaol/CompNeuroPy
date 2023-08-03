@@ -22,7 +22,7 @@ _fit_Bogacz = Neuron(
     equations="""
         dg_ampa/dt = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rates_noise, -g_ampa/tau_ampa, -g_ampa/tau_ampa + increase_noise/dt)
         dg_gaba/dt = -g_gaba/tau_gaba
-        I = I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba)
+        I = I_app - neg(g_ampa*(v - E_ampa)) - pos(g_gaba*(v - E_gaba))
 
         dv/dt      = n2 * v * v + n1 * v + n0 - u + R_input_megOhm*((abs(I))**(1/x))/((I+1e-20)/(abs(I)+ 1e-20))
         du/dt      = a * (b * v - u)

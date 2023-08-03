@@ -21,7 +21,7 @@ Izhikevich2003_noisy_AMPA = Neuron(
     equations="""
         dg_ampa/dt = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rates_noise, -g_ampa/tau_ampa, -g_ampa/tau_ampa + increase_noise/dt)
         dg_gaba/dt = -g_gaba / tau_gaba
-        dv/dt      = 0.04 * v * v + 5 * v + 140 - u + I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba)
+        dv/dt      = 0.04 * v * v + 5 * v + 140 - u + I_app - neg(g_ampa*(v - E_ampa)) - pos(g_gaba*(v - E_gaba))
         du/dt      = a * (b * v - u)
     """,
     spike="""
@@ -56,7 +56,7 @@ Izhikevich2003_flexible_noisy_AMPA = Neuron(
     equations="""
         dg_ampa/dt = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rates_noise, -g_ampa/tau_ampa, -g_ampa/tau_ampa + increase_noise/dt)
         dg_gaba/dt = -g_gaba / tau_gaba
-        dv/dt      = n2 * v * v + n1 * v + n0 - u + I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba)
+        dv/dt      = n2 * v * v + n1 * v + n0 - u + I_app - neg(g_ampa*(v - E_ampa)) - pos(g_gaba*(v - E_gaba))
         du/dt      = a * (b * v - u)
     """,
     spike="""
@@ -91,7 +91,7 @@ Izhikevich2003_flexible_noisy_AMPA_nonlin = Neuron(
     equations="""
         dg_ampa/dt = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rates_noise, -g_ampa/tau_ampa, -g_ampa/tau_ampa + increase_noise/dt)
         dg_gaba/dt = -g_gaba / tau_gaba
-        I = I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba)
+        I = I_app - neg(g_ampa*(v - E_ampa)) - pos(g_gaba*(v - E_gaba))
         dv/dt      = n2 * v * v + n1 * v + n0 - u + f(I,nonlin)
         du/dt      = a * (b * v - u)
     """,
@@ -133,7 +133,7 @@ Izhikevich2003_flexible_noisy_I_nonlin = Neuron(
         dg_gaba/dt  = -g_gaba / tau_gaba
         offset_base = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rate_base_noise, offset_base, Normal(0, 1) * base_noise)
         I_base      = base_mean + offset_base
-        I           = I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba)
+        I           = I_app - neg(g_ampa*(v - E_ampa)) - pos(g_gaba*(v - E_gaba))
         dv/dt       = n2 * v * v + n1 * v + n0 - u + f(I,nonlin) + I_base
         du/dt       = a * (b * v - u)
     """,
@@ -174,7 +174,7 @@ Izhikevich2003_flexible_noisy_AMPA_oscillating = Neuron(
         osc        = amp * sin(t * 2 * pi * (freq / 1000))
         dg_ampa/dt = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rates_noise, -g_ampa/tau_ampa, -g_ampa/tau_ampa + increase_noise/dt)
         dg_gaba/dt = -g_gaba / tau_gaba
-        dv/dt      = n2 * v * v + n1 * v + n0 - u + I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba) + osc
+        dv/dt      = n2 * v * v + n1 * v + n0 - u + I_app - neg(g_ampa*(v - E_ampa)) - pos(g_gaba*(v - E_gaba)) + osc
         du/dt      = a * (b * v - u)
     """,
     spike="""
