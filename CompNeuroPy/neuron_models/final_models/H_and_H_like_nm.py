@@ -109,7 +109,7 @@ HHB.equations.membrane.base = """
     C_m * dv/dt  = -I_L - I_Na - I_Kv1 - I_Kv3 - I_SK - I_Ca + I_app : init=-68
 """
 HHB.equations.membrane.conductance = """
-    C_m * dv/dt  = -I_L - I_Na - I_Kv1 - I_Kv3 - I_SK - I_Ca + I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba) : init=-68
+    C_m * dv/dt  = -I_L - I_Na - I_Kv1 - I_Kv3 - I_SK - I_Ca + I_app - neg(g_ampa*(v - E_ampa)) - pos(g_gaba*(v - E_gaba)) : init=-68
 """
 
 
@@ -223,7 +223,7 @@ HHC.equations.membrane.voltage_clamp = """
     I_inf = -I_L - I_Na - I_Kv3 - I_Kv1 + I_app
 """
 HHC.equations.membrane.conductance = """
-    C_m * dv/dt  = -I_L - I_Na - I_Kv3 - I_Kv1 + I_app - g_ampa*(v - E_ampa) - g_gaba*(v - E_gaba) : init=-70.03810532250634
+    C_m * dv/dt  = -I_L - I_Na - I_Kv3 - I_Kv1 + I_app - neg(g_ampa*(v - E_ampa)) - pos(g_gaba*(v - E_gaba)) : init=-70.03810532250634
 """
 
 H_and_H_Corbit = Neuron(
