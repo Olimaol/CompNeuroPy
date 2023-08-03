@@ -6,6 +6,7 @@ from CompNeuroPy import generate_model as gm
 from CompNeuroPy import extra_functions as ef
 from CompNeuroPy.Monitors import Monitors
 import matplotlib.pyplot as plt
+import sys
 
 # hyperopt
 from hyperopt import fmin, tpe, hp, STATUS_OK
@@ -371,11 +372,10 @@ class opt_neuron:
             )
         if len(all_vars_names) > 0:
             print(
-                "opt_neuron: Error: The neuron_model does not contain parameters",
+                "opt_neuron: WARNING: The neuron_model does not contain parameters",
                 all_vars_names,
                 "!",
             )
-            quit()
 
     def __run_simulator__(self, fitparams):
         """
@@ -541,6 +541,68 @@ class opt_neuron:
             m_list[1] = results
             m_list[2] = all_loss
 
+    def __replace_substrings_except_within_braces__(
+        self, input_string, replacement_mapping
+    ):
+        result = []
+        inside_braces = False
+        i = 0
+
+        while i < len(input_string):
+            if input_string[i] == "{":
+                inside_braces = True
+                result.append(input_string[i])
+                i += 1
+            elif input_string[i] == "}":
+                inside_braces = False
+                result.append(input_string[i])
+                i += 1
+            else:
+                if not inside_braces:
+                    found_match = False
+                    for old_substr, new_substr in replacement_mapping.items():
+                        if input_string[i : i + len(old_substr)] == old_substr:
+                            result.append(new_substr)
+                            i += len(old_substr)
+                            found_match = True
+                            break
+                    if not found_match:
+                        result.append(input_string[i])
+                        i += 1
+                else:
+                    result.append(input_string[i])
+                    i += 1
+
+        return "".join(result)
+
+    def __replace_keys_with_values__(self, dictionary, value_key, value):
+        try:
+            new_value = value
+            sorted_keys = sorted(list(dictionary.keys()), key=len, reverse=True)
+            ### first replace largest keys --> if smaller keys are within larger keys this should not cause a problem
+            for key in sorted_keys:
+                if key in new_value:
+                    ### replace the key in the value
+                    ### only replace things which are not between {}
+                    new_value = self.__replace_substrings_except_within_braces__(
+                        new_value, {key: "{" + key + "}"}
+                    )
+            ### evaluate the value with the values of the dictionary
+            new_value = eval(new_value.format(**dictionary))
+        except:
+            exc_type, exc_value, _ = sys.exc_info()
+            error_message = traceback.format_exception_only(exc_type, exc_value)
+            raise ValueError(
+                " ".join(
+                    [
+                        f"ERROR opt_neuron: evaluate the value {value} of parameter {value_key}"
+                    ]
+                    + error_message
+                )
+            )
+
+        return new_value
+
     def __set_fitting_parameters__(
         self,
         fitparams,
@@ -569,45 +631,33 @@ class opt_neuron:
             monitors=monitors,
         )
 
-        ### only set parameters of the fitted neuron model (in case target neuron model is given)
-        if pop == self.pop:
-            ### set fitting parameters
-            for idx in range(len(fitparams)):
-                setattr(
-                    get_population(pop),
-                    self.fitting_variables_name_list[idx],
-                    fitparams[idx],
+        ### get all variables dict (combine fitting variables and const variables)
+        all_variables_dict = self.const_params.copy()
+
+        for fitting_variable_idx, fitting_variable_name in enumerate(
+            self.fitting_variables_name_list
+        ):
+            all_variables_dict[fitting_variable_name] = fitparams[fitting_variable_idx]
+
+        ### evaluate variables defined by a str
+        for key, val in all_variables_dict.items():
+            if isinstance(val, str):
+                all_variables_dict[key] = self.__replace_keys_with_values__(
+                    all_variables_dict, key, val
                 )
 
-            ### set constant parameters
-            for key, val in self.const_params.items():
-                if isinstance(val, str):
-                    try:
-                        ### value is str --> name of variable in fitting parameters
-                        setattr(
-                            get_population(pop),
-                            key,
-                            fitparams[
-                                np.where(
-                                    np.array(self.fitting_variables_name_list) == val
-                                )[0][0]
-                            ],
-                        )
-                    except:
-                        try:
-                            ### or name of variable in other const parameters
-                            setattr(get_population(pop), key, self.const_params[val])
-                        except:
-                            raise ValueError(
-                                "ERROR: during setting const parameter "
-                                + key
-                                + " value for "
-                                + val
-                                + " not found in fitting parameters or other const parameters!"
-                            )
-                            quit()
-                else:
-                    setattr(get_population(pop), key, val)
+        ### only set parameters of the fitted neuron model (in case target neuron model is given)
+        if pop == self.pop:
+            ### set parameters
+            for param_name, param_val in all_variables_dict.items():
+                pop_parameter_names = get_population(pop).attributes
+                ### only if param_name in parameter attributes
+                if param_name in pop_parameter_names:
+                    setattr(
+                        get_population(pop),
+                        param_name,
+                        param_val,
+                    )
 
     def __test_fit__(self, fitparamsDict):
         """
