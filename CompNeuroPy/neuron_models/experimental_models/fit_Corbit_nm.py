@@ -286,3 +286,51 @@ _Izhikevich2007_Corbit9 = Neuron(
     name="_Izhikevich2007_Corbit9",
     description="Based on Izhikevich2007 adjusted to fit Corbit FSI neuron model. Adjusted version should be able to produce late spiking and non-linear f-I curve. Combination of Corbit6 and Corbit8 without parameter d, but x ",
 )
+
+_Izhikevich2007_Corbit10 = Neuron(
+    parameters="""
+        ### base parameters
+        C               = 1.083990339534819   : population # yF/cm^2
+        k               = 0.05309718629366466 : population
+        v_r             = -81.80651073990241  : population # mV
+        v_t             = -70.1476426599      : population # mV
+        a               = 0.6405371575132652  : population # ms**-1
+        b               = 0.19226726856898893 : population
+        c               = -55.03504481838757  : population # mV
+        d               = 417.74317723840124  : population
+        v_peak          = 30                  : population # mV
+        ### slow currents parameters
+        a_s             = 1                   : population
+        a_n             = 1                   : population
+        b_n             = 1                   : population
+        ### synaptic current parameters
+        tau_ampa        = 1                   : population
+        tau_gaba        = 1                   : population
+        E_ampa          = 0                   : population
+        E_gaba          = -90                 : population
+        I_app           = 0                                # yA/cm^2
+        base_mean       = 0                                # yA/cm^2
+        base_noise      = 0                                # yA/cm^2
+        rate_base_noise = 0                                # 1/s
+    """,
+    equations="""
+        #dg_ampa/dt = -g_ampa/tau_ampa
+        #dg_gaba/dt = -g_gaba/tau_gaba
+        #offset_base = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rate_base_noise, offset_base, Normal(0, 1) * base_noise)
+        #I_base      = base_mean + offset_base
+        I = I_app #+ I_base - neg(g_ampa*(v - E_ampa)) - pos(g_gaba*(v - E_gaba))
+      
+        C * dv/dt = k*(v - v_r)*(v - v_t) - u - b_n*n + I : init=-81.80651073990241
+        du/dt     = a*(b*(v - v_r) - u)
+
+        ds/dt     = a_s*(I - s)
+        dn/dt     = a_n*((I - s) - n)
+    """,
+    spike="v >= v_peak",
+    reset="""
+        v = c
+        u = u + d
+    """,
+    name="_Izhikevich2007_Corbit10",
+    description="Simple neuron model equations from Izhikevich (2007) adjusted version to fit the striatal FSI neuron model from Corbit et al. (2016) should be able to produce late spiking.",
+)
