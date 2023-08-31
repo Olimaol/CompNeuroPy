@@ -284,7 +284,7 @@ class opt_neuron:
         for param_name, param_bounds in self.variables_bounds.items():
             if isinstance(param_bounds, list):
                 fitting_variables_space.append(
-                    hp.uniform(param_name, param_bounds[0], param_bounds[1])
+                    hp.uniform(param_name, min(param_bounds), max(param_bounds))
                 )
         return fitting_variables_space
 

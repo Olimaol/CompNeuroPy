@@ -8,6 +8,7 @@ from .experimental_models.fit_Corbit_nm import (
     _Izhikevich2007_Corbit7,
     _Izhikevich2007_Corbit8,
     _Izhikevich2007_Corbit9,
+    _Izhikevich2007_Corbit10,
 )
 from .experimental_models.fit_Hjorth_nm import (
     _Izhikevich2007_Hjorth_2020_ChIN1,
