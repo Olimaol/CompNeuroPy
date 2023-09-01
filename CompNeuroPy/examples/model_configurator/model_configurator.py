@@ -7,22 +7,29 @@ from ANNarchy import (
     Monitor,
     raster_plot,
     setup,
+    clear,
+    populations,
 )
 from ANNarchy.core.Global import _network
 from CompNeuroPy.neuron_models import (
     poisson_neuron_up_down,
     Izhikevich2003_flexible_noisy_I,
 )
-from CompNeuroPy import generate_model
+from CompNeuroPy import generate_model, cnp_clear
 import numpy as np
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
+import itertools
+from tqdm import tqdm
+from time import time
 
 
 #######   FUNCTIONS   ######
 
 
-def get_rate_1000(net, population, variable_init_dict, monitor, amp):
+def get_rate_1000(
+    net, population, variable_init_dict, monitor, I_app=0, g_ampa=0, g_gaba=0
+):
     """
     simulates 1000 ms a population consisting of a single neuron and returns the firing rate
     """
@@ -30,8 +37,13 @@ def get_rate_1000(net, population, variable_init_dict, monitor, amp):
     net.reset()
     for var_name, var_val in variable_init_dict.items():
         setattr(population, var_name, var_val)
+    ### slow down conductances (i.e. make them constant)
+    population.tau_ampa = 1e20
+    population.tau_gaba = 1e20
     ### simulate
-    population.I_app = amp
+    population.I_app = I_app
+    population.g_ampa = g_ampa
+    population.g_gaba = g_gaba
     net.simulate(1000)
     ### rate is nbr spikes since simulated 1000 ms
     spike_dict = monitor.get("spike")
@@ -39,10 +51,10 @@ def get_rate_1000(net, population, variable_init_dict, monitor, amp):
     return len(t)
 
 
-def predict_I_app(f_list, I_list, f_max):
-    I_f = interp1d(x=f_list, y=I_list, fill_value="extrapolate")
-    I_app = I_f(f_max)
-    return I_app
+def predict_1d(X, y, X_pred):
+    I_f = interp1d(x=X, y=y, fill_value="extrapolate")
+    y_pred = I_f(X_pred)
+    return y_pred
 
 
 def get_init_neuron_variables(net, population):
@@ -55,13 +67,13 @@ def get_init_neuron_variables(net, population):
     return variable_init_dict
 
 
-def get_f_I_curve(net, population, monitor, f_t, population_name):
+def prepare_f_I_g_curve(net, population, monitor, f_t, population_name):
 
     ### get initialization of neuron
     variable_init_dict = get_init_neuron_variables(net, population)
 
     ### get f_0
-    f_0 = get_rate_1000(net, population, variable_init_dict, monitor, amp=0)
+    f_0 = get_rate_1000(net, population, variable_init_dict, monitor)
     f_max = f_0 + f_t + 100
 
     ### now use different I_app values to get a f(I) curve
@@ -84,12 +96,12 @@ def get_f_I_curve(net, population, monitor, f_t, population_name):
         not (0 <= (f_rec - f_max) and (f_rec - f_max) < tolerance) and n_it < n_it_max
     ):
         ### get f for I
-        f_rec = get_rate_1000(net, population, variable_init_dict, monitor, amp=I_app)
+        f_rec = get_rate_1000(net, population, variable_init_dict, monitor, I_app=I_app)
         ### append I_app and f_rec to f_list/I_list
         f_list.append(f_rec)
         I_list.append(I_app)
         ### predict new I_app for f_max
-        I_app = predict_I_app(f_list, I_list, f_max)
+        I_app = predict_1d(X=f_list, y=I_list, X_pred=f_max)
         ### increase iterator
         n_it += 1
 
@@ -97,19 +109,108 @@ def get_f_I_curve(net, population, monitor, f_t, population_name):
         raise UserWarning(
             f"could not find I_max for f_max={f_max} for population {population_name}"
         )
-
-    ### now fill f(I) curve between I bounds
     I_max = I_list[-1]
-    I_value_array = np.linspace(-I_max, I_max, 100)
-    for I_app in I_value_array:
-        if not (I_app in I_list):
-            ### get f for I
-            f_rec = get_rate_1000(
-                net, population, variable_init_dict, monitor, amp=I_app
-            )
-            ### append I_app and f_rec to f_list/I_list
-            f_list.append(f_rec)
-            I_list.append(I_app)
+    print(np.array([I_list, f_list]).T)
+
+    ### now get g_ampa_max, by increasing g_ampa until f_max is reached (same as with I_app)
+    init_g_ampa = 1
+    f_rec = f_0
+    alpha_tol = 0.02
+    tolerance = (f_max - f_0) * alpha_tol
+    n_it_max = 100
+    n_it = 0
+    g_ampa = init_g_ampa
+    g_ampa_list = [0]
+    f_list = [f_0]
+    while (
+        not (0 <= (f_rec - f_max) and (f_rec - f_max) < tolerance) and n_it < n_it_max
+    ):
+        ### get f for g_ampa
+        f_rec = get_rate_1000(
+            net, population, variable_init_dict, monitor, g_ampa=g_ampa
+        )
+        ### append I_app and f_rec to f_list/I_list
+        f_list.append(f_rec)
+        g_ampa_list.append(g_ampa)
+        ### predict new g_ampa_list for f_max
+        g_ampa = predict_1d(X=f_list, y=g_ampa_list, X_pred=f_max)
+        ### increase iterator
+        n_it += 1
+
+    if not (n_it < n_it_max):
+        raise UserWarning(
+            f"could not find g_ampa_max for f_max={f_max} for population {population_name}"
+        )
+    g_ampa_max = g_ampa_list[-1]
+    print(np.array([g_ampa_list, f_list]).T)
+
+    ### now get g_gaba_max, setting I_app to I_max and increasing g_gaba until f = f_0
+    ### now get g_ampa_max, by increasing g_ampa until f_max is reached (same as with I_app)
+    init_g_gaba = 1
+    f_rec = f_max
+    alpha_tol = 0.02
+    tolerance = (f_0 - f_max) * alpha_tol
+    n_it_max = 100
+    n_it = 0
+    g_gaba = init_g_gaba
+    g_gaba_list = [0]
+    f_list = [f_max]
+    while not (0 >= (f_rec - f_0) and (f_rec - f_0) > tolerance) and n_it < n_it_max:
+        ### get f for g_gaba
+        f_rec = get_rate_1000(
+            net, population, variable_init_dict, monitor, g_gaba=g_gaba, I_app=I_max
+        )
+        ### append I_app and f_rec to f_list/I_list
+        f_list.append(f_rec)
+        g_gaba_list.append(g_gaba)
+        ### predict new g_gaba_list for f_0
+        g_gaba = predict_1d(X=f_list, y=g_gaba_list, X_pred=f_0)
+        ### increase iterator
+        n_it += 1
+
+    if not (n_it < n_it_max):
+        raise UserWarning(
+            f"could not find g_gaba_max for f_0={f_0} for population {population_name}"
+        )
+    g_gaba_max = g_gaba_list[-1]
+    print(np.array([g_gaba_list, f_list]).T)
+
+    return [I_max, g_ampa_max, g_gaba_max, variable_init_dict]
+
+
+def get_f_I_g_curve(net, population, monitor, f_t, population_name):
+    ### get max values for I_app, g_ampa and g_gaba, and initial variable values
+    I_max, g_ampa_max, g_gaba_max, variable_init_dict = prepare_f_I_g_curve(
+        net, population, monitor, f_t, population_name
+    )
+
+    ### now fill f(I,g_ampa,g_gaba) curve between I bounds
+    number_of_points = int(len(population) ** (1 / 3))
+    I_app_value_array = np.linspace(-I_max, I_max, 100)
+    g_ampa_value_array = np.linspace(0, g_ampa_max, 100)
+    g_gaba_value_array = np.linspace(0, g_gaba_max, 100)
+
+    iter_list = list(
+        itertools.product(*[I_app_value_array, g_ampa_value_array, g_gaba_value_array])
+    )
+    f_arr = np.zeros(len(iter_list))
+
+    for idx, value_tuple in tqdm(enumerate(iter_list)):
+        I_app_value, g_ampa_value, g_gaba_value = value_tuple
+        ### get f for I
+        f_rec = get_rate_1000(
+            net,
+            population,
+            variable_init_dict,
+            monitor,
+            g_ampa=g_ampa_value,
+            g_gaba=g_gaba_value,
+            I_app=I_app_value,
+        )
+        ### store f_rec
+        f_arr[idx] = f_rec
+
+    quit()
 
     f_I_curve = interp1d(x=I_list, y=f_list, fill_value="extrapolate")
     I_bound_list = [-I_max, I_max]
@@ -335,7 +436,7 @@ if __name__ == "__main__":
         model_kwargs={"params": params},
         name="BGM_part_model",
         description="Part of a BGM circuit",
-        do_compile=False,
+        do_create=False,
     )
 
     ### model configurator should get target firing rates as input
@@ -346,6 +447,10 @@ if __name__ == "__main__":
         "snr": 60,
         "thal": 5,
     }
+
+    ### the model configurator also needs the model CompNeuroPy object
+    if not (model.created):
+        model.create(do_compile=False)
 
     ### create node for one population e.g. SNr
     ### get all afferent populations/projections
@@ -375,6 +480,39 @@ if __name__ == "__main__":
         afferent_projection_dict["size"].append(len(get_projection(projection).pre))
 
     ### get f(I) and I(g_ampa,g_gaba,base_mean)
+
+    ### first create population with 1000 neurons
+    ### and monitor
+    ### then check how long the simulation takes
+    ### then delete the network and calculate the population size for a 10 sec simulation
+    ### then create population and monitor with new size and check simulaiton time
+    ### repeat until simulation duration below 10 sec
+    ### TODO
+
+    for neuron_n in [10, 100, 1000]:
+        cnp_clear()
+        model.create(do_compile=False)
+        ### create many neurons population
+        many_neuron = Population(
+            neuron_n,
+            neuron=get_population(population_name).neuron_type,
+            name="many_neuron",
+        )
+        for attr_name, attr_val in get_population(population_name).init.items():
+            setattr(many_neuron, attr_name, attr_val)
+        ### create Monitor for many neuron population
+        mon_many = Monitor(many_neuron, ["spike", "g_ampa", "g_gaba", "I"])
+
+        net = Network()
+        net.add([many_neuron, mon_many])
+        net.compile()
+        start = time()
+        net.simulate(1000, measure_time=True)
+        end = time()
+        duration = end - start
+        print(duration)
+
+    quit()
 
     ### create single neuron from population
     single_neuron = Population(

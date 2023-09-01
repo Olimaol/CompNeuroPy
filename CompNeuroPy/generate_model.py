@@ -21,23 +21,29 @@ class generate_model:
         self.name = name
         if name == "model":
             self.name = name + str(self.__nr_models__())
-        self.initialized_models[self.name] = False
         self.description = description
         self.model_creation_function = model_creation_function
         self.compile_folder_name = compile_folder_name
         self.model_kwargs = model_kwargs
         self.populations = []
         self.projections = []
-        self.created = False
+        self.initialized_models[self.name] = False
         if do_create:
             self.create(do_compile=do_compile, compile_folder_name=compile_folder_name)
+
+    def __getattr__(self, name):
+        if name == "created":
+            return self.initialized_models[self.name]
+        else:
+            # Default behaviour
+            raise AttributeError
 
     def compile(self, compile_folder_name=None):
         """
         compiles a created model
         """
         ### check if this model is created
-        if self.created:
+        if self.initialized_models[self.name]:
             if compile_folder_name == None:
                 compile_folder_name = self.compile_folder_name
 
@@ -64,7 +70,7 @@ class generate_model:
         """
         creates a model and optionally compiles it directly
         """
-        if self.created:
+        if self.initialized_models[self.name]:
             print("model", self.name, "already created!")
         else:
             initial_existing_model = mf.get_full_model()
@@ -73,7 +79,7 @@ class generate_model:
                 self.model_creation_function(**self.model_kwargs)
             else:
                 self.model_creation_function()
-            self.created = True
+            self.initialized_models[self.name] = True
 
             ### check which populations and projections have been added
             post_existing_model = mf.get_full_model()
@@ -128,7 +134,7 @@ class generate_model:
         """
         ### cach if model is not created, only if created populations and projections are available
         assert (
-            self.created == True
+            self.initialized_models[self.name] == True
         ), f"ERROR set_param: model {self.name} has to be created before setting parameters!"
 
         ### check if compartment is in populations or projections
@@ -171,7 +177,7 @@ class generate_model:
         """
         ### cach if model is not created, only if created populations and projections are available
         assert (
-            self.created == True
+            self.initialized_models[self.name] == True
         ), f"ERROR model {self.name}: model has to be created before checking for double compartments!"
         ### only have to go over populations and check if they are also projections (go over projections not neccessary)
         pop_in_projections_list = []
@@ -191,7 +197,7 @@ class generate_model:
         """
         ### cach if model is not created, only if created populations and projections are available
         assert (
-            self.created == True
+            self.initialized_models[self.name] == True
         ), f"ERROR model {self.name}: model has to be created before creating paramteer dictionary!"
 
         ### create empty paramteter dict

@@ -7,10 +7,12 @@ from ANNarchy import (
     get_time,
     populations,
     projections,
+    clear,
 )
 import os
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy import extra_functions as ef
+from CompNeuroPy.generate_model import generate_model
 
 
 def compile_in_folder(folder_name):
@@ -163,3 +165,12 @@ def get_full_model():
         "populations": [pop.name for pop in populations()],
         "projections": [proj.name for proj in projections()],
     }
+
+
+def cnp_clear():
+    """
+    like clear with ANNarchy, but CompNeuroPy model objects are also cleared
+    """
+    clear()
+    for model_name in generate_model.initialized_models.keys():
+        generate_model.initialized_models[model_name] = False
