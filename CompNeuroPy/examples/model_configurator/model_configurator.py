@@ -33,7 +33,7 @@ from sklearn.model_selection import train_test_split
 
 
 #######   FUNCTIONS   ######
-def train_regr(X_raw, y_raw):
+def train_regr(X_raw, y_raw, X_name_list, y_name):
     """
     shape X = (n_samples, n_features), y = (n_samples, 1)
     """
@@ -80,67 +80,74 @@ def train_regr(X_raw, y_raw):
     print("test_error scaled:", test_error_scaled)
     print("test_error raw:", test_error_raw)
 
-    return f_I_g(regr_model, scaler_X, scaler_y)
+    return regr_function_3p(regr_model, scaler_X, scaler_y, X_name_list, y_name)
 
 
-class f_I_g:
-    def __init__(self, regr_model, scaler_X, scaler_y) -> None:
+class regr_function_3p:
+    def __init__(self, regr_model, scaler_X, scaler_y, X_name_list, y_name) -> None:
         self.regr_model = regr_model
         self.scaler_X = scaler_X
         self.scaler_y = scaler_y
 
-    def __call__(self, I_app=None, g_ampa=None, g_gaba=None):
+        self.X_name_dict = {
+            ["p1", "p2", "p3"][idx_X_name]: X_name
+            for idx_X_name, X_name in enumerate(X_name_list)
+        }
+        self.y_name = y_name
+
+    def __call__(self, p1=None, p2=None, p3=None):
         """
         params:
-            I_app, number or array, default 0
-            g_ampa, number or array, default 0
-            g_gaba, number or array, default 0
+            p1, number or array, default 0
+            p2, number or array, default 0
+            p3, number or array, default 0
 
-            if I_app, g_ampa, g_gaba == array --> same size!
+            if p1, p2, p3 == array --> same size!
 
         return:
-            f_arr
+            y_arr
         """
         ### check which values are given
-        I_app_given = not (isinstance(I_app, type(None)))
-        g_ampa_given = not (isinstance(g_ampa, type(None)))
-        g_gaba_given = not (isinstance(g_gaba, type(None)))
+        p1_given = not (isinstance(p1, type(None)))
+        p2_given = not (isinstance(p2, type(None)))
+        p3_given = not (isinstance(p3, type(None)))
 
         ### reshape all to target shape
-        I_app = np.array(I_app).reshape((-1, 1)).astype(float)
-        g_ampa = np.array(g_ampa).reshape((-1, 1)).astype(float)
-        g_gaba = np.array(g_gaba).reshape((-1, 1)).astype(float)
+        p1 = np.array(p1).reshape((-1, 1)).astype(float)
+        p2 = np.array(p2).reshape((-1, 1)).astype(float)
+        p3 = np.array(p3).reshape((-1, 1)).astype(float)
 
         ### check if arrays of given values have same size
-        size_arr = np.array([I_app.shape[0], g_ampa.shape[0], g_gaba.shape[0]])
-        given_arr = np.array([I_app_given, g_ampa_given, g_gaba_given]).astype(bool)
+        size_arr = np.array([p1.shape[0], p2.shape[0], p3.shape[0]])
+        given_arr = np.array([p1_given, p2_given, p3_given]).astype(bool)
         if len(size_arr[given_arr]) > 0:
             all_size = size_arr[given_arr][0]
             all_same_size = np.all(size_arr[given_arr] == all_size)
             if not all_same_size:
                 raise ValueError(
-                    "f_I_g call: given I_app, g_ampa and g_gaba have to have same size!"
+                    "regr_function_3p call: given p1, p2 and p3 have to have same size!"
                 )
 
         ### set the correctly sized arrays for the not given values
-        if not I_app_given:
-            I_app = np.zeros(all_size).reshape((-1, 1))
-        if not g_ampa_given:
-            g_ampa = np.zeros(all_size).reshape((-1, 1))
-        if not g_gaba_given:
-            g_gaba = np.zeros(all_size).reshape((-1, 1))
+        if not p1_given:
+            p1 = np.zeros(all_size).reshape((-1, 1))
+        if not p2_given:
+            p2 = np.zeros(all_size).reshape((-1, 1))
+        if not p3_given:
+            p3 = np.zeros(all_size).reshape((-1, 1))
 
-        ### predict f_arr
-        X_raw = np.concatenate([I_app, g_ampa, g_gaba], axis=1)
-        f_arr = pred_regr(X_raw, self.regr_model, self.scaler_X, self.scaler_y)
-        f_arr = np.clip(f_arr, 0, None)
+        ### predict y_arr
+        X_raw = np.concatenate([p1, p2, p3], axis=1)
+        y_arr = pred_regr(X_raw, self.regr_model, self.scaler_X, self.scaler_y)[:, 0]
 
-        return f_arr
+        return y_arr
 
 
 def pred_regr(X_raw, regr_model, scaler_X, scaler_y):
     """
     X shape = (n_samples, n_features)
+
+    pred shape = (n_samples, 1)
     """
 
     X_scaled = scaler_X.transform(X_raw)
@@ -227,6 +234,7 @@ def get_init_neuron_variables(net, population):
     variable_init_dict = {
         var_name: getattr(population, var_name) for var_name in population.variables
     }
+    net.reset()
     return variable_init_dict
 
 
@@ -235,9 +243,7 @@ def prepare_f_I_g_curve(net_single_dict, f_t, population_name):
     net = net_single_dict["net"]
     population = net_single_dict["population"]
     monitor = net_single_dict["monitor"]
-
-    ### get initialization of neuron
-    variable_init_dict = get_init_neuron_variables(net, population)
+    variable_init_dict = net_single_dict["variable_init_dict"]
 
     ### get f_0
     f_0 = get_rate_1000(net, population, variable_init_dict, monitor)[0]
@@ -252,7 +258,7 @@ def prepare_f_I_g_curve(net_single_dict, f_t, population_name):
     ### than bounds for I for f(I) curver are -I_max and I_max
     init_I_app = 3
     f_rec = f_0
-    alpha_tol = 0.02
+    alpha_tol = 0.001
     tolerance = (f_max - f_0) * alpha_tol
     n_it_max = 100
     n_it = 0
@@ -286,7 +292,7 @@ def prepare_f_I_g_curve(net_single_dict, f_t, population_name):
     ### now get g_ampa_max, by increasing g_ampa until f_max is reached (same as with I_app)
     init_g_ampa = 1
     f_rec = f_0
-    alpha_tol = 0.02
+    alpha_tol = 0.001
     tolerance = (f_max - f_0) * alpha_tol
     n_it_max = 100
     n_it = 0
@@ -319,7 +325,7 @@ def prepare_f_I_g_curve(net_single_dict, f_t, population_name):
     ### now get g_ampa_max, by increasing g_ampa until f_max is reached (same as with I_app)
     init_g_gaba = 1
     f_rec = f_max
-    alpha_tol = 0.02
+    alpha_tol = 0.001
     tolerance = (f_0 - f_max) * alpha_tol
     n_it_max = 100
     n_it = 0
@@ -374,7 +380,7 @@ def get_f_I_g_curve(net_many_dict, prepare_list):
     g_ampa_arr = I_g_arr[:, 1]
     g_gaba_arr = I_g_arr[:, 2]
 
-    ### get f for I
+    ### get f for all combinations of I, g_ampa and g_gaba
     f_rec_arr = get_rate_1000(
         net_many_dict["net"],
         net_many_dict["population"],
@@ -384,15 +390,24 @@ def get_f_I_g_curve(net_many_dict, prepare_list):
         g_gaba=g_gaba_arr,
         I_app=I_app_arr,
     )
-
+    ### add f_rec to tje f_I_g_data_arr
     f_I_g_data_arr = np.concatenate([I_g_arr, f_rec_arr[:, None]], axis=1)
 
     print("train regr...")
     f_I_g_curve = train_regr(
-        X_raw=f_I_g_data_arr[:, :3], y_raw=f_I_g_data_arr[:, 3][:, None]
+        X_raw=f_I_g_data_arr[:, :3],
+        y_raw=f_I_g_data_arr[:, 3][:, None],
+        X_name_list=["I", "g_ampa", "g_gaba"],
+        y_name="f",
+    )
+    I_f_g_curve = train_regr(
+        X_raw=f_I_g_data_arr[:, 1:],
+        y_raw=f_I_g_data_arr[:, 0][:, None],
+        X_name_list=["g_ampa", "g_gaba", "f"],
+        y_name="I",
     )
 
-    return [f_I_g_curve, I_max, g_ampa_max]
+    return [f_I_g_curve, I_f_g_curve, I_max, g_ampa_max]
 
 
 def BGM_part_function(params):
@@ -589,11 +604,16 @@ def create_single_network(population_name):
     net_single.add([single_neuron, mon_single])
     net_single.compile()
 
+    variable_init_dict = get_init_neuron_variables(
+        net_single, net_single.get(single_neuron)
+    )
+
     ### network dict
     net_single_dict = {
         "net": net_single,
         "population": net_single.get(single_neuron),
         "monitor": net_single.get(mon_single),
+        "variable_init_dict": variable_init_dict,
     }
     return net_single_dict
 
@@ -859,7 +879,7 @@ def get_max_w_of_proj(proj_name, tau_ampa, tau_gaba, g_max):
     init_weight_val = 1
     weight_val = init_weight_val
     g_val = 0
-    alpha_tol = 0.02
+    alpha_tol = 0.001
     tolerance = g_max * alpha_tol
     n_it_max = 100
     n_it = 0
@@ -912,6 +932,61 @@ def get_w_max(afferent_projection_dict, population_name, g_ampa_max, g_gaba_max)
         )
     ### remove weight key from afferent_projection_dict which was added during the process
     afferent_projection_dict.pop("weights")
+
+
+def get_g_values_from_weight_dict(
+    weight_dict, population_name, afferent_projection_dict
+):
+
+    weight_dict_of_pop = weight_dict[population_name]
+    afferent_projection_dict["weights"] = [0] * len(
+        afferent_projection_dict["projection_names"]
+    )
+    for proj_name, weight_val in weight_dict_of_pop.items():
+        proj_idx = afferent_projection_dict["projection_names"].index(proj_name)
+        afferent_projection_dict["weights"][proj_idx] = weight_val
+
+    tau_ampa = get_population(population_name).tau_ampa
+    tau_gaba = get_population(population_name).tau_gaba
+
+    g_ampa, g_gaba = get_g_values(afferent_projection_dict, tau_ampa, tau_gaba)
+
+    return [g_ampa, g_gaba]
+
+
+def check_and_rescale_weights_of_pop(
+    weight_dict, population_name, afferent_projection_dict
+):
+    g_ampa, g_gaba = get_g_values_from_weight_dict(
+        weight_dict=weight_dict,
+        population_name=population_name,
+        afferent_projection_dict=afferent_projection_dict,
+    )
+
+    ### check if they exceed g_max, if yes --> rescale
+    g_ampa_factor = g_ampa / g_ampa_max
+    g_gaba_factor = g_gaba / g_gaba_max
+    if g_ampa_factor > 1:
+        ### rescale all ampa weights
+        for proj_idx in range(len(afferent_projection_dict["projection_names"])):
+            if afferent_projection_dict["target"][proj_idx] == "ampa":
+                proj_name = afferent_projection_dict["projection_names"][proj_idx]
+                weight_dict[population_name][proj_name] *= 1 / g_ampa_factor
+    if g_gaba_factor > 1:
+        ### rescale all ampa weights
+        for proj_idx in range(len(afferent_projection_dict["projection_names"])):
+            if afferent_projection_dict["target"][proj_idx] == "gaba":
+                proj_name = afferent_projection_dict["projection_names"][proj_idx]
+                weight_dict[population_name][proj_name] *= 1 / g_gaba_factor
+
+    if g_ampa_factor > 1 or g_gaba_factor > 1:
+        g_ampa, g_gaba = get_g_values_from_weight_dict(
+            weight_dict=weight_dict,
+            population_name=population_name,
+            afferent_projection_dict=afferent_projection_dict,
+        )
+
+    return [weight_dict, g_ampa, g_gaba]
 
 
 if __name__ == "__main__":
@@ -1060,17 +1135,65 @@ if __name__ == "__main__":
         },
     }
 
-    # get_g_values(afferent_projection_dict, tau_ampa, tau_gaba)
-    quit()
-    ### get f_I_g_curve with many_neuron network
-    f_I_g_curve, I_max, g_ampa_max = get_f_I_g_curve(
+    weight_dict, g_ampa, g_gaba = check_and_rescale_weights_of_pop(
+        weight_dict=weight_dict,
+        population_name=population_name,
+        afferent_projection_dict=afferent_projection_dict,
+    )
+
+    ### get f_I_g_curve and I_f_g_curve with many_neuron network
+    f_I_g_curve, I_f_g_curve, I_max, g_ampa_max = get_f_I_g_curve(
         net_many_dict=net_many_dict,
         prepare_list=prepare_list,
     )
 
+    ### predict I from g_ampa, g_gaba and target firing rate using I_f_g_curve
+    I_pred = I_f_g_curve(
+        p1=g_ampa, p2=g_gaba, p3=target_firing_rate_dict[population_name]
+    )[0]
+    print(f_I_g_curve.X_name_dict)
+    print(I_f_g_curve.X_name_dict)
+    print(f"I(f=[100, 50, 25])={I_f_g_curve(p3=[100,50,25])}")
+    print(
+        f"I_pred(f=f_t={target_firing_rate_dict[population_name]}, g_ampa={g_ampa}, g_gaba={g_gaba})={I_pred}"
+    )
+
+    f_rec = get_rate_1000(
+        net=net_single_dict["net"],
+        population=net_single_dict["population"],
+        variable_init_dict=variable_init_dict,
+        monitor=net_single_dict["monitor"],
+        I_app=I_pred,
+        g_ampa=g_ampa,
+        g_gaba=g_gaba,
+    )
+    print(f"f_rec(I=f_pred={I_pred}, g_ampa={g_ampa}, g_gaba={g_gaba})={f_rec}")
+    print(f"== f_t ({target_firing_rate_dict[population_name]})?")
+
+    ### test more predicted Is
+    I_pred = I_f_g_curve(
+        p1=[g_ampa * fac for fac in np.linspace(1, 0.1, 10)],
+        p2=[g_gaba * fac for fac in np.linspace(1, 0.1, 10)],
+        p3=[target_firing_rate_dict[population_name]] * 10,
+    )
+
+    f_rec_list = []
+    for idx in range(10):
+        f_rec = get_rate_1000(
+            net=net_single_dict["net"],
+            population=net_single_dict["population"],
+            variable_init_dict=variable_init_dict,
+            monitor=net_single_dict["monitor"],
+            I_app=I_pred[idx],
+            g_ampa=[g_ampa * fac for fac in np.linspace(1, 0.1, 10)][idx],
+            g_gaba=[g_gaba * fac for fac in np.linspace(1, 0.1, 10)][idx],
+        )
+        f_rec_list.append(f_rec)
+    print(f"f_rec == {target_firing_rate_dict[population_name]}?: {f_rec_list}")
+
     ### get f(I)
     I_arr = np.linspace(-I_max, I_max, 100)
-    f_arr = f_I_g_curve(I_app=I_arr)
+    f_arr = np.clip(f_I_g_curve(p1=I_arr), 0, None)
     plt.figure()
     plt.plot(I_arr, f_arr)
     plt.xlabel("I")
@@ -1080,7 +1203,7 @@ if __name__ == "__main__":
 
     ### get f(g_ampa)
     g_ampa_arr = np.linspace(0, g_ampa_max, 100)
-    f_arr = f_I_g_curve(g_ampa=g_ampa_arr)
+    f_arr = np.clip(f_I_g_curve(p2=g_ampa_arr), 0, None)
     plt.figure()
     plt.plot(g_ampa_arr, f_arr)
     plt.xlabel("g_ampa")
