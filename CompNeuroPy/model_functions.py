@@ -174,3 +174,5 @@ def cnp_clear():
     clear()
     for model_name in generate_model.initialized_models.keys():
         generate_model.initialized_models[model_name] = False
+    for model_name in generate_model.compiled_models.keys():
+        generate_model.compiled_models[model_name] = False

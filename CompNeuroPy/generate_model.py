@@ -7,6 +7,7 @@ import pandas as pd
 
 class generate_model:
     initialized_models = {}
+    compiled_models={}
 
     def __init__(
         self,
@@ -28,12 +29,15 @@ class generate_model:
         self.populations = []
         self.projections = []
         self.initialized_models[self.name] = False
+        self.compiled_models[self.name] = False
         if do_create:
             self.create(do_compile=do_compile, compile_folder_name=compile_folder_name)
 
     def __getattr__(self, name):
         if name == "created":
             return self.initialized_models[self.name]
+        elif name=="compiled":
+            return self.compiled_models[self.name]
         else:
             # Default behaviour
             raise AttributeError
@@ -58,6 +62,7 @@ class generate_model:
                     + "\n"
                 )
             mf.compile_in_folder(compile_folder_name)
+            self.compiled_models[self.name] = True
         else:
             print("\n")
             assert False, (

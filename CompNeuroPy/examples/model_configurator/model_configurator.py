@@ -10,6 +10,7 @@ from ANNarchy import (
     clear,
     populations,
     dt,
+    SpikeSourceArray,
 )
 from ANNarchy.core.Global import _network
 from CompNeuroPy.neuron_models import (
@@ -153,7 +154,7 @@ def get_rate_1000(
     net, population, variable_init_dict, monitor, I_app=0, g_ampa=0, g_gaba=0
 ):
     """
-    simulates 1000 ms a population consisting of a single neuron and returns the firing rate
+    simulates 1000 ms a population and returns the firing rate of each neuron
     """
     ### reset and set init values
     net.reset()
@@ -179,9 +180,43 @@ def get_rate_1000(
     return f_arr
 
 
+def get_g_1000(net_dict, afferent_projection_dict):
+    """
+    simulates 1000 ms a population consisting of a single neuron and returns the g_ampa and g_gaba value
+    """
+    net = net_dict["net"]
+    monitor = net_dict["monitor"]
+    ampa_inp_proj = net_dict["ampa_inp_proj"]
+    gaba_inp_proj = net_dict["gaba_inp_proj"]
+    ### reset
+    net.reset()
+    ### set weights of the projections
+    ampa_weight_list = []
+    if not isinstance(ampa_inp_proj, type(None)):
+        for idx_proj in range(len(afferent_projection_dict["projection_names"])):
+            if afferent_projection_dict["target"][idx_proj] == "ampa":
+                ampa_weight_list.append(afferent_projection_dict["weights"][idx_proj])
+        ampa_inp_proj.w = np.array(ampa_weight_list)
+    gaba_weight_list = []
+    if not isinstance(gaba_inp_proj, type(None)):
+        for idx_proj in range(len(afferent_projection_dict["projection_names"])):
+            if afferent_projection_dict["target"][idx_proj] == "gaba":
+                gaba_weight_list.append(afferent_projection_dict["weights"][idx_proj])
+        gaba_inp_proj.w = np.array(gaba_weight_list)
+    ### simulate
+    net.simulate(1000)
+    ### get g values
+    g_ampa_arr = monitor.get("g_ampa")[:, 0]
+    g_gaba_arr = monitor.get("g_gaba")[:, 0]
+    g_ampa_val = np.mean(g_ampa_arr[int(len(g_ampa_arr) * 0.7) :])
+    g_gaba_val = np.mean(g_gaba_arr[int(len(g_gaba_arr) * 0.7) :])
+
+    return [g_ampa_val, g_gaba_val]
+
+
 def predict_1d(X, y, X_pred):
-    I_f = interp1d(x=X, y=y, fill_value="extrapolate")
-    y_pred = I_f(X_pred)
+    y_X = interp1d(x=X, y=y, fill_value="extrapolate")
+    y_pred = float(y_X(X_pred))
     return y_pred
 
 
@@ -195,7 +230,11 @@ def get_init_neuron_variables(net, population):
     return variable_init_dict
 
 
-def prepare_f_I_g_curve(net, population, monitor, f_t, population_name):
+def prepare_f_I_g_curve(net_single_dict, f_t, population_name):
+
+    net = net_single_dict["net"]
+    population = net_single_dict["population"]
+    monitor = net_single_dict["monitor"]
 
     ### get initialization of neuron
     variable_init_dict = get_init_neuron_variables(net, population)
@@ -220,6 +259,8 @@ def prepare_f_I_g_curve(net, population, monitor, f_t, population_name):
     I_app = init_I_app
     I_list = [0]
     f_list = [f_0]
+    print(population_name)
+    print(f"f_max: {f_max}")
     while (
         not (0 <= (f_rec - f_max) and (f_rec - f_max) < tolerance) and n_it < n_it_max
     ):
@@ -285,6 +326,7 @@ def prepare_f_I_g_curve(net, population, monitor, f_t, population_name):
     g_gaba = init_g_gaba
     g_gaba_list = [0]
     f_list = [f_max]
+    print(f"f_0: {f_0}")
     while not (0 >= (f_rec - f_0) and (f_rec - f_0) > tolerance) and n_it < n_it_max:
         ### get f for g_gaba
         f_rec = get_rate_1000(
@@ -308,15 +350,9 @@ def prepare_f_I_g_curve(net, population, monitor, f_t, population_name):
     return [I_max, g_ampa_max, g_gaba_max, variable_init_dict]
 
 
-def get_f_I_g_curve(net_single_dict, net_many_dict, f_t, population_name):
-    ### get max values for I_app, g_ampa and g_gaba, and initial variable values
-    I_max, g_ampa_max, g_gaba_max, variable_init_dict = prepare_f_I_g_curve(
-        net_single_dict["net"],
-        net_single_dict["population"],
-        net_single_dict["monitor"],
-        f_t,
-        population_name,
-    )
+def get_f_I_g_curve(net_many_dict, prepare_list):
+
+    I_max, g_ampa_max, g_gaba_max, variable_init_dict = prepare_list
 
     ### now fill f(I,g_ampa,g_gaba) curve between I, g_ampa and g_gaba bounds
     number_of_points = np.round(len(net_many_dict["population"]) ** (1 / 3), 0).astype(
@@ -537,6 +573,347 @@ def get_nr_many_neurons(model, population_name):
     return nr_neuron_10s
 
 
+def create_single_network(population_name):
+    ### create single neuron from population
+    single_neuron = Population(
+        1, neuron=get_population(population_name).neuron_type, name="single_neuron"
+    )
+    for attr_name, attr_val in get_population(population_name).init.items():
+        setattr(single_neuron, attr_name, attr_val)
+
+    ### create Monitor for single neuron
+    mon_single = Monitor(single_neuron, ["spike"])
+
+    ### create network with single neuron
+    net_single = Network()
+    net_single.add([single_neuron, mon_single])
+    net_single.compile()
+
+    ### network dict
+    net_single_dict = {
+        "net": net_single,
+        "population": net_single.get(single_neuron),
+        "monitor": net_single.get(mon_single),
+    }
+    return net_single_dict
+
+
+def create_many_network(model, population_name):
+    ### create many neuron population whose simulation of 1000ms takes about 10sec
+    nr_many_neurons = get_nr_many_neurons(model, population_name)
+    print("nr_many_neurons:", nr_many_neurons)
+    many_neuron = Population(
+        nr_many_neurons,
+        neuron=get_population(population_name).neuron_type,
+        name="many_neuron",
+    )
+    for attr_name, attr_val in get_population(population_name).init.items():
+        setattr(many_neuron, attr_name, attr_val)
+
+    ### create Monitor for many neuron
+    mon_many = Monitor(many_neuron, ["spike"])
+
+    ### create network with many neuron
+    net_many = Network()
+    net_many.add([many_neuron, mon_many])
+    net_many.compile()
+
+    ### network dict
+    net_many_dict = {
+        "net": net_many,
+        "population": net_many.get(many_neuron),
+        "monitor": net_many.get(mon_many),
+    }
+
+    return net_many_dict
+
+
+def get_afferent_projection_dict(model, population_name):
+    afferent_projection_dict = {}
+    afferent_projection_dict["projection_names"] = []
+    for projection in model.projections:
+        if get_projection(projection).post.name == population_name:
+            afferent_projection_dict["projection_names"].append(projection)
+
+    ### get target firing rates resting-state for afferent projections
+    afferent_projection_dict["target firing rate"] = []
+    afferent_projection_dict["probability"] = []
+    afferent_projection_dict["size"] = []
+    afferent_projection_dict["target"] = []
+    for projection in afferent_projection_dict["projection_names"]:
+        pre_pop_name = get_projection(projection).pre.name
+        ### target firing rate
+        afferent_projection_dict["target firing rate"].append(
+            target_firing_rate_dict[pre_pop_name]
+        )
+        ### probability, _connection_args only if connect_fixed_prob (i.e. connector_name==Random)
+        afferent_projection_dict["probability"].append(
+            get_projection(projection)._connection_args[0]
+        )
+        ### size
+        afferent_projection_dict["size"].append(len(get_projection(projection).pre))
+        ### target type
+        afferent_projection_dict["target"].append(get_projection(projection).target)
+
+    return afferent_projection_dict
+
+
+# def create_single_with_inputs_network(population_name, afferent_projection_dict):
+#     ### create single neuron from population
+#     single_neuron_with_inputs = Population(
+#         1,
+#         neuron=get_population(population_name).neuron_type,
+#         name="single_neuron_with_inputs",
+#     )
+#     for attr_name, attr_val in get_population(population_name).init.items():
+#         setattr(single_neuron_with_inputs, attr_name, attr_val)
+
+#     ### create input populations
+#     proj_spike_times_ampa_list = []
+#     proj_spike_times_gaba_list = []
+#     for idx_projection in range(len(afferent_projection_dict["projection_names"])):
+#         spike_frequency = (
+#             afferent_projection_dict["target firing rate"][idx_projection]
+#             * afferent_projection_dict["probability"][idx_projection]
+#             * afferent_projection_dict["size"][idx_projection]
+#         )
+#         print(
+#             afferent_projection_dict["projection_names"][idx_projection],
+#             spike_frequency,
+#         )
+#         spike_times = np.arange(0, 1000, 1 / spike_frequency)
+#         if afferent_projection_dict["target"][idx_projection] == "ampa":
+
+#             proj_spike_times_ampa_list.append(spike_times)
+#         else:
+#             proj_spike_times_gaba_list.append(spike_times)
+
+#     ### create input populations, different neurons = different afferent projections
+#     if len(proj_spike_times_ampa_list) > 0:
+#         ampa_input_pop = SpikeSourceArray(
+#             spike_times=proj_spike_times_ampa_list, name="single_neuron_ampa_inputs"
+#         )
+#     if len(proj_spike_times_gaba_list) > 0:
+#         gaba_input_pop = SpikeSourceArray(
+#             spike_times=proj_spike_times_gaba_list, name="single_neuron_gaba_inputs"
+#         )
+
+#     ### connect inputs to single neuron
+#     if len(proj_spike_times_ampa_list) > 0:
+#         ampa_input_proj = Projection(
+#             pre=ampa_input_pop,
+#             post=single_neuron_with_inputs,
+#             target="ampa",
+#             name="ampa_input_proj",
+#         )
+#         ampa_input_proj.connect_all_to_all(weights=0, force_multiple_weights=True)
+#     if len(proj_spike_times_gaba_list) > 0:
+#         gaba_input_proj = Projection(
+#             pre=gaba_input_pop,
+#             post=single_neuron_with_inputs,
+#             target="gaba",
+#             name="gaba_input_proj",
+#         )
+#         gaba_input_proj.connect_all_to_all(weights=0, force_multiple_weights=True)
+
+#     ### create Monitor for single neuron
+#     mon_single_with_inputs = Monitor(single_neuron_with_inputs, ["g_ampa", "g_gaba"])
+
+#     ### create network with single neuron
+#     net_single_with_inputs = Network()
+#     net_single_with_inputs.add(
+#         [
+#             single_neuron_with_inputs,
+#             mon_single_with_inputs,
+#         ]
+#     )
+#     if len(proj_spike_times_ampa_list) > 0:
+#         net_single_with_inputs.add(
+#             [
+#                 ampa_input_pop,
+#                 ampa_input_proj,
+#             ]
+#         )
+#     if len(proj_spike_times_gaba_list) > 0:
+#         net_single_with_inputs.add(
+#             [
+#                 gaba_input_pop,
+#                 gaba_input_proj,
+#             ]
+#         )
+#     net_single_with_inputs.compile()
+
+#     ### network dict
+#     net_single_with_inputs_dict = {
+#         "net": net_single_with_inputs,
+#         "monitor": net_single_with_inputs.get(mon_single_with_inputs),
+#         "population": net_single_with_inputs.get(single_neuron_with_inputs),
+#     }
+#     if len(proj_spike_times_ampa_list) > 0:
+#         net_single_with_inputs_dict["ampa_input_proj"] = net_single_with_inputs.get(
+#             ampa_input_proj
+#         )
+#     else:
+#         net_single_with_inputs_dict["ampa_input_proj"] = None
+#     if len(proj_spike_times_gaba_list) > 0:
+#         net_single_with_inputs_dict["gaba_input_proj"] = net_single_with_inputs.get(
+#             gaba_input_proj
+#         )
+#     else:
+#         net_single_with_inputs_dict["gaba_input_proj"] = None
+#     return net_single_with_inputs_dict
+
+
+def get_mean_g_1000(spike_times_arr, spike_weights_arr, tau):
+    ### for isi calculation append last spike at 1000ms
+    isis_g_arr = np.diff(np.concatenate([spike_times_arr, np.array([1000])]))
+    ### calc mean g
+    mean_w = np.mean(spike_weights_arr)
+    mean_isi = np.mean(isis_g_arr)
+    mean_g = mean_w / ((1 / np.exp(-mean_isi / tau)) - 1)
+
+    return mean_g
+
+
+def get_g_values(afferent_projection_dict, tau_ampa, tau_gaba):
+    ### get spike times over 1000 ms for ampa and gaba inputs based on afferent_projection_dict
+    proj_spike_times_ampa_list = []
+    proj_spike_weights_ampa_list = []
+    proj_spike_times_gaba_list = []
+    proj_spike_weights_gaba_list = []
+    for idx_projection in range(len(afferent_projection_dict["projection_names"])):
+        spike_frequency = (
+            afferent_projection_dict["target firing rate"][idx_projection]
+            * afferent_projection_dict["probability"][idx_projection]
+            * afferent_projection_dict["size"][idx_projection]
+        )
+        spike_times = np.arange(0, 1, 1 / spike_frequency)
+        spike_times = spike_times * 1000
+        if afferent_projection_dict["target"][idx_projection] == "ampa":
+            proj_spike_times_ampa_list.append(spike_times)
+            proj_spike_weights_ampa_list.append(
+                np.ones(len(spike_times))
+                * afferent_projection_dict["weights"][idx_projection]
+            )
+        else:
+            proj_spike_times_gaba_list.append(spike_times)
+            proj_spike_weights_gaba_list.append(
+                np.ones(len(spike_times))
+                * afferent_projection_dict["weights"][idx_projection]
+            )
+    ### concatenate spike times of different projections
+    ### ampa
+    proj_spike_times_ampa_arr = np.concatenate(proj_spike_times_ampa_list)
+    proj_spike_weights_ampa_arr = np.concatenate(proj_spike_weights_ampa_list)
+    ### gaba
+    proj_spike_times_gaba_arr = np.concatenate(proj_spike_times_gaba_list)
+    proj_spike_weights_gaba_arr = np.concatenate(proj_spike_weights_gaba_list)
+    ### sort the spike times and corresponding ids
+    ### ampa
+    sort_idx_ampa = np.argsort(proj_spike_times_ampa_arr)
+    proj_spike_times_ampa_arr = proj_spike_times_ampa_arr[sort_idx_ampa]
+    proj_spike_weights_ampa_arr = proj_spike_weights_ampa_arr[sort_idx_ampa]
+    ### gaba
+    sort_idx_gaba = np.argsort(proj_spike_times_gaba_arr)
+    proj_spike_times_gaba_arr = proj_spike_times_gaba_arr[sort_idx_gaba]
+    proj_spike_weights_gaba_arr = proj_spike_weights_gaba_arr[sort_idx_gaba]
+
+    ### calculate mean g values
+    ### ampa
+    mean_ampa = get_mean_g_1000(
+        spike_times_arr=proj_spike_times_ampa_arr,
+        spike_weights_arr=proj_spike_weights_ampa_arr,
+        tau=tau_ampa,
+    )
+    ### gaba
+    mean_gaba = get_mean_g_1000(
+        spike_times_arr=proj_spike_times_gaba_arr,
+        spike_weights_arr=proj_spike_weights_gaba_arr,
+        tau=tau_gaba,
+    )
+
+    return [mean_ampa, mean_gaba]
+
+
+def get_g_of_single_proj(weight, proj_name, tau_ampa, tau_gaba):
+    afferent_projection_dict["weights"] = []
+    ### set only the given proj to 1
+    for idx_proj in range(len(afferent_projection_dict["projection_names"])):
+        if afferent_projection_dict["projection_names"][idx_proj] == proj_name:
+            afferent_projection_dict["weights"].append(weight)
+            proj_target_type = afferent_projection_dict["target"][idx_proj]
+        else:
+            afferent_projection_dict["weights"].append(0)
+    g_ampa_val, g_gaba_val = get_g_values(afferent_projection_dict, tau_ampa, tau_gaba)
+    if proj_target_type == "ampa":
+        g_val = g_ampa_val
+    else:
+        g_val = g_gaba_val
+    return g_val
+
+
+def get_max_w_of_proj(proj_name, tau_ampa, tau_gaba, g_max):
+
+    weight_list = [0]
+    g_list = [0]
+    init_weight_val = 1
+    weight_val = init_weight_val
+    g_val = 0
+    alpha_tol = 0.02
+    tolerance = g_max * alpha_tol
+    n_it_max = 100
+    n_it = 0
+    ###
+    while (
+        not (0 <= (g_val - g_max) and (g_val - g_max) < tolerance) and n_it < n_it_max
+    ):
+        ### get f for I
+        g_val = get_g_of_single_proj(
+            weight=weight_val, proj_name=proj_name, tau_ampa=tau_ampa, tau_gaba=tau_gaba
+        )
+        ### append I_app and f_rec to f_list/I_list
+        g_list.append(g_val)
+        weight_list.append(weight_val)
+        # print(g_list)
+        # print(weight_list)
+        ### predict new I_app for f_max
+        weight_val = predict_1d(X=g_list, y=weight_list, X_pred=g_max)
+        ### increase iterator
+        n_it += 1
+    print(np.array([weight_list, g_list]).T)
+
+    max_w = weight_list[-1]
+    return max_w
+
+
+def get_w_max(afferent_projection_dict, population_name, g_ampa_max, g_gaba_max):
+
+    tau_ampa = get_population(population_name).tau_ampa
+    tau_gaba = get_population(population_name).tau_gaba
+
+    ### loop over afferent projections
+    print(f"g_ampa_max: {g_ampa_max}, g_gaba_max: {g_gaba_max}")
+    afferent_projection_dict["max_weight"] = []
+    for idx_proj in range(len(afferent_projection_dict["projection_names"])):
+        print(afferent_projection_dict["projection_names"][idx_proj])
+        ### find max weight for projection
+        proj_target_type = afferent_projection_dict["target"][idx_proj]
+        if proj_target_type == "ampa":
+            g_max = g_ampa_max
+        else:
+            g_max = g_gaba_max
+        afferent_projection_dict["max_weight"].append(
+            get_max_w_of_proj(
+                proj_name=afferent_projection_dict["projection_names"][idx_proj],
+                tau_ampa=tau_ampa,
+                tau_gaba=tau_gaba,
+                g_max=g_max,
+            )
+        )
+    ### remove weight key from afferent_projection_dict which was added during the process
+    afferent_projection_dict.pop("weights")
+
+
 if __name__ == "__main__":
     #######   PARAMETERS   ######
     params = {}
@@ -623,84 +1000,72 @@ if __name__ == "__main__":
     }
 
     ### the model configurator also needs the model CompNeuroPy object
-    if not (model.created):
-        model.create(do_compile=False)
+    ### clear ANNarchy and create model
+    cnp_clear()
+    model.create(do_compile=False)
 
     ### create node for one population e.g. SNr
     ### get all afferent populations/projections
     population_name = "snr"
 
-    afferent_projection_dict = {}
-    afferent_projection_dict["projection names"] = []
-    for projection in model.projections:
-        if get_projection(projection).post.name == population_name:
-            afferent_projection_dict["projection names"].append(projection)
-
-    ### get target firing rates resting-state for afferent projections
-    afferent_projection_dict["target firing rate"] = []
-    afferent_projection_dict["probability"] = []
-    afferent_projection_dict["size"] = []
-    for projection in afferent_projection_dict["projection names"]:
-        pre_pop_name = get_projection(projection).pre.name
-        ### target firing rate
-        afferent_projection_dict["target firing rate"].append(
-            target_firing_rate_dict[pre_pop_name]
-        )
-        ### probability, _connection_args only if connect_fixed_prob (i.e. connector_name==Random)
-        afferent_projection_dict["probability"].append(
-            get_projection(projection)._connection_args[0]
-        )
-        ### size
-        afferent_projection_dict["size"].append(len(get_projection(projection).pre))
-
-    ### get f(I) and I(g_ampa,g_gaba,base_mean)
-
-    ### create many neuron population whose simulation of 1000ms takes about 10sec
-    nr_many_neurons = get_nr_many_neurons(model, population_name)
-    many_neuron = Population(
-        nr_many_neurons,
-        neuron=get_population(population_name).neuron_type,
-        name="many_neuron",
+    ### get afferent projection dict
+    afferent_projection_dict = get_afferent_projection_dict(
+        model=model, population_name=population_name
     )
-    for attr_name, attr_val in get_population(population_name).init.items():
-        setattr(many_neuron, attr_name, attr_val)
 
-    ### create Monitor for many neuron
-    mon_many = Monitor(many_neuron, ["spike", "g_ampa", "g_gaba"])
+    ### get max values for I_app, g_ampa and g_gaba
+    ### first create single neuron network
+    ### before single_neuron also create many_neuron for later
+    net_many_dict = create_many_network(model=model, population_name=population_name)
+    net_single_dict = create_single_network(population_name=population_name)
 
-    ### create network with many neuron
-    net_many = Network()
-    net_many.add([many_neuron, mon_many])
-    net_many.compile()
-
-    ### create single neuron from population
-    single_neuron = Population(
-        1, neuron=get_population(population_name).neuron_type, name="single_neuron"
-    )
-    for attr_name, attr_val in get_population(population_name).init.items():
-        setattr(single_neuron, attr_name, attr_val)
-
-    ### create Monitor for single neuron
-    mon_single = Monitor(single_neuron, ["spike", "g_ampa", "g_gaba", "I"])
-
-    ### create network with single neuron
-    net_single = Network()
-    net_single.add([single_neuron, mon_single])
-    net_single.compile()
-
-    f_I_g_curve, I_max, g_ampa_max = get_f_I_g_curve(
-        net_single_dict={
-            "net": net_single,
-            "population": net_single.get(single_neuron),
-            "monitor": net_single.get(mon_single),
-        },
-        net_many_dict={
-            "net": net_many,
-            "population": net_many.get(many_neuron),
-            "monitor": net_many.get(mon_many),
-        },
+    ### get max values for I_app, g_ampa and g_gaba, and initial variable values
+    prepare_list = prepare_f_I_g_curve(
+        net_single_dict=net_single_dict,
         f_t=target_firing_rate_dict[population_name],
         population_name=population_name,
+    )
+    I_max, g_ampa_max, g_gaba_max, variable_init_dict = prepare_list
+
+    ### with g_ampa_max and g_gaba_max get the max_w values for the afferent projections
+    get_w_max(
+        afferent_projection_dict=afferent_projection_dict,
+        population_name=population_name,
+        g_ampa_max=g_ampa_max,
+        g_gaba_max=g_gaba_max,
+    )
+    print(afferent_projection_dict)
+    return_dict_for_pop = {
+        proj_name: afferent_projection_dict["max_weight"][proj_idx]
+        for proj_idx, proj_name in enumerate(
+            afferent_projection_dict["projection_names"]
+        )
+    }
+
+    max_w_return_dict = {"snr": return_dict_for_pop}
+    print("max_w_return_dict")
+    print(max_w_return_dict)
+
+    ### now the user has max w (so far without projection conditions)
+    ### return the user a dict, keys= population name, values = dicts with keys = afferent projections, vals = max_w
+    ### now the user selects w and the mean_base should beautomatically found
+    ### the user should give the weights in the exact form as the max weights were returne (dict of dicts)
+    weight_dict = {
+        "pop_1": {"aff_proj_11": 10, "aff_proj_12": 5},
+        "pop_2": {"aff_proj_21": 1, "aff_proj_22": 0.5},
+        "snr": {
+            "stn__snr": 6.254214832726668,
+            "gpe__snr": 0.5124776746963882,
+            "snr__snr": 0.355887274094714,
+        },
+    }
+
+    # get_g_values(afferent_projection_dict, tau_ampa, tau_gaba)
+    quit()
+    ### get f_I_g_curve with many_neuron network
+    f_I_g_curve, I_max, g_ampa_max = get_f_I_g_curve(
+        net_many_dict=net_many_dict,
+        prepare_list=prepare_list,
     )
 
     ### get f(I)
@@ -723,6 +1088,6 @@ if __name__ == "__main__":
     plt.savefig("tmp_f_g_ampa.png")
     plt.close("all")
 
-    ### remove all networks etc and compile the model
+    ### after all clear ANNarchy and create model
     cnp_clear()
-    model.create()
+    model.create(do_compile=False)
