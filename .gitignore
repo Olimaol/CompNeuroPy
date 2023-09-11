@@ -9,3 +9,4 @@ dist/
 *annarchy/
 *tmp.py
 *.~lock*
+*model_conf_log
