@@ -1,13 +1,9 @@
-from ANNarchy import (
-    Population,
-    Projection,
-    setup,
-)
+from ANNarchy import Population, Projection, setup, simulate, get_population
 from CompNeuroPy.neuron_models import (
     poisson_neuron_up_down,
     Izhikevich2003_flexible_noisy_I,
 )
-from CompNeuroPy import generate_model
+from CompNeuroPy import generate_model, Monitors, plot_recordings
 from model_configurator_cnp import model_configurator
 
 
@@ -234,7 +230,8 @@ if __name__ == "__main__":
         do_create=False,
     )
 
-    ### model configurator should get target firing rates as input
+    ### model configurator should get target resting-state firing rates for the
+    ### model populations one wants to configure and their afferents as input
     target_firing_rate_dict = {
         "cor": 15,
         "stn": 30,
@@ -244,45 +241,70 @@ if __name__ == "__main__":
     }
     do_not_config_list = ["cor"]
 
+    ### initialize model_configurator
     model_conf = model_configurator(
         model,
         target_firing_rate_dict,
         do_not_config_list=do_not_config_list,
         print_guide=True,
+        I_app_variable="I_app",
     )
 
-    weight_dict = model_conf.get_max_syn()
-    print("user weight_dict:")
-    print(weight_dict)
+    ### obtain the maximum synaptic loads for the populations and the
+    ### maximum weights of their afferent projections
+    model_conf.get_max_syn()
 
-    ### model_configurator should print
-    ### now set weights or synaptic load and contribution
-    ### and for which projections
-
-    ### now give a weights dict
-    ### 1st possibility is directly selecting weights --> can check weight dict for w_max
-    ### 2nd possibility is to select relative contributions of afferents and the total
-    ### amount of g_ampa and g_gaba which should be archived by afferents relative to
-    ### g_ampa max and g_gaba_max
-
-    ### 1st define synaptic load of populations
-    ### --> for each population a list with 0 to 2 values
-    ### 0 - no afferents
-    ### 1 - only ampa or only gaba afferents
-    ### 2 - ampa and gaba afferents (first value is ampa)
-    ### the model_configurator expects the correct number of values, if not given --> error
-    ### if a single value instead of a dict is given, all synaptic loads are equal
-
+    ### now either set weights directly or define synaptic load of populations
+    ### and the contributions of their afferent projections
     synaptic_load_dict = {
         "stn": [0.3, 0.3],
-        "gpe": [0.3, 0.3],
+        "gpe": [0.3],
         "snr": [0.3, 0.3],
-        "thal": [0.3, 0.3],
+        "thal": [0.7],
     }
-    synaptic_contribution_dict = model_conf.set_synaptic_load(synaptic_load_dict)
+    synaptic_load_dict = 0
+    synaptic_contribution_dict = {"snr": {"gaba": {"gpe__snr": 0.7, "snr__snr": 0.3}}}
+    synaptic_contribution_dict = model_conf.set_syn_load(
+        synaptic_load_dict, synaptic_contribution_dict
+    )
 
-    ### after this model_configurator tells you for which projections you have to define relative contributions
-    ### for this it returns a template dict were you can add the factors
+    ### after setting the weights i.e. the synaptic load/contributions
+    ### get the baseline currents
+    I_base_dict = model_conf.set_base(I_base_variable="base_mean")
+    print("user I_base:")
+    print(I_base_dict)
 
-    synaptic_contribution_dict = []  # ...
-    model_conf.set_synaptic_contribution(synaptic_contribution_dict)
+    ### do a test simulation
+    mon = Monitors(
+        {
+            "pop;cor": ["spike"],
+            "pop;stn": ["spike"],
+            "pop;gpe": ["spike"],
+            "pop;snr": ["spike"],
+            "pop;thal": ["spike"],
+        }
+    )
+    mon.start()
+    simulate(1000)
+    get_population("cor").rates = target_firing_rate_dict["cor"]
+    simulate(2000)
+
+    ### get recordings
+    recordings = mon.get_recordings()
+    recording_times = mon.get_recording_times()
+
+    ### plot recordings
+    plot_recordings(
+        figname="model_recordings.png",
+        recordings=recordings,
+        recording_times=recording_times,
+        chunk=0,
+        shape=(5, 1),
+        plan=[
+            "1;cor;spike;hybrid",
+            "2;stn;spike;hybrid",
+            "3;gpe;spike;hybrid",
+            "4;snr;spike;hybrid",
+            "5;thal;spike;hybrid",
+        ],
+    )

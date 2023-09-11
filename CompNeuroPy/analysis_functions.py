@@ -566,19 +566,25 @@ def get_pop_rate(spikes, t_start=None, t_end=None, time_step=1, t_smooth_ms=-1):
             )
             ### time_population_rate was returned in s --> transform it into ms
             time_population_rate = time_population_rate * 1000
-
-            ### interpolate
+            print("time_population_rate", time_population_rate)
+            print("population_rate", population_rate)
             time_arr0 = np.arange(t_start, t_start + duration, dt)
-            interpolate_func = interp1d(
-                time_population_rate,
-                population_rate,
-                kind="linear",
-                bounds_error=False,
-                fill_value=(population_rate[0], population_rate[-1]),
-            )
-            population_rate = interpolate_func(time_arr0)
+            if len(time_population_rate) > 1:
+                ### interpolate
+                interpolate_func = interp1d(
+                    time_population_rate,
+                    population_rate,
+                    kind="linear",
+                    bounds_error=False,
+                    fill_value=(population_rate[0], population_rate[-1]),
+                )
+                population_rate_arr = interpolate_func(time_arr0)
+            else:
+                population_rate_arr = np.zeros(len(time_arr0))
+                mask = time_arr0 == time_population_rate[0]
+                population_rate_arr[mask] = population_rate[0]
 
-            ret = population_rate
+            ret = population_rate_arr
     else:
         if t_start == None or t_end == None:
             return None

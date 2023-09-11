@@ -1,4 +1,4 @@
-from CompNeuroPy import cnp_clear
+from CompNeuroPy import cnp_clear, rmse
 from ANNarchy import Population, get_population, Monitor, Network, get_projection
 from time import time
 import numpy as np
@@ -8,11 +8,21 @@ from scipy.signal import find_peaks
 import inspect
 import textwrap
 import os
+import itertools
+from sklearn.neural_network import MLPRegressor
+from sklearn import preprocessing
+from sklearn.model_selection import train_test_split
+from tqdm import tqdm
 
 
 class model_configurator:
     def __init__(
-        self, model, target_firing_rate_dict, do_not_config_list=[], print_guide=False
+        self,
+        model,
+        target_firing_rate_dict,
+        do_not_config_list=[],
+        print_guide=False,
+        I_app_variable="I_app",
     ) -> None:
         """
         Args:
@@ -30,6 +40,10 @@ class model_configurator:
             print_guide: bool, optional, default=False
                 if you want to get information about what you could do with model_configurator
 
+            I_app_variable: str, optional, default="I_app"
+                the name of the varaible in the populations which represents the applied current
+                TODO: not implemented yet, default value is always used
+
         Functions:
             get_max_syn:
                 returns a dictionary with weight ranges for all afferent projections of the configured populations
@@ -45,6 +59,9 @@ class model_configurator:
         self.nr_afferent_proj_dict = {pop_name: None for pop_name in self.pop_name_list}
         self.net_many_dict = {pop_name: None for pop_name in self.pop_name_list}
         self.max_weight_dict = {pop_name: None for pop_name in self.pop_name_list}
+        self.variable_init_dict = {pop_name: None for pop_name in self.pop_name_list}
+        self.f_I_g_curve_dict = {pop_name: None for pop_name in self.pop_name_list}
+        self.I_f_g_curve_dict = {pop_name: None for pop_name in self.pop_name_list}
         self.afferent_projection_dict = {
             pop_name: None for pop_name in self.pop_name_list
         }
@@ -52,6 +69,7 @@ class model_configurator:
         self.caller_name = ""
         self.log("model configurator log:")
         self.print_guide = print_guide
+        self.did_get_regressions = False
 
         ### print guide
         self._p_g(_p_g_1)
@@ -107,18 +125,396 @@ class model_configurator:
                 print(wrapped_text)
         print("")
 
-    def set_synaptic_load(self, synaptic_load):
+    def set_base(self, I_base_variable="base_mean"):
+        """
+        Obtain the baseline currents for the configured populations to obtian the target firing rates
+        with the currently set weights, set by .set_weights or .set_syn_load
+        Then set baseline currents in model, compile model and set weights in model.
+
+        Args:
+            do_compile: bool, optional, default=True
+                If the model should be compiled with the obtained baselines set.
+
+            I_base_variable: str, optional, default="base_mean"
+                The variable name of the variable which represents the baseline current of the neurons.
+        """
+        ### get regressions if not did already
+        if not self.did_get_regressions:
+            self.get_regressions()
+
+        I_base_dict = {}
+        for pop_name in self.pop_name_list:
+            ### get the current g_values of the populations
+            ### with the currently set weights in the afferent projeciton dict
+            g_value_dict = self.get_g_values_of_pop(pop_name)
+            g_ampa = g_value_dict["ampa"]
+            g_gaba = g_value_dict["gaba"]
+
+            ### predict baseline current values using g_values and target firing rates
+            I_base_dict[pop_name] = self.I_f_g_curve_dict[pop_name](
+                p1=g_ampa, p2=g_gaba, p3=self.target_firing_rate_dict[pop_name]
+            )[0]
+
+        ### TODO: split this into get_base and set_base
+        ### TODO: create with single networks a more complex initialization method (simulating few seconds --> get distribution of variable combinations --> one can select from this for initializing a population)
+
+        ### clear annarchy, create model and set baselines and weights
+        cnp_clear()
+        self.model.create(do_compile=False)
+        ### set baselines
+        for pop_name in I_base_dict.keys():
+            get_val = getattr(get_population(pop_name), I_base_variable)
+            try:
+                set_val = np.ones(len(get_val)) * I_base_dict[pop_name]
+            except:
+                set_val = I_base_dict[pop_name]
+            setattr(get_population(pop_name), I_base_variable, set_val)
+        ### compile
+        self.model.compile()
+        ### set weights
+        for pop_name in self.pop_name_list:
+            for proj_idx, proj_name in enumerate(
+                self.afferent_projection_dict[pop_name]["projection_names"]
+            ):
+                weight_val = self.afferent_projection_dict[pop_name]["weights"][
+                    proj_idx
+                ]
+                get_projection(proj_name).w = weight_val
+
+        return I_base_dict
+
+    def get_regressions(self):
+
+        ### get the regressions to
+        ### 1st: predict I_app with f, g_ampa and g_gaba (for .set_base())
+        ### 2nd: predict f with I_app, g_ampa and g_gaba (for later use...)
+
+        txt = "get regression models..."
+        print(txt)
+        self.log(txt)
+        for pop_name in tqdm(self.pop_name_list):
+
+            variable_init_dict = self.variable_init_dict[pop_name]
+            g_ampa_max = self.g_max_dict[pop_name]["ampa"]
+            g_gaba_max = self.g_max_dict[pop_name]["gaba"]
+            I_max = self.I_app_max_dict[pop_name]
+            net_many_dict = self.net_many_dict[pop_name]
+
+            ### prepare grid for I, g_ampa and g_gaba
+            number_of_points = np.round(
+                len(net_many_dict["population"]) ** (1 / 3), 0
+            ).astype(int)
+            I_app_value_array = np.linspace(-I_max, I_max, number_of_points)
+            g_ampa_value_array = np.linspace(0, g_ampa_max, number_of_points)
+            g_gaba_value_array = np.linspace(0, g_gaba_max, number_of_points)
+
+            ### get all combinations (grid) of I, g_ampa and g_gaba
+            I_g_arr = np.array(
+                list(
+                    itertools.product(
+                        *[I_app_value_array, g_ampa_value_array, g_gaba_value_array]
+                    )
+                )
+            )
+            I_app_arr = I_g_arr[:, 0]
+            g_ampa_arr = I_g_arr[:, 1]
+            g_gaba_arr = I_g_arr[:, 2]
+
+            ### get f for all combinations of I, g_ampa and g_gaba
+            f_rec_arr = self.get_rate_1000(
+                net=net_many_dict["net"],
+                population=net_many_dict["population"],
+                variable_init_dict=variable_init_dict,
+                monitor=net_many_dict["monitor"],
+                I_app=I_app_arr,
+                g_ampa=g_ampa_arr,
+                g_gaba=g_gaba_arr,
+            )
+
+            ### add f_rec to the data grid
+            f_I_g_data_arr = np.concatenate([I_g_arr, f_rec_arr[:, None]], axis=1)
+
+            ### train regression to predict f with I_app, g_ampa, and g_gaba
+            self.log("train regr for f_I_g_curve")
+            self.f_I_g_curve_dict[pop_name] = self.train_regr_3p(
+                X_raw=f_I_g_data_arr[:, :3],
+                y_raw=f_I_g_data_arr[:, 3][:, None],
+                X_name_list=["I_app", "g_ampa", "g_gaba"],
+                y_name="f",
+            )
+
+            ### train regression to predict I_app with g_ampa, g_gaba, and f
+            self.log("train regr for I_f_g_curve")
+            self.I_f_g_curve_dict[pop_name] = self.train_regr_3p(
+                X_raw=f_I_g_data_arr[:, 1:],
+                y_raw=f_I_g_data_arr[:, 0][:, None],
+                X_name_list=["g_ampa", "g_gaba", "f"],
+                y_name="I_app",
+            )
+
+        self.did_get_regressions = True
+
+    def train_regr_3p(self, X_raw, y_raw, X_name_list, y_name):
+        """
+        Train a regresion with 3 predictors and a single regressor
+
+        Args:
+            X_raw: array (n_samples, 3)
+                Data for the 3 predictors
+
+            y_raw: array (n_samples, 1)
+                Data of the regressor
+
+            X_name_list: list of str
+                The names of the 3 predictors
+
+            y_name: str
+                The name of the regressor
+
+        return:
+            regr_func: object
+                callable regression function with 3 arguments = the 3 predictors
+                regr_func(p1=, p2=, p3=)
+                regr_func.predictors gives the info how the predictors p1, p2 and p3 are called
+                regr_func.regressor gives the info how the returned variable is called
+
+        """
+        ### create scaler to z-transform data (and retransform scaled data)
+        scaler_X = preprocessing.StandardScaler().fit(X_raw)
+        scaler_y = preprocessing.StandardScaler().fit(y_raw)
+
+        ### create scaled data
+        X_scaled = scaler_X.transform(X_raw)
+        y_scaled = scaler_y.transform(y_raw)[:, 0]
+
+        ### split in test/train set
+        X_train, X_test, y_train, y_test = train_test_split(
+            X_scaled, y_scaled, test_size=0.1, random_state=42
+        )
+
+        ### train MLP regression
+        regr_model = MLPRegressor(
+            hidden_layer_sizes=(300, 200, 100), random_state=42, max_iter=100
+        )
+        regr_model.fit(X_train, y_train)
+
+        ### test predictions
+        ### scaled data
+        pred_test_scaled = regr_model.predict(X_test)
+        test_error_scaled = rmse(y_test, pred_test_scaled)
+        ### raw data
+        y_test_raw = scaler_y.inverse_transform(y_test[:, None])
+        pred_test_raw = scaler_y.inverse_transform(pred_test_scaled[:, None])
+        test_error_raw = rmse(y_test_raw, pred_test_raw)
+        ### log errors
+        self.log(f"test_error scaled: {test_error_scaled}")
+        self.log(f"test_error raw: {test_error_raw}")
+
+        return regr_function_3p(regr_model, scaler_X, scaler_y, X_name_list, y_name)
+
+    def set_syn_load(self, synaptic_load_dict, synaptic_contribution_dict=None):
         """
         Args:
-            synaptic_load: dict or number
-                either a dictionary with keys = all populaiton names the model_configurator should configure
+            synaptic_load_dict: dict or number
+                either a dictionary with keys = all population names the model_configurator should configure
                 or a single number between 0 and 1
-                The dictionary values should be lists which contain either
-        """
-        pass
+                The dictionary values should be lists which contain either 2 values for ampa and gaba load,
+                only 1 value if the population has only ampa or gaba input.
+                For the strucutre of the dictionary check the print_guide
 
-    def set_synaptic_contribution(self, synaptic_contribution):
-        pass
+            synaptic_contribution_dict: dict, optional, default=None
+                by default the synaptic contributions of all afferent projections is equal
+                one can define other contributions in this dict
+                give for each affernt projection the contribution to the synaptic load of the target population
+                For the strucutre of the dictionary check the print_guide
+        """
+
+        ### synaptic load
+        ### is dict --> replace internal dict values
+        if isinstance(synaptic_load_dict, dict):
+            ### check if correct number of population
+            if len(list(synaptic_load_dict.keys())) != len(
+                list(self.syn_load_dict.keys())
+            ):
+                error_msg = f"ERROR set_syn_load: wrong number of populations given with 'synaptic_load_dict' given={len(list(synaptic_load_dict.keys()))}, expected={len(list(self.syn_load_dict.keys()))}"
+                self.log(error_msg)
+                raise ValueError(error_msg)
+            ### loop over all populations
+            for pop_name in synaptic_load_dict.keys():
+                ### cehck pop name
+                if pop_name not in list(self.syn_load_dict.keys()):
+                    error_msg = f"ERROR set_syn_load: the given population {pop_name} is not within the list of populations which should be configured {self.pop_name_list}"
+                    self.log(error_msg)
+                    raise ValueError(error_msg)
+                value_list = synaptic_load_dict[pop_name]
+                ### check value list
+                if len(value_list) != len(self.syn_load_dict[pop_name]):
+                    error_msg = f"ERROR set_syn_load: for population {pop_name}, {len(self.syn_load_dict[pop_name])} syn load values should be given but {len(value_list)} were given"
+                    self.log(error_msg)
+                    raise ValueError(error_msg)
+                if not (
+                    (np.array(value_list) <= 1).all()
+                    and (np.array(value_list) >= 0).all()
+                ):
+                    error_msg = f"ERROR set_syn_load: the values for synaptic loads should be equal or smaller than 1, given for population {pop_name}: {value_list}"
+                    self.log(error_msg)
+                    raise ValueError(error_msg)
+                ### replace internal values with given values
+                self.syn_load_dict[pop_name] = value_list
+        else:
+            ### is not a dict --> check number
+            try:
+                synaptic_load = float(synaptic_load_dict)
+            except:
+                error_msg = "ERROR set_syn_load: if synaptic_load_dict is not a dictionary it should be a single number!"
+                self.log(error_msg)
+                raise ValueError(error_msg)
+            if not (synaptic_load <= 1 and synaptic_load >= 0):
+                error_msg = "ERROR set_syn_load: value for synaptic_loadshould be equal or smaller than 1"
+                self.log(error_msg)
+                raise ValueError(error_msg)
+            ### replace internal values with given value
+            for pop_name in self.syn_load_dict.keys():
+                for idx in range(len(self.syn_load_dict[pop_name])):
+                    self.syn_load_dict[pop_name][idx] = synaptic_load
+        ### transform syn load dict in correct form with projection target type keys
+        syn_load_dict = {}
+        for pop_name in self.pop_name_list:
+            syn_load_dict[pop_name] = {}
+            if (
+                "ampa" in self.afferent_projection_dict[pop_name]["target"]
+                and "gaba" in self.afferent_projection_dict[pop_name]["target"]
+            ):
+                syn_load_dict[pop_name]["ampa"] = self.syn_load_dict[pop_name][0]
+                syn_load_dict[pop_name]["gaba"] = self.syn_load_dict[pop_name][1]
+            elif "ampa" in self.afferent_projection_dict[pop_name]["target"]:
+                syn_load_dict[pop_name]["ampa"] = self.syn_load_dict[pop_name][0]
+                syn_load_dict[pop_name]["gaba"] = None
+            elif "gaba" in self.afferent_projection_dict[pop_name]["target"]:
+                syn_load_dict[pop_name]["ampa"] = None
+                syn_load_dict[pop_name]["gaba"] = self.syn_load_dict[pop_name][0]
+        self.syn_load_dict = syn_load_dict
+
+        ### synaptic contribution
+        if not isinstance(synaptic_contribution_dict, type(None)):
+            ### loop over all given populations
+            for pop_name in synaptic_contribution_dict.keys():
+                ### check pop_name
+                if pop_name not in list(self.syn_contr_dict.keys()):
+                    error_msg = f"ERROR set_syn_load: the given population {pop_name} is not within the list of populations which should be configured {self.pop_name_list}"
+                    self.log(error_msg)
+                    raise ValueError(error_msg)
+                ### loop over given projeciton target type (ampa,gaba)
+                for given_proj_target_type in synaptic_contribution_dict[
+                    pop_name
+                ].keys():
+                    ### check given target type
+                    if not (
+                        given_proj_target_type == "ampa"
+                        or given_proj_target_type == "gaba"
+                    ):
+                        error_msg = f"ERROR set_syn_load: with the synaptic_contribution_dict for each given population a 'ampa' and/or 'gaba' dictionary contianing the corresponding afferent projections should be given, given key={given_proj_target_type}"
+                        self.log(error_msg)
+                        raise ValueError(error_msg)
+                    ### check if for the projection target type the correct number of projections is given
+                    given_proj_name_list = list(
+                        synaptic_contribution_dict[pop_name][
+                            given_proj_target_type
+                        ].keys()
+                    )
+                    internal_proj_name_list = list(
+                        self.syn_contr_dict[pop_name][given_proj_target_type].keys()
+                    )
+                    if len(given_proj_name_list) != len(internal_proj_name_list):
+                        error_msg = f"ERROR set_syn_load: in synaptic_contribution_dict for population {pop_name} and target_type {given_proj_target_type} wrong number of projections is given\ngiven={given_proj_name_list}, expected={internal_proj_name_list}"
+                        self.log(error_msg)
+                        raise ValueError(error_msg)
+                    ### check if given contributions for the target type sum up to 1
+                    given_contribution_arr = np.array(
+                        list(
+                            synaptic_contribution_dict[pop_name][
+                                given_proj_target_type
+                            ].values()
+                        )
+                    )
+                    if round(given_contribution_arr.sum(), 6) != 1:
+                        error_msg = f"ERROR set_syn_load: given synaptic contributions for population {pop_name} and target_type {given_proj_target_type} do not sum up to 1: given={given_contribution_arr}-->{round(given_contribution_arr.sum(),6)}"
+                        self.log(error_msg)
+                        raise ValueError(error_msg)
+                    ### loop over given afferent projections
+                    for proj_name in given_proj_name_list:
+                        ### check if projection name exists
+                        if proj_name not in internal_proj_name_list:
+                            error_msg = f"ERROR set_syn_load: given projection {proj_name} given with synaptic_contribution_dict no possible projection, possible={internal_proj_name_list}"
+                            self.log(error_msg)
+                            raise ValueError(error_msg)
+                        ### replace internal value of the projection with given value
+                        self.syn_contr_dict[pop_name][given_proj_target_type][
+                            proj_name
+                        ] = synaptic_contribution_dict[pop_name][
+                            given_proj_target_type
+                        ][
+                            proj_name
+                        ]
+
+        ### create weight dict from synaptic load/contributions
+        self.weight_dict = {}
+        for pop_name in self.max_weight_dict.keys():
+            self.weight_dict[pop_name] = {}
+            for proj_target_type in self.max_weight_dict[pop_name].keys():
+                self.weight_dict[pop_name][proj_target_type] = {}
+                for proj_name in self.max_weight_dict[pop_name][
+                    proj_target_type
+                ].keys():
+                    weight_val = self.max_weight_dict[pop_name][proj_target_type][
+                        proj_name
+                    ]
+                    syn_load = self.syn_load_dict[pop_name][proj_target_type]
+                    syn_contr = self.syn_contr_dict[pop_name][proj_target_type][
+                        proj_name
+                    ]
+                    weight_val_scaled = weight_val * syn_load * syn_contr
+                    self.weight_dict[pop_name][proj_target_type][
+                        proj_name
+                    ] = weight_val_scaled
+
+        ### set the weights in the afferent_projection_dict
+        for pop_name in self.max_weight_dict.keys():
+            weight_list = []
+            for proj_name in self.afferent_projection_dict[pop_name][
+                "projection_names"
+            ]:
+                ### get proj info
+                proj_dict = self.get_proj_dict(proj_name)
+                proj_target_type = proj_dict["proj_target_type"]
+                ### store the weight from the weight_dict within weight_list
+                weight_list.append(
+                    self.weight_dict[pop_name][proj_target_type][proj_name]
+                )
+            self.afferent_projection_dict[pop_name]["weights"] = weight_list
+
+        ### print guide
+        self._p_g(_p_g_after_set_syn_load)
+
+    def get_template_synaptic_contribution_dict(self, given_dict):
+        """
+        converts the full template dict with all keys for populations, target-types and projections into a reduced dict
+        which only contains the keys which lead to values smaller 1
+        """
+
+        ret_dict = {}
+        for key in given_dict.keys():
+            if isinstance(given_dict[key], dict):
+                rec_dict = self.get_template_synaptic_contribution_dict(given_dict[key])
+                if len(rec_dict) > 0:
+                    ret_dict[key] = self.get_template_synaptic_contribution_dict(
+                        given_dict[key]
+                    )
+            else:
+                if given_dict[key] < 1:
+                    ret_dict[key] = "contr"
+
+        return ret_dict
 
     def get_max_syn(self):
         """
@@ -144,6 +540,7 @@ class model_configurator:
                 pop_name=pop_name, nr_neurons=nr_many_neurons
             )
             net_single_dict = self.create_net_single(pop_name=pop_name)
+            self.variable_init_dict[pop_name] = net_single_dict["variable_init_dict"]
 
             ### get max synaptic currents (I and gs) using the single neuron network
             self.log(
@@ -169,19 +566,39 @@ class model_configurator:
             self.max_weight_dict[pop_name] = self.get_max_weight_dict_for_pop(pop_name)
 
         ### print next steps
-        template_weight_dict = self.max_weight_dict
-        template_synaptic_load_dict = {}
+        ### create the synaptic load template dict
+        self.syn_load_dict = {}
         for pop_name in self.pop_name_list:
-            template_synaptic_load_dict[pop_name] = []
+            self.syn_load_dict[pop_name] = []
             if "ampa" in self.afferent_projection_dict[pop_name]["target"]:
-                template_synaptic_load_dict[pop_name].append("ampa_load")
+                self.syn_load_dict[pop_name].append("ampa_load")
             if "gaba" in self.afferent_projection_dict[pop_name]["target"]:
-                template_synaptic_load_dict[pop_name].append("gaba_load")
+                self.syn_load_dict[pop_name].append("gaba_load")
+        ### create the synaptic contribution template dict
+        self.syn_contr_dict = {}
+        for pop_name in self.max_weight_dict.keys():
+            self.syn_contr_dict[pop_name] = {}
+
+            for target_type in ["ampa", "gaba"]:
+                self.syn_contr_dict[pop_name][target_type] = {}
+
+                nr_afferent_proj_with_target = len(
+                    list(self.max_weight_dict[pop_name][target_type].keys())
+                )
+                for proj_name in self.max_weight_dict[pop_name][target_type].keys():
+                    self.syn_contr_dict[pop_name][target_type][proj_name] = (
+                        1 / nr_afferent_proj_with_target
+                    )
+        ### only return synaptic contributions smaller 1
+        template_synaptic_contribution_dict = (
+            self.get_template_synaptic_contribution_dict(given_dict=self.syn_contr_dict)
+        )
 
         self._p_g(
             _p_g_after_get_weights(
-                template_weight_dict=template_weight_dict,
-                template_synaptic_load_dict=template_synaptic_load_dict,
+                template_weight_dict=self.max_weight_dict,
+                template_synaptic_load_dict=self.syn_load_dict,
+                template_synaptic_contribution_dict=template_synaptic_contribution_dict,
             )
         )
 
@@ -1055,11 +1472,120 @@ class model_configurator:
         return mean_g
 
 
+class regr_function_3p:
+    def __init__(self, regr_model, scaler_X, scaler_y, X_name_list, y_name) -> None:
+        """
+        Regression function with 3 predictors and 1 regressor.
+
+        functions:
+            __call__:
+                Args:
+                    p1: number or array, optional, default=0
+                        Data sample(s) of the 1st predictor
+
+                    p2: number or array, optional, default=0
+                        Data sample(s) of the 2nd predictor
+
+                    p3: number or array, optional, default=0
+                        Data sample(s) of the 3rd predictor
+
+                    if p1, p2, p3 == array --> same size!
+
+                return:
+                    y_arr: array
+                        The predicted regressor value(s)
+
+        attributes:
+            predictors: list of str
+                The names of the 3 predictors
+
+            regressor: list of str
+                The name of the regressor
+        """
+        self.regr_model = regr_model
+        self.scaler_X = scaler_X
+        self.scaler_y = scaler_y
+
+        self.predictors = {
+            ["p1", "p2", "p3"][idx_X_name]: X_name
+            for idx_X_name, X_name in enumerate(X_name_list)
+        }
+        self.regressor = y_name
+
+    def __call__(self, p1=None, p2=None, p3=None):
+        """
+        Args:
+            p1: number or array, optional, default=0
+                Data sample(s) of the 1st predictor
+
+            p2: number or array, optional, default=0
+                Data sample(s) of the 2nd predictor
+
+            p3: number or array, optional, default=0
+                Data sample(s) of the 3rd predictor
+
+            if p1, p2, p3 == array --> same size!
+
+        return:
+            y_arr: array
+                The predicted regressor value(s)
+        """
+        ### check which values are given
+        p1_given = not (isinstance(p1, type(None)))
+        p2_given = not (isinstance(p2, type(None)))
+        p3_given = not (isinstance(p3, type(None)))
+
+        ### reshape all to target shape
+        p1 = np.array(p1).reshape((-1, 1)).astype(float)
+        p2 = np.array(p2).reshape((-1, 1)).astype(float)
+        p3 = np.array(p3).reshape((-1, 1)).astype(float)
+
+        ### check if arrays of given values have same size
+        size_arr = np.array([p1.shape[0], p2.shape[0], p3.shape[0]])
+        given_arr = np.array([p1_given, p2_given, p3_given]).astype(bool)
+        if len(size_arr[given_arr]) > 0:
+            all_size = size_arr[given_arr][0]
+            all_same_size = np.all(size_arr[given_arr] == all_size)
+            if not all_same_size:
+                raise ValueError(
+                    "regr_function_3p call: given p1, p2 and p3 have to have same size!"
+                )
+
+        ### set the correctly sized arrays for the not given values
+        if not p1_given:
+            p1 = np.zeros(all_size).reshape((-1, 1))
+        if not p2_given:
+            p2 = np.zeros(all_size).reshape((-1, 1))
+        if not p3_given:
+            p3 = np.zeros(all_size).reshape((-1, 1))
+
+        ### predict y_arr
+        X_raw = np.concatenate([p1, p2, p3], axis=1)
+        y_arr = self.pred_regr(X_raw, self.regr_model, self.scaler_X, self.scaler_y)[
+            :, 0
+        ]
+
+        return y_arr
+
+    def pred_regr(self, X_raw, regr_model, scaler_X, scaler_y):
+        """
+        X shape = (n_samples, n_features)
+
+        pred shape = (n_samples, 1)
+        """
+
+        X_scaled = scaler_X.transform(X_raw)
+        pred_scaled = regr_model.predict(X_scaled)
+        pred_raw = scaler_y.inverse_transform(pred_scaled[:, None])
+
+        return pred_raw
+
+
 _p_g_1 = """First call get_max_syn.
 This determines max synaptic conductances and weights of all afferent projections of the model populations and returns a dictionary with max weights."""
 
 _p_g_after_get_weights = (
-    lambda template_weight_dict, template_synaptic_load_dict: f"""Now either set the weights of all projections directly or first set the synaptic load of the populations and then the synaptic contributions of the afferent projections.
+    lambda template_weight_dict, template_synaptic_load_dict, template_synaptic_contribution_dict: f"""Now either set the weights of all projections directly or first set the synaptic load of the populations and the synaptic contributions of the afferent projections.
 You can set the weights using the function .set_weights() which requires a weight_dict as argument.
 Use this template for the weight_dict:
 
@@ -1068,11 +1594,20 @@ Use this template for the weight_dict:
 The values within the template are the maximum weight values.
 
 
-You can set the synaptic load using the function .set_syn_load() which requires a synaptic_load_dict or a single number between 0 and 1.
+You can set the synaptic load and contribution using the function .set_syn_load() which requires a synaptic_load_dict or a single number between 0 and 1 for the synaptic load of the populations and a synaptic_contribution_dict for the synaptic contributions to the synaptic load of the afferent projections.
 Use this template for the synaptic_load_dict:
 
 {template_synaptic_load_dict}
 
-'ampa_load' and 'gaba_load' are placeholders, replace them with values between 0 and 1
+'ampa_load' and 'gaba_load' are placeholders, replace them with values between 0 and 1.
+
+Use this template for the synaptic_contribution_dict:
+
+{template_synaptic_contribution_dict}
+
+'contr' are placeholders, replace them with the contributions of the afferent projections. The contributions of all afferent projections of a single population have to sum up to 1!
 """
 )
+
+_p_g_after_set_syn_load = """Synaptic loads and contributions, i.e. weights set. Now call .set_base to obtain the baseline currents for the model populations.
+"""
