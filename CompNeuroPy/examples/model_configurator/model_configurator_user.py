@@ -234,7 +234,7 @@ if __name__ == "__main__":
     ### model populations one wants to configure and their afferents as input
     target_firing_rate_dict = {
         "cor": 15,
-        "stn": 30,
+        "stn": 70,
         "gpe": 50,
         "snr": 60,
         "thal": 5,
@@ -284,8 +284,8 @@ if __name__ == "__main__":
             "pop;thal": ["spike"],
         }
     )
-    mon.start()
     simulate(1000)
+    mon.start()
     get_population("cor").rates = target_firing_rate_dict["cor"]
     simulate(2000)
 

@@ -1,10 +1,10 @@
 from CompNeuroPy import cnp_clear, rmse
-from ANNarchy import Population, get_population, Monitor, Network, get_projection
+from ANNarchy import Population, get_population, Monitor, Network, get_projection, dt
 from time import time
 import numpy as np
-from scipy.interpolate import interp1d
-import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d, interpn
 from scipy.signal import find_peaks
+import matplotlib.pyplot as plt
 import inspect
 import textwrap
 import os
@@ -13,6 +13,7 @@ from sklearn.neural_network import MLPRegressor
 from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
+import multiprocessing
 
 
 class model_configurator:
@@ -58,8 +59,11 @@ class model_configurator:
         self.tau_dict = {pop_name: None for pop_name in self.pop_name_list}
         self.nr_afferent_proj_dict = {pop_name: None for pop_name in self.pop_name_list}
         self.net_many_dict = {pop_name: None for pop_name in self.pop_name_list}
+        self.net_single_dict = {pop_name: None for pop_name in self.pop_name_list}
         self.max_weight_dict = {pop_name: None for pop_name in self.pop_name_list}
-        self.variable_init_dict = {pop_name: None for pop_name in self.pop_name_list}
+        self.variable_init_sampler_dict = {
+            pop_name: None for pop_name in self.pop_name_list
+        }
         self.f_I_g_curve_dict = {pop_name: None for pop_name in self.pop_name_list}
         self.I_f_g_curve_dict = {pop_name: None for pop_name in self.pop_name_list}
         self.afferent_projection_dict = {
@@ -70,6 +74,7 @@ class model_configurator:
         self.log("model configurator log:")
         self.print_guide = print_guide
         self.did_get_regressions = False
+        self.simulation_dur = 5000
 
         ### print guide
         self._p_g(_p_g_1)
@@ -125,18 +130,14 @@ class model_configurator:
                 print(wrapped_text)
         print("")
 
-    def set_base(self, I_base_variable="base_mean"):
+    def get_base(self):
         """
         Obtain the baseline currents for the configured populations to obtian the target firing rates
         with the currently set weights, set by .set_weights or .set_syn_load
-        Then set baseline currents in model, compile model and set weights in model.
 
-        Args:
-            do_compile: bool, optional, default=True
-                If the model should be compiled with the obtained baselines set.
-
-            I_base_variable: str, optional, default="base_mean"
-                The variable name of the variable which represents the baseline current of the neurons.
+        return:
+            I_base_dict, dict
+                Dictionary with baseline curretns for all configured populations.
         """
         ### get regressions if not did already
         if not self.did_get_regressions:
@@ -146,21 +147,74 @@ class model_configurator:
         for pop_name in self.pop_name_list:
             ### get the current g_values of the populations
             ### with the currently set weights in the afferent projeciton dict
-            g_value_dict = self.get_g_values_of_pop(pop_name)
-            g_ampa = g_value_dict["ampa"]
-            g_gaba = g_value_dict["gaba"]
 
             ### predict baseline current values using g_values and target firing rates
-            I_base_dict[pop_name] = self.I_f_g_curve_dict[pop_name](
-                p1=g_ampa, p2=g_gaba, p3=self.target_firing_rate_dict[pop_name]
-            )[0]
+            I_base_dict[pop_name] = self.find_base_current(pop_name)
+            # I_base_dict[pop_name] = self.I_f_g_curve_dict[pop_name](
+            #     p1=g_ampa, p2=g_gaba, p3=self.target_firing_rate_dict[pop_name]
+            # )[0]
 
-        ### TODO: split this into get_base and set_base
-        ### TODO: create with single networks a more complex initialization method (simulating few seconds --> get distribution of variable combinations --> one can select from this for initializing a population)
+        return I_base_dict
+
+    def find_base_current(self, pop_name):
+        ### first get values for g_ampa, g_gaba, I_app_max
+        g_value_dict = self.get_g_values_of_pop(pop_name)
+        g_ampa = g_value_dict["ampa"]
+        g_gaba = g_value_dict["gaba"]
+        I_app_max = self.I_app_max_dict[pop_name]
+
+        ### 1st search through whole I_app space
+        I_app_arr = np.linspace(-I_app_max, I_app_max, 200)
+        possible_firing_rates_arr = self.f_I_g_curve_dict[pop_name](
+            a=I_app_arr, b=g_ampa, c=g_gaba
+        )
+        target_firing_rate = self.target_firing_rate_dict[pop_name]
+        best_idx = np.argmin(
+            np.absolute(possible_firing_rates_arr - target_firing_rate)
+        )
+        I_app_best = I_app_arr[best_idx]
+
+        ### second search around I_app_best
+        I_app_0 = np.clip(I_app_best - I_app_max / 100, -I_app_max, I_app_max)
+        I_app_1 = np.clip(I_app_best + I_app_max / 100, -I_app_max, I_app_max)
+        I_app_arr = np.linspace(I_app_0, I_app_1, 100)
+        possible_firing_rates_arr = self.f_I_g_curve_dict[pop_name](
+            a=I_app_arr, b=g_ampa, c=g_gaba
+        )
+        target_firing_rate = self.target_firing_rate_dict[pop_name]
+        best_idx = np.argmin(possible_firing_rates_arr - target_firing_rate)
+        I_app_best = I_app_arr[best_idx]
+
+        return I_app_best
+
+    def set_base(self, I_base_dict=None, I_base_variable="base_mean"):
+        """
+        Set baseline currents in model, compile model and set weights in model.
+
+        Args:
+            I_base_dict: dict, optional, default=None
+                Dictionary with baseline currents for all populations, if None the baselines are obtained by .get_base
+
+            I_base_variable: str, optional, default="mean_base"
+                Name of the variable which represents the baseline current in the configured populations. They all have to have the same variable.
+        """
+        ### check I_base_dict
+        if isinstance(I_base_dict, type(None)):
+            I_base_dict = self.get_base()
 
         ### clear annarchy, create model and set baselines and weights
         cnp_clear()
         self.model.create(do_compile=False)
+        ### set initial variables of populations
+        for pop_name in self.pop_name_list:
+            population = get_population(pop_name)
+            variable_init_sampler = self.net_single_dict[pop_name][
+                "variable_init_sampler"
+            ]
+            variable_init_arr = variable_init_sampler.sample(len(population), seed=0)
+            for var_idx, var_name in enumerate(population.variables):
+                set_val = variable_init_arr[:, var_idx]
+                setattr(population, var_name, set_val)
         ### set baselines
         for pop_name in I_base_dict.keys():
             get_val = getattr(get_population(pop_name), I_base_variable)
@@ -194,7 +248,9 @@ class model_configurator:
         self.log(txt)
         for pop_name in tqdm(self.pop_name_list):
 
-            variable_init_dict = self.variable_init_dict[pop_name]
+            variable_init_sampler = self.net_single_dict[pop_name][
+                "variable_init_sampler"
+            ]
             g_ampa_max = self.g_max_dict[pop_name]["ampa"]
             g_gaba_max = self.g_max_dict[pop_name]["gaba"]
             I_max = self.I_app_max_dict[pop_name]
@@ -221,38 +277,90 @@ class model_configurator:
             g_gaba_arr = I_g_arr[:, 2]
 
             ### get f for all combinations of I, g_ampa and g_gaba
-            f_rec_arr = self.get_rate_1000(
+            f_rec_arr = self.get_rate(
                 net=net_many_dict["net"],
                 population=net_many_dict["population"],
-                variable_init_dict=variable_init_dict,
+                variable_init_sampler=variable_init_sampler,
                 monitor=net_many_dict["monitor"],
                 I_app=I_app_arr,
                 g_ampa=g_ampa_arr,
                 g_gaba=g_gaba_arr,
             )
 
-            ### add f_rec to the data grid
-            f_I_g_data_arr = np.concatenate([I_g_arr, f_rec_arr[:, None]], axis=1)
-
-            ### train regression to predict f with I_app, g_ampa, and g_gaba
-            self.log("train regr for f_I_g_curve")
-            self.f_I_g_curve_dict[pop_name] = self.train_regr_3p(
-                X_raw=f_I_g_data_arr[:, :3],
-                y_raw=f_I_g_data_arr[:, 3][:, None],
-                X_name_list=["I_app", "g_ampa", "g_gaba"],
-                y_name="f",
+            ### create interpolation
+            self.f_I_g_curve_dict[pop_name] = self.get_interp_3p(
+                x=I_app_value_array,
+                y=g_ampa_value_array,
+                z=g_gaba_value_array,
+                values=f_rec_arr,
             )
 
-            ### train regression to predict I_app with g_ampa, g_gaba, and f
-            self.log("train regr for I_f_g_curve")
-            self.I_f_g_curve_dict[pop_name] = self.train_regr_3p(
-                X_raw=f_I_g_data_arr[:, 1:],
-                y_raw=f_I_g_data_arr[:, 0][:, None],
-                X_name_list=["g_ampa", "g_gaba", "f"],
-                y_name="I_app",
-            )
+            # ### add f_rec to the data grid
+            # f_I_g_data_arr = np.concatenate([I_g_arr, f_rec_arr[:, None]], axis=1)
+
+            # ### train regression to predict f with I_app, g_ampa, and g_gaba
+            # self.log("train regr for f_I_g_curve")
+            # self.f_I_g_curve_dict[pop_name] = self.train_regr_3p(
+            #     X_raw=f_I_g_data_arr[:, :3],
+            #     y_raw=f_I_g_data_arr[:, 3][:, None],
+            #     X_name_list=["I_app", "g_ampa", "g_gaba"],
+            #     y_name="f",
+            # )
+
+            # ### train regression to predict I_app with g_ampa, g_gaba, and f
+            # self.log("train regr for I_f_g_curve")
+            # self.I_f_g_curve_dict[pop_name] = self.train_regr_3p(
+            #     X_raw=f_I_g_data_arr[:, 1:],
+            #     y_raw=f_I_g_data_arr[:, 0][:, None],
+            #     X_name_list=["g_ampa", "g_gaba", "f"],
+            #     y_name="I_app",
+            # )
 
         self.did_get_regressions = True
+
+    class get_interp_3p:
+        def __init__(self, x, y, z, values) -> None:
+            self.x = x
+            self.y = y
+            self.z = z
+            self.values = values
+
+        def __call__(self, a, b, c):
+
+            ### get input arrays
+            input_arr_dict = {
+                "a": np.array(a).reshape(-1),
+                "b": np.array(b).reshape(-1),
+                "c": np.array(c).reshape(-1),
+            }
+
+            ### check if the arrays with size larger 1 have same size
+            size_arr = np.array([val.size for val in input_arr_dict.values()])
+            mask = size_arr > 1
+            if True in mask:
+                input_size = size_arr[mask][0]
+                if not (input_size == size_arr[mask]).all():
+                    raise ValueError(
+                        "ERROR model_configurator get_interp_3p: a,b,c either single values or arrays. All arrays have to have same size"
+                    )
+
+            ### if there are inputs only consisting of a single value --> duplicate to increase size if there are also array inputs
+            for idx, larger_1 in enumerate(mask):
+                if not larger_1 and True in mask:
+                    val = input_arr_dict[list(input_arr_dict.keys())[idx]][0]
+                    input_arr_dict[list(input_arr_dict.keys())[idx]] = (
+                        np.ones(input_size) * val
+                    )
+
+            point_arr = np.array(
+                [input_arr_dict["a"], input_arr_dict["b"], input_arr_dict["c"]]
+            ).T
+
+            return interpn(
+                (self.x, self.y, self.z),
+                self.values.reshape((self.x.size, self.y.size, self.z.size)),
+                point_arr,
+            )
 
     def train_regr_3p(self, X_raw, y_raw, X_name_list, y_name):
         """
@@ -516,6 +624,19 @@ class model_configurator:
 
         return ret_dict
 
+    def divide_almost_equal(self, number, num_parts):
+        # Calculate the quotient and remainder
+        quotient, remainder = divmod(number, num_parts)
+
+        # Initialize a list to store the almost equal integers
+        result = [quotient] * num_parts
+
+        # Distribute the remainder evenly among the integers
+        for i in range(remainder):
+            result[i] += 1
+
+        return result
+
     def get_max_syn(self):
         """
         get the weight dictionary for all populations given in target_firing_rate_dict
@@ -528,26 +649,44 @@ class model_configurator:
 
         for pop_name in self.pop_name_list:
             self.log(pop_name)
-            ### get the sizes of the many neuron population
-            self.log(
-                f"create network_1000 and get nr of neurons for network_many for {pop_name}"
+
+            ### OLD
+            # ### get the sizes of the many neuron population
+            # self.log(
+            #     f"create network_1000 and get nr of neurons for network_many for {pop_name}"
+            # )
+            # nr_many_neurons = self.get_nr_many_neurons(pop_name)
+            # self.log(f"nr_many_neurons for {pop_name}: {nr_many_neurons}")
+            ### OLD
+
+            ### target nr many neurons = 100000 --> want to get 100000 values i.e. 100 for I_app, g_ampa and g_gaba each
+            ### number of networks with size=1000 --> do not get smaller with parallel networks!
+            nr_networks_1000 = 100
+            ### get the number of available parallel workers
+            nr_available_workers = int(multiprocessing.cpu_count() / 2)
+            ### now use the smaller number of networks
+            nr_networks = min([nr_networks_1000, nr_available_workers])
+            ### evenly distribute all neurons over the number of networks
+            nr_many_neurons_list = self.get_nr_many_neurons(
+                nr_neurons=100000, nr_networks=nr_networks
             )
-            nr_many_neurons = self.get_nr_many_neurons(pop_name)
+            self.log(f"nr_many_neurons_list for {pop_name}: {nr_many_neurons_list}")
+            self.log(f"nr_networks for {pop_name}: {nr_networks}")
 
             ### create the many and single neuron network
+            ### TODO change the many_neruons networks simulations to run_parallel, nr_networks and their sizes -> see above
             self.log(f"create network_many and network_single for {pop_name}")
             self.net_many_dict[pop_name] = self.create_net_many(
                 pop_name=pop_name, nr_neurons=nr_many_neurons
             )
-            net_single_dict = self.create_net_single(pop_name=pop_name)
-            self.variable_init_dict[pop_name] = net_single_dict["variable_init_dict"]
+            self.net_single_dict[pop_name] = self.create_net_single(pop_name=pop_name)
 
             ### get max synaptic currents (I and gs) using the single neuron network
             self.log(
                 f"get max I_app, g_ampa and g_gaba using network_single for {pop_name}"
             )
             I_app_max, g_ampa_max, g_gaba_max = self.get_max_syn_currents(
-                net_single_dict=net_single_dict, pop_name=pop_name
+                pop_name=pop_name
             )
             self.I_app_max_dict[pop_name] = I_app_max
             self.g_max_dict[pop_name] = {
@@ -652,7 +791,7 @@ class model_configurator:
 
         return afferent_projection_dict
 
-    def get_max_syn_currents(self, net_single_dict, pop_name):
+    def get_max_syn_currents(self, pop_name):
         """
         obtain I_app_max, g_ampa_max and g_gaba max.
         f_max = f_0 + f_t + 100
@@ -661,15 +800,6 @@ class model_configurator:
         I_gaba_max causes f_0 while I_app=I_app_max (decreases f from f_max to f_0)
 
         Args:
-            net_single_dict: dict
-                dictionary which contains the network/population to simulate and record from
-                items: {
-                    "net": ANNarchy network,
-                    "population": ANNarchy population,
-                    "monitor": ANNarchy monitor,
-                    "variable_init_dict": initial values for population
-                }
-
             pop_name: str
                 population name from original model
 
@@ -685,22 +815,22 @@ class model_configurator:
         """
 
         ### extrace values from net_single_dict
-        net = net_single_dict["net"]
-        population = net_single_dict["population"]
-        monitor = net_single_dict["monitor"]
-        variable_init_dict = net_single_dict["variable_init_dict"]
+        net = self.net_single_dict[pop_name]["net"]
+        population = self.net_single_dict[pop_name]["population"]
+        monitor = self.net_single_dict[pop_name]["monitor"]
+        variable_init_sampler = self.net_single_dict[pop_name]["variable_init_sampler"]
 
         ### get f_0 and f_max
-        f_0 = self.get_rate_1000(net, population, variable_init_dict, monitor)[0]
+        f_0 = self.get_rate(net, population, variable_init_sampler, monitor)[0]
         f_max = f_0 + self.target_firing_rate_dict[pop_name] + 100
 
         ### find I_max with incremental_continuous_bound_search
         self.log("search I_app_max with y(X) = f(I_app=X, g_ampa=0, g_gaba=0)")
         I_max = self.incremental_continuous_bound_search(
-            y_X=lambda X_val: self.get_rate_1000(
+            y_X=lambda X_val: self.get_rate(
                 net,
                 population,
-                variable_init_dict,
+                variable_init_sampler,
                 monitor,
                 I_app=X_val,
             )[0],
@@ -725,10 +855,10 @@ class model_configurator:
         ### only get values until first discontinuity
         self.log("search g_ampa_max with y(X) = f(I_app=0, g_ampa=X, g_gaba=0)")
         g_ampa_max = self.incremental_continuous_bound_search(
-            y_X=lambda X_val: self.get_rate_1000(
+            y_X=lambda X_val: self.get_rate(
                 net,
                 population,
-                variable_init_dict,
+                variable_init_sampler,
                 monitor,
                 g_ampa=X_val,
             )[0],
@@ -741,10 +871,10 @@ class model_configurator:
         ### find g_gaba with incremental_continuous_bound_search
         self.log("search g_gaba_max with y(X) = f(I_app=I_max, g_ampa=0, g_gaba=X)")
         g_gaba_max = self.incremental_continuous_bound_search(
-            y_X=lambda X_val: self.get_rate_1000(
+            y_X=lambda X_val: self.get_rate(
                 net,
                 population,
-                variable_init_dict,
+                variable_init_sampler,
                 monitor,
                 g_gaba=X_val,
                 I_app=I_max,
@@ -1014,11 +1144,19 @@ class model_configurator:
         y_pred_arr = y_X(X_pred)
         return y_pred_arr.reshape(1)
 
-    def get_rate_1000(
-        self, net, population, variable_init_dict, monitor, I_app=0, g_ampa=0, g_gaba=0
+    def get_rate(
+        self,
+        net,
+        population,
+        variable_init_sampler,
+        monitor,
+        I_app=0,
+        g_ampa=0,
+        g_gaba=0,
     ):
         """
-        simulates 1000 ms a population and returns the firing rate of each neuron
+        simulates a population for X+500 ms and returns the firing rate of each neuron for the last X ms
+        X is defined with self.simulation_dur
 
         Args:
             net: ANNarchy network
@@ -1027,8 +1165,8 @@ class model_configurator:
             population: ANNarchy population
                 population which is recorded and stimulated
 
-            variable_init_dict: dict
-                containing the initial values of the population neuron
+            variable_init_sampler: object
+                containing the initial values of the population neuron, use .sample() to get values
 
             monitor: ANNarchy monitor
                 to record spikes from population
@@ -1044,24 +1182,26 @@ class model_configurator:
         """
         ### reset and set init values
         net.reset()
-        for var_name, var_val in variable_init_dict.items():
-            tmp = getattr(population, var_name)
-            set_val = np.ones(len(tmp)) * var_val
+        variable_init_arr = variable_init_sampler.sample(len(population), seed=0)
+        for var_idx, var_name in enumerate(population.variables):
+            set_val = variable_init_arr[:, var_idx]
             setattr(population, var_name, set_val)
-        ### slow down conductances (i.e. make them constant for 1000 ms)
+        ### slow down conductances (i.e. make them constant)
         population.tau_ampa = 1e20
         population.tau_gaba = 1e20
         ### apply given variables
         population.I_app = I_app
         population.g_ampa = g_ampa
         population.g_gaba = g_gaba
-        ### simulate 1000 ms
-        net.simulate(1000)
-        ### rate is nbr spikes since simulated 1000 ms
+        ### simulate 500 ms initial duration + X ms
+        net.simulate(500 + self.simulation_dur)
+        ### get rate for the last X ms
         spike_dict = monitor.get("spike")
         f_arr = np.zeros(len(population))
         for idx_n, n in enumerate(spike_dict.keys()):
-            rate = len(spike_dict[n])
+            time_list = np.array(spike_dict[n])
+            nbr_spks = np.sum((time_list > (500 / dt())).astype(int))
+            rate = nbr_spks / (self.simulation_dur / 1000)
             f_arr[idx_n] = rate
 
         return f_arr
@@ -1135,7 +1275,7 @@ class model_configurator:
         net_single.compile()
 
         ### get the values of the variables after 2000 ms simulation
-        variable_init_dict = self.get_init_neuron_variables(
+        variable_init_sampler = self.get_init_neuron_variables(
             net_single, net_single.get(single_neuron)
         )
 
@@ -1144,7 +1284,7 @@ class model_configurator:
             "net": net_single,
             "population": net_single.get(single_neuron),
             "monitor": net_single.get(mon_single),
-            "variable_init_dict": variable_init_dict,
+            "variable_init_sampler": variable_init_sampler,
         }
 
         return net_single_dict
@@ -1161,16 +1301,73 @@ class model_configurator:
                 the population whose variables are obtained
 
         """
+        ### reset neuron and deactivate input
         net.reset()
         pop.I_app = 0
-        net.simulate(2000)
-        variable_init_dict = {
-            var_name: getattr(pop, var_name) for var_name in pop.variables
-        }
-        net.reset()
-        return variable_init_dict
 
-    def get_nr_many_neurons(self, pop_name):
+        ### 1000 ms init duration
+        net.simulate(1000)
+
+        ### simulate 2000 ms and check every dt the variables of the neuron
+        time_steps = int(2000 / dt())
+        var_name_list = list(pop.variables)
+        var_arr = np.zeros((time_steps, len(var_name_list)))
+        for time_idx in range(time_steps):
+            net.simulate(dt())
+            get_arr = np.array([getattr(pop, var_name) for var_name in pop.variables])
+            var_arr[time_idx, :] = get_arr[:, 0]
+        net.reset()
+
+        ### create a sampler with the data samples of from the 1000 ms simulation
+        sampler = self.var_arr_sampler(var_arr)
+        return sampler
+
+    class var_arr_sampler:
+        def __init__(self, var_arr) -> None:
+            self.var_arr_shape = var_arr.shape
+            self.is_const = (
+                np.std(var_arr, axis=0) <= np.mean(np.absolute(var_arr), axis=0) / 1000
+            )
+            self.constant_arr = var_arr[0, self.is_const]
+            self.not_constant_val_arr = var_arr[:, np.logical_not(self.is_const)]
+
+        def sample(self, n, seed=0):
+            """
+            Args:
+                n: int
+                    number of samples
+
+                seed: int, optional, default=0
+                    seed for rng
+            """
+            ### get random idx
+            rng = np.random.default_rng(seed=seed)
+            random_idx_arr = rng.integers(low=0, high=self.var_arr_shape[0], size=n)
+            ### sample with random idx
+            sample_arr = self.not_constant_val_arr[random_idx_arr]
+            ### create return array
+            ret_arr = np.zeros((n,) + self.var_arr_shape[1:])
+            ### add samples to return array
+            ret_arr[:, np.logical_not(self.is_const)] = sample_arr
+            ### add constant values to return array
+            ret_arr[:, self.is_const] = self.constant_arr
+
+            return ret_arr
+
+    def get_nr_many_neurons(self, nr_neurons, nr_networks):
+        """
+        Splits the number of neurons in almost equally sized parts.
+
+        Args:
+            nr_neurons: int
+                number of neurons which should be splitted
+
+            nr_networks: int
+                number of networks over which the neurons should be equally distributed
+        """
+        return self.divide_almost_equal(self, number=nr_neurons, num_parts=nr_networks)
+
+    def get_nr_many_neurons_old(self, pop_name):
         """
         gets population size of a population given by the neuron type of pop_name
         so that simulating 1000 ms takes about 10 s
@@ -1180,14 +1377,14 @@ class model_configurator:
             pop_name: str
                 population name
         """
-        duration_1000 = self.get_duration_1000(pop_name=pop_name, pop_size=1000)
+        duration_1000 = self.get_duration(pop_name=pop_name, pop_size=1000)
         nr_factor = 10 / duration_1000
         nr_neuron_10s = int(int(int(1000 * nr_factor) ** (1 / 3)) ** 3)
         return nr_neuron_10s
 
-    def get_duration_1000(self, pop_name, pop_size):
+    def get_duration(self, pop_name, pop_size):
         """
-        gets the duration for simulating 1000 ms with a population given
+        gets the duration for simulating X+500 ms with a population given
         by the neuron type of pop_name and the size pop_size
 
         Args:
@@ -1210,12 +1407,12 @@ class model_configurator:
         ### create Monitor for many neuron population
         mon_many = Monitor(many_neuron, ["spike"])
 
-        ### create network and record duration for 1000 ms simulation
+        ### create network and record duration for 500+X ms simulation
         net = Network()
         net.add([many_neuron, mon_many])
         net.compile()
         start = time()
-        net.simulate(1000)
+        net.simulate(500 + self.simulation_dur)
         end = time()
         duration = end - start
 
@@ -1609,5 +1806,5 @@ Use this template for the synaptic_contribution_dict:
 """
 )
 
-_p_g_after_set_syn_load = """Synaptic loads and contributions, i.e. weights set. Now call .set_base to obtain the baseline currents for the model populations.
+_p_g_after_set_syn_load = """Synaptic loads and contributions, i.e. weights set. Now call .get_base to obtain the baseline currents for the model populations. With .set_base you can directly set these baselines and the current weights in the model and compile the model.
 """
