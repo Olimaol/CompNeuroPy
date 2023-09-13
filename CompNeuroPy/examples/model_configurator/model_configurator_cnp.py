@@ -1,6 +1,14 @@
-from CompNeuroPy import cnp_clear, rmse
-from ANNarchy import Population, get_population, Monitor, Network, get_projection, dt
-from time import time
+from CompNeuroPy import cnp_clear, compile_in_folder, find_folder_with_prefix
+from ANNarchy import (
+    Population,
+    get_population,
+    Monitor,
+    Network,
+    get_projection,
+    dt,
+    parallel_run,
+)
+from ANNarchy.core.Global import _network
 import numpy as np
 from scipy.interpolate import interp1d, interpn
 from scipy.signal import find_peaks
@@ -9,11 +17,9 @@ import inspect
 import textwrap
 import os
 import itertools
-from sklearn.neural_network import MLPRegressor
-from sklearn import preprocessing
-from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 import multiprocessing
+import importlib.util
 
 
 class model_configurator:
@@ -69,12 +75,23 @@ class model_configurator:
         self.afferent_projection_dict = {
             pop_name: None for pop_name in self.pop_name_list
         }
+        self.neuron_model_dict = {pop_name: None for pop_name in self.pop_name_list}
+        self.neuron_model_parameters_dict = {
+            pop_name: None for pop_name in self.pop_name_list
+        }
         self.log_exist = False
         self.caller_name = ""
         self.log("model configurator log:")
         self.print_guide = print_guide
-        self.did_get_regressions = False
+        self.did_get_interpolation = False
         self.simulation_dur = 5000
+        ### nr of neurons **(1/3) has to result in an integer
+        self.nr_vals_interpolation_grid = 100
+        self.nr_pop_interpolation = self.nr_vals_interpolation_grid**3
+        self.nr_total_neurons = self.nr_pop_interpolation * len(self.pop_name_list)
+
+        ### prepare the creation of the networks
+        self.prepare_network_creation()
 
         ### print guide
         self._p_g(_p_g_1)
@@ -139,9 +156,9 @@ class model_configurator:
             I_base_dict, dict
                 Dictionary with baseline curretns for all configured populations.
         """
-        ### get regressions if not did already
-        if not self.did_get_regressions:
-            self.get_regressions()
+        ### get interpolations if not did already
+        if not self.did_get_interpolation:
+            self.get_interpolation()
 
         I_base_dict = {}
         for pop_name in self.pop_name_list:
@@ -237,34 +254,37 @@ class model_configurator:
 
         return I_base_dict
 
-    def get_regressions(self):
+    def get_interpolation(self):
 
-        ### get the regressions to
+        ### get the interpolations to
         ### 1st: predict I_app with f, g_ampa and g_gaba (for .set_base())
         ### 2nd: predict f with I_app, g_ampa and g_gaba (for later use...)
 
-        txt = "get regression models..."
+        ### TODO for get interpolation data you need the many neuron network
+        ### create the many neuron entwork here and clear ANNarchy before
+        ### if one needs the single neuron networks again later one can quickly recreate them
+
+        self.create_many_neuron_network()
+
+        txt = "get interpolation data..."
         print(txt)
         self.log(txt)
         for pop_name in tqdm(self.pop_name_list):
 
-            variable_init_sampler = self.net_single_dict[pop_name][
-                "variable_init_sampler"
-            ]
+            ### prepare grid for I, g_ampa and g_gaba
+            ### bounds
             g_ampa_max = self.g_max_dict[pop_name]["ampa"]
             g_gaba_max = self.g_max_dict[pop_name]["gaba"]
             I_max = self.I_app_max_dict[pop_name]
-            net_many_dict = self.net_many_dict[pop_name]
-
-            ### prepare grid for I, g_ampa and g_gaba
+            ### number of points for individual value arrays: I, g_ampa and g_gaba
             number_of_points = np.round(
-                len(net_many_dict["population"]) ** (1 / 3), 0
+                self.nr_neurons_net_many_total ** (1 / 3), 0
             ).astype(int)
+            ### create value_arrays
             I_app_value_array = np.linspace(-I_max, I_max, number_of_points)
             g_ampa_value_array = np.linspace(0, g_ampa_max, number_of_points)
             g_gaba_value_array = np.linspace(0, g_gaba_max, number_of_points)
-
-            ### get all combinations (grid) of I, g_ampa and g_gaba
+            ### get all combinations (grid) of value_arrays
             I_g_arr = np.array(
                 list(
                     itertools.product(
@@ -272,20 +292,36 @@ class model_configurator:
                     )
                 )
             )
+            ### individual value arrays from combinations
             I_app_arr = I_g_arr[:, 0]
             g_ampa_arr = I_g_arr[:, 1]
             g_gaba_arr = I_g_arr[:, 2]
 
-            ### get f for all combinations of I, g_ampa and g_gaba
-            f_rec_arr = self.get_rate(
-                net=net_many_dict["net"],
-                population=net_many_dict["population"],
-                variable_init_sampler=variable_init_sampler,
-                monitor=net_many_dict["monitor"],
-                I_app=I_app_arr,
-                g_ampa=g_ampa_arr,
-                g_gaba=g_gaba_arr,
+            ### split the arrays into the sizes of the many-neuron networks
+            split_idx_arr = np.cumsum(self.nr_many_neurons_list[pop_name])[:-1]
+
+            I_app_arr_list = np.split(I_app_arr, split_idx_arr)
+            g_ampa_arr_list = np.split(g_ampa_arr, split_idx_arr)
+            g_gaba_arr_list = np.split(g_gaba_arr, split_idx_arr)
+
+            ### get the firing rates for all I_app, g_ampa, g_gaba values
+            ### using all the many-neuron networks with parallel_run
+            network_list = [
+                net_many_dict["net"] for net_many_dict in self.net_many_dict[pop_name]
+            ]
+            f_rec_arr_list = parallel_run(
+                method=get_rate_parallel,
+                networks=network_list,
+                **{
+                    "pop_name": [pop_name] * len(network_list),
+                    "I_app_arr": I_app_arr_list,
+                    "g_ampa_arr": g_ampa_arr_list,
+                    "g_gaba_arr": g_gaba_arr_list,
+                    "self": [self] * len(network_list),
+                },
             )
+            ### TODO in case last network was not fully used --> ignore the not used values
+            f_rec_arr = np.concatenate(f_rec_arr_list)
 
             ### create interpolation
             self.f_I_g_curve_dict[pop_name] = self.get_interp_3p(
@@ -295,28 +331,7 @@ class model_configurator:
                 values=f_rec_arr,
             )
 
-            # ### add f_rec to the data grid
-            # f_I_g_data_arr = np.concatenate([I_g_arr, f_rec_arr[:, None]], axis=1)
-
-            # ### train regression to predict f with I_app, g_ampa, and g_gaba
-            # self.log("train regr for f_I_g_curve")
-            # self.f_I_g_curve_dict[pop_name] = self.train_regr_3p(
-            #     X_raw=f_I_g_data_arr[:, :3],
-            #     y_raw=f_I_g_data_arr[:, 3][:, None],
-            #     X_name_list=["I_app", "g_ampa", "g_gaba"],
-            #     y_name="f",
-            # )
-
-            # ### train regression to predict I_app with g_ampa, g_gaba, and f
-            # self.log("train regr for I_f_g_curve")
-            # self.I_f_g_curve_dict[pop_name] = self.train_regr_3p(
-            #     X_raw=f_I_g_data_arr[:, 1:],
-            #     y_raw=f_I_g_data_arr[:, 0][:, None],
-            #     X_name_list=["g_ampa", "g_gaba", "f"],
-            #     y_name="I_app",
-            # )
-
-        self.did_get_regressions = True
+        self.did_get_interpolation = True
 
     class get_interp_3p:
         def __init__(self, x, y, z, values) -> None:
@@ -361,64 +376,6 @@ class model_configurator:
                 self.values.reshape((self.x.size, self.y.size, self.z.size)),
                 point_arr,
             )
-
-    def train_regr_3p(self, X_raw, y_raw, X_name_list, y_name):
-        """
-        Train a regresion with 3 predictors and a single regressor
-
-        Args:
-            X_raw: array (n_samples, 3)
-                Data for the 3 predictors
-
-            y_raw: array (n_samples, 1)
-                Data of the regressor
-
-            X_name_list: list of str
-                The names of the 3 predictors
-
-            y_name: str
-                The name of the regressor
-
-        return:
-            regr_func: object
-                callable regression function with 3 arguments = the 3 predictors
-                regr_func(p1=, p2=, p3=)
-                regr_func.predictors gives the info how the predictors p1, p2 and p3 are called
-                regr_func.regressor gives the info how the returned variable is called
-
-        """
-        ### create scaler to z-transform data (and retransform scaled data)
-        scaler_X = preprocessing.StandardScaler().fit(X_raw)
-        scaler_y = preprocessing.StandardScaler().fit(y_raw)
-
-        ### create scaled data
-        X_scaled = scaler_X.transform(X_raw)
-        y_scaled = scaler_y.transform(y_raw)[:, 0]
-
-        ### split in test/train set
-        X_train, X_test, y_train, y_test = train_test_split(
-            X_scaled, y_scaled, test_size=0.1, random_state=42
-        )
-
-        ### train MLP regression
-        regr_model = MLPRegressor(
-            hidden_layer_sizes=(300, 200, 100), random_state=42, max_iter=100
-        )
-        regr_model.fit(X_train, y_train)
-
-        ### test predictions
-        ### scaled data
-        pred_test_scaled = regr_model.predict(X_test)
-        test_error_scaled = rmse(y_test, pred_test_scaled)
-        ### raw data
-        y_test_raw = scaler_y.inverse_transform(y_test[:, None])
-        pred_test_raw = scaler_y.inverse_transform(pred_test_scaled[:, None])
-        test_error_raw = rmse(y_test_raw, pred_test_raw)
-        ### log errors
-        self.log(f"test_error scaled: {test_error_scaled}")
-        self.log(f"test_error raw: {test_error_raw}")
-
-        return regr_function_3p(regr_model, scaler_X, scaler_y, X_name_list, y_name)
 
     def set_syn_load(self, synaptic_load_dict, synaptic_contribution_dict=None):
         """
@@ -637,50 +594,82 @@ class model_configurator:
 
         return result
 
+    def prepare_network_creation(self):
+        """
+        prepares the creation of the single neuron and many neuron networks
+        """
+        ### clear ANNarchy and create the model
+        cnp_clear()
+        self.model.create(do_compile=False)
+
+        ### get the neuron models from the model
+        for pop_name in self.pop_name_list:
+            self.neuron_model_dict[pop_name] = get_population(pop_name).neuron_type
+            self.neuron_model_parameters_dict[pop_name] = get_population(
+                pop_name
+            ).init.items()
+
+        ### prepare creation of networks
+        ### number of networks with size=10000 --> do not get smaller with parallel networks!
+        nr_networks_10000 = np.ceil(self.nr_total_neurons / 10000)
+        ### get the number of available parallel workers
+        nr_available_workers = int(multiprocessing.cpu_count() / 2)
+        ### now use the smaller number of networks
+        nr_networks = int(min([nr_networks_10000, nr_available_workers]))
+        ### now get the number of neurons each population of the many neruion network should have
+        ### evenly distribute all neurons over the number of networks
+        self.nr_neurons_of_pop_per_net = int(
+            np.ceil(self.nr_pop_interpolation / nr_networks)
+        )
+        self.nr_total_neurons = round(
+            self.nr_pop_interpolation * len(self.pop_name_list), 0
+        )
+        self.log(f"nr_vals_interpolation_grid: {self.nr_vals_interpolation_grid}")
+        self.log(f"nr_pop_interpolation: {self.nr_pop_interpolation}")
+        self.log(f"nr_pop: {len(self.pop_name_list)}")
+        self.log(f"nr_total_neurons: {self.nr_total_neurons}")
+        self.log(
+            f"nr_neurons_of_pop_per_net: {self.nr_neurons_of_pop_per_net}; times nr_networks: {self.nr_neurons_of_pop_per_net*nr_networks}"
+        )
+        self.log(f"nr_networks: {nr_networks}")
+        ### this nr of neurons of pop per network may result in too mcuh neurons per pop --> check if all networks are fully needed
+        ### correct nr networks
+        self.nr_networks = int(
+            np.ceil(self.nr_pop_interpolation / self.nr_neurons_of_pop_per_net)
+        )
+        self.nr_last_network = round(
+            self.nr_neurons_of_pop_per_net
+            - (
+                round(self.nr_neurons_of_pop_per_net * self.nr_networks, 0)
+                - self.nr_pop_interpolation
+            ),
+            0,
+        )
+        self.log(
+            f"nr_networks corrected: {self.nr_pop_interpolation / self.nr_neurons_of_pop_per_net} --> {self.nr_networks} with {self.nr_last_network} neurons to use from last network"
+        )
+        ### TODO use these new sizes to create large multi population networks and get the firing rates from it
+
+    def create_single_neuron_networks(self):
+        ### clear ANNarchy
+        cnp_clear()
+        ### create the single neuron networks
+        for pop_name in self.pop_name_list:
+            self.log(f"create network_single for {pop_name}")
+            self.net_single_dict[pop_name] = self.create_net_single(pop_name=pop_name)
+
     def get_max_syn(self):
         """
         get the weight dictionary for all populations given in target_firing_rate_dict
         keys = population names, values = dict which contain values = afferent projection names, values = lists with w_min and w_max
         """
 
-        ### clear ANNarchy and create the model
-        cnp_clear()
-        self.model.create(do_compile=False)
+        ### create single neuron netwokrs
+        self.create_single_neuron_networks()
 
+        ### get max synaptic things with single neuron networks
         for pop_name in self.pop_name_list:
             self.log(pop_name)
-
-            ### OLD
-            # ### get the sizes of the many neuron population
-            # self.log(
-            #     f"create network_1000 and get nr of neurons for network_many for {pop_name}"
-            # )
-            # nr_many_neurons = self.get_nr_many_neurons(pop_name)
-            # self.log(f"nr_many_neurons for {pop_name}: {nr_many_neurons}")
-            ### OLD
-
-            ### target nr many neurons = 100000 --> want to get 100000 values i.e. 100 for I_app, g_ampa and g_gaba each
-            ### number of networks with size=1000 --> do not get smaller with parallel networks!
-            nr_networks_1000 = 100
-            ### get the number of available parallel workers
-            nr_available_workers = int(multiprocessing.cpu_count() / 2)
-            ### now use the smaller number of networks
-            nr_networks = min([nr_networks_1000, nr_available_workers])
-            ### evenly distribute all neurons over the number of networks
-            nr_many_neurons_list = self.get_nr_many_neurons(
-                nr_neurons=100000, nr_networks=nr_networks
-            )
-            self.log(f"nr_many_neurons_list for {pop_name}: {nr_many_neurons_list}")
-            self.log(f"nr_networks for {pop_name}: {nr_networks}")
-
-            ### create the many and single neuron network
-            ### TODO change the many_neruons networks simulations to run_parallel, nr_networks and their sizes -> see above
-            self.log(f"create network_many and network_single for {pop_name}")
-            self.net_many_dict[pop_name] = self.create_net_many(
-                pop_name=pop_name, nr_neurons=nr_many_neurons
-            )
-            self.net_single_dict[pop_name] = self.create_net_single(pop_name=pop_name)
-
             ### get max synaptic currents (I and gs) using the single neuron network
             self.log(
                 f"get max I_app, g_ampa and g_gaba using network_single for {pop_name}"
@@ -742,6 +731,53 @@ class model_configurator:
         )
 
         return self.max_weight_dict
+
+    def compile_net_many_sequential(self):
+        network_list = [
+            net_many_dict["net"]
+            for net_many_dict_list in self.net_many_dict.values()
+            for net_many_dict in net_many_dict_list
+        ]
+        for net in network_list:
+            self.compile_net_many(net=net)
+
+    def compile_net_many_parallel(self):
+        nr_available_workers = int(multiprocessing.cpu_count() / 2)
+        network_list = [
+            net_many_dict["net"]
+            for net_many_dict_list in self.net_many_dict.values()
+            for net_many_dict in net_many_dict_list
+        ]
+        with multiprocessing.Pool(nr_available_workers) as p:
+            p.map(self.compile_net_many, network_list)
+
+        ### for each network have network idx
+        ### network 0 is base network
+        ### netork 1,2,3...N are the single neuron networks for the N populations
+        ### start idx = N+1 (inclusive), end_idx = number many networks + N (inclusive)
+        for net_idx in range(
+            len(self.pop_name_list) + 1, len(network_list) + len(self.pop_name_list) + 1
+        ):
+            ### get the name of the run folder of the network
+            ### search for a folder which starts with run_
+            ### there should only be 1 --> get run_folder_name as str
+            run_folder_name = find_folder_with_prefix(
+                base_path=f"annarchy_folders/many_net_{net_idx}", prefix="run_"
+            )
+            run_folder_name = f"/scratch/olmai/Projects/PhD/CompNeuroPy/CompNeuroPy/examples/model_configurator/annarchy_folders/many_net_{net_idx}//{run_folder_name}"
+
+            print(run_folder_name)
+            ### import the ANNarchyCore.so module from this folder
+            spec = importlib.util.spec_from_file_location(
+                f"ANNarchyCore{net_idx}", f"{run_folder_name}/ANNarchyCore{net_idx}.so"
+            )
+            foo = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(foo)
+
+            ### overwrite the entries in the network manager
+            _network[net_idx]["instance"] = foo
+            _network[net_idx]["compiled"] = True
+            _network[net_idx]["directory"] = run_folder_name
 
     def get_afferent_projection_dict(self, pop_name):
         """
@@ -1206,7 +1242,12 @@ class model_configurator:
 
         return f_arr
 
-    def create_net_many(self, pop_name, nr_neurons):
+    def compile_net_many(self, net):
+        compile_in_folder(
+            folder_name=f"many_net_{net.id}", net=net, clean=True, silent=True
+        )
+
+    def create_many_neuron_network(self, pop_name):
         """
         creates a network with the neuron type of the population given by pop_name
         the number of neurons is selected so that the simulation of 1000 ms takes
@@ -1215,37 +1256,51 @@ class model_configurator:
         Args:
             pop_name: str
                 population name
-
-            nr_neurons: int
-                size of the created population
         """
-        ### create the many neuron population
-        many_neuron = Population(
-            nr_neurons,
-            neuron=get_population(pop_name).neuron_type,
-            name=f"many_neuron_{pop_name}",
-        )
 
-        ### set the attributes of the neurons
-        for attr_name, attr_val in get_population(pop_name).init.items():
-            setattr(many_neuron, attr_name, attr_val)
+        ### clear ANNarchy
+        cnp_clear()
 
-        ### create Monitor for many neuron
-        mon_many = Monitor(many_neuron, ["spike"])
+        nr_neurons = int(self.nr_neurons_per_net_many_list / len(self.pop_name_list))
 
-        ### create network with many neuron
-        net_many = Network()
-        net_many.add([many_neuron, mon_many])
-        net_many.compile()
+        ### for each configured population create a population with a given size
+        for pop_name in self.pop_name_list:
+            ### create the many neuron population
+            many_neuron = Population(
+                nr_neurons,
+                neuron=get_population(pop_name).neuron_type,
+                name=f"many_neuron_{pop_name}_{net_idx}",
+            )
 
-        ### network dict
-        net_many_dict = {
-            "net": net_many,
-            "population": net_many.get(many_neuron),
-            "monitor": net_many.get(mon_many),
-        }
+        ret_list = []
+        for net_idx, nr_neurons in enumerate(self.nr_many_neurons_list[pop_name]):
+            ### create the many neuron population
+            many_neuron = Population(
+                nr_neurons,
+                neuron=get_population(pop_name).neuron_type,
+                name=f"many_neuron_{pop_name}_{net_idx}",
+            )
 
-        return net_many_dict
+            ### set the attributes of the neurons
+            for attr_name, attr_val in get_population(pop_name).init.items():
+                setattr(many_neuron, attr_name, attr_val)
+
+            ### create Monitor for many neuron
+            mon_many = Monitor(many_neuron, ["spike"])
+
+            ### create network with many neuron
+            net_many = Network()
+            net_many.add([many_neuron, mon_many])
+
+            ### network dict
+            net_many_dict = {
+                "net": net_many,
+                "population": net_many.get(many_neuron),
+                "monitor": net_many.get(mon_many),
+            }
+            ret_list.append(net_many_dict)
+
+        return ret_list
 
     def create_net_single(self, pop_name):
         """
@@ -1259,11 +1314,11 @@ class model_configurator:
         ### create the single neuron population
         single_neuron = Population(
             1,
-            neuron=get_population(pop_name).neuron_type,
+            neuron=self.neuron_model_dict[pop_name],
             name=f"single_neuron_{pop_name}",
         )
         ### set the attributes of the neuron
-        for attr_name, attr_val in get_population(pop_name).init.items():
+        for attr_name, attr_val in self.neuron_model_parameters_dict[pop_name]:
             setattr(single_neuron, attr_name, attr_val)
 
         ### create Monitor for single neuron
@@ -1272,7 +1327,9 @@ class model_configurator:
         ### create network with single neuron
         net_single = Network()
         net_single.add([single_neuron, mon_single])
-        net_single.compile()
+        compile_in_folder(
+            folder_name=f"single_net_{pop_name}", silent=True, net=net_single
+        )
 
         ### get the values of the variables after 2000 ms simulation
         variable_init_sampler = self.get_init_neuron_variables(
@@ -1365,58 +1422,7 @@ class model_configurator:
             nr_networks: int
                 number of networks over which the neurons should be equally distributed
         """
-        return self.divide_almost_equal(self, number=nr_neurons, num_parts=nr_networks)
-
-    def get_nr_many_neurons_old(self, pop_name):
-        """
-        gets population size of a population given by the neuron type of pop_name
-        so that simulating 1000 ms takes about 10 s
-        and that the 3rd root of population size is an int
-
-        Args:
-            pop_name: str
-                population name
-        """
-        duration_1000 = self.get_duration(pop_name=pop_name, pop_size=1000)
-        nr_factor = 10 / duration_1000
-        nr_neuron_10s = int(int(int(1000 * nr_factor) ** (1 / 3)) ** 3)
-        return nr_neuron_10s
-
-    def get_duration(self, pop_name, pop_size):
-        """
-        gets the duration for simulating X+500 ms with a population given
-        by the neuron type of pop_name and the size pop_size
-
-        Args:
-            pop_name: str
-                population name
-
-            pop_size: int
-                population size i.e. number of neurons
-        """
-        ### create many neuron population with determined neuron_type and given size
-        many_neuron = Population(
-            pop_size,
-            neuron=get_population(pop_name).neuron_type,
-            name=f"duration_1000_{pop_name}",
-        )
-        ### set the attributes of the neurons
-        for attr_name, attr_val in get_population(pop_name).init.items():
-            setattr(many_neuron, attr_name, attr_val)
-
-        ### create Monitor for many neuron population
-        mon_many = Monitor(many_neuron, ["spike"])
-
-        ### create network and record duration for 500+X ms simulation
-        net = Network()
-        net.add([many_neuron, mon_many])
-        net.compile()
-        start = time()
-        net.simulate(500 + self.simulation_dur)
-        end = time()
-        duration = end - start
-
-        return duration
+        return self.divide_almost_equal(number=nr_neurons, num_parts=nr_networks)
 
     def get_max_weight_dict_for_pop(self, pop_name):
         """
@@ -1669,113 +1675,46 @@ class model_configurator:
         return mean_g
 
 
-class regr_function_3p:
-    def __init__(self, regr_model, scaler_X, scaler_y, X_name_list, y_name) -> None:
-        """
-        Regression function with 3 predictors and 1 regressor.
+def get_rate_parallel(idx, net, pop_name, I_app_arr, g_ampa_arr, g_gaba_arr, self):
+    """
+    function used by parallel_run to otain the firing rates of the population of the network given with 'idx' for given I_app, g_ampa and g_gaba values
 
-        functions:
-            __call__:
-                Args:
-                    p1: number or array, optional, default=0
-                        Data sample(s) of the 1st predictor
+    Args:
+        idx: int
+            network index given by the parallel_run function
 
-                    p2: number or array, optional, default=0
-                        Data sample(s) of the 2nd predictor
+        net: object
+            network object given by the parallel_run function
 
-                    p3: number or array, optional, default=0
-                        Data sample(s) of the 3rd predictor
+        pop_name: str
+            population name given during calling the parallel_run function
 
-                    if p1, p2, p3 == array --> same size!
+        I_app_arr: array
+            array with input values for I_app
 
-                return:
-                    y_arr: array
-                        The predicted regressor value(s)
+        g_ampa_arr: array
+            array with input values for g_ampa
 
-        attributes:
-            predictors: list of str
-                The names of the 3 predictors
+        g_gaba_arr: array
+            array with input values for g_gaba
+    """
+    ### get the network dict and the input arrays for the current network idx
+    net_many_dict_list = self.net_many_dict[pop_name]
+    net_many_dict = net_many_dict_list[idx]
+    variable_init_sampler = self.net_single_dict[pop_name]["variable_init_sampler"]
 
-            regressor: list of str
-                The name of the regressor
-        """
-        self.regr_model = regr_model
-        self.scaler_X = scaler_X
-        self.scaler_y = scaler_y
-
-        self.predictors = {
-            ["p1", "p2", "p3"][idx_X_name]: X_name
-            for idx_X_name, X_name in enumerate(X_name_list)
-        }
-        self.regressor = y_name
-
-    def __call__(self, p1=None, p2=None, p3=None):
-        """
-        Args:
-            p1: number or array, optional, default=0
-                Data sample(s) of the 1st predictor
-
-            p2: number or array, optional, default=0
-                Data sample(s) of the 2nd predictor
-
-            p3: number or array, optional, default=0
-                Data sample(s) of the 3rd predictor
-
-            if p1, p2, p3 == array --> same size!
-
-        return:
-            y_arr: array
-                The predicted regressor value(s)
-        """
-        ### check which values are given
-        p1_given = not (isinstance(p1, type(None)))
-        p2_given = not (isinstance(p2, type(None)))
-        p3_given = not (isinstance(p3, type(None)))
-
-        ### reshape all to target shape
-        p1 = np.array(p1).reshape((-1, 1)).astype(float)
-        p2 = np.array(p2).reshape((-1, 1)).astype(float)
-        p3 = np.array(p3).reshape((-1, 1)).astype(float)
-
-        ### check if arrays of given values have same size
-        size_arr = np.array([p1.shape[0], p2.shape[0], p3.shape[0]])
-        given_arr = np.array([p1_given, p2_given, p3_given]).astype(bool)
-        if len(size_arr[given_arr]) > 0:
-            all_size = size_arr[given_arr][0]
-            all_same_size = np.all(size_arr[given_arr] == all_size)
-            if not all_same_size:
-                raise ValueError(
-                    "regr_function_3p call: given p1, p2 and p3 have to have same size!"
-                )
-
-        ### set the correctly sized arrays for the not given values
-        if not p1_given:
-            p1 = np.zeros(all_size).reshape((-1, 1))
-        if not p2_given:
-            p2 = np.zeros(all_size).reshape((-1, 1))
-        if not p3_given:
-            p3 = np.zeros(all_size).reshape((-1, 1))
-
-        ### predict y_arr
-        X_raw = np.concatenate([p1, p2, p3], axis=1)
-        y_arr = self.pred_regr(X_raw, self.regr_model, self.scaler_X, self.scaler_y)[
-            :, 0
-        ]
-
-        return y_arr
-
-    def pred_regr(self, X_raw, regr_model, scaler_X, scaler_y):
-        """
-        X shape = (n_samples, n_features)
-
-        pred shape = (n_samples, 1)
-        """
-
-        X_scaled = scaler_X.transform(X_raw)
-        pred_scaled = regr_model.predict(X_scaled)
-        pred_raw = scaler_y.inverse_transform(pred_scaled[:, None])
-
-        return pred_raw
+    ### get f for the input arrays of I_app, g_ampa and g_gaba
+    f_rec_arr = self.get_rate(
+        net=net_many_dict["net"],
+        population=net_many_dict["population"],
+        variable_init_sampler=variable_init_sampler,
+        monitor=net_many_dict["monitor"],
+        I_app=I_app_arr,
+        g_ampa=g_ampa_arr,
+        g_gaba=g_gaba_arr,
+    )
+    ### return firing rate array
+    return f_rec_arr
 
 
 _p_g_1 = """First call get_max_syn.

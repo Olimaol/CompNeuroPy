@@ -166,3 +166,19 @@ def get_all_objects():
     # _getr does the real work.
     _getr(gcl, olist, seen)
     return olist
+
+
+def find_folder_with_prefix(base_path, prefix):
+    # List all items (files and directories) in the base_path
+    items = os.listdir(base_path)
+
+    # Iterate through the items to find a folder with the specified prefix
+    for item in items:
+        item_path = os.path.join(base_path, item)
+
+        # Check if the item is a directory and its name starts with the given prefix
+        if os.path.isdir(item_path) and item.startswith(prefix):
+            return item
+
+    # If no folder with the specified prefix is found, return None
+    return None

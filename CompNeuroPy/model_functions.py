@@ -15,14 +15,17 @@ from CompNeuroPy import extra_functions as ef
 from CompNeuroPy.generate_model import generate_model
 
 
-def compile_in_folder(folder_name):
+def compile_in_folder(folder_name, net=None, clean=False, silent=False):
     """
     creates the compilation folder in annarchy_folders/
     or uses existing one
     compiles the current network
     """
-    sf.create_dir("annarchy_folders/" + folder_name, print_info=1)
-    compile("annarchy_folders/" + folder_name)
+    sf.create_dir("annarchy_folders/" + folder_name, print_info=False)
+    if isinstance(net, type(None)):
+        compile("annarchy_folders/" + folder_name, clean=clean, silent=silent)
+    else:
+        net.compile("annarchy_folders/" + folder_name, clean=clean, silent=silent)
     if os.getcwd().split("/")[-1] == "annarchy_folders":
         os.chdir("../")
 
