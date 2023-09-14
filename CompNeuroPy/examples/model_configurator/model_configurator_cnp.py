@@ -1,4 +1,4 @@
-from CompNeuroPy import cnp_clear, compile_in_folder, find_folder_with_prefix
+from CompNeuroPy import cnp_clear, compile_in_folder, find_folder_with_prefix, data_obj
 from ANNarchy import (
     Population,
     get_population,
@@ -7,6 +7,8 @@ from ANNarchy import (
     get_projection,
     dt,
     parallel_run,
+    simulate,
+    reset,
 )
 from ANNarchy.core.Global import _network
 import numpy as np
@@ -20,6 +22,8 @@ import itertools
 from tqdm import tqdm
 import multiprocessing
 import importlib.util
+from time import time, strftime
+import datetime
 
 
 class model_configurator:
@@ -85,12 +89,14 @@ class model_configurator:
         self.print_guide = print_guide
         self.did_get_interpolation = False
         self.simulation_dur = 5000
+        self.simulation_dur_estimate_time = 50
         ### nr of neurons **(1/3) has to result in an integer
-        self.nr_vals_interpolation_grid = 100
+        self.nr_vals_interpolation_grid = 36
         self.nr_pop_interpolation = self.nr_vals_interpolation_grid**3
         self.nr_total_neurons = self.nr_pop_interpolation * len(self.pop_name_list)
 
         ### prepare the creation of the networks
+        ### also do things for which the model needs to be created (it will not be available later)
         self.prepare_network_creation()
 
         ### print guide
@@ -162,14 +168,8 @@ class model_configurator:
 
         I_base_dict = {}
         for pop_name in self.pop_name_list:
-            ### get the current g_values of the populations
-            ### with the currently set weights in the afferent projeciton dict
-
-            ### predict baseline current values using g_values and target firing rates
+            ### predict baseline current values
             I_base_dict[pop_name] = self.find_base_current(pop_name)
-            # I_base_dict[pop_name] = self.I_f_g_curve_dict[pop_name](
-            #     p1=g_ampa, p2=g_gaba, p3=self.target_firing_rate_dict[pop_name]
-            # )[0]
 
         return I_base_dict
 
@@ -254,23 +254,296 @@ class model_configurator:
 
         return I_base_dict
 
+    def get_time_in_x_sec(self, x):
+        """
+        Args:
+            x: int
+                how many seconds add to the current time
+
+        return:
+            formatted_future_time: str
+                string of the future time in HH:MM:SS
+        """
+        # Get the current time
+        current_time = datetime.datetime.now()
+
+        # Add 10 seconds to the current time
+        future_time = current_time + datetime.timedelta(seconds=x)
+
+        # Format future_time as HH:MM:SS
+        formatted_future_time = future_time.strftime("%H:%M:%S")
+
+        return formatted_future_time
+
     def get_interpolation(self):
+        """
+        get the interpolations to
+        predict f with I_app, g_ampa and g_gaba
 
-        ### get the interpolations to
-        ### 1st: predict I_app with f, g_ampa and g_gaba (for .set_base())
-        ### 2nd: predict f with I_app, g_ampa and g_gaba (for later use...)
+        sets the class variable self.f_I_g_curve_dict --> for each population a f_I_g_curve function
+        """
 
-        ### TODO for get interpolation data you need the many neuron network
-        ### create the many neuron entwork here and clear ANNarchy before
-        ### if one needs the single neuron networks again later one can quickly recreate them
+        ### create model
+        net_many_dict = self.create_many_neuron_network()
 
-        self.create_many_neuron_network()
-
+        ### get interpolation data TODO
         txt = "get interpolation data..."
         print(txt)
         self.log(txt)
-        for pop_name in tqdm(self.pop_name_list):
+        ### for each population get the input arrays for I_app, g_ampa and g_gaba TODO
+        input_dict = self.get_input_for_many_neurons_net()
 
+        ### create dict with variable_init_samplers of populations
+        variable_init_sampler_list = [
+            self.net_single_dict[pop_name]["variable_init_sampler"]
+            for pop_name in self.pop_name_list
+        ]
+
+        ### run the run_parallel with a reduced simulation duration and obtain a time estimate for the full duration
+        start = time()
+        parallel_run(
+            method=get_rate_parallel,
+            number=self.nr_networks,
+            **{
+                "pop_name_list": [self.pop_name_list] * self.nr_networks,
+                "population_list": [list(net_many_dict["population_dict"].values())]
+                * self.nr_networks,
+                "variable_init_sampler_list": [variable_init_sampler_list]
+                * self.nr_networks,
+                "monitor_list": [list(net_many_dict["monitor_dict"].values())]
+                * self.nr_networks,
+                "I_app_list": input_dict["I_app_list"],
+                "g_ampa_list": input_dict["g_ampa_list"],
+                "g_gaba_list": input_dict["g_gaba_list"],
+                "simulation_dur": [dt()] * self.nr_networks,
+            },
+        )
+        reset()
+        end = time()
+        offset_time = end - start
+        start = time()
+        parallel_run(
+            method=get_rate_parallel,
+            number=self.nr_networks,
+            **{
+                "pop_name_list": [self.pop_name_list] * self.nr_networks,
+                "population_list": [list(net_many_dict["population_dict"].values())]
+                * self.nr_networks,
+                "variable_init_sampler_list": [variable_init_sampler_list]
+                * self.nr_networks,
+                "monitor_list": [list(net_many_dict["monitor_dict"].values())]
+                * self.nr_networks,
+                "I_app_list": input_dict["I_app_list"],
+                "g_ampa_list": input_dict["g_ampa_list"],
+                "g_gaba_list": input_dict["g_gaba_list"],
+                "simulation_dur": [self.simulation_dur_estimate_time]
+                * self.nr_networks,
+            },
+        )
+        reset()
+        end = time()
+        time_estimate = round(
+            (end - start - offset_time)
+            * (self.simulation_dur / self.simulation_dur_estimate_time),
+            1,
+        )
+
+        txt = f"start parallel_run of many neurons network on {self.nr_networks} threads, will take approx. {time_estimate} s (end: {self.get_time_in_x_sec(x=time_estimate)})..."
+        print(txt)
+        self.log(txt)
+        ### simulate the many neurons network with the input arrays splitted into the network populations sizes TODO
+        ### and get the data of all populations
+        ### run_parallel
+        start = time()
+        f_rec_arr_list_list = parallel_run(
+            method=get_rate_parallel,
+            number=self.nr_networks,
+            **{
+                "pop_name_list": [self.pop_name_list] * self.nr_networks,
+                "population_list": [list(net_many_dict["population_dict"].values())]
+                * self.nr_networks,
+                "variable_init_sampler_list": [variable_init_sampler_list]
+                * self.nr_networks,
+                "monitor_list": [list(net_many_dict["monitor_dict"].values())]
+                * self.nr_networks,
+                "I_app_list": input_dict["I_app_list"],
+                "g_ampa_list": input_dict["g_ampa_list"],
+                "g_gaba_list": input_dict["g_gaba_list"],
+                "simulation_dur": [self.simulation_dur] * self.nr_networks,
+            },
+        )
+        end = time()
+        print(f"took {end-start} s")
+
+        ### combine the list of outputs from parallel_run to one output per population TODO
+        output_of_populations_dict = self.get_output_of_populations(f_rec_arr_list_list)
+
+        ### create interpolation
+        for pop_name in self.pop_name_list:
+            ### get whole input arrays
+            I_app_value_array = input_dict["I_app_arr_dict"][pop_name]
+            g_ampa_value_array = input_dict["g_ampa_arr_dict"][pop_name]
+            g_gaba_value_array = input_dict["g_gaba_arr_dict"][pop_name]
+            ### get the interpolation
+            self.f_I_g_curve_dict[pop_name] = self.get_interp_3p(
+                x=I_app_value_array,
+                y=g_ampa_value_array,
+                z=g_gaba_value_array,
+                values=output_of_populations_dict[pop_name],
+            )
+
+        self.did_get_interpolation = True
+
+    def get_output_of_populations(self, f_rec_arr_list_list):
+        """
+        restructure the output of run_parallel so that for each population a single array with firing rates is obtained
+
+        Args:
+            f_rec_arr_list_list: list of lists of arrays
+                first lists contain different network runs, second level lists contain arrays for the different populations
+        return:
+            output_pop_dict: dict of arrays
+                for each population a single array with firing rates
+        """
+        output_pop_dict = {}
+        for pop_name in self.pop_name_list:
+            output_pop_dict[pop_name] = []
+        for f_rec_arr_list in f_rec_arr_list_list:
+            for pop_idx, pop_name in enumerate(self.pop_name_list):
+                output_pop_dict[pop_name].append(f_rec_arr_list[pop_idx])
+
+        ### if last network was smaller --> do not use X last values
+        if self.nr_last_network < self.nr_neurons_of_pop_per_net:
+            not_use_values = round(
+                self.nr_neurons_of_pop_per_net - self.nr_last_network, 0
+            )
+
+            for pop_name in self.pop_name_list:
+                output_pop_dict[pop_name][-1] = output_pop_dict[pop_name][-1][
+                    :-not_use_values
+                ]
+
+        ### concatenate the arrays of the populations
+        for pop_name in self.pop_name_list:
+            output_pop_dict[pop_name] = np.concatenate(output_pop_dict[pop_name])
+
+        return output_pop_dict
+
+    def get_input_for_many_neurons_net(self):
+        """
+        get the inputs for the parallel many neurons network simulation
+
+        need a list of dicts, keys=pop_name, lsit=number of networks
+        """
+
+        ### create dicts with lists for the populations
+        I_app_arr_list_dict = {}
+        g_ampa_arr_list_dict = {}
+        g_gaba_arr_list_dict = {}
+        I_app_arr_dict = {}
+        g_ampa_arr_dict = {}
+        g_gaba_arr_dict = {}
+        for pop_name in self.pop_name_list:
+            ### prepare grid for I, g_ampa and g_gaba
+            ### bounds
+            g_ampa_max = self.g_max_dict[pop_name]["ampa"]
+            g_gaba_max = self.g_max_dict[pop_name]["gaba"]
+            I_max = self.I_app_max_dict[pop_name]
+
+            ### create value_arrays
+            I_app_value_array = np.linspace(
+                -I_max, I_max, self.nr_vals_interpolation_grid
+            )
+            g_ampa_value_array = np.linspace(
+                0, g_ampa_max, self.nr_vals_interpolation_grid
+            )
+            g_gaba_value_array = np.linspace(
+                0, g_gaba_max, self.nr_vals_interpolation_grid
+            )
+
+            ### store these value arrays for each pop
+            I_app_arr_dict[pop_name] = I_app_value_array
+            g_ampa_arr_dict[pop_name] = g_ampa_value_array
+            g_gaba_arr_dict[pop_name] = g_gaba_value_array
+
+            ### get all combinations (grid) of value_arrays
+            I_g_arr = np.array(
+                list(
+                    itertools.product(
+                        *[I_app_value_array, g_ampa_value_array, g_gaba_value_array]
+                    )
+                )
+            )
+
+            ### individual value arrays from combinations
+            I_app_arr = I_g_arr[:, 0]
+            g_ampa_arr = I_g_arr[:, 1]
+            g_gaba_arr = I_g_arr[:, 2]
+
+            ### split the arrays for the networks
+            networks_size_list = np.array(
+                [self.nr_neurons_of_pop_per_net] * self.nr_networks
+            )
+            split_idx_arr = np.cumsum(networks_size_list)[:-1]
+            ### after this split the last array may be smaller than the others --> append zeros
+            I_app_arr_list = np.split(I_app_arr, split_idx_arr)
+            g_ampa_arr_list = np.split(g_ampa_arr, split_idx_arr)
+            g_gaba_arr_list = np.split(g_gaba_arr, split_idx_arr)
+
+            ### check if last network is smaler
+            if self.nr_last_network < self.nr_neurons_of_pop_per_net:
+                nr_of_zeros_append = round(
+                    self.nr_neurons_of_pop_per_net - self.nr_last_network, 0
+                )
+                I_app_arr_list[-1] = np.concatenate(
+                    [I_app_arr_list[-1], np.zeros(nr_of_zeros_append)]
+                )
+                g_ampa_arr_list[-1] = np.concatenate(
+                    [g_ampa_arr_list[-1], np.zeros(nr_of_zeros_append)]
+                )
+                g_gaba_arr_list[-1] = np.concatenate(
+                    [g_gaba_arr_list[-1], np.zeros(nr_of_zeros_append)]
+                )
+
+            ### store the arra lists into the populaiton dicts
+            I_app_arr_list_dict[pop_name] = I_app_arr_list
+            g_ampa_arr_list_dict[pop_name] = g_ampa_arr_list
+            g_gaba_arr_list_dict[pop_name] = g_gaba_arr_list
+
+        ### restructure the dict of lists into a list for networks of list for populations
+        I_app_list = []
+        g_ampa_list = []
+        g_gaba_list = []
+        for net_idx in range(self.nr_networks):
+            I_app_list.append(
+                [
+                    I_app_arr_list_dict[pop_name][net_idx]
+                    for pop_name in self.pop_name_list
+                ]
+            )
+            g_ampa_list.append(
+                [
+                    g_ampa_arr_list_dict[pop_name][net_idx]
+                    for pop_name in self.pop_name_list
+                ]
+            )
+            g_gaba_list.append(
+                [
+                    g_gaba_arr_list_dict[pop_name][net_idx]
+                    for pop_name in self.pop_name_list
+                ]
+            )
+
+        return {
+            "I_app_list": I_app_list,
+            "g_ampa_list": g_ampa_list,
+            "g_gaba_list": g_gaba_list,
+            "I_app_arr_dict": I_app_arr_dict,
+            "g_ampa_arr_dict": g_ampa_arr_dict,
+            "g_gaba_arr_dict": g_gaba_arr_dict,
+        }
+
+        for pop_name in self.pop_name_list:
             ### prepare grid for I, g_ampa and g_gaba
             ### bounds
             g_ampa_max = self.g_max_dict[pop_name]["ampa"]
@@ -303,35 +576,6 @@ class model_configurator:
             I_app_arr_list = np.split(I_app_arr, split_idx_arr)
             g_ampa_arr_list = np.split(g_ampa_arr, split_idx_arr)
             g_gaba_arr_list = np.split(g_gaba_arr, split_idx_arr)
-
-            ### get the firing rates for all I_app, g_ampa, g_gaba values
-            ### using all the many-neuron networks with parallel_run
-            network_list = [
-                net_many_dict["net"] for net_many_dict in self.net_many_dict[pop_name]
-            ]
-            f_rec_arr_list = parallel_run(
-                method=get_rate_parallel,
-                networks=network_list,
-                **{
-                    "pop_name": [pop_name] * len(network_list),
-                    "I_app_arr": I_app_arr_list,
-                    "g_ampa_arr": g_ampa_arr_list,
-                    "g_gaba_arr": g_gaba_arr_list,
-                    "self": [self] * len(network_list),
-                },
-            )
-            ### TODO in case last network was not fully used --> ignore the not used values
-            f_rec_arr = np.concatenate(f_rec_arr_list)
-
-            ### create interpolation
-            self.f_I_g_curve_dict[pop_name] = self.get_interp_3p(
-                x=I_app_value_array,
-                y=g_ampa_value_array,
-                z=g_gaba_value_array,
-                values=f_rec_arr,
-            )
-
-        self.did_get_interpolation = True
 
     class get_interp_3p:
         def __init__(self, x, y, z, values) -> None:
@@ -616,7 +860,7 @@ class model_configurator:
         nr_available_workers = int(multiprocessing.cpu_count() / 2)
         ### now use the smaller number of networks
         nr_networks = int(min([nr_networks_10000, nr_available_workers]))
-        ### now get the number of neurons each population of the many neruion network should have
+        ### now get the number of neurons each population of the many neuron network should have
         ### evenly distribute all neurons over the number of networks
         self.nr_neurons_of_pop_per_net = int(
             np.ceil(self.nr_pop_interpolation / nr_networks)
@@ -630,6 +874,9 @@ class model_configurator:
         self.log(f"nr_total_neurons: {self.nr_total_neurons}")
         self.log(
             f"nr_neurons_of_pop_per_net: {self.nr_neurons_of_pop_per_net}; times nr_networks: {self.nr_neurons_of_pop_per_net*nr_networks}"
+        )
+        self.log(
+            f"nr_neurons_of_per_net: {self.nr_neurons_of_pop_per_net * len(self.pop_name_list)}"
         )
         self.log(f"nr_networks: {nr_networks}")
         ### this nr of neurons of pop per network may result in too mcuh neurons per pop --> check if all networks are fully needed
@@ -649,6 +896,30 @@ class model_configurator:
             f"nr_networks corrected: {self.nr_pop_interpolation / self.nr_neurons_of_pop_per_net} --> {self.nr_networks} with {self.nr_last_network} neurons to use from last network"
         )
         ### TODO use these new sizes to create large multi population networks and get the firing rates from it
+
+        ### do further things for which the model needs to be created
+        ### get the afferent projection dict for the populations (model needed!)
+        for pop_name in self.pop_name_list:
+            ### get afferent projection dict
+            self.log(f"get the afferent_projection_dict for {pop_name}")
+            self.afferent_projection_dict[pop_name] = self.get_afferent_projection_dict(
+                pop_name=pop_name
+            )
+
+        ### create dictionary with timeconstants of g_ampa and g_gaba of the populations
+        for pop_name in self.pop_name_list:
+            self.tau_dict[pop_name] = {
+                "ampa": get_population(pop_name).tau_ampa,
+                "gaba": get_population(pop_name).tau_gaba,
+            }
+
+        ### get the post_pop_name_dict
+        self.post_pop_name_dict = {}
+        for proj_name in self.model.projections:
+            self.post_pop_name_dict[proj_name] = get_projection(proj_name).post.name
+
+        ### clear ANNarchy --> the model is not available anymore
+        cnp_clear()
 
     def create_single_neuron_networks(self):
         ### clear ANNarchy
@@ -683,13 +954,7 @@ class model_configurator:
                 "gaba": g_gaba_max,
             }
 
-            ### get afferent projection dict
-            self.log(f"get the afferent_projection_dict for {pop_name}")
-            self.afferent_projection_dict[pop_name] = self.get_afferent_projection_dict(
-                pop_name=pop_name
-            )
-
-            ### get the weight dict
+            ### get the max_weight dict
             self.log(f"get the max_weight_dict for {pop_name}")
             self.max_weight_dict[pop_name] = self.get_max_weight_dict_for_pop(pop_name)
 
@@ -795,6 +1060,12 @@ class model_configurator:
 
         return: dict of dicts
         """
+        ### check if model is available
+        if not self.model.created:
+            error_msg = "ERROR model_configurator get_afferent_projection_dict: the model has to be created!"
+            self.log(error_msg)
+            raise AssertionError(error_msg)
+        ### get projection names
         afferent_projection_dict = {}
         afferent_projection_dict["projection_names"] = []
         for projection in self.model.projections:
@@ -1180,6 +1451,91 @@ class model_configurator:
         y_pred_arr = y_X(X_pred)
         return y_pred_arr.reshape(1)
 
+    def get_rate_dict(
+        self,
+        net,
+        population_dict,
+        variable_init_sampler_dict,
+        monitor_dict,
+        I_app_dict,
+        g_ampa_dict,
+        g_gaba_dict,
+    ):
+        """
+        function to obtain the firing rates of the populations of
+        the network given with 'idx' for given I_app, g_ampa and g_gaba values
+
+        Args:
+            idx: int
+                network index given by the parallel_run function
+
+            net: object
+                network object given by the parallel_run function
+
+            net_many_dict: dict
+                dictionary containing a population_dict and a monitor_dict
+                which contain for each population name the
+                - ANNarchy Population object of the magic network
+                - ANNarchy Monitor object of the magic network
+
+            I_app_arr_dict: dict of arrays
+                dictionary containing for each population the array with input values for I_app
+
+            g_ampa_arr_dict: dict of arrays
+                dictionary containing for each population the array with input values for g_ampa
+
+            g_gaba_arr_dict: dict of arrays
+                dictionary containing for each population the array with input values for g_gaba
+
+            variable_init_sampler_dict: dict
+                dictionary containing for each population the initial variables sampler object
+                with the function.sample() to get initial values of the neurons
+
+            self: object
+                the model_configurator object
+
+        return:
+            f_rec_arr_dict: dict of arrays
+                dictionary containing for each population the array with the firing rates for the given inputs
+        """
+        ### reset and set init values
+        net.reset()
+        for pop_name, varaible_init_sampler in variable_init_sampler_dict.items():
+            population = net.get(population_dict[pop_name])
+            variable_init_arr = varaible_init_sampler.sample(len(population), seed=0)
+            for var_idx, var_name in enumerate(population.variables):
+                set_val = variable_init_arr[:, var_idx]
+                setattr(population, var_name, set_val)
+
+        ### slow down conductances (i.e. make them constant)
+        for pop_name in population_dict.keys():
+            population = net.get(population_dict[pop_name])
+            population.tau_ampa = 1e20
+            population.tau_gaba = 1e20
+        ### apply given variables
+        for pop_name in population_dict.keys():
+            population = net.get(population_dict[pop_name])
+            population.I_app = I_app_dict[pop_name]
+            population.g_ampa = g_ampa_dict[pop_name]
+            population.g_gaba = g_gaba_dict[pop_name]
+        ### simulate 500 ms initial duration + X ms
+        net.simulate(500 + self.simulation_dur)
+        ### get rate for the last X ms
+        f_arr_dict = {}
+        for pop_name in population_dict.keys():
+            population = net.get(population_dict[pop_name])
+            monitor = net.get(monitor_dict[pop_name])
+            spike_dict = monitor.get("spike")
+            f_arr = np.zeros(len(population))
+            for idx_n, n in enumerate(spike_dict.keys()):
+                time_list = np.array(spike_dict[n])
+                nbr_spks = np.sum((time_list > (500 / dt())).astype(int))
+                rate = nbr_spks / (self.simulation_dur / 1000)
+                f_arr[idx_n] = rate
+            f_arr_dict[pop_name] = f_arr
+
+        return f_arr_dict
+
     def get_rate(
         self,
         net,
@@ -1247,60 +1603,51 @@ class model_configurator:
             folder_name=f"many_net_{net.id}", net=net, clean=True, silent=True
         )
 
-    def create_many_neuron_network(self, pop_name):
+    def create_many_neuron_network(self):
         """
-        creates a network with the neuron type of the population given by pop_name
-        the number of neurons is selected so that the simulation of 1000 ms takes
-        arbout 10 s
+        creates a ANNarchy magic network with all popualtions which should be configured the size
+        of the populations is equal and is obtianed by dividing the number of the
+        interpolation values by the number of networks which will be used during run_parallel
 
-        Args:
-            pop_name: str
-                population name
+        return:
+            net_many_dict: dict
+                contains
+                - population_dict: for all population names the created population in the magic network
+                - monitor_dict: for all population names the created monitors in the magic network
         """
+        self.log("create many neurons network")
 
         ### clear ANNarchy
         cnp_clear()
 
-        nr_neurons = int(self.nr_neurons_per_net_many_list / len(self.pop_name_list))
-
-        ### for each configured population create a population with a given size
+        ### for each population of the given model which should be configured create a population for the many neurons network with a given size
+        many_neuron_population_dict = {}
+        many_neuron_monitor_dict = {}
         for pop_name in self.pop_name_list:
             ### create the many neuron population
-            many_neuron = Population(
-                nr_neurons,
-                neuron=get_population(pop_name).neuron_type,
-                name=f"many_neuron_{pop_name}_{net_idx}",
-            )
-
-        ret_list = []
-        for net_idx, nr_neurons in enumerate(self.nr_many_neurons_list[pop_name]):
-            ### create the many neuron population
-            many_neuron = Population(
-                nr_neurons,
-                neuron=get_population(pop_name).neuron_type,
-                name=f"many_neuron_{pop_name}_{net_idx}",
+            many_neuron_population_dict[pop_name] = Population(
+                geometry=self.nr_neurons_of_pop_per_net,
+                neuron=self.neuron_model_dict[pop_name],
+                name=f"many_neuron_{pop_name}",
             )
 
             ### set the attributes of the neurons
-            for attr_name, attr_val in get_population(pop_name).init.items():
-                setattr(many_neuron, attr_name, attr_val)
+            for attr_name, attr_val in self.neuron_model_parameters_dict[pop_name]:
+                setattr(many_neuron_population_dict[pop_name], attr_name, attr_val)
 
             ### create Monitor for many neuron
-            mon_many = Monitor(many_neuron, ["spike"])
+            many_neuron_monitor_dict[pop_name] = Monitor(
+                many_neuron_population_dict[pop_name], ["spike"]
+            )
 
-            ### create network with many neuron
-            net_many = Network()
-            net_many.add([many_neuron, mon_many])
+        ### compile the network
+        compile_in_folder(folder_name="many_neurons_net", silent=True)
 
-            ### network dict
-            net_many_dict = {
-                "net": net_many,
-                "population": net_many.get(many_neuron),
-                "monitor": net_many.get(mon_many),
-            }
-            ret_list.append(net_many_dict)
-
-        return ret_list
+        net_many_dict = {
+            "population_dict": many_neuron_population_dict,
+            "monitor_dict": many_neuron_monitor_dict,
+        }
+        return net_many_dict
 
     def create_net_single(self, pop_name):
         """
@@ -1435,11 +1782,6 @@ class model_configurator:
         return: dict
             keys = afferent projection names, values = max weights
         """
-        ### create dictionary with timeconstants of g_ampa and g_gaba within the defined population
-        self.tau_dict[pop_name] = {
-            "ampa": get_population(pop_name).tau_ampa,
-            "gaba": get_population(pop_name).tau_gaba,
-        }
 
         ### loop over afferent projections
         max_w_list = []
@@ -1487,7 +1829,7 @@ class model_configurator:
                 keys see above
         """
         ### get post_pop_name
-        post_pop_name = get_projection(proj_name).post.name
+        post_pop_name = self.post_pop_name_dict[proj_name]
         ### get idx_proj and proj_target_type
         idx_proj = self.afferent_projection_dict[post_pop_name][
             "projection_names"
@@ -1675,9 +2017,21 @@ class model_configurator:
         return mean_g
 
 
-def get_rate_parallel(idx, net, pop_name, I_app_arr, g_ampa_arr, g_gaba_arr, self):
+def get_rate_parallel(
+    idx,
+    net,
+    pop_name_list,
+    population_list,
+    variable_init_sampler_list,
+    monitor_list,
+    I_app_list,
+    g_ampa_list,
+    g_gaba_list,
+    simulation_dur,
+):
     """
-    function used by parallel_run to otain the firing rates of the population of the network given with 'idx' for given I_app, g_ampa and g_gaba values
+    function to obtain the firing rates of the populations of
+    the network given with 'idx' for given I_app, g_ampa and g_gaba values
 
     Args:
         idx: int
@@ -1686,35 +2040,73 @@ def get_rate_parallel(idx, net, pop_name, I_app_arr, g_ampa_arr, g_gaba_arr, sel
         net: object
             network object given by the parallel_run function
 
-        pop_name: str
-            population name given during calling the parallel_run function
+        pop_name_list: list of str
+            list with population names of network
 
-        I_app_arr: array
-            array with input values for I_app
+        population_list: list of ANNarchy Population object
+            list of population objets of magic network
 
-        g_ampa_arr: array
-            array with input values for g_ampa
+        variable_init_sampler_list: list of sampler objects
+            for each population a sampler object with function .sample to get initial variable values
 
-        g_gaba_arr: array
-            array with input values for g_gaba
+        monitor_list: list of ANNarchy Monitor objects
+            list of monitor objets of magic network recording spikes from the populations
+
+        I_app_list: list of arrays
+            list containing for each population the array with input values for I_app
+
+        g_ampa_list: list of arrays
+            list containing for each population the array with input values for g_ampa
+
+        g_gaba_list: list of arrays
+            list containing for each population the array with input values for g_gaba
+
+        simulation_dur: int
+            simulation duration
+
+    return:
+        f_rec_arr_list: list of arrays
+            list containing for each population the array with the firing rates for the given inputs
     """
-    ### get the network dict and the input arrays for the current network idx
-    net_many_dict_list = self.net_many_dict[pop_name]
-    net_many_dict = net_many_dict_list[idx]
-    variable_init_sampler = self.net_single_dict[pop_name]["variable_init_sampler"]
+    ### reset and set init values
+    net.reset()
+    for pop_idx, pop_name in enumerate(pop_name_list):
+        population = net.get(population_list[pop_idx])
+        variable_init_arr = variable_init_sampler_list[pop_idx].sample(
+            len(population), seed=0
+        )
+        for var_idx, var_name in enumerate(population.variables):
+            set_val = variable_init_arr[:, var_idx]
+            setattr(population, var_name, set_val)
 
-    ### get f for the input arrays of I_app, g_ampa and g_gaba
-    f_rec_arr = self.get_rate(
-        net=net_many_dict["net"],
-        population=net_many_dict["population"],
-        variable_init_sampler=variable_init_sampler,
-        monitor=net_many_dict["monitor"],
-        I_app=I_app_arr,
-        g_ampa=g_ampa_arr,
-        g_gaba=g_gaba_arr,
-    )
-    ### return firing rate array
-    return f_rec_arr
+    ### slow down conductances (i.e. make them constant)
+    for pop_idx, pop_name in enumerate(pop_name_list):
+        population = net.get(population_list[pop_idx])
+        population.tau_ampa = 1e20
+        population.tau_gaba = 1e20
+    ### apply given variables
+    for pop_idx, pop_name in enumerate(pop_name_list):
+        population = net.get(population_list[pop_idx])
+        population.I_app = I_app_list[pop_idx]
+        population.g_ampa = g_ampa_list[pop_idx]
+        population.g_gaba = g_gaba_list[pop_idx]
+    ### simulate 500 ms initial duration + X ms
+    net.simulate(500 + simulation_dur)
+    ### get rate for the last X ms
+    f_arr_list = []
+    for pop_idx, pop_name in enumerate(pop_name_list):
+        population = net.get(population_list[pop_idx])
+        monitor = net.get(monitor_list[pop_idx])
+        spike_dict = monitor.get("spike")
+        f_arr = np.zeros(len(population))
+        for idx_n, n in enumerate(spike_dict.keys()):
+            time_list = np.array(spike_dict[n])
+            nbr_spks = np.sum((time_list > (500 / dt())).astype(int))
+            rate = nbr_spks / (simulation_dur / 1000)
+            f_arr[idx_n] = rate
+        f_arr_list.append(f_arr)
+
+    return f_arr_list
 
 
 _p_g_1 = """First call get_max_syn.

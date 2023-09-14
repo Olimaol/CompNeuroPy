@@ -158,11 +158,11 @@ if __name__ == "__main__":
     params = {}
     #######   POPULATIONS PARAMETERS   ######
     ### cortex / input populations
-    params["cor.size"] = 40
+    params["cor.size"] = 100
     params["cor.tau_up"] = 10
     params["cor.tau_down"] = 30
     ### BG Populations
-    params["stn.size"] = 10
+    params["stn.size"] = 50
     params["stn.a"] = 0.005
     params["stn.b"] = 0.265
     params["stn.c"] = -65
@@ -174,7 +174,7 @@ if __name__ == "__main__":
     params["stn.tau_gaba"] = 10
     params["stn.E_ampa"] = 0
     params["stn.E_gaba"] = -90
-    params["snr.size"] = 20
+    params["snr.size"] = 100
     params["snr.a"] = 0.005
     params["snr.b"] = 0.585
     params["snr.c"] = -65
@@ -186,7 +186,7 @@ if __name__ == "__main__":
     params["snr.tau_gaba"] = 10
     params["snr.E_ampa"] = 0
     params["snr.E_gaba"] = -90
-    params["gpe.size"] = 25
+    params["gpe.size"] = 100
     params["gpe.a"] = 0.039191890241715294
     params["gpe.b"] = 0.000548238111291427
     params["gpe.c"] = -49.88014418530518
@@ -198,7 +198,7 @@ if __name__ == "__main__":
     params["gpe.tau_gaba"] = 10
     params["gpe.E_ampa"] = 0
     params["gpe.E_gaba"] = -90
-    params["thal.size"] = 10
+    params["thal.size"] = 100
     params["thal.a"] = 0.02
     params["thal.b"] = 0.2
     params["thal.c"] = -65
@@ -234,7 +234,7 @@ if __name__ == "__main__":
     ### model populations one wants to configure and their afferents as input
     target_firing_rate_dict = {
         "cor": 15,
-        "stn": 70,
+        "stn": 30,
         "gpe": 50,
         "snr": 60,
         "thal": 5,
@@ -258,14 +258,15 @@ if __name__ == "__main__":
     ### and the contributions of their afferent projections
     synaptic_load_dict = {
         "stn": [0.3, 0.3],
-        "gpe": [0.3],
+        "gpe": [1],
         "snr": [0.3, 0.3],
         "thal": [0.7],
     }
-    synaptic_load_dict = 0
+    # TODO gpe should get extremely large input from stn --> but if stn is deactivated not much happens in gpe...
     synaptic_contribution_dict = {"snr": {"gaba": {"gpe__snr": 0.7, "snr__snr": 0.3}}}
     synaptic_contribution_dict = model_conf.set_syn_load(
-        synaptic_load_dict, synaptic_contribution_dict
+        synaptic_load_dict,
+        synaptic_contribution_dict,
     )
 
     ### after setting the weights i.e. the synaptic load/contributions
@@ -288,6 +289,8 @@ if __name__ == "__main__":
     mon.start()
     get_population("cor").rates = target_firing_rate_dict["cor"]
     simulate(2000)
+    get_population("cor").rates = 0
+    simulate(2000)
 
     ### get recordings
     recordings = mon.get_recordings()
@@ -308,3 +311,8 @@ if __name__ == "__main__":
             "5;thal;spike;hybrid",
         ],
     )
+
+    # TODO
+    # it seems that there are problems with snr
+    # it even gets wotse if I deactivate the lateral inhib
+    # maybe check which g_ampa, g_gaba are expected based on weights and which actually are present
