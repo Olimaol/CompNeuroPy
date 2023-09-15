@@ -1,4 +1,4 @@
-import CompNeuroPy.model_functions as mf
+from CompNeuroPy import model_functions as mf
 from CompNeuroPy import extra_functions as ef
 from CompNeuroPy import analysis_functions as af
 from ANNarchy import get_time, reset, dt

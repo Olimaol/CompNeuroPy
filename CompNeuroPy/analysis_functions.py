@@ -740,6 +740,33 @@ def __plot_recordings(
                 )
                 quit()
         try:
+            ### check if variable is equation
+            variable_is_equation = (
+                "+" in variable or "-" in variable or "*" in variable or "/" in variable
+            )
+            if variable_is_equation:
+                ### evalueate the equation
+                value_dict = {}
+                for rec_key, rec_val in recordings.items():
+                    if rec_key is f"{part};parameter_dict":
+                        continue
+                    if ";" in rec_key:
+                        rec_var_name = rec_key.split(";")[1]
+                    else:
+                        rec_var_name = rec_key
+                    value_dict[rec_var_name] = rec_val
+                for param_key, param_val in recordings[
+                    f"{part};parameter_dict"
+                ].items():
+                    value_dict[param_key] = param_val
+                ### evaluate
+                evaluated_variable = ef.evaluate_expression_with_dict(
+                    expression=variable, value_dict=value_dict
+                )
+                ### add the evaluated variable to the recordings
+                recordings[f"{part};{variable}"] = evaluated_variable
+
+            ### set data
             data = recordings[f"{part};{variable}"]
         except:
             print(

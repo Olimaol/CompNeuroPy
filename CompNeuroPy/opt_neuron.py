@@ -2,9 +2,9 @@ from ANNarchy import setup, Population, get_population, reset, Neuron, clear
 import numpy as np
 import traceback
 from CompNeuroPy import system_functions as sf
-from CompNeuroPy import generate_model as gm
 from CompNeuroPy import extra_functions as ef
 from CompNeuroPy.Monitors import Monitors
+from CompNeuroPy.generate_model import generate_model
 import matplotlib.pyplot as plt
 import sys
 
@@ -171,7 +171,7 @@ class opt_neuron:
             monitors = None
             if self.results_soll is None:
                 ### create two models
-                model = gm.generate_model(
+                model = generate_model(
                     model_creation_function=self.__raw_neuron__,
                     model_kwargs={"neuron": self.neuron_model, "name": "model_neuron"},
                     name="standard_model",
@@ -180,7 +180,7 @@ class opt_neuron:
                     compile_folder_name=self.compile_folder_name,
                 )
 
-                target_model = gm.generate_model(
+                target_model = generate_model(
                     model_creation_function=self.__raw_neuron__,
                     model_kwargs={
                         "neuron": self.target_neuron,
@@ -206,7 +206,7 @@ class opt_neuron:
 
             else:
                 ### create one model
-                model = gm.generate_model(
+                model = generate_model(
                     model_creation_function=self.__raw_neuron__,
                     model_kwargs={"neuron": self.neuron_model, "name": "model_neuron"},
                     name="single_model",

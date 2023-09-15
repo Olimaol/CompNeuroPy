@@ -151,8 +151,20 @@ def getMonitors(monDict, mon):
     """
     recordings = {}
     for key, val in monDict.items():
-        _, compartment, period = ef.unpack_monDict_keys(key)
+        compartment_type, compartment, period = ef.unpack_monDict_keys(key)
         recordings[f"{compartment};period"] = period
+        if compartment_type == "pop":
+            pop = get_population(compartment)
+            parameter_dict = {
+                param_name: getattr(pop, param_name) for param_name in pop.parameters
+            }
+            recordings[f"{compartment};parameter_dict"] = parameter_dict
+        if compartment_type == "proj":
+            proj = get_projection(compartment)
+            parameter_dict = {
+                param_name: getattr(proj, param_name) for param_name in proj.parameters
+            }
+            recordings[f"{compartment};parameters"] = parameter_dict
         for val_val in val:
             temp = mon[compartment].get(val_val)
             recordings[f"{compartment};{val_val}"] = temp
