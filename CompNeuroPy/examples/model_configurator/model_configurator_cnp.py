@@ -16,6 +16,7 @@ from ANNarchy import (
     simulate,
     reset,
     Neuron,
+    simulate_until,
 )
 from ANNarchy.core.Global import _network
 import numpy as np
@@ -78,6 +79,9 @@ class model_configurator:
         self.nr_afferent_proj_dict = {pop_name: None for pop_name in self.pop_name_list}
         self.net_many_dict = {pop_name: None for pop_name in self.pop_name_list}
         self.net_single_dict = {pop_name: None for pop_name in self.pop_name_list}
+        self.net_single_v_clamp_dict = {
+            pop_name: None for pop_name in self.pop_name_list
+        }
         self.max_weight_dict = {pop_name: None for pop_name in self.pop_name_list}
         self.variable_init_sampler_dict = {
             pop_name: None for pop_name in self.pop_name_list
@@ -94,6 +98,7 @@ class model_configurator:
         self.neuron_model_attributes_dict = {
             pop_name: None for pop_name in self.pop_name_list
         }
+        self.max_psp_dict = {pop_name: None for pop_name in self.pop_name_list}
         self.log_exist = False
         self.caller_name = ""
         self.log("model configurator log:")
@@ -941,11 +946,12 @@ class model_configurator:
         ### create the single neuron networks
         for pop_name in self.pop_name_list:
             self.log(f"create network_single for {pop_name}")
-            ### TODO
-            # self.create_net_single_voltage_clamp(pop_name=pop_name)
+            ### the network with the standard neuron
             self.net_single_dict[pop_name] = self.create_net_single(pop_name=pop_name)
-            print(f"created single neuron net fo {pop_name}")
-            quit()
+            ### the network with the voltage clamp version neuron
+            self.net_single_v_clamp_dict[
+                pop_name
+            ] = self.create_net_single_voltage_clamp(pop_name=pop_name)
 
     def get_max_syn(self):
         """
@@ -953,13 +959,13 @@ class model_configurator:
         keys = population names, values = dict which contain values = afferent projection names, values = lists with w_min and w_max
         """
 
-        ### create single neuron netwokrs
+        ### create single neuron networks
         self.create_single_neuron_networks()
 
         ### get max synaptic things with single neuron networks
         for pop_name in self.pop_name_list:
             self.log(pop_name)
-            ### get max synaptic currents (I and gs) using the single neuron network
+            ### get max synaptic currents (I and gs) using the single neuron networks
             self.log(
                 f"get max I_app, g_ampa and g_gaba using network_single for {pop_name}"
             )
@@ -1148,29 +1154,35 @@ class model_configurator:
             f_t: target firing rate
         """
 
-        ### extrace values from net_single_dict
-        net = self.net_single_dict[pop_name]["net"]
-        population = self.net_single_dict[pop_name]["population"]
-        monitor = self.net_single_dict[pop_name]["monitor"]
-        variable_init_sampler = self.net_single_dict[pop_name]["variable_init_sampler"]
+        # ### extrace values from net_single_dict
+        # net = self.net_single_dict[pop_name]["net"]
+        # population = self.net_single_dict[pop_name]["population"]
+        # monitor = self.net_single_dict[pop_name]["monitor"]
+        # variable_init_sampler = self.net_single_dict[pop_name]["variable_init_sampler"]
 
-        ### get f_0 and f_max
-        f_0 = self.get_rate(net, population, variable_init_sampler, monitor)[0]
-        f_max = f_0 + self.target_firing_rate_dict[pop_name] + 100
+        # ### get f_0 and f_max
+        # f_0 = self.get_rate(net, population, variable_init_sampler, monitor)[0]
+        # f_max = f_0 + self.target_firing_rate_dict[pop_name] + 100
 
         ### find g_ampa max
+        self.max_psp_dict[pop_name] = 10
         self.log("search g_ampa_max with y(X) = PSP(g_ampa=X, g_gaba=0)")
         g_ampa_max = self.incremental_continuous_bound_search(
             y_X=lambda X_val: self.get_psp(
-                net,
-                population,
-                variable_init_sampler,
-                monitor,
+                net=self.net_single_v_clamp_dict[pop_name]["net"],
+                population=self.net_single_v_clamp_dict[pop_name]["population"],
+                variable_init_sampler=self.net_single_v_clamp_dict[pop_name][
+                    "variable_init_sampler"
+                ],
+                monitor=self.net_single_v_clamp_dict[pop_name]["monitor"],
+                v_clamp_rec_thresh=self.net_single_v_clamp_dict[pop_name][
+                    "v_clamp_rec_thresh"
+                ],
                 g_ampa=X_val,
             )[0],
-            y_bound=f_max,
+            y_bound=self.max_psp_dict[pop_name],
             X_0=0,
-            y_0=f_0,
+            y_0=0,
             alpha_abs=1,
         )
 
@@ -1272,6 +1284,10 @@ class model_configurator:
             X_bound:
                 X value which causes y=y_bound
         """
+        ### TODO difference to target goes up in both directions
+        ### then nothing new is predicted --> fails
+        ### importent for finding v_rest
+        ### but maybe just search with something else, because dv/dt is not continous increasing...
         ### log the task
         self.log(
             f"find X_bound for: y_0(X_0={X_0})={y_0} --> y_bound(X_bound=??)={y_bound}"
@@ -1619,6 +1635,7 @@ class model_configurator:
         population,
         variable_init_sampler,
         monitor,
+        v_clamp_rec_thresh,
         g_ampa=0,
         g_gaba=0,
     ):
@@ -1656,25 +1673,30 @@ class model_configurator:
         for var_idx, var_name in enumerate(population.variables):
             set_val = variable_init_arr[:, var_idx]
             setattr(population, var_name, set_val)
-        ### slow down conductances (i.e. make them constant)
-        population.tau_ampa = 1e20
-        population.tau_gaba = 1e20
-        ### apply given variables
-        population.I_app = I_app
-        population.g_ampa = g_ampa
-        population.g_gaba = g_gaba
-        ### simulate 500 ms initial duration + X ms
-        net.simulate(500 + self.simulation_dur)
-        ### get rate for the last X ms
-        spike_dict = monitor.get("spike")
-        f_arr = np.zeros(len(population))
-        for idx_n, n in enumerate(spike_dict.keys()):
-            time_list = np.array(spike_dict[n])
-            nbr_spks = np.sum((time_list > (500 / dt())).astype(int))
-            rate = nbr_spks / (self.simulation_dur / 1000)
-            f_arr[idx_n] = rate
+        ### apply no input
+        population.v_clamp_rec_thresh = v_clamp_rec_thresh
+        population.I_app = 0
+        population.g_ampa = 0
+        population.g_gaba = 0
+        ### simulate 500 ms initial duration
+        net.simulate(500)
+        ### apply given conductances --> increases v_clamp_rec
+        population.g_ampa = 0  # g_ampa
+        population.g_gaba = 1  # g_gaba
+        ### simulate until v_clamp_rec is near zero again
+        simulate_until(max_duration=self.simulation_dur, population=population)
+        ### get the psp = maximum of v_clamp_rec
+        v_clamp_rec = monitor.get("v_clamp_rec")[:, 0]
+        psp = np.max(v_clamp_rec)
 
-        return f_arr
+        plt.figure()
+        plt.title("g_ampa = {g_ampa}, g_gaba={g_gaba}")
+        plt.plot(v_clamp_rec)
+        plt.savefig("tmp_psp.png")
+        plt.close("all")
+        quit()
+
+        return psp
 
     def compile_net_many(self, net):
         compile_in_folder(
@@ -1772,7 +1794,17 @@ class model_configurator:
         return net_single_dict
 
     def create_net_single_voltage_clamp(self, pop_name):
-        """ """
+        """
+        creates a network with the neuron type of the population given by pop_name
+        the number of neurons is 1
+
+        The equation wich defines the chagne of v is set to zero and teh change of v
+        is stored in the new variable v_clamp_rec
+
+        Args:
+            pop_name: str
+                population name
+        """
 
         ### get the initial arguments of the neuron
         neuron_model = self.neuron_model_dict[pop_name]
@@ -1789,19 +1821,25 @@ class model_configurator:
         ### get new equations for voltage clamp
         equations_new = self.get_voltage_clamp_equations(init_arguments_dict, pop_name)
         init_arguments_dict["equations"] = equations_new
+        ### add v_clamp_rec_thresh to the parameters
+        parameters_line_split_list = str(init_arguments_dict["parameters"]).splitlines()
+        parameters_line_split_list.append("v_clamp_rec_thresh = 0 : population")
+        init_arguments_dict["parameters"] = "\n".join(parameters_line_split_list)
+
         ### create neuron model with new equations
         neuron_model_new = Neuron(**init_arguments_dict)
-
-        print(neuron_model_new)
 
         ### create the single neuron population
         single_neuron_v_clamp = Population(
             1,
             neuron=neuron_model_new,
             name=f"single_neuron_v_clamp_{pop_name}",
+            stop_condition="(v_clamp_rec<v_clamp_rec_thresh) and (v_clamp_rec_pre>v_clamp_rec_thresh) : any",
         )
+
         ### set the attributes of the neuron
         for attr_name, attr_val in self.neuron_model_parameters_dict[pop_name]:
+            print(attr_name, attr_val)
             setattr(single_neuron_v_clamp, attr_name, attr_val)
 
         ### create Monitor for single neuron
@@ -1814,31 +1852,59 @@ class model_configurator:
             folder_name=f"single_v_clamp_net_{pop_name}", silent=True, net=net_single
         )
 
-        ### TODO set v to resting v
-        net_single.reset()
-        net_single.simulate(1000)
-        v_clamp_rec = net_single.get(mon_single).get("v_clamp_rec")[:, 0]
-        plt.figure()
-        plt.plot(v_clamp_rec)
-        plt.savefig("tmp_v_clamp.png")
-        plt.close("all")
-        quit()
-        ### get the values of the variables after 2000 ms simulation
-        variable_init_sampler = self.get_init_neuron_variables(
-            net_single, net_single.get(single_neuron)
+        ### find v where dv/dt is minimal (best = 0)
+        ### get value for v=0
+        delta_v_50 = self.get_v_clamp_1000(
+            v=-50,
+            net=net_single,
+            population=net_single.get(single_neuron_v_clamp),
         )
+        ### search for v_rest
+
+        ### TODO difference to target goes up in both directions
+        ### then nothing new is predicted --> fails
+        ### importent for finding v_rest
+        ### but maybe just search with something else, because dv/dt is not continous increasing...
+        self.log("search v_rest with y(X) = delta_v_1000(v=X)")
+        v_rest = self.incremental_continuous_bound_search(
+            y_X=lambda X_val: self.get_v_clamp_1000(
+                v=X_val,
+                net=net_single,
+                population=net_single.get(single_neuron_v_clamp),
+            ),
+            y_bound=0,
+            X_0=-50,
+            y_0=delta_v_50,
+            alpha_abs=0.05,
+        )
+
+        ### get the variable_init_sampler for v=v_rest
+        variable_init_sampler = self.get_init_neuron_variables_v_clamp(
+            net_single, net_single.get(single_neuron_v_clamp), v_rest=v_rest
+        )
+
+        ### get a sample to obtain v_clamp_rec_thresh
+        sample = variable_init_sampler.sample(1)
+        variable_name_list = list(net_single.get(single_neuron_v_clamp).variables)
+        v_clamp_rec_rest = sample[0, variable_name_list.index("v_clamp_rec")]
+        v_clamp_rec_thresh = v_clamp_rec_rest + 0.05
 
         ### network dict
         net_single_dict = {
             "net": net_single,
-            "population": net_single.get(single_neuron),
+            "population": net_single.get(single_neuron_v_clamp),
             "monitor": net_single.get(mon_single),
             "variable_init_sampler": variable_init_sampler,
+            "v_clamp_rec_thresh": v_clamp_rec_thresh,
         }
 
         return net_single_dict
 
-        quit()
+    def get_v_clamp_1000(self, v, net, population):
+        net.reset()
+        population.v = v
+        net.simulate(1000)
+        return population.v_clamp_rec[0]
 
     def get_voltage_clamp_equations(self, init_arguments_dict, pop_name):
         """
@@ -1867,12 +1933,14 @@ class model_configurator:
             ### create the new equations for the ANNarchy neuron
             ### create two lines, the voltage clamp line v+=0 and the
             ### right sight of v+=... separately
-            eq_new_0 = "v+=0"
-            eq_new_1 = f"v_clamp_rec = {eq_v.split('+=')[1]}"
+            eq_new_0 = "v_clamp_rec_pre = v_clamp_rec"
+            eq_new_1 = f"v_clamp_rec = abs({eq_v.split('+=')[1]})"
+            eq_new_2 = "v+=0"
             ### remove old v line and insert new lines
             del eq[line_is_v_list.index(True)]
             eq.insert(line_is_v_list.index(True), eq_new_0)
             eq.insert(line_is_v_list.index(True), eq_new_1)
+            eq.insert(line_is_v_list.index(True), eq_new_2)
             eq = "\n".join(eq)
             ### return new neuron equations
             return eq
@@ -1935,16 +2003,19 @@ class model_configurator:
         ### now create the new equations for the ANNarchy neuron
         ### create two lines, the voltage clamp line dv/dt=0 and the
         ### obtained line which would be the right side of dv/dt
+        ### v_clamp_rec should be an absolute value, abs does not work therefore **2**1/2...
+        eq_new_0 = f"v_clamp_rec = (({result})**2)**(1/2)"
+        eq_new_1 = "v_clamp_rec_pre = v_clamp_rec"
         ### add stored tags to dv/dt equation
         if not isinstance(tags, type(None)):
-            eq_new_0 = f"dv/dt=0 : {tags}"
+            eq_new_2 = f"dv/dt=0 : {tags}"
         else:
-            eq_new_0 = "dv/dt=0"
-        eq_new_1 = f"v_clamp_rec = {result}"
+            eq_new_2 = "dv/dt=0"
         ### remove old v line and insert new lines
         del eq[line_is_v_list.index(True)]
         eq.insert(line_is_v_list.index(True), eq_new_0)
         eq.insert(line_is_v_list.index(True), eq_new_1)
+        eq.insert(line_is_v_list.index(True), eq_new_2)
         eq = "\n".join(eq)
         ### return new neuron equations
         return eq
@@ -1999,6 +2070,34 @@ class model_configurator:
         net.reset()
 
         ### create a sampler with the data samples of from the 1000 ms simulation
+        sampler = self.var_arr_sampler(var_arr)
+        return sampler
+
+    def get_init_neuron_variables_v_clamp(self, net, pop, v_rest):
+        """
+        get the variables of the given population after simulating 2000 ms
+
+        Args:
+            net: ANNarchy network
+                the network which contains the pop
+
+            pop: ANNarchy population
+                the population whose variables are obtained
+
+        """
+        ### reset neuron and deactivate input and set v_rest
+        net.reset()
+        pop.I_app = 0
+        pop.v = v_rest
+
+        ### get the variables of the neuron after 1000 ms
+        net.simulate(1000)
+        var_name_list = list(pop.variables)
+        var_arr = np.zeros((1, len(var_name_list)))
+        get_arr = np.array([getattr(pop, var_name) for var_name in pop.variables])
+        var_arr[0, :] = get_arr[:, 0]
+
+        ### create a sampler with the one data sample
         sampler = self.var_arr_sampler(var_arr)
         return sampler
 
