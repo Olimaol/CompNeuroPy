@@ -9,6 +9,7 @@ from ANNarchy import (
     parallel_run,
     simulate,
     reset,
+    Neuron,
 )
 from ANNarchy.core.Global import _network
 import numpy as np
@@ -927,6 +928,8 @@ class model_configurator:
         ### create the single neuron networks
         for pop_name in self.pop_name_list:
             self.log(f"create network_single for {pop_name}")
+            ### TODO
+            self.create_net_single_voltage_clamp(pop_name=pop_name)
             self.net_single_dict[pop_name] = self.create_net_single(pop_name=pop_name)
 
     def get_max_syn(self):
@@ -1106,6 +1109,15 @@ class model_configurator:
         g_ampa_max causes f_max (increases f from f_0 to f_max)
         I_gaba_max causes f_0 while I_app=I_app_max (decreases f from f_max to f_0)
 
+        TODO:
+            reaching f_max does not work well sometimes extreme values of I are needed and then the max values for the conductances gets extreme as well
+            --> first get max g_ampa and g_gaba with a max PSP:
+                a single spike causes conductance to increase shortly and the resulting snypatic current changes v
+                start at resting potential than produce a single spike and record v and get the peak of v
+                for g_ampa a peak = a minimum of v
+                for g_gaba a peak = a minimum of v
+                with max of g_ampa get max firing rate and with this max firing rate get max I_app
+
         Args:
             pop_name: str
                 population name from original model
@@ -1131,6 +1143,22 @@ class model_configurator:
         f_0 = self.get_rate(net, population, variable_init_sampler, monitor)[0]
         f_max = f_0 + self.target_firing_rate_dict[pop_name] + 100
 
+        ### find g_ampa max
+        self.log("search g_ampa_max with y(X) = PSP(g_ampa=X, g_gaba=0)")
+        g_ampa_max = self.incremental_continuous_bound_search(
+            y_X=lambda X_val: self.get_psp(
+                net,
+                population,
+                variable_init_sampler,
+                monitor,
+                g_ampa=X_val,
+            )[0],
+            y_bound=f_max,
+            X_0=0,
+            y_0=f_0,
+            alpha_abs=1,
+        )
+
         ### find I_max with incremental_continuous_bound_search
         self.log("search I_app_max with y(X) = f(I_app=X, g_ampa=0, g_gaba=0)")
         I_max = self.incremental_continuous_bound_search(
@@ -1140,34 +1168,6 @@ class model_configurator:
                 variable_init_sampler,
                 monitor,
                 I_app=X_val,
-            )[0],
-            y_bound=f_max,
-            X_0=0,
-            y_0=f_0,
-            alpha_abs=1,
-        )
-
-        ### find g_ampa with incremental_continuous_bound_search
-        ### dificulties with g_ampa:
-        ### increasing until f_max is reached or increasing until f_0 is reached while I_app=-I_max
-        ### DOES NOT WORK! because I_gaba is not well suited to compensate negative currents
-        ### because I_gaba drives v only to 0 mV, the nearer v gets to 0 the smaller I_gaba gets
-        ### if there is a negative current which is large enough close to v=0 this negative current
-        ### will always prevent spiking, a large g_ampa cannot cause spiking in this case
-        ### neuron models like Izhikevich have recovery variables i.e. negative currents after spiking
-        ### --> faster spiking --> larger negative currents --> g_ampa cannot increase spiking
-        ### therefore increase g_ampa either until f_max is reached or the firing rate saturates
-        ### further difficulty: increasing g_ampa also leads to discontinuities in firing rate
-        ### (sudden jumps in firing rate to new plateau... I think it's numerical inprecision)
-        ### only get values until first discontinuity
-        self.log("search g_ampa_max with y(X) = f(I_app=0, g_ampa=X, g_gaba=0)")
-        g_ampa_max = self.incremental_continuous_bound_search(
-            y_X=lambda X_val: self.get_rate(
-                net,
-                population,
-                variable_init_sampler,
-                monitor,
-                g_ampa=X_val,
             )[0],
             y_bound=f_max,
             X_0=0,
@@ -1598,6 +1598,69 @@ class model_configurator:
 
         return f_arr
 
+    def get_psp(
+        self,
+        net,
+        population,
+        variable_init_sampler,
+        monitor,
+        g_ampa=0,
+        g_gaba=0,
+    ):
+        """
+        simulates a population for X+500 ms and returns the firing rate of each neuron for the last X ms
+        X is defined with self.simulation_dur
+
+        Args:
+            net: ANNarchy network
+                network which contains the population and monitor
+
+            population: ANNarchy population
+                population which is recorded and stimulated
+
+            variable_init_sampler: object
+                containing the initial values of the population neuron, use .sample() to get values
+
+            monitor: ANNarchy monitor
+                to record spikes from population
+
+            I_app: number or arr, optional, default = 0
+                applied current to the population neurons, has to have the same size as the population
+
+            g_ampa: number or arr, optional, default = 0
+                applied ampa conductance to the population neurons, has to have the same size as the population
+
+            g_gaba: number or arr, optional, default = 0
+                applied gaba conductance to the population neurons, has to have the same size as the population
+        """
+        ### TODO
+        ### for getting the psp I need a single neuron model with a voltage-clamp neuron
+
+        net.reset()
+        variable_init_arr = variable_init_sampler.sample(len(population), seed=0)
+        for var_idx, var_name in enumerate(population.variables):
+            set_val = variable_init_arr[:, var_idx]
+            setattr(population, var_name, set_val)
+        ### slow down conductances (i.e. make them constant)
+        population.tau_ampa = 1e20
+        population.tau_gaba = 1e20
+        ### apply given variables
+        population.I_app = I_app
+        population.g_ampa = g_ampa
+        population.g_gaba = g_gaba
+        ### simulate 500 ms initial duration + X ms
+        net.simulate(500 + self.simulation_dur)
+        ### get rate for the last X ms
+        spike_dict = monitor.get("spike")
+        f_arr = np.zeros(len(population))
+        for idx_n, n in enumerate(spike_dict.keys()):
+            time_list = np.array(spike_dict[n])
+            nbr_spks = np.sum((time_list > (500 / dt())).astype(int))
+            rate = nbr_spks / (self.simulation_dur / 1000)
+            f_arr[idx_n] = rate
+
+        return f_arr
+
     def compile_net_many(self, net):
         compile_in_folder(
             folder_name=f"many_net_{net.id}", net=net, clean=True, silent=True
@@ -1692,6 +1755,38 @@ class model_configurator:
         }
 
         return net_single_dict
+
+    def create_net_single_voltage_clamp(self, pop_name):
+        ### to reliable get the PSP I have to clip the neuron
+        ### so dv/dt has to be zero
+        ### and I have to record everything which defines dv/dt
+        ### e.g.:
+        ### C * dv/dt = 5 + I
+        ### I would need to record C and I to compute (5 + I) / C
+        ### and I would need to set dv/dt = 0
+        ### I need to get the equations and parameters from the neuron model
+        ### then from the equations extract the dv/dt equation
+        ### then reform the dv/dt equation, so that dv/dt is on the left side, alone
+        ### then create a new equation line psp = the right side
+        ### and set dv / dt = 0
+        ### from these new equation create the neuron...
+        ### reset and set init values
+
+        ### get the equations of the neuron
+        neuron_model = self.neuron_model_dict[pop_name]
+
+        init_arguments_name_list = list(Neuron.__init__.__code__.co_varnames)
+        init_arguments_name_list.remove("self")
+
+        init_arguments_dict = {
+            init_arguments_name: getattr(neuron_model, init_arguments_name)
+            for init_arguments_name in init_arguments_name_list
+        }
+        print(list(init_arguments_dict.keys()))
+        print(init_arguments_dict["equations"])
+        print(init_arguments_dict["parameters"])
+        print(init_arguments_dict["spike"])
+        quit()
 
     def get_init_neuron_variables(self, net, pop):
         """
