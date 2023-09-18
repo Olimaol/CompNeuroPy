@@ -1,4 +1,10 @@
-from CompNeuroPy import cnp_clear, compile_in_folder, find_folder_with_prefix, data_obj
+from CompNeuroPy import (
+    cnp_clear,
+    compile_in_folder,
+    find_folder_with_prefix,
+    data_obj,
+    replace_names_with_dict,
+)
 from ANNarchy import (
     Population,
     get_population,
@@ -25,6 +31,7 @@ import multiprocessing
 import importlib.util
 from time import time, strftime
 import datetime
+from sympy import symbols, Symbol, sympify, solve
 
 
 class model_configurator:
@@ -82,6 +89,9 @@ class model_configurator:
         }
         self.neuron_model_dict = {pop_name: None for pop_name in self.pop_name_list}
         self.neuron_model_parameters_dict = {
+            pop_name: None for pop_name in self.pop_name_list
+        }
+        self.neuron_model_attributes_dict = {
             pop_name: None for pop_name in self.pop_name_list
         }
         self.log_exist = False
@@ -853,6 +863,9 @@ class model_configurator:
             self.neuron_model_parameters_dict[pop_name] = get_population(
                 pop_name
             ).init.items()
+            self.neuron_model_attributes_dict[pop_name] = get_population(
+                pop_name
+            ).attributes
 
         ### prepare creation of networks
         ### number of networks with size=10000 --> do not get smaller with parallel networks!
@@ -929,8 +942,10 @@ class model_configurator:
         for pop_name in self.pop_name_list:
             self.log(f"create network_single for {pop_name}")
             ### TODO
-            self.create_net_single_voltage_clamp(pop_name=pop_name)
+            # self.create_net_single_voltage_clamp(pop_name=pop_name)
             self.net_single_dict[pop_name] = self.create_net_single(pop_name=pop_name)
+            print(f"created single neuron net fo {pop_name}")
+            quit()
 
     def get_max_syn(self):
         """
@@ -1757,36 +1772,202 @@ class model_configurator:
         return net_single_dict
 
     def create_net_single_voltage_clamp(self, pop_name):
-        ### to reliable get the PSP I have to clip the neuron
-        ### so dv/dt has to be zero
-        ### and I have to record everything which defines dv/dt
-        ### e.g.:
-        ### C * dv/dt = 5 + I
-        ### I would need to record C and I to compute (5 + I) / C
-        ### and I would need to set dv/dt = 0
-        ### I need to get the equations and parameters from the neuron model
-        ### then from the equations extract the dv/dt equation
-        ### then reform the dv/dt equation, so that dv/dt is on the left side, alone
-        ### then create a new equation line psp = the right side
-        ### and set dv / dt = 0
-        ### from these new equation create the neuron...
-        ### reset and set init values
+        """ """
 
-        ### get the equations of the neuron
+        ### get the initial arguments of the neuron
         neuron_model = self.neuron_model_dict[pop_name]
-
+        ### names of arguments
         init_arguments_name_list = list(Neuron.__init__.__code__.co_varnames)
         init_arguments_name_list.remove("self")
-
+        init_arguments_name_list.remove("name")
+        init_arguments_name_list.remove("description")
+        ### arguments dict
         init_arguments_dict = {
             init_arguments_name: getattr(neuron_model, init_arguments_name)
             for init_arguments_name in init_arguments_name_list
         }
-        print(list(init_arguments_dict.keys()))
-        print(init_arguments_dict["equations"])
-        print(init_arguments_dict["parameters"])
-        print(init_arguments_dict["spike"])
+        ### get new equations for voltage clamp
+        equations_new = self.get_voltage_clamp_equations(init_arguments_dict, pop_name)
+        init_arguments_dict["equations"] = equations_new
+        ### create neuron model with new equations
+        neuron_model_new = Neuron(**init_arguments_dict)
+
+        print(neuron_model_new)
+
+        ### create the single neuron population
+        single_neuron_v_clamp = Population(
+            1,
+            neuron=neuron_model_new,
+            name=f"single_neuron_v_clamp_{pop_name}",
+        )
+        ### set the attributes of the neuron
+        for attr_name, attr_val in self.neuron_model_parameters_dict[pop_name]:
+            setattr(single_neuron_v_clamp, attr_name, attr_val)
+
+        ### create Monitor for single neuron
+        mon_single = Monitor(single_neuron_v_clamp, ["v_clamp_rec"])
+
+        ### create network with single neuron
+        net_single = Network()
+        net_single.add([single_neuron_v_clamp, mon_single])
+        compile_in_folder(
+            folder_name=f"single_v_clamp_net_{pop_name}", silent=True, net=net_single
+        )
+
+        ### TODO set v to resting v
+        net_single.reset()
+        net_single.simulate(1000)
+        v_clamp_rec = net_single.get(mon_single).get("v_clamp_rec")[:, 0]
+        plt.figure()
+        plt.plot(v_clamp_rec)
+        plt.savefig("tmp_v_clamp.png")
+        plt.close("all")
         quit()
+        ### get the values of the variables after 2000 ms simulation
+        variable_init_sampler = self.get_init_neuron_variables(
+            net_single, net_single.get(single_neuron)
+        )
+
+        ### network dict
+        net_single_dict = {
+            "net": net_single,
+            "population": net_single.get(single_neuron),
+            "monitor": net_single.get(mon_single),
+            "variable_init_sampler": variable_init_sampler,
+        }
+
+        return net_single_dict
+
+        quit()
+
+    def get_voltage_clamp_equations(self, init_arguments_dict, pop_name):
+        """
+        works with
+        dv/dt = ...
+        v += ...
+        """
+        ### get the dv/dt equation from equations
+        ### find the line with dv/dt= or v+= or v=
+        eq = str(init_arguments_dict["equations"])
+        eq = eq.splitlines()
+        line_is_v_list = [False] * len(eq)
+        ### check in which lines v is defined
+        for line_idx, line in enumerate(eq):
+            line_is_v_list[line_idx] = self.get_line_is_v(line)
+        ### raise error if no v or multiple times v
+        if True not in line_is_v_list or sum(line_is_v_list) > 1:
+            raise ValueError(
+                f"ERROR model_configurator create_net_single_voltage_clamp: In the equations of the neurons has to be exactly a single line which defines dv/dt or v, not given for population {pop_name}"
+            )
+        ### set the v equation
+        eq_v = eq[line_is_v_list.index(True)]
+
+        ### if equation type is v += ... --> just take right side
+        if "+=" in eq_v:
+            ### create the new equations for the ANNarchy neuron
+            ### create two lines, the voltage clamp line v+=0 and the
+            ### right sight of v+=... separately
+            eq_new_0 = "v+=0"
+            eq_new_1 = f"v_clamp_rec = {eq_v.split('+=')[1]}"
+            ### remove old v line and insert new lines
+            del eq[line_is_v_list.index(True)]
+            eq.insert(line_is_v_list.index(True), eq_new_0)
+            eq.insert(line_is_v_list.index(True), eq_new_1)
+            eq = "\n".join(eq)
+            ### return new neuron equations
+            return eq
+
+        ### if equation type is dv/dt = ... --> get the right side of dv/dt=...
+        ### transform eq_v
+        ### remove whitespaces
+        ### remove tags and store them for later
+        ### TODO replace random distributions and mathematical expressions which may be on the left side
+        eq_v = eq_v.replace(" ", "")
+        eq_v = eq_v.replace("dv/dt", "delta_v")
+        eq_tags_list = eq_v.split(":")
+        eq_v = eq_tags_list[0]
+        if len(eq_tags_list) > 1:
+            tags = eq_tags_list[1]
+        else:
+            tags = None
+
+        ### split the equation at "=" and move everything on one side (other side = 0)
+        eq_v_splitted = eq_v.split("=")
+        left_side = eq_v_splitted[0]
+        right_side = "right_side"
+        eq_v_one_side = f"{right_side}-({left_side})"
+
+        ### prepare the sympy equation generation
+        attributes_name_list = self.neuron_model_attributes_dict[pop_name]
+        attributes_tuple = symbols(",".join(attributes_name_list))
+        ### for each attribute of the neuron a sympy symbol
+        attributes_sympy_dict = {
+            key: attributes_tuple[attributes_name_list.index(key)]
+            for key in attributes_name_list
+        }
+        ### furhter create symbols for dv/dt and right_side
+        attributes_sympy_dict["delta_v"] = Symbol("delta_v")
+        attributes_sympy_dict["right_side"] = Symbol("right_side")
+
+        ### now replace the symbolds in the eq_v string with the dictionary items
+        eq_v_replaced = replace_names_with_dict(
+            expression=eq_v_one_side,
+            name_of_dict="attributes_sympy_dict",
+            dictionary=attributes_sympy_dict,
+        )
+
+        ### from this string get the sympy equation expression
+        eq_sympy = eval(eq_v_replaced)
+
+        ### solve the equation to delta_v
+        result = solve(eq_sympy, attributes_sympy_dict["delta_v"], dict=True)
+        if len(result) != 1:
+            raise ValueError(
+                f"ERROR model_configurator create_net_single_voltage_clamp: Could not find solution for dv/dt for neuronmodel of population {pop_name}!"
+            )
+        result = str(result[0][attributes_sympy_dict["delta_v"]])
+
+        ### replace right_side by the original right side
+        result = result.replace("right_side", f"({eq_v_splitted[1]})")
+
+        ### TODO replace mathematical expressions and random distributions back to previous
+
+        ### now create the new equations for the ANNarchy neuron
+        ### create two lines, the voltage clamp line dv/dt=0 and the
+        ### obtained line which would be the right side of dv/dt
+        ### add stored tags to dv/dt equation
+        if not isinstance(tags, type(None)):
+            eq_new_0 = f"dv/dt=0 : {tags}"
+        else:
+            eq_new_0 = "dv/dt=0"
+        eq_new_1 = f"v_clamp_rec = {result}"
+        ### remove old v line and insert new lines
+        del eq[line_is_v_list.index(True)]
+        eq.insert(line_is_v_list.index(True), eq_new_0)
+        eq.insert(line_is_v_list.index(True), eq_new_1)
+        eq = "\n".join(eq)
+        ### return new neuron equations
+        return eq
+
+    def get_line_is_v(self, line: str):
+        """
+        check if a equation string contains dv/dt or v= or v+=
+        """
+        if "v" not in line:
+            return False
+
+        ### remove whitespaces
+        line = line.replace(" ", "")
+
+        ### check for dv/dt
+        if "dv/dt" in line:
+            return True
+
+        ### check for v update
+        if ("v=" in line or "v+=" in line) and line.startswith("v"):
+            return True
+
+        return False
 
     def get_init_neuron_variables(self, net, pop):
         """
