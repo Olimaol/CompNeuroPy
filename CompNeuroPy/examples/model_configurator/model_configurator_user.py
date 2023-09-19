@@ -254,15 +254,15 @@ if __name__ == "__main__":
     ### maximum weights of their afferent projections
     model_conf.get_max_syn()
 
-    ### now either set weights directly or define synaptic load of populations
-    ### and the contributions of their afferent projections
+    ### now either set weights directly
+    ### or define synaptic load of populations
     synaptic_load_dict = {
         "stn": [0.3, 0.3],
         "gpe": [1],
         "snr": [0.3, 0.3],
         "thal": [0.7],
     }
-    # TODO gpe should get extremely large input from stn --> but if stn is deactivated not much happens in gpe...
+    ### and define the contributions of their afferent projections
     synaptic_contribution_dict = {"snr": {"gaba": {"gpe__snr": 0.7, "snr__snr": 0.3}}}
     synaptic_contribution_dict = model_conf.set_syn_load(
         synaptic_load_dict,

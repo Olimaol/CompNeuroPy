@@ -100,6 +100,7 @@ class model_configurator:
             pop_name: None for pop_name in self.pop_name_list
         }
         self.max_psp_dict = {pop_name: None for pop_name in self.pop_name_list}
+        self.possible_rates_dict = {pop_name: None for pop_name in self.pop_name_list}
         self.log_exist = False
         self.caller_name = ""
         self.log("model configurator log:")
@@ -108,9 +109,7 @@ class model_configurator:
         self.simulation_dur = 5000
         self.simulation_dur_estimate_time = 50
         ### nr of neurons **(1/3) has to result in an integer
-        self.nr_vals_interpolation_grid = 36
-        self.nr_pop_interpolation = self.nr_vals_interpolation_grid**3
-        self.nr_total_neurons = self.nr_pop_interpolation * len(self.pop_name_list)
+        self.nr_vals_interpolation_grid = 3  # 36
 
         ### prepare the creation of the networks
         ### also do things for which the model needs to be created (it will not be available later)
@@ -183,6 +182,7 @@ class model_configurator:
         if not self.did_get_interpolation:
             self.get_interpolation()
 
+        ### use interpolation to get baseline currents
         I_base_dict = {}
         for pop_name in self.pop_name_list:
             ### predict baseline current values
@@ -202,7 +202,26 @@ class model_configurator:
         possible_firing_rates_arr = self.f_I_g_curve_dict[pop_name](
             a=I_app_arr, b=g_ampa, c=g_gaba
         )
+        ### catch if target firing rate cannot be reached
         target_firing_rate = self.target_firing_rate_dict[pop_name]
+        possible_f_min = possible_firing_rates_arr.min()
+        possible_f_max = possible_firing_rates_arr.max()
+        if not (
+            target_firing_rate >= possible_f_min or target_firing_rate <= possible_f_max
+        ):
+            new_target_firing_rate = np.array([possible_f_min, possible_f_max])[
+                np.argmin(
+                    np.absolute(
+                        np.array([possible_f_min, possible_f_max]) - target_firing_rate
+                    )
+                )
+            ]
+            self.target_firing_rate_dict[pop_name] = new_target_firing_rate
+            target_firing_rate = self.target_firing_rate_dict[pop_name]
+            warning_txt = f"WARNING get_possible_rates: target firing rate of population {pop_name}({target_firing_rate}) cannot be reached. Possible range: [{possible_f_min},{possible_f_max}]. Set firing rate to {new_target_firing_rate}."
+            self._p_w(warning_txt)
+            self.log(warning_txt)
+        ### find bes I_app for reaching target firing rate
         best_idx = np.argmin(
             np.absolute(possible_firing_rates_arr - target_firing_rate)
         )
@@ -303,14 +322,22 @@ class model_configurator:
         ### create model
         net_many_dict = self.create_many_neuron_network()
 
-        ### get interpolation data TODO
+        ### get interpolation data
         txt = "get interpolation data..."
         print(txt)
         self.log(txt)
-        ### for each population get the input arrays for I_app, g_ampa and g_gaba TODO
+        ### for each population get the input arrays for I_app, g_ampa and g_gaba
+        ### TODO catch "wrong" bounds
+        ### g_ampa_max = 0
+        ### g_gaba_max = 0
+        ### I_app_max = 0
+        ### if these values are 0 --> no interpolation steps possible
+        ### --> do interpolation only with the values which have "correct" bounds
+        ### --> need to adjust network many and interpolation process
+        ### while getting inputs define which values should be used later
         input_dict = self.get_input_for_many_neurons_net()
 
-        ### create dict with variable_init_samplers of populations
+        ### create list with variable_init_samplers of populations
         variable_init_sampler_list = [
             self.net_single_dict[pop_name]["variable_init_sampler"]
             for pop_name in self.pop_name_list
@@ -390,10 +417,23 @@ class model_configurator:
             },
         )
         end = time()
-        print(f"took {end-start} s")
+        txt = f"took {end-start} s"
+        print(txt)
+        self.log(txt)
 
         ### combine the list of outputs from parallel_run to one output per population TODO
-        output_of_populations_dict = self.get_output_of_populations(f_rec_arr_list_list)
+        output_of_populations_dict = self.get_output_of_populations(
+            f_rec_arr_list_list, input_dict
+        )
+        for pop_name in self.pop_name_list:
+            print(pop_name)
+            print(output_of_populations_dict[pop_name])
+        quit()
+
+        ### TODO catch "wrong" bounds
+        ### maybe for one or two values tehre are wrong bounds --> only value zero
+        ### maybe do only a 2d interpolation
+        ### or a 1d interpolation
 
         ### create interpolation
         for pop_name in self.pop_name_list:
@@ -411,7 +451,7 @@ class model_configurator:
 
         self.did_get_interpolation = True
 
-    def get_output_of_populations(self, f_rec_arr_list_list):
+    def get_output_of_populations(self, f_rec_arr_list_list, input_dict):
         """
         restructure the output of run_parallel so that for each population a single array with firing rates is obtained
 
@@ -425,24 +465,70 @@ class model_configurator:
         output_pop_dict = {}
         for pop_name in self.pop_name_list:
             output_pop_dict[pop_name] = []
+        ### first loop selecting the network
         for f_rec_arr_list in f_rec_arr_list_list:
+            ### second loop selecting the population
             for pop_idx, pop_name in enumerate(self.pop_name_list):
+                ### append the recorded values to the array of the corresponding population
                 output_pop_dict[pop_name].append(f_rec_arr_list[pop_idx])
 
-        ### if last network was smaller --> do not use X last values
-        if self.nr_last_network < self.nr_neurons_of_pop_per_net:
-            not_use_values = round(
-                self.nr_neurons_of_pop_per_net - self.nr_last_network, 0
-            )
-
-            for pop_name in self.pop_name_list:
-                output_pop_dict[pop_name][-1] = output_pop_dict[pop_name][-1][
-                    :-not_use_values
-                ]
-
-        ### concatenate the arrays of the populations
+        ### concatenate the arrays of the individual populations
         for pop_name in self.pop_name_list:
             output_pop_dict[pop_name] = np.concatenate(output_pop_dict[pop_name])
+
+        ### use the input dict to only use values which should be used
+        ### lis of lists, first list level = networks, second list level = populations then you get array with input values
+        ### so same format as f_rec_arr_list_list
+        use_I_app_arr_list_list = input_dict["use_I_app_list"]
+        use_g_ampa_arr_list_list = input_dict["use_g_ampa_list"]
+        use_g_gaba_arr_list_list = input_dict["use_g_gaba_list"]
+
+        ### now get for each population an array which contains the info if the values should be used
+        use_output_pop_dict = {}
+        for pop_name in self.pop_name_list:
+            use_output_pop_dict[pop_name] = []
+        ### first loop selecting the network
+        for net_idx in range(len(use_I_app_arr_list_list)):
+            use_I_app_arr_list = use_I_app_arr_list_list[net_idx]
+            use_g_ampa_arr_list = use_g_ampa_arr_list_list[net_idx]
+            use_g_gaba_arr_list = use_g_gaba_arr_list_list[net_idx]
+            ### second loop selecting the population
+            for pop_idx, pop_name in enumerate(self.pop_name_list):
+                ### only use values if for all input values use is True
+                use_I_app_arr = use_I_app_arr_list[pop_idx]
+                use_g_ampa_arr = use_g_ampa_arr_list[pop_idx]
+                use_g_gaba_arr = use_g_gaba_arr_list[pop_idx]
+                use_value_arr = np.logical_and(use_I_app_arr, use_g_ampa_arr)
+                use_value_arr = np.logical_and(use_value_arr, use_g_gaba_arr)
+                ### append the recorded values to the array of the corresponding population
+                use_output_pop_dict[pop_name].append(use_value_arr)
+
+        ### concatenate the arrays of the individual populations over the networks
+        for pop_name in self.pop_name_list:
+            ### only use values defined by the use_array
+            if self.nr_networks > 1:
+                use_output_arr = np.concatenate(use_output_pop_dict[pop_name])
+                output_pop_dict[pop_name] = np.concatenate(output_pop_dict[pop_name])[
+                    use_output_arr
+                ]
+            else:
+                use_output_arr = use_output_pop_dict[pop_name][0]
+                output_pop_dict[pop_name] = output_pop_dict[pop_name][0][use_output_arr]
+
+        # ### if last network was smaller --> do not use X last values
+        # if self.nr_last_network < self.nr_neurons_of_pop_per_net:
+        #     not_use_values = round(
+        #         self.nr_neurons_of_pop_per_net - self.nr_last_network, 0
+        #     )
+
+        #     for pop_name in self.pop_name_list:
+        #         output_pop_dict[pop_name][-1] = output_pop_dict[pop_name][-1][
+        #             :-not_use_values
+        #         ]
+
+        # ### concatenate the arrays of the populations
+        # for pop_name in self.pop_name_list:
+        #     output_pop_dict[pop_name] = np.concatenate(output_pop_dict[pop_name])
 
         return output_pop_dict
 
@@ -457,6 +543,9 @@ class model_configurator:
         I_app_arr_list_dict = {}
         g_ampa_arr_list_dict = {}
         g_gaba_arr_list_dict = {}
+        use_I_app_arr_list_dict = {}
+        use_g_ampa_arr_list_dict = {}
+        use_g_gaba_arr_list_dict = {}
         I_app_arr_dict = {}
         g_ampa_arr_dict = {}
         g_gaba_arr_dict = {}
@@ -483,6 +572,15 @@ class model_configurator:
             g_ampa_arr_dict[pop_name] = g_ampa_value_array
             g_gaba_arr_dict[pop_name] = g_gaba_value_array
 
+            ### create use values arrays
+            use_I_app_array = np.array([I_max > 0] * self.nr_vals_interpolation_grid)
+            use_g_ampa_array = np.array(
+                [g_ampa_max > 0] * self.nr_vals_interpolation_grid
+            )
+            use_g_gaba_array = np.array(
+                [g_gaba_max > 0] * self.nr_vals_interpolation_grid
+            )
+
             ### get all combinations (grid) of value_arrays
             I_g_arr = np.array(
                 list(
@@ -492,10 +590,24 @@ class model_configurator:
                 )
             )
 
+            ### get all combinations (grid) of the use values arrays
+            use_I_g_arr = np.array(
+                list(
+                    itertools.product(
+                        *[use_I_app_array, use_g_ampa_array, use_g_gaba_array]
+                    )
+                )
+            )
+
             ### individual value arrays from combinations
             I_app_arr = I_g_arr[:, 0]
             g_ampa_arr = I_g_arr[:, 1]
             g_gaba_arr = I_g_arr[:, 2]
+
+            ### individual use values arrays from combinations
+            use_I_app_arr = use_I_g_arr[:, 0]
+            use_g_ampa_arr = use_I_g_arr[:, 1]
+            use_g_gaba_arr = use_I_g_arr[:, 2]
 
             ### split the arrays for the networks
             networks_size_list = np.array(
@@ -503,15 +615,23 @@ class model_configurator:
             )
             split_idx_arr = np.cumsum(networks_size_list)[:-1]
             ### after this split the last array may be smaller than the others --> append zeros
+            ### value arrays
             I_app_arr_list = np.split(I_app_arr, split_idx_arr)
             g_ampa_arr_list = np.split(g_ampa_arr, split_idx_arr)
             g_gaba_arr_list = np.split(g_gaba_arr, split_idx_arr)
+            ### use value arrays
+            use_I_app_arr_list = np.split(use_I_app_arr, split_idx_arr)
+            use_g_ampa_arr_list = np.split(use_g_ampa_arr, split_idx_arr)
+            use_g_gaba_arr_list = np.split(use_g_gaba_arr, split_idx_arr)
 
             ### check if last network is smaler
             if self.nr_last_network < self.nr_neurons_of_pop_per_net:
+                ### if yes --> append zeros to value arrays
+                ### and append False to use values arrays
                 nr_of_zeros_append = round(
                     self.nr_neurons_of_pop_per_net - self.nr_last_network, 0
                 )
+                ### value arrays
                 I_app_arr_list[-1] = np.concatenate(
                     [I_app_arr_list[-1], np.zeros(nr_of_zeros_append)]
                 )
@@ -521,17 +641,36 @@ class model_configurator:
                 g_gaba_arr_list[-1] = np.concatenate(
                     [g_gaba_arr_list[-1], np.zeros(nr_of_zeros_append)]
                 )
+                ### use values arrays
+                use_I_app_arr_list[-1] = np.concatenate(
+                    [use_I_app_arr_list[-1], np.array([False] * nr_of_zeros_append)]
+                )
+                use_g_ampa_arr_list[-1] = np.concatenate(
+                    [use_g_ampa_arr_list[-1], np.array([False] * nr_of_zeros_append)]
+                )
+                use_g_gaba_arr_list[-1] = np.concatenate(
+                    [use_g_gaba_arr_list[-1], np.array([False] * nr_of_zeros_append)]
+                )
 
-            ### store the arra lists into the populaiton dicts
+            ### store the array lists into the population dicts
+            ### value arrays
             I_app_arr_list_dict[pop_name] = I_app_arr_list
             g_ampa_arr_list_dict[pop_name] = g_ampa_arr_list
             g_gaba_arr_list_dict[pop_name] = g_gaba_arr_list
+            ### use value arrays
+            use_I_app_arr_list_dict[pop_name] = use_I_app_arr_list
+            use_g_ampa_arr_list_dict[pop_name] = use_g_ampa_arr_list
+            use_g_gaba_arr_list_dict[pop_name] = use_g_gaba_arr_list
 
         ### restructure the dict of lists into a list for networks of list for populations
         I_app_list = []
         g_ampa_list = []
         g_gaba_list = []
+        use_I_app_list = []
+        use_g_ampa_list = []
+        use_g_gaba_list = []
         for net_idx in range(self.nr_networks):
+            ### value arrays
             I_app_list.append(
                 [
                     I_app_arr_list_dict[pop_name][net_idx]
@@ -550,11 +689,33 @@ class model_configurator:
                     for pop_name in self.pop_name_list
                 ]
             )
+            ### use values arrays
+            use_I_app_list.append(
+                [
+                    use_I_app_arr_list_dict[pop_name][net_idx]
+                    for pop_name in self.pop_name_list
+                ]
+            )
+            use_g_ampa_list.append(
+                [
+                    use_g_ampa_arr_list_dict[pop_name][net_idx]
+                    for pop_name in self.pop_name_list
+                ]
+            )
+            use_g_gaba_list.append(
+                [
+                    use_g_gaba_arr_list_dict[pop_name][net_idx]
+                    for pop_name in self.pop_name_list
+                ]
+            )
 
         return {
             "I_app_list": I_app_list,
             "g_ampa_list": g_ampa_list,
             "g_gaba_list": g_gaba_list,
+            "use_I_app_list": use_I_app_list,
+            "use_g_ampa_list": use_g_ampa_list,
+            "use_g_gaba_list": use_g_gaba_list,
             "I_app_arr_dict": I_app_arr_dict,
             "g_ampa_arr_dict": g_ampa_arr_dict,
             "g_gaba_arr_dict": g_gaba_arr_dict,
@@ -859,6 +1020,7 @@ class model_configurator:
         """
         prepares the creation of the single neuron and many neuron networks
         """
+
         ### clear ANNarchy and create the model
         cnp_clear()
         self.model.create(do_compile=False)
@@ -874,48 +1036,47 @@ class model_configurator:
             ).attributes
 
         ### prepare creation of networks
+        ### get the size of the interpolation
+        nr_pop_interpolation = self.nr_vals_interpolation_grid**3
+        nr_total_neurons = nr_pop_interpolation * len(self.pop_name_list)
         ### number of networks with size=10000 --> do not get smaller with parallel networks!
-        nr_networks_10000 = np.ceil(self.nr_total_neurons / 10000)
+        nr_networks_10000 = np.ceil(nr_total_neurons / 10000)
         ### get the number of available parallel workers
         nr_available_workers = int(multiprocessing.cpu_count() / 2)
         ### now use the smaller number of networks
         nr_networks = int(min([nr_networks_10000, nr_available_workers]))
         ### now get the number of neurons each population of the many neuron network should have
         ### evenly distribute all neurons over the number of networks
-        self.nr_neurons_of_pop_per_net = int(
-            np.ceil(self.nr_pop_interpolation / nr_networks)
-        )
-        self.nr_total_neurons = round(
-            self.nr_pop_interpolation * len(self.pop_name_list), 0
-        )
+        nr_neurons_of_pop_per_net = int(np.ceil(nr_pop_interpolation / nr_networks))
+        nr_total_neurons = round(nr_pop_interpolation * len(self.pop_name_list), 0)
         self.log(f"nr_vals_interpolation_grid: {self.nr_vals_interpolation_grid}")
-        self.log(f"nr_pop_interpolation: {self.nr_pop_interpolation}")
+        self.log(f"nr_pop_interpolation: {nr_pop_interpolation}")
         self.log(f"nr_pop: {len(self.pop_name_list)}")
-        self.log(f"nr_total_neurons: {self.nr_total_neurons}")
+        self.log(f"nr_total_neurons: {nr_total_neurons}")
         self.log(
-            f"nr_neurons_of_pop_per_net: {self.nr_neurons_of_pop_per_net}; times nr_networks: {self.nr_neurons_of_pop_per_net*nr_networks}"
+            f"nr_neurons_of_pop_per_net: {nr_neurons_of_pop_per_net}; times nr_networks: {nr_neurons_of_pop_per_net*nr_networks}"
         )
         self.log(
-            f"nr_neurons_of_per_net: {self.nr_neurons_of_pop_per_net * len(self.pop_name_list)}"
+            f"nr_neurons_of_per_net: {nr_neurons_of_pop_per_net * len(self.pop_name_list)}"
         )
         self.log(f"nr_networks: {nr_networks}")
         ### this nr of neurons of pop per network may result in too mcuh neurons per pop --> check if all networks are fully needed
         ### correct nr networks
         self.nr_networks = int(
-            np.ceil(self.nr_pop_interpolation / self.nr_neurons_of_pop_per_net)
+            np.ceil(nr_pop_interpolation / nr_neurons_of_pop_per_net)
         )
         self.nr_last_network = round(
-            self.nr_neurons_of_pop_per_net
+            nr_neurons_of_pop_per_net
             - (
-                round(self.nr_neurons_of_pop_per_net * self.nr_networks, 0)
-                - self.nr_pop_interpolation
+                round(nr_neurons_of_pop_per_net * self.nr_networks, 0)
+                - nr_pop_interpolation
             ),
             0,
         )
         self.log(
-            f"nr_networks corrected: {self.nr_pop_interpolation / self.nr_neurons_of_pop_per_net} --> {self.nr_networks} with {self.nr_last_network} neurons to use from last network"
+            f"nr_networks corrected: {nr_pop_interpolation / nr_neurons_of_pop_per_net} --> {self.nr_networks} with {self.nr_last_network} neurons to use from last network"
         )
-        ### TODO use these new sizes to create large multi population networks and get the firing rates from it
+        self.nr_neurons_of_pop_per_net = nr_neurons_of_pop_per_net
 
         ### do further things for which the model needs to be created
         ### get the afferent projection dict for the populations (model needed!)
@@ -978,7 +1139,6 @@ class model_configurator:
                 "ampa": g_ampa_max,
                 "gaba": g_gaba_max,
             }
-
             ### get the max_weight dict
             self.log(f"get the max_weight_dict for {pop_name}")
             self.max_weight_dict[pop_name] = self.get_max_weight_dict_for_pop(pop_name)
@@ -1155,18 +1315,10 @@ class model_configurator:
             f_t: target firing rate
         """
 
-        # ### extrace values from net_single_dict
-        # net = self.net_single_dict[pop_name]["net"]
-        # population = self.net_single_dict[pop_name]["population"]
-        # monitor = self.net_single_dict[pop_name]["monitor"]
-        # variable_init_sampler = self.net_single_dict[pop_name]["variable_init_sampler"]
-
-        # ### get f_0 and f_max
-        # f_0 = self.get_rate(net, population, variable_init_sampler, monitor)[0]
-        # f_max = f_0 + self.target_firing_rate_dict[pop_name] + 100
+        ### set max psp for a single spike
+        self.max_psp_dict[pop_name] = 10
 
         ### find g_ampa max
-        self.max_psp_dict[pop_name] = 10
         self.log("search g_ampa_max with y(X) = PSP(g_ampa=X, g_gaba=0)")
         g_ampa_max = self.incremental_continuous_bound_search(
             y_X=lambda X_val: self.get_psp(
@@ -1176,47 +1328,69 @@ class model_configurator:
                     "variable_init_sampler"
                 ],
                 monitor=self.net_single_v_clamp_dict[pop_name]["monitor"],
-                v_clamp_rec_thresh=self.net_single_v_clamp_dict[pop_name][
-                    "v_clamp_rec_thresh"
-                ],
                 g_ampa=X_val,
-            )[0],
+            ),
             y_bound=self.max_psp_dict[pop_name],
             X_0=0,
             y_0=0,
-            alpha_abs=1,
+            alpha_abs=0.1,
+            X_increase=0.1,
         )
 
-        ### find I_max with incremental_continuous_bound_search
+        ### find g_gaba max
+        self.log("search g_gaba_max with y(X) = PSP(g_ampa=0, g_gaba=X)")
+        g_gaba_max = self.incremental_continuous_bound_search(
+            y_X=lambda X_val: self.get_psp(
+                net=self.net_single_v_clamp_dict[pop_name]["net"],
+                population=self.net_single_v_clamp_dict[pop_name]["population"],
+                variable_init_sampler=self.net_single_v_clamp_dict[pop_name][
+                    "variable_init_sampler"
+                ],
+                monitor=self.net_single_v_clamp_dict[pop_name]["monitor"],
+                g_gaba=X_val,
+            ),
+            y_bound=self.max_psp_dict[pop_name],
+            X_0=0,
+            y_0=0,
+            alpha_abs=0.1,
+            X_increase=0.1,
+        )
+
+        ### get f_0 and f_max with g_ampa_max
+        f_0 = self.get_rate(
+            net=self.net_single_dict[pop_name]["net"],
+            population=self.net_single_dict[pop_name]["population"],
+            variable_init_sampler=self.net_single_dict[pop_name][
+                "variable_init_sampler"
+            ],
+            monitor=self.net_single_dict[pop_name]["monitor"],
+        )[0]
+        f_max = self.get_rate(
+            net=self.net_single_dict[pop_name]["net"],
+            population=self.net_single_dict[pop_name]["population"],
+            variable_init_sampler=self.net_single_dict[pop_name][
+                "variable_init_sampler"
+            ],
+            monitor=self.net_single_dict[pop_name]["monitor"],
+            g_ampa=g_ampa_max,
+        )[0]
+        self.log(f"pop={pop_name}, f_0={f_0}, f_max={f_max}")
+
+        ### find I_max with f_0, and f_max using incremental_continuous_bound_search
         self.log("search I_app_max with y(X) = f(I_app=X, g_ampa=0, g_gaba=0)")
         I_max = self.incremental_continuous_bound_search(
             y_X=lambda X_val: self.get_rate(
-                net,
-                population,
-                variable_init_sampler,
-                monitor,
+                net=self.net_single_dict[pop_name]["net"],
+                population=self.net_single_dict[pop_name]["population"],
+                variable_init_sampler=self.net_single_dict[pop_name][
+                    "variable_init_sampler"
+                ],
+                monitor=self.net_single_dict[pop_name]["monitor"],
                 I_app=X_val,
             )[0],
             y_bound=f_max,
             X_0=0,
             y_0=f_0,
-            alpha_abs=1,
-        )
-
-        ### find g_gaba with incremental_continuous_bound_search
-        self.log("search g_gaba_max with y(X) = f(I_app=I_max, g_ampa=0, g_gaba=X)")
-        g_gaba_max = self.incremental_continuous_bound_search(
-            y_X=lambda X_val: self.get_rate(
-                net,
-                population,
-                variable_init_sampler,
-                monitor,
-                g_gaba=X_val,
-                I_app=I_max,
-            )[0],
-            y_bound=f_0,
-            X_0=0,
-            y_0=f_max,
             alpha_abs=1,
         )
 
@@ -1285,11 +1459,9 @@ class model_configurator:
             X_bound:
                 X value which causes y=y_bound
         """
-        ### TODO difference to target goes up in both directions
+        ### TODO catch difference to target goes up in both directions
         ### then nothing new is predicted --> fails
-        ### importent for finding v_rest
-        ### but maybe just search with something else, because dv/dt is not continous increasing...
-        ### log the task
+
         self.log(
             f"find X_bound for: y_0(X_0={X_0})={y_0} --> y_bound(X_bound=??)={y_bound}"
         )
@@ -1357,6 +1529,13 @@ class model_configurator:
             ### increase iterator
             n_it += 1
 
+        ### catch the initial point already satisified stop condition
+        if len(X_list_all) == 1:
+            warning_txt = f"WARNING incremental_continuous_bound_search: search did not start because initial point already satisfied stop condition!"
+            self._p_w(warning_txt)
+            self.log(warning_txt)
+            return X_0
+
         ### warning if search saturated
         if (y_not_changed_counter >= saturation_thresh) and saturation_warning:
             warning_txt = f"WARNING incremental_continuous_bound_search: search saturated at y={y_list_predict[-1]} while searching for X_val for y_bound={y_bound}"
@@ -1401,11 +1580,18 @@ class model_configurator:
         self.log("predict:")
         self.log(np.array([X_list_predict, y_list_predict]).T)
 
-        ### check if there is a discontinuity in y
+        ### check if there is a discontinuity in y_all, starting with the first used value in y_predict
+        ### update all values with first predict value
+        first_y_used_in_predict = y_list_predict[0]
+        idx_first_y_in_all = y_list_all.index(first_y_used_in_predict)
+        y_list_all = y_list_all[idx_first_y_in_all:]
+        X_space_arr = y_list_all[idx_first_y_in_all:]
+        ### get discontinuity
         discontinuity_idx_list = self.get_discontinuity_idx_list(y_list_all)
         self.log("discontinuity_idx_list")
         self.log(f"{discontinuity_idx_list}")
         if len(discontinuity_idx_list) > 0:
+            ### there is a discontinuity
             discontinuity_idx = discontinuity_idx_list[0]
             ### only use values until discontinuity
             y_bound_new = y_list_all[discontinuity_idx]
@@ -1421,6 +1607,7 @@ class model_configurator:
                 f"discontinuities detected --> only use last values until first discontinuity: X={X_val_best}, y={y_val_best}"
             )
         else:
+            ### there is no discontinuity
             ### now predict final X_val
             X_val = self.predict_1d(X=y_list_predict, y=X_list_predict, X_pred=y_bound)[
                 0
@@ -1636,13 +1823,12 @@ class model_configurator:
         population,
         variable_init_sampler,
         monitor,
-        v_clamp_rec_thresh,
         g_ampa=0,
         g_gaba=0,
+        do_plot=False,
     ):
         """
-        simulates a population for X+500 ms and returns the firing rate of each neuron for the last X ms
-        X is defined with self.simulation_dur
+        simulates a single spike at t=50 ms and records the change of v within a voltage_clamp neuron
 
         Args:
             net: ANNarchy network
@@ -1655,47 +1841,47 @@ class model_configurator:
                 containing the initial values of the population neuron, use .sample() to get values
 
             monitor: ANNarchy monitor
-                to record spikes from population
+                to record v_clamp_rec from population
 
-            I_app: number or arr, optional, default = 0
-                applied current to the population neurons, has to have the same size as the population
+            g_ampa: number, optional, default = 0
+                applied ampa conductance to the population neuron at t=50 ms
 
-            g_ampa: number or arr, optional, default = 0
-                applied ampa conductance to the population neurons, has to have the same size as the population
-
-            g_gaba: number or arr, optional, default = 0
-                applied gaba conductance to the population neurons, has to have the same size as the population
+            g_gaba: number, optional, default = 0
+                applied gaba conductance to the population neurons at t=50 ms
         """
-        ### TODO
-        ### for getting the psp I need a single neuron model with a voltage-clamp neuron
-
+        ### reset network and set initial values
         net.reset()
         variable_init_arr = variable_init_sampler.sample(len(population), seed=0)
         for var_idx, var_name in enumerate(population.variables):
             set_val = variable_init_arr[:, var_idx]
             setattr(population, var_name, set_val)
         ### apply no input
-        population.v_clamp_rec_thresh = v_clamp_rec_thresh
         population.I_app = 0
         population.g_ampa = 0
         population.g_gaba = 0
-        ### simulate 500 ms initial duration
-        net.simulate(500)
-        ### apply given conductances --> increases v_clamp_rec
-        population.g_ampa = 0  # g_ampa
-        population.g_gaba = 1  # g_gaba
-        ### simulate until v_clamp_rec is near zero again
-        simulate_until(max_duration=self.simulation_dur, population=population)
-        ### get the psp = maximum of v_clamp_rec
+        ### simulate 50 ms initial duration
+        net.simulate(50)
+        ### apply given conductances --> changes v_clamp_rec
+        v_clamp_rec_rest = population.v_clamp_rec[0]
+        population.v_clamp_rec_thresh = v_clamp_rec_rest
+        population.g_ampa = g_ampa
+        population.g_gaba = g_gaba
+        ### simulate until v_clamp_rec is near v_clamp_rec_rest again
+        net.simulate_until(max_duration=self.simulation_dur, population=population)
+        ### get the psp = maximum of difference of v_clamp_rec and v_clamp_rec_rest
         v_clamp_rec = monitor.get("v_clamp_rec")[:, 0]
-        psp = np.max(v_clamp_rec)
+        psp = float(np.absolute(v_clamp_rec - v_clamp_rec_rest).max())
 
-        plt.figure()
-        plt.title("g_ampa = {g_ampa}, g_gaba={g_gaba}")
-        plt.plot(v_clamp_rec)
-        plt.savefig("tmp_psp.png")
-        plt.close("all")
-        quit()
+        if do_plot:
+            plt.figure()
+            plt.title(
+                f"g_ampa={g_ampa}, g_gaba={g_gaba}, v_clamp_rec_rest={v_clamp_rec_rest}, psp={psp}"
+            )
+            plt.plot(v_clamp_rec)
+            plt.savefig(
+                f"tmp_psp_{population.name}_{int(g_ampa*1000)}_{int(g_gaba*1000)}.png"
+            )
+            plt.close("all")
 
         return psp
 
@@ -1828,8 +2014,6 @@ class model_configurator:
         init_arguments_dict["parameters"] = "\n".join(parameters_line_split_list)
 
         ### create neuron model with new equations
-        print(init_arguments_dict["equations"])
-        print(init_arguments_dict["parameters"])
         neuron_model_new = Neuron(**init_arguments_dict)
 
         ### create the single neuron population
@@ -1837,7 +2021,7 @@ class model_configurator:
             1,
             neuron=neuron_model_new,
             name=f"single_neuron_v_clamp_{pop_name}",
-            stop_condition="(v_clamp_rec<v_clamp_rec_thresh) and (v_clamp_rec_pre>v_clamp_rec_thresh) : any",
+            stop_condition="(abs(v_clamp_rec-v_clamp_rec_thresh)<1) and (abs(v_clamp_rec_pre-v_clamp_rec_thresh)>1) : any",
         )
 
         ### set the attributes of the neuron
@@ -1854,67 +2038,35 @@ class model_configurator:
             folder_name=f"single_v_clamp_net_{pop_name}", silent=True, net=net_single
         )
 
-        net_single.get(single_neuron_v_clamp).v = 0
-        net_single.simulate(500)
-        net_single.get(single_neuron_v_clamp).v = -70
-        net_single.simulate(500)
-        v_clamp_rec = net_single.get(mon_single).get("v_clamp_rec")
-
-        plt.figure()
-        plt.plot(v_clamp_rec)
-        plt.savefig("tmp_v_clamp.png")
-        plt.close("all")
-        quit()
-
         ### find v where dv/dt is minimal (best = 0)
-        ### get value for v=0
-        delta_v_50 = self.get_v_clamp_1000(
-            v=-50,
-            net=net_single,
-            population=net_single.get(single_neuron_v_clamp),
-        )
-        ### search for v_rest
-
-        ### TODO difference to target goes up in both directions
-        ### then nothing new is predicted --> fails
-        ### importent for finding v_rest
-        ### but maybe just search with something else, because dv/dt is not continous increasing...
-        self.log("search v_rest with y(X) = delta_v_1000(v=X)")
-        v_rest = self.incremental_continuous_bound_search(
-            y_X=lambda X_val: self.get_v_clamp_1000(
-                v=X_val,
-                net=net_single,
-                population=net_single.get(single_neuron_v_clamp),
-            ),
-            y_bound=0,
-            X_0=-50,
-            y_0=delta_v_50,
-            alpha_abs=0.05,
-        )
+        self.log("search v_rest with y(X) = delta_v_2000(v=X) using hyperopt")
         best = fmin(
-            fn=lambda X_val: self.get_v_clamp_1000(
+            fn=lambda X_val: self.get_v_clamp_2000(
                 v=X_val,
                 net=net_single,
                 population=net_single.get(single_neuron_v_clamp),
             ),
             space=hp.normal("v", -70, 30),
             algo=tpe.suggest,
-            max_evals=100,
-            loss_threshold=0.05,
+            timeout=5,
+            show_progressbar=False,
         )
-        print(best)
-        quit()
+        v_rest = best["v"]
+        detla_v_rest = self.get_v_clamp_2000(
+            v=v_rest,
+            net=net_single,
+            population=net_single.get(single_neuron_v_clamp),
+        )
+        self.log(f"found v_rest={v_rest} with delta_v_2000(v=v_rest)={detla_v_rest}")
+        if detla_v_rest > 1:
+            ### there seems to be no restign potential --> use -60 mV
+            v_rest = -60
+            self.log(f"since there is seems to be no v_rest --> set v_rest={v_rest}")
 
         ### get the variable_init_sampler for v=v_rest
         variable_init_sampler = self.get_init_neuron_variables_v_clamp(
             net_single, net_single.get(single_neuron_v_clamp), v_rest=v_rest
         )
-
-        ### get a sample to obtain v_clamp_rec_thresh
-        sample = variable_init_sampler.sample(1)
-        variable_name_list = list(net_single.get(single_neuron_v_clamp).variables)
-        v_clamp_rec_rest = sample[0, variable_name_list.index("v_clamp_rec")]
-        v_clamp_rec_thresh = v_clamp_rec_rest + 0.05
 
         ### network dict
         net_single_dict = {
@@ -1922,15 +2074,14 @@ class model_configurator:
             "population": net_single.get(single_neuron_v_clamp),
             "monitor": net_single.get(mon_single),
             "variable_init_sampler": variable_init_sampler,
-            "v_clamp_rec_thresh": v_clamp_rec_thresh,
         }
 
         return net_single_dict
 
-    def get_v_clamp_1000(self, v, net, population):
+    def get_v_clamp_2000(self, v, net, population):
         net.reset()
         population.v = v
-        net.simulate(1000)
+        net.simulate(2000)
         return population.v_clamp_rec[0]
 
     def get_voltage_clamp_equations(self, init_arguments_dict, pop_name):
@@ -2117,8 +2268,8 @@ class model_configurator:
         pop.I_app = 0
         pop.v = v_rest
 
-        ### get the variables of the neuron after 1000 ms
-        net.simulate(1000)
+        ### get the variables of the neuron after 5000 ms
+        net.simulate(5000)
         var_name_list = list(pop.variables)
         var_arr = np.zeros((1, len(var_name_list)))
         get_arr = np.array([getattr(pop, var_name) for var_name in pop.variables])
