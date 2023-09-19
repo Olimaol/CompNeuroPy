@@ -33,6 +33,7 @@ import importlib.util
 from time import time, strftime
 import datetime
 from sympy import symbols, Symbol, sympify, solve
+from hyperopt import fmin, tpe, hp
 
 
 class model_configurator:
@@ -1827,6 +1828,8 @@ class model_configurator:
         init_arguments_dict["parameters"] = "\n".join(parameters_line_split_list)
 
         ### create neuron model with new equations
+        print(init_arguments_dict["equations"])
+        print(init_arguments_dict["parameters"])
         neuron_model_new = Neuron(**init_arguments_dict)
 
         ### create the single neuron population
@@ -1839,7 +1842,6 @@ class model_configurator:
 
         ### set the attributes of the neuron
         for attr_name, attr_val in self.neuron_model_parameters_dict[pop_name]:
-            print(attr_name, attr_val)
             setattr(single_neuron_v_clamp, attr_name, attr_val)
 
         ### create Monitor for single neuron
@@ -1851,6 +1853,18 @@ class model_configurator:
         compile_in_folder(
             folder_name=f"single_v_clamp_net_{pop_name}", silent=True, net=net_single
         )
+
+        net_single.get(single_neuron_v_clamp).v = 0
+        net_single.simulate(500)
+        net_single.get(single_neuron_v_clamp).v = -70
+        net_single.simulate(500)
+        v_clamp_rec = net_single.get(mon_single).get("v_clamp_rec")
+
+        plt.figure()
+        plt.plot(v_clamp_rec)
+        plt.savefig("tmp_v_clamp.png")
+        plt.close("all")
+        quit()
 
         ### find v where dv/dt is minimal (best = 0)
         ### get value for v=0
@@ -1877,6 +1891,19 @@ class model_configurator:
             y_0=delta_v_50,
             alpha_abs=0.05,
         )
+        best = fmin(
+            fn=lambda X_val: self.get_v_clamp_1000(
+                v=X_val,
+                net=net_single,
+                population=net_single.get(single_neuron_v_clamp),
+            ),
+            space=hp.normal("v", -70, 30),
+            algo=tpe.suggest,
+            max_evals=100,
+            loss_threshold=0.05,
+        )
+        print(best)
+        quit()
 
         ### get the variable_init_sampler for v=v_rest
         variable_init_sampler = self.get_init_neuron_variables_v_clamp(
