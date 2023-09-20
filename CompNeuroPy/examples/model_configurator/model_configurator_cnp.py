@@ -386,10 +386,14 @@ class model_configurator:
         )
         reset()
         end = time()
-        time_estimate = round(
-            (end - start - offset_time)
-            * (self.simulation_dur / self.simulation_dur_estimate_time),
-            1,
+        time_estimate = np.clip(
+            round(
+                (end - start - offset_time)
+                * (self.simulation_dur / self.simulation_dur_estimate_time),
+                1,
+            ),
+            0,
+            None,
         )
 
         txt = f"start parallel_run of many neurons network on {self.nr_networks} threads, will take approx. {time_estimate} s (end: {self.get_time_in_x_sec(x=time_estimate)})..."
@@ -425,10 +429,18 @@ class model_configurator:
         output_of_populations_dict = self.get_output_of_populations(
             f_rec_arr_list_list, input_dict
         )
-        for pop_name in self.pop_name_list:
-            print(pop_name)
-            print(output_of_populations_dict[pop_name])
-        quit()
+        for pop_idx, pop_name in enumerate(self.pop_name_list):
+            if pop_name == "stn" or pop_name == "gpe":
+                print(pop_name)
+                print("output")
+                print(output_of_populations_dict[pop_name])
+                print("I_app")
+                print(input_dict["I_app_list"][0][pop_idx])
+                print("g_ampa")
+                print(input_dict["g_ampa_list"][0][pop_idx])
+                print("g_gaba")
+                print(input_dict["g_gaba_list"][0][pop_idx])
+                print("")
 
         ### TODO catch "wrong" bounds
         ### maybe for one or two values tehre are wrong bounds --> only value zero
@@ -438,16 +450,36 @@ class model_configurator:
         ### create interpolation
         for pop_name in self.pop_name_list:
             ### get whole input arrays
-            I_app_value_array = input_dict["I_app_arr_dict"][pop_name]
-            g_ampa_value_array = input_dict["g_ampa_arr_dict"][pop_name]
-            g_gaba_value_array = input_dict["g_gaba_arr_dict"][pop_name]
+            I_app_value_array = None
+            g_ampa_value_array = None
+            g_gaba_value_array = None
+            if self.I_app_max_dict[pop_name] > 0:
+                I_app_value_array = input_dict["I_app_arr_dict"][pop_name]
+            if self.g_max_dict[pop_name]["ampa"] > 0:
+                g_ampa_value_array = input_dict["g_ampa_arr_dict"][pop_name]
+            if self.g_max_dict[pop_name]["gaba"] > 0:
+                g_gaba_value_array = input_dict["g_gaba_arr_dict"][pop_name]
+
             ### get the interpolation
             self.f_I_g_curve_dict[pop_name] = self.get_interp_3p(
+                values=output_of_populations_dict[pop_name],
+                model_conf_obj=self,
+                var_name_dict={"x": "I_app", "y": "g_ampa", "z": "g_gaba"},
                 x=I_app_value_array,
                 y=g_ampa_value_array,
                 z=g_gaba_value_array,
-                values=output_of_populations_dict[pop_name],
             )
+            if pop_name == "stn" or pop_name == "gpe":
+                print(pop_name)
+                print("predict for all 0:")
+                print(
+                    self.f_I_g_curve_dict[pop_name](
+                        x=0,
+                        y=0,
+                        z=0,
+                    )
+                )
+        quit()
 
         self.did_get_interpolation = True
 
@@ -503,17 +535,23 @@ class model_configurator:
                 ### append the recorded values to the array of the corresponding population
                 use_output_pop_dict[pop_name].append(use_value_arr)
 
-        ### concatenate the arrays of the individual populations over the networks
+        ### concatenate the arrays of the individual populations
         for pop_name in self.pop_name_list:
-            ### only use values defined by the use_array
-            if self.nr_networks > 1:
-                use_output_arr = np.concatenate(use_output_pop_dict[pop_name])
-                output_pop_dict[pop_name] = np.concatenate(output_pop_dict[pop_name])[
-                    use_output_arr
-                ]
-            else:
-                use_output_arr = use_output_pop_dict[pop_name][0]
-                output_pop_dict[pop_name] = output_pop_dict[pop_name][0][use_output_arr]
+            use_output_pop_dict[pop_name] = np.concatenate(
+                use_output_pop_dict[pop_name]
+            )
+
+        print("output_pop_dict")
+        print(output_pop_dict)
+        print("use_output_pop_dict")
+        print(use_output_pop_dict)
+        print("\n")
+
+        ### finaly only use values defined by ues_output...
+        for pop_name in self.pop_name_list:
+            output_pop_dict[pop_name] = output_pop_dict[pop_name][
+                use_output_pop_dict[pop_name]
+            ]
 
         # ### if last network was smaller --> do not use X last values
         # if self.nr_last_network < self.nr_neurons_of_pop_per_net:
@@ -580,6 +618,10 @@ class model_configurator:
             use_g_gaba_array = np.array(
                 [g_gaba_max > 0] * self.nr_vals_interpolation_grid
             )
+            ### use at least a single value
+            use_I_app_array[0] = True
+            use_g_ampa_array[0] = True
+            use_g_gaba_array[0] = True
 
             ### get all combinations (grid) of value_arrays
             I_g_arr = np.array(
@@ -756,19 +798,89 @@ class model_configurator:
             g_gaba_arr_list = np.split(g_gaba_arr, split_idx_arr)
 
     class get_interp_3p:
-        def __init__(self, x, y, z, values) -> None:
+        def __init__(
+            self, values, model_conf_obj, var_name_dict, x=None, y=None, z=None
+        ) -> None:
+            """
+            x, y, and z are the increasing gid steps on the interpolation grid
+            set z=None to get 2D interpiolation
+            set y and z = None to get 1D interpolation
+            """
             self.x = x
             self.y = y
             self.z = z
             self.values = values
+            self.model_conf_obj = model_conf_obj
+            self.var_name_dict = var_name_dict
 
-        def __call__(self, a, b, c):
+            if (
+                isinstance(self.x, type(None))
+                and isinstance(self.y, type(None))
+                and isinstance(self.z, type(None))
+            ):
+                error_msg = (
+                    "ERROR get_interp_3p: at least one of x,y,z has to be an array"
+                )
+                model_conf_obj.log(error_msg)
+                raise AssertionError(error_msg)
+
+        def __call__(self, x=None, y=None, z=None):
+            ### check x
+            if isinstance(x, type(None)):
+                if not isinstance(self.x, type(None)):
+                    error_msg = f"ERROR get_interp_3p: interpolation values for {self.var_name_dict['x']} were given but sample points are missing!"
+                    self.model_conf_obj.log(error_msg)
+                    raise AssertionError(error_msg)
+                tmp_x = 0
+            else:
+                if isinstance(self.x, type(None)):
+                    warning_txt = f"WARNING get_interp_3p: sample points for {self.var_name_dict['x']} are given but no interpolation values for {self.var_name_dict['x']} were given!"
+                    self.model_conf_obj._p_w(warning_txt)
+                    self.model_conf_obj.log(warning_txt)
+                    x = None
+                    tmp_x = 0
+                else:
+                    tmp_x = x
+
+            ### check y
+            if isinstance(y, type(None)):
+                if not isinstance(self.y, type(None)):
+                    error_msg = f"ERROR get_interp_3p: interpolation values for {self.var_name_dict['y']} were given but sample points are missing!"
+                    self.model_conf_obj.log(error_msg)
+                    raise AssertionError(error_msg)
+                tmp_y = 0
+            else:
+                if isinstance(self.y, type(None)):
+                    warning_txt = f"WARNING get_interp_3p: sample points for {self.var_name_dict['y']} are given but no interpolation values for {self.var_name_dict['y']} were given!"
+                    self.model_conf_obj._p_w(warning_txt)
+                    self.model_conf_obj.log(warning_txt)
+                    y = None
+                    tmp_y = 0
+                else:
+                    tmp_y = y
+
+            ### check z
+            if isinstance(z, type(None)):
+                if not isinstance(self.y, type(None)):
+                    error_msg = f"ERROR get_interp_3p: interpolation values for {self.var_name_dict['z']} were given but sample points are missing!"
+                    self.model_conf_obj.log(error_msg)
+                    raise AssertionError(error_msg)
+                tmp_z = 0
+            else:
+                if isinstance(self.z, type(None)):
+                    warning_txt = f"WARNING get_interp_3p: sample points for {self.var_name_dict['z']} are given but no interpolation values for {self.var_name_dict['z']} were given!"
+                    self.model_conf_obj._p_w(warning_txt)
+                    self.model_conf_obj.log(warning_txt)
+                    z = None
+                    tmp_z = 0
+                else:
+                    tmp_z = z
 
             ### get input arrays
             input_arr_dict = {
-                "a": np.array(a).reshape(-1),
-                "b": np.array(b).reshape(-1),
-                "c": np.array(c).reshape(-1),
+                "x": np.array(tmp_x).reshape(-1),
+                "y": np.array(tmp_y).reshape(-1),
+                "z": np.array(tmp_z).reshape(-1),
             }
 
             ### check if the arrays with size larger 1 have same size
@@ -778,7 +890,7 @@ class model_configurator:
                 input_size = size_arr[mask][0]
                 if not (input_size == size_arr[mask]).all():
                     raise ValueError(
-                        "ERROR model_configurator get_interp_3p: a,b,c either single values or arrays. All arrays have to have same size"
+                        "ERROR model_configurator get_interp_3p: x,y,z sample points have to be either single values or arrays. All arrays have to have same size"
                     )
 
             ### if there are inputs only consisting of a single value --> duplicate to increase size if there are also array inputs
@@ -789,14 +901,51 @@ class model_configurator:
                         np.ones(input_size) * val
                     )
 
+            ### get the sample points
+            use_variable_names_list = ["x", "y", "z"]
+            if isinstance(x, type(None)):
+                use_variable_names_list.remove("x")
+            if isinstance(y, type(None)):
+                use_variable_names_list.remove("y")
+            if isinstance(z, type(None)):
+                use_variable_names_list.remove("z")
             point_arr = np.array(
-                [input_arr_dict["a"], input_arr_dict["b"], input_arr_dict["c"]]
+                [input_arr_dict[var_name] for var_name in use_variable_names_list]
             ).T
 
+            ### get the grid points, only use these which are not None
+            use_variable_names_list = ["x", "y", "z"]
+            if isinstance(self.x, type(None)):
+                use_variable_names_list.remove("x")
+            if isinstance(self.y, type(None)):
+                use_variable_names_list.remove("y")
+            if isinstance(self.z, type(None)):
+                use_variable_names_list.remove("z")
+
+            interpolation_grid_arr_dict = {
+                "x": self.x,
+                "y": self.y,
+                "z": self.z,
+            }
+            points = tuple(
+                [
+                    interpolation_grid_arr_dict[var_name]
+                    for var_name in use_variable_names_list
+                ]
+            )
+
+            ### get shape of values
+            values_shape = tuple(
+                [
+                    interpolation_grid_arr_dict[var_name].size
+                    for var_name in use_variable_names_list
+                ]
+            )
+
             return interpn(
-                (self.x, self.y, self.z),
-                self.values.reshape((self.x.size, self.y.size, self.z.size)),
-                point_arr,
+                points=points,
+                values=self.values.reshape(values_shape),
+                xi=point_arr,
             )
 
     def set_syn_load(self, synaptic_load_dict, synaptic_contribution_dict=None):
@@ -1317,18 +1466,6 @@ class model_configurator:
 
         ### set max psp for a single spike
         self.max_psp_dict[pop_name] = 10
-
-        self.get_psp(
-            net=self.net_single_v_clamp_dict[pop_name]["net"],
-            population=self.net_single_v_clamp_dict[pop_name]["population"],
-            variable_init_sampler=self.net_single_v_clamp_dict[pop_name][
-                "variable_init_sampler"
-            ],
-            monitor=self.net_single_v_clamp_dict[pop_name]["monitor"],
-            g_ampa=1,
-            do_plot=True,
-        )
-        quit()
 
         ### find g_ampa max
         self.log("search g_ampa_max with y(X) = PSP(g_ampa=X, g_gaba=0)")
@@ -2637,9 +2774,10 @@ def get_rate_parallel(
     net.reset()
     for pop_idx, pop_name in enumerate(pop_name_list):
         population = net.get(population_list[pop_idx])
-        variable_init_arr = variable_init_sampler_list[pop_idx].sample(
-            len(population), seed=0
-        )
+        ### sample init values, one could sample different values for multiple neurons
+        ### but here we sample a single sample and use it for all neurons
+        variable_init_arr = variable_init_sampler_list[pop_idx].sample(1, seed=0)
+        variable_init_arr = np.array([variable_init_arr[0]] * len(population))
         for var_idx, var_name in enumerate(population.variables):
             set_val = variable_init_arr[:, var_idx]
             setattr(population, var_name, set_val)
