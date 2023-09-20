@@ -1318,6 +1318,18 @@ class model_configurator:
         ### set max psp for a single spike
         self.max_psp_dict[pop_name] = 10
 
+        self.get_psp(
+            net=self.net_single_v_clamp_dict[pop_name]["net"],
+            population=self.net_single_v_clamp_dict[pop_name]["population"],
+            variable_init_sampler=self.net_single_v_clamp_dict[pop_name][
+                "variable_init_sampler"
+            ],
+            monitor=self.net_single_v_clamp_dict[pop_name]["monitor"],
+            g_ampa=1,
+            do_plot=True,
+        )
+        quit()
+
         ### find g_ampa max
         self.log("search g_ampa_max with y(X) = PSP(g_ampa=X, g_gaba=0)")
         g_ampa_max = self.incremental_continuous_bound_search(
