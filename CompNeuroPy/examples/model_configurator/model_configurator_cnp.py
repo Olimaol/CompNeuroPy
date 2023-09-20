@@ -2193,8 +2193,8 @@ class model_configurator:
         ### now create the new equations for the ANNarchy neuron
         ### create two lines, the voltage clamp line dv/dt=0 and the
         ### obtained line which would be the right side of dv/dt
-        ### v_clamp_rec should be an absolute value, abs does not work therefore **2**1/2...
-        eq_new_0 = f"v_clamp_rec = (({result})**2)**(1/2)"
+        ### v_clamp_rec should be an absolute value
+        eq_new_0 = f"v_clamp_rec = fabs({result})"
         eq_new_1 = "v_clamp_rec_pre = v_clamp_rec"
         ### add stored tags to dv/dt equation
         if not isinstance(tags, type(None)):
