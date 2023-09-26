@@ -34,6 +34,7 @@ from time import time, strftime
 import datetime
 from sympy import symbols, Symbol, sympify, solve
 from hyperopt import fmin, tpe, hp
+import pandas as pd
 
 
 class model_configurator:
@@ -41,6 +42,8 @@ class model_configurator:
         self,
         model,
         target_firing_rate_dict,
+        interpolation_grid_points=10,
+        max_psp=10,
         do_not_config_list=[],
         print_guide=False,
         I_app_variable="I_app",
@@ -54,6 +57,12 @@ class model_configurator:
 
             target_firing_rate_dict: dict
                 keys = population names of model which should be configured, values = target firing rates in Hz
+
+            interpolation_grid_points: int, optional, default=10
+                how many points should be used for the interpolation of the f-I-g curve on a single axis
+
+            max_psp: int, optional, default=10
+                maximum post synaptic potential in mV
 
             do_not_config_list: list, optional, default=[]
                 list with strings containing population names of populations which should not be configured
@@ -101,6 +110,12 @@ class model_configurator:
         }
         self.max_psp_dict = {pop_name: None for pop_name in self.pop_name_list}
         self.possible_rates_dict = {pop_name: None for pop_name in self.pop_name_list}
+        self.extreme_firing_rates_df_dict = {
+            pop_name: None for pop_name in self.pop_name_list
+        }
+        ### set max psp for a single spike
+        self.max_psp_dict = {pop_name: max_psp for pop_name in self.pop_name_list}
+        ### print things
         self.log_exist = False
         self.caller_name = ""
         self.log("model configurator log:")
@@ -109,7 +124,7 @@ class model_configurator:
         self.simulation_dur = 5000
         self.simulation_dur_estimate_time = 50
         ### nr of neurons **(1/3) has to result in an integer
-        self.nr_vals_interpolation_grid = 3  # 36
+        self.nr_vals_interpolation_grid = interpolation_grid_points
 
         ### prepare the creation of the networks
         ### also do things for which the model needs to be created (it will not be available later)
@@ -159,14 +174,13 @@ class model_configurator:
         """
         print_width = min([os.get_terminal_size().columns, 80])
 
-        if self.print_guide:
-            print("\n[model_configurator WARNING]:")
-            for line in str(txt).splitlines():
-                wrapped_text = textwrap.fill(
-                    line, width=print_width - 5, replace_whitespace=False
-                )
-                wrapped_text = textwrap.indent(wrapped_text, "    |")
-                print(wrapped_text)
+        print("\n[model_configurator WARNING]:")
+        for line in str(txt).splitlines():
+            wrapped_text = textwrap.fill(
+                line, width=print_width - 5, replace_whitespace=False
+            )
+            wrapped_text = textwrap.indent(wrapped_text, "    |")
+            print(wrapped_text)
         print("")
 
     def get_base(self):
@@ -184,30 +198,44 @@ class model_configurator:
 
         ### use interpolation to get baseline currents
         I_base_dict = {}
-        for pop_name in self.pop_name_list:
-            ### predict baseline current values
-            I_base_dict[pop_name] = self.find_base_current(pop_name)
+        target_firing_rate_changed = True
+        nr_max_iter = 100
+        nr_iter = 0
+        while target_firing_rate_changed and nr_iter < nr_max_iter:
+            target_firing_rate_changed = False
+            for pop_name in self.pop_name_list:
+                ### predict baseline current values
+                (
+                    target_firing_rate_changed,
+                    I_base_dict[pop_name],
+                ) = self.find_base_current(pop_name)
+                if target_firing_rate_changed:
+                    break
+            nr_iter += 1
 
         return I_base_dict
 
     def find_base_current(self, pop_name):
+        target_firing_rate_changed = False
         ### first get values for g_ampa, g_gaba, I_app_max
         g_value_dict = self.get_g_values_of_pop(pop_name)
         g_ampa = g_value_dict["ampa"]
         g_gaba = g_value_dict["gaba"]
         I_app_max = self.I_app_max_dict[pop_name]
 
-        ### 1st search through whole I_app space
+        ### 1st search through whole I_app space with given g_ampa and g_gaba
         I_app_arr = np.linspace(-I_app_max, I_app_max, 200)
         possible_firing_rates_arr = self.f_I_g_curve_dict[pop_name](
-            a=I_app_arr, b=g_ampa, c=g_gaba
+            x=I_app_arr, y=g_ampa, z=g_gaba
         )
+
         ### catch if target firing rate cannot be reached
         target_firing_rate = self.target_firing_rate_dict[pop_name]
         possible_f_min = possible_firing_rates_arr.min()
         possible_f_max = possible_firing_rates_arr.max()
         if not (
-            target_firing_rate >= possible_f_min or target_firing_rate <= possible_f_max
+            target_firing_rate >= possible_f_min
+            and target_firing_rate <= possible_f_max
         ):
             new_target_firing_rate = np.array([possible_f_min, possible_f_max])[
                 np.argmin(
@@ -216,12 +244,20 @@ class model_configurator:
                     )
                 )
             ]
-            self.target_firing_rate_dict[pop_name] = new_target_firing_rate
-            target_firing_rate = self.target_firing_rate_dict[pop_name]
-            warning_txt = f"WARNING get_possible_rates: target firing rate of population {pop_name}({target_firing_rate}) cannot be reached. Possible range: [{possible_f_min},{possible_f_max}]. Set firing rate to {new_target_firing_rate}."
+            ### if the possible firing rates are too small --> what (high) firing rate could be maximally reached with a hypothetical g_ampa_max and I_app_max
+            ### if the possible firing rates are too large --> waht (low) firing rate could be reached with g_gaba_max and -I_app_max
+            warning_txt = f"WARNING get_possible_rates: target firing rate of population {pop_name}({target_firing_rate}) cannot be reached.\nPossible range with current synaptic load: [{round(possible_f_min,1)},{round(possible_f_max,1)}].\nSet firing rate to {round(new_target_firing_rate,1)}."
+            sub_text_1 = "Possible range with maximum gaba/ampa synaptic load:"
+            sub_text_2 = (
+                f"{self.extreme_firing_rates_df_dict[pop_name].sort_values('f')}"
+            )
+            warning_txt = "\n".join([warning_txt, sub_text_1, sub_text_2])
             self._p_w(warning_txt)
             self.log(warning_txt)
-        ### find bes I_app for reaching target firing rate
+            self.target_firing_rate_dict[pop_name] = new_target_firing_rate
+            target_firing_rate = self.target_firing_rate_dict[pop_name]
+            target_firing_rate_changed = True
+        ### find best I_app for reaching target firing rate
         best_idx = np.argmin(
             np.absolute(possible_firing_rates_arr - target_firing_rate)
         )
@@ -232,13 +268,13 @@ class model_configurator:
         I_app_1 = np.clip(I_app_best + I_app_max / 100, -I_app_max, I_app_max)
         I_app_arr = np.linspace(I_app_0, I_app_1, 100)
         possible_firing_rates_arr = self.f_I_g_curve_dict[pop_name](
-            a=I_app_arr, b=g_ampa, c=g_gaba
+            x=I_app_arr, y=g_ampa, z=g_gaba
         )
         target_firing_rate = self.target_firing_rate_dict[pop_name]
         best_idx = np.argmin(possible_firing_rates_arr - target_firing_rate)
         I_app_best = I_app_arr[best_idx]
 
-        return I_app_best
+        return [target_firing_rate_changed, I_app_best]
 
     def set_base(self, I_base_dict=None, I_base_variable="base_mean"):
         """
@@ -327,13 +363,6 @@ class model_configurator:
         print(txt)
         self.log(txt)
         ### for each population get the input arrays for I_app, g_ampa and g_gaba
-        ### TODO catch "wrong" bounds
-        ### g_ampa_max = 0
-        ### g_gaba_max = 0
-        ### I_app_max = 0
-        ### if these values are 0 --> no interpolation steps possible
-        ### --> do interpolation only with the values which have "correct" bounds
-        ### --> need to adjust network many and interpolation process
         ### while getting inputs define which values should be used later
         input_dict = self.get_input_for_many_neurons_net()
 
@@ -390,7 +419,7 @@ class model_configurator:
             round(
                 (end - start - offset_time)
                 * (self.simulation_dur / self.simulation_dur_estimate_time),
-                1,
+                0,
             ),
             0,
             None,
@@ -399,7 +428,7 @@ class model_configurator:
         txt = f"start parallel_run of many neurons network on {self.nr_networks} threads, will take approx. {time_estimate} s (end: {self.get_time_in_x_sec(x=time_estimate)})..."
         print(txt)
         self.log(txt)
-        ### simulate the many neurons network with the input arrays splitted into the network populations sizes TODO
+        ### simulate the many neurons network with the input arrays splitted into the network populations sizes
         ### and get the data of all populations
         ### run_parallel
         start = time()
@@ -425,29 +454,14 @@ class model_configurator:
         print(txt)
         self.log(txt)
 
-        ### combine the list of outputs from parallel_run to one output per population TODO
+        ### combine the list of outputs from parallel_run to one output per population
         output_of_populations_dict = self.get_output_of_populations(
             f_rec_arr_list_list, input_dict
         )
-        for pop_idx, pop_name in enumerate(self.pop_name_list):
-            if pop_name == "stn" or pop_name == "gpe":
-                print(pop_name)
-                print("output")
-                print(output_of_populations_dict[pop_name])
-                print("I_app")
-                print(input_dict["I_app_list"][0][pop_idx])
-                print("g_ampa")
-                print(input_dict["g_ampa_list"][0][pop_idx])
-                print("g_gaba")
-                print(input_dict["g_gaba_list"][0][pop_idx])
-                print("")
 
-        ### TODO catch "wrong" bounds
-        ### maybe for one or two values tehre are wrong bounds --> only value zero
-        ### maybe do only a 2d interpolation
-        ### or a 1d interpolation
-
-        ### create interpolation
+        ### create interpolation for each population
+        ### it can be a 1D to 3D interpolation, default (if everything works fine) is
+        ### 3D interpolation with "x": "I_app", "y": "g_ampa", "z": "g_gaba"
         for pop_name in self.pop_name_list:
             ### get whole input arrays
             I_app_value_array = None
@@ -469,19 +483,70 @@ class model_configurator:
                 y=g_ampa_value_array,
                 z=g_gaba_value_array,
             )
-            if pop_name == "stn" or pop_name == "gpe":
-                print(pop_name)
-                print("predict for all 0:")
-                print(
-                    self.f_I_g_curve_dict[pop_name](
-                        x=0,
-                        y=0,
-                        z=0,
-                    )
-                )
-        quit()
 
         self.did_get_interpolation = True
+
+        ### with interpolation get the firing rates for all extreme values of I_app, g_ampa, g_gaba
+        for pop_name in self.pop_name_list:
+            self.extreme_firing_rates_df_dict[
+                pop_name
+            ] = self.get_extreme_firing_rates_df(pop_name)
+
+    def get_extreme_firing_rates_df(self, pop_name):
+        """
+        get the firing rates for all extreme values of I_app, g_ampa, g_gaba
+
+        Args:
+            pop_name: str
+                popualtion name
+
+        return:
+            table_df: pandas dataframe
+                containing the firing rates for all extreme values of I_app, g_ampa, g_gaba
+        """
+        I_app_list = [-self.I_app_max_dict[pop_name], self.I_app_max_dict[pop_name]]
+        g_ampa_list = [0, self.g_max_dict[pop_name]["ampa"]]
+        g_gaba_list = [0, self.g_max_dict[pop_name]["gaba"]]
+        ### create all combiniations of I_app_list, g_ampa_list, g_gaba_list in a single list
+        comb_list = self.get_all_combinations_of_lists(
+            [I_app_list, g_ampa_list, g_gaba_list]
+        )
+
+        ### get the firing rates for all combinations
+        f_list = []
+        for I_app, g_ampa, g_gaba in comb_list:
+            f_list.append(
+                self.f_I_g_curve_dict[pop_name](x=I_app, y=g_ampa, z=g_gaba)[0]
+            )
+
+        ### now get the same for names
+        I_app_name_list = ["min", "max"]
+        g_ampa_name_list = ["min", "max"]
+        g_gaba_name_list = ["min", "max"]
+        ### create all combiniations of I_app_name_list, g_ampa_name_list, g_gaba_name_list in a single list
+        comb_name_list = self.get_all_combinations_of_lists(
+            [I_app_name_list, g_ampa_name_list, g_gaba_name_list]
+        )
+
+        ### create a dict as table with header I_app, g_ampa, g_gaba
+        table_dict = {
+            "I_app": np.array(comb_name_list)[:, 0].tolist(),
+            "g_ampa": np.array(comb_name_list)[:, 1].tolist(),
+            "g_gaba": np.array(comb_name_list)[:, 2].tolist(),
+            "f": f_list,
+        }
+
+        ### create a pandas dataframe from the table_dict
+        table_df = pd.DataFrame(table_dict)
+
+        return table_df
+
+    def get_all_combinations_of_lists(self, list_of_lists):
+        """
+        get all combinations of lists in a single list
+        example: [[1,2],[3,4],[5,6]] --> [[1,3,5],[1,3,6],[1,4,5],[1,4,6],[2,3,5],[2,3,6],[2,4,5],[2,4,6]]
+        """
+        return list(itertools.product(*list_of_lists))
 
     def get_output_of_populations(self, f_rec_arr_list_list, input_dict):
         """
@@ -541,32 +606,11 @@ class model_configurator:
                 use_output_pop_dict[pop_name]
             )
 
-        print("output_pop_dict")
-        print(output_pop_dict)
-        print("use_output_pop_dict")
-        print(use_output_pop_dict)
-        print("\n")
-
         ### finaly only use values defined by ues_output...
         for pop_name in self.pop_name_list:
             output_pop_dict[pop_name] = output_pop_dict[pop_name][
                 use_output_pop_dict[pop_name]
             ]
-
-        # ### if last network was smaller --> do not use X last values
-        # if self.nr_last_network < self.nr_neurons_of_pop_per_net:
-        #     not_use_values = round(
-        #         self.nr_neurons_of_pop_per_net - self.nr_last_network, 0
-        #     )
-
-        #     for pop_name in self.pop_name_list:
-        #         output_pop_dict[pop_name][-1] = output_pop_dict[pop_name][-1][
-        #             :-not_use_values
-        #         ]
-
-        # ### concatenate the arrays of the populations
-        # for pop_name in self.pop_name_list:
-        #     output_pop_dict[pop_name] = np.concatenate(output_pop_dict[pop_name])
 
         return output_pop_dict
 
@@ -835,7 +879,6 @@ class model_configurator:
             else:
                 if isinstance(self.x, type(None)):
                     warning_txt = f"WARNING get_interp_3p: sample points for {self.var_name_dict['x']} are given but no interpolation values for {self.var_name_dict['x']} were given!"
-                    self.model_conf_obj._p_w(warning_txt)
                     self.model_conf_obj.log(warning_txt)
                     x = None
                     tmp_x = 0
@@ -852,7 +895,6 @@ class model_configurator:
             else:
                 if isinstance(self.y, type(None)):
                     warning_txt = f"WARNING get_interp_3p: sample points for {self.var_name_dict['y']} are given but no interpolation values for {self.var_name_dict['y']} were given!"
-                    self.model_conf_obj._p_w(warning_txt)
                     self.model_conf_obj.log(warning_txt)
                     y = None
                     tmp_y = 0
@@ -1256,7 +1298,9 @@ class model_configurator:
         cnp_clear()
         ### create the single neuron networks
         for pop_name in self.pop_name_list:
-            self.log(f"create network_single for {pop_name}")
+            txt = f"create network_single for {pop_name}"
+            print(txt)
+            self.log(txt)
             ### the network with the standard neuron
             self.net_single_dict[pop_name] = self.create_net_single(pop_name=pop_name)
             ### the network with the voltage clamp version neuron
@@ -1277,9 +1321,11 @@ class model_configurator:
         for pop_name in self.pop_name_list:
             self.log(pop_name)
             ### get max synaptic currents (I and gs) using the single neuron networks
-            self.log(
+            txt = (
                 f"get max I_app, g_ampa and g_gaba using network_single for {pop_name}"
             )
+            print(txt)
+            self.log(txt)
             I_app_max, g_ampa_max, g_gaba_max = self.get_max_syn_currents(
                 pop_name=pop_name
             )
@@ -1463,10 +1509,6 @@ class model_configurator:
 
             f_t: target firing rate
         """
-
-        ### set max psp for a single spike
-        self.max_psp_dict[pop_name] = 10
-
         ### find g_ampa max
         self.log("search g_ampa_max with y(X) = PSP(g_ampa=X, g_gaba=0)")
         g_ampa_max = self.incremental_continuous_bound_search(
