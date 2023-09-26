@@ -281,10 +281,10 @@ if __name__ == "__main__":
     mon = Monitors(
         {
             "pop;cor": ["spike"],
-            "pop;stn": ["spike"],
-            "pop;gpe": ["spike"],
-            "pop;snr": ["spike"],
-            "pop;thal": ["spike"],
+            "pop;stn": ["spike", "g_ampa", "g_gaba"],
+            "pop;gpe": ["spike", "g_ampa", "g_gaba"],
+            "pop;snr": ["spike", "g_ampa", "g_gaba"],
+            "pop;thal": ["spike", "g_ampa", "g_gaba"],
         }
     )
     simulate(1000)
@@ -304,13 +304,21 @@ if __name__ == "__main__":
         recordings=recordings,
         recording_times=recording_times,
         chunk=0,
-        shape=(5, 1),
+        shape=(5, 3),
         plan=[
             "1;cor;spike;hybrid",
-            "2;stn;spike;hybrid",
-            "3;gpe;spike;hybrid",
-            "4;snr;spike;hybrid",
-            "5;thal;spike;hybrid",
+            "4;stn;spike;hybrid",
+            "5;stn;g_ampa;line",
+            "6;stn;g_gaba;line",
+            "7;gpe;spike;hybrid",
+            "8;gpe;g_ampa;line",
+            "9;gpe;g_gaba;line",
+            "10;snr;spike;hybrid",
+            "11;snr;g_ampa;line",
+            "12;snr;g_gaba;line",
+            "13;thal;spike;hybrid",
+            "14;thal;g_ampa;line",
+            "15;thal;g_gaba;line",
         ],
     )
 
