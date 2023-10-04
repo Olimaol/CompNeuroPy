@@ -17,11 +17,12 @@ from ANNarchy import (
     reset,
     Neuron,
     simulate_until,
+    Uniform,
 )
 from ANNarchy.core.Global import _network
 import numpy as np
 from scipy.interpolate import interp1d, interpn
-from scipy.signal import find_peaks
+from scipy.signal import find_peaks, argrelmin
 import matplotlib.pyplot as plt
 import inspect
 import textwrap
@@ -212,9 +213,11 @@ class model_configurator:
             ### the network with the standard neuron
             self.net_single_dict[pop_name] = self.create_net_single(pop_name=pop_name)
             ### the network with the voltage clamp version neuron
+            ### to prepare get_psp
             self.net_single_v_clamp_dict[
                 pop_name
             ] = self.create_net_single_voltage_clamp(pop_name=pop_name)
+        quit()
 
     def create_net_single(self, pop_name):
         """
@@ -276,8 +279,8 @@ class model_configurator:
         net.reset()
         pop.I_app = 0
 
-        ### 1000 ms init duration
-        net.simulate(1000)
+        ### 10000 ms init duration
+        net.simulate(10000)
 
         ### simulate 2000 ms and check every dt the variables of the neuron
         time_steps = int(2000 / dt())
@@ -351,30 +354,97 @@ class model_configurator:
             folder_name=f"single_v_clamp_net_{pop_name}", silent=True, net=net_single
         )
 
-        ### find v where dv/dt is minimal (best = 0)
-        self.log("search v_rest with y(X) = delta_v_2000(v=X) using hyperopt")
-        best = fmin(
-            fn=lambda X_val: self.get_v_clamp_2000(
-                v=X_val,
+        ### find v where dv/dt is minimal (best = 0, it can only be >= 0)
+        self.log("search v_rest with y(X) = delta_v_2000(v=X) using grid search")
+
+        ### TODO TMP test what get_v_clamp returns for different I_app values
+        v_arr = np.linspace(-90, -20, 200)
+        v_clamp_arr = np.array(
+            [
+                self.get_v_clamp_2000(
+                    v=X_val,
+                    net=net_single,
+                    population=net_single.get(single_neuron_v_clamp),
+                )
+                for X_val in v_arr
+            ]
+        )
+        v_rest = np.min(v_arr[argrelmin(v_clamp_arr)[0]])
+        plt.figure()
+        plt.plot(v_arr, v_clamp_arr)
+        plt.axvline(v_rest, color="k")
+        plt.axhline(0, color="k", ls="dashed")
+        plt.savefig(f"tmp_v_clamp_{pop_name}.png")
+        plt.close("all")
+
+        detla_v_rest = (
+            self.get_v_clamp_2000(
+                v=v_rest,
                 net=net_single,
                 population=net_single.get(single_neuron_v_clamp),
-            ),
-            space=hp.normal("v", -70, 30),
-            algo=tpe.suggest,
-            timeout=5,
-            show_progressbar=False,
+            )
+            * dt()
         )
-        v_rest = best["v"]
-        detla_v_rest = self.get_v_clamp_2000(
-            v=v_rest,
-            net=net_single,
-            population=net_single.get(single_neuron_v_clamp),
+        self.log(
+            f"for {pop_name} found v_rest={v_rest} with delta_v_2000(v=v_rest)={detla_v_rest}"
         )
-        self.log(f"found v_rest={v_rest} with delta_v_2000(v=v_rest)={detla_v_rest}")
-        if detla_v_rest > 1:
-            ### there seems to be no restign potential --> use -60 mV
-            v_rest = -60
-            self.log(f"since there is seems to be no v_rest --> set v_rest={v_rest}")
+
+        ### check if the neuron stays at v_rest with normal neuron
+        ### if it stays --> use new value as v_rest (its even a bit finer as before)
+        ### if it not stays --> use previous value and find I_app to hold it there
+        ### TODO not use end value but progress over 2 sec --> there you can nicely see if v changed (i.e. neuron is self-active and has no actual v_rest) or not
+        obtained_variables = {
+            var_name: getattr(net_single.get(single_neuron_v_clamp), var_name)
+            for var_name in net_single.get(single_neuron_v_clamp).variables
+        }
+        v_rest_arr = self.get_new_v_rest_2000(pop_name, obtained_variables)
+
+        v_rest_arr_is_const = (
+            np.std(v_rest_arr, axis=0)
+            <= np.mean(np.absolute(v_rest_arr), axis=0) / 1000
+        )
+
+        if v_rest_arr_is_const:
+            v_rest = v_rest_arr[-1]
+            self.log(f"final v_rest = {v_rest_arr[-1]}")
+        else:
+            ### there is no v_rest i.e. neuron is self-active --> find smallest negative I_app to silence neuron
+            self.log(
+                "neuron seems to be self-active --> find smallest I_app to silence the neuron"
+            )
+
+            ### negative current initially reduces v
+            ### then v climbs back up
+            ### check if the second half of v is constant if yes fine if not increase negative I_app
+            ### with incremental search?
+
+            ### find I_app_hold
+            ### TODO fin I_app_hold = DONE!
+            self.log("search I_app_hold with y(X) = CHANGE_OF_V(I_app=X)")
+            I_app_hold = -self.incremental_continuous_bound_search(
+                y_X=lambda X_val: self.get_v_rest_arr_const(
+                    pop_name=pop_name,
+                    obtained_variables=obtained_variables,
+                    I_app=-X_val,
+                ),
+                y_bound=0,
+                X_0=0,
+                y_0=self.get_v_rest_arr_const(
+                    pop_name=pop_name,
+                    obtained_variables=obtained_variables,
+                    I_app=0,
+                ),
+                X_increase=detla_v_rest,
+                accept_non_dicontinuity=True,
+                bound_type="greater",
+            )
+
+            v_rest_arr = self.get_new_v_rest_2000(
+                pop_name, obtained_variables, I_app=I_app_hold
+            )
+            v_rest = v_rest_arr[-1]
+
+            self.log(f"I_app_hold = {I_app_hold}, resulting v_rest = {v_rest}")
 
         ### get the variable_init_sampler for v=v_rest
         variable_init_sampler = self.get_init_neuron_variables_v_clamp(
@@ -390,6 +460,82 @@ class model_configurator:
         }
 
         return net_single_dict
+
+    def get_v_rest_arr_const(self, pop_name, obtained_variables, I_app):
+        """
+        sets I_app and obtained varaibles in single neuron
+        simulates 2000 ms and returns how much the v changes
+        0 = constant, negative = not constant
+        """
+        v_rest_arr = self.get_new_v_rest_2000(pop_name, obtained_variables, I_app=I_app)
+        v_rest_arr = v_rest_arr[len(v_rest_arr) // 2 :]
+
+        # v_rest_arr_is_const = (
+        #     0<= np.mean(np.absolute(v_rest_arr), axis=0) / 1000 - np.std(v_rest_arr, axis=0)
+        # )
+
+        return np.mean(np.absolute(v_rest_arr), axis=0) / 1000 - np.std(
+            v_rest_arr, axis=0
+        )
+
+    def get_new_v_rest_2000(
+        self, pop_name, obtained_variables, I_app=None, do_plot=True
+    ):
+        """
+        use single_net to simulate 2000 ms and return v
+        """
+        net = self.net_single_dict[pop_name]["net"]
+        pop = self.net_single_dict[pop_name]["population"]
+        net.reset()
+        ### set variables
+        for var_name, var_val in obtained_variables.items():
+            if var_name in pop.variables:
+                setattr(pop, var_name, var_val)
+        if not isinstance(I_app, type(None)):
+            pop.I_app = I_app
+        ### simulate
+        time_steps = int(2000 / dt())
+        var_name_list = list(pop.variables)
+        var_arr = np.zeros((time_steps, len(var_name_list)))
+        for time_idx in range(time_steps):
+            net.simulate(dt())
+            get_arr = np.array([getattr(pop, var_name) for var_name in pop.variables])
+            var_arr[time_idx, :] = get_arr[:, 0]
+
+        v_idx = list(pop.variables).index("v")
+        v_arr = var_arr[:, v_idx]
+
+        if do_plot:
+            plt.figure()
+            plt.title(f"{pop.I_app}")
+            plt.plot(v_arr)
+            plt.savefig(f"tmp_v_rest_{pop_name}.png")
+            plt.close("all")
+
+        return v_arr
+
+    def get_nr_spikes_from_v_rest_2000(
+        self, pop_name, obtained_variables, I_app=None, do_plot=True
+    ):
+        """
+        use single_net to simulate 2000 ms and return number spikes
+        """
+        net = self.net_single_dict[pop_name]["net"]
+        pop = self.net_single_dict[pop_name]["population"]
+        mon = self.net_single_dict[pop_name]["monitor"]
+        net.reset()
+        ### set variables
+        for var_name, var_val in obtained_variables.items():
+            if var_name in pop.variables:
+                setattr(pop, var_name, var_val)
+        if not isinstance(I_app, type(None)):
+            pop.I_app = I_app
+        ### simulate
+        simulate(2000)
+        ### get spikes
+        spike_dict = mon.get("spike")
+        nr_spikes = len(spike_dict["0"])
+        return nr_spikes
 
     def log(self, txt):
         caller_frame = inspect.currentframe().f_back
@@ -450,13 +596,14 @@ class model_configurator:
             I_base_dict, dict
                 Dictionary with baseline curretns for all configured populations.
         """
-        ### use interpolation to get baseline currents
+        ### use many neuron network to get baseline currents
         I_base_dict = {}
         target_firing_rate_changed = True
         nr_max_iter = 100
         nr_iter = 0
         while target_firing_rate_changed and nr_iter < nr_max_iter:
-            ### predict baseline current values
+            ### get baseline current values, if target firing rates could not
+            ### be reached, try again with new target firing rates
             (
                 target_firing_rate_changed,
                 I_base_dict,
@@ -466,29 +613,41 @@ class model_configurator:
         return I_base_dict
 
     def find_base_current(self):
+        """
+        search through whole I_app space
+        for each population simulate a network with 10000 neurons, each neuron has a different I_app value
+        g_ampa and g_gaba values are internally created using
+        the weigths stored in the afferent_projection dict
+        and target firing rates stored in the target_firing_rate_dict
+        """
 
-        ### search through whole I_app space
-        ### for each population simulate a network with 10000 neurons, each neuron has a different I_app value
-        ### g_ampa and g_gaba values are internally created using
-        ### the weigths stored in the afferent_projection dict
-        ### and target firing rates stored in the target_firing_rate_dict
         I_app_arr_list = []
         weight_list_list = []
         proj_name_list_list = []
         rate_list_list = []
-        ### TODO get lists which define the weights to the afferent populations
-        ### TODO get lists which define the rates of the afferent populations
-        ### maybe lists with the projection names and lists with the weight values
+        size_list_list = []
+        ### get lists which define the current weights to the afferent populations
+        ### get lists which define the current rates of the afferent populations
+        ### get lists with the names of the afferent populations
         ### the length of the lists has to be the number of networks i.e. the number of populations
         for pop_name in self.pop_name_list:
-            ### get the weights, names and rates of the afferent populations
+            ### get the weights, names, rates of the afferent populations
             weight_list = self.afferent_projection_dict[pop_name]["weights"]
             proj_name_list = self.afferent_projection_dict[pop_name]["projection_names"]
             rate_list = self.get_rate_list_for_pop(pop_name)
+            size_list = self.get_size_list_for_pop(pop_name)
+            ### get the I_app_arr
+            I_app_arr = np.linspace(
+                -self.I_app_max_dict[pop_name],
+                self.I_app_max_dict[pop_name],
+                self.nr_neurons_per_net,
+            )
             ### append these lists to the list for all populations i.e. networks
             weight_list_list.append(weight_list)
             proj_name_list_list.append(proj_name_list)
             rate_list_list.append(rate_list)
+            size_list_list.append(size_list)
+            I_app_arr_list.append(I_app_arr)
 
         ### create model
         net_many_dict = self.create_many_neuron_network()
@@ -513,6 +672,7 @@ class model_configurator:
                 "weight_list": weight_list_list,
                 "proj_name_list": proj_name_list_list,
                 "rate_list": rate_list_list,
+                "size_list": size_list_list,
                 "simulation_dur": [self.simulation_dur] * nr_networks,
             },
         )
@@ -567,6 +727,17 @@ class model_configurator:
             pre_rate = self.target_firing_rate_dict[pre_pop_name]
             rate_list.append(pre_rate)
         return rate_list
+
+    def get_size_list_for_pop(self, pop_name):
+        """
+        get the size list for the afferent populations of the given population
+        """
+        size_list = []
+        for proj_name in self.afferent_projection_dict[pop_name]["projection_names"]:
+            proj_dict = self.get_proj_dict(proj_name)
+            pre_pop_size = proj_dict["pre_pop_size"]
+            size_list.append(pre_pop_size)
+        return size_list
 
     def set_base(self, I_base_dict=None, I_base_variable="base_mean"):
         """
@@ -1375,7 +1546,7 @@ class model_configurator:
                     error_msg = f"ERROR set_syn_load: the given population {pop_name} is not within the list of populations which should be configured {self.pop_name_list}"
                     self.log(error_msg)
                     raise ValueError(error_msg)
-                ### loop over given projeciton target type (ampa,gaba)
+                ### loop over given projection target type (ampa,gaba)
                 for given_proj_target_type in synaptic_contribution_dict[
                     pop_name
                 ].keys():
@@ -1544,6 +1715,11 @@ class model_configurator:
         self.pre_pop_name_dict = {}
         for proj_name in self.model.projections:
             self.pre_pop_name_dict[proj_name] = get_projection(proj_name).pre.name
+
+        ### get the pre_pop_size_dict
+        self.pre_pop_size_dict = {}
+        for proj_name in self.model.projections:
+            self.pre_pop_size_dict[proj_name] = get_projection(proj_name).pre.size
 
         ### clear ANNarchy --> the model is not available anymore
         cnp_clear()
@@ -1761,6 +1937,8 @@ class model_configurator:
         X_increase=1,
         saturation_thresh=10,
         saturation_warning=True,
+        accept_non_dicontinuity=False,
+        bound_type="equal",
     ):
         """
         you have system X --> y
@@ -1808,6 +1986,15 @@ class model_configurator:
             saturation_warning: bool, optional, default=True
                 if you want to get a warning when the saturation is reached during search
 
+            accept_non_dicontinuity: bool, optional, default=False
+                if you do not want to search only in the first continuous search space
+
+            bound_type: str, optional, default="equal"
+                equal, greater or less
+                equal: result should be near bound within tolerance
+                greater: result should be at least larger bound within tolerance
+                less: result should be smaller bound within tolerance
+
         return:
             X_bound:
                 X value which causes y=y_bound
@@ -1825,12 +2012,31 @@ class model_configurator:
             tolerance = alpha_abs
 
         ### define stop condition
-        stop_condition = (
-            lambda y_val, n_it: (
-                ((y_bound - tolerance) <= y_val) and (y_val <= (y_bound + tolerance))
+        if bound_type == "equal":
+            stop_condition = (
+                lambda y_val, n_it: (
+                    ((y_bound - tolerance) <= y_val)
+                    and (y_val <= (y_bound + tolerance))
+                )
+                or n_it >= n_it_max
             )
-            or n_it >= n_it_max
-        )
+        elif bound_type == "greater":
+            stop_condition = (
+                lambda y_val, n_it: (
+                    ((y_bound - 0) <= y_val) and (y_val <= (y_bound + 2 * tolerance))
+                )
+                or n_it >= n_it_max
+            )
+        elif bound_type == "less":
+            stop_condition = (
+                lambda y_val, n_it: (
+                    ((y_bound - 2 * tolerance) <= y_val) and (y_val <= (y_bound + 0))
+                )
+                or n_it >= n_it_max
+            )
+
+        ### check if y(X) is increasing
+        is_increasing = y_bound > y_0
 
         ### search for X_val
         X_list_predict = [X_0]
@@ -1863,13 +2069,16 @@ class model_configurator:
                     X=y_list_predict, y=X_list_predict, X_pred=y_bound
                 )[0]
                 X_change_predicted = X_val - X_val_pre
+                ### now actually update X_val
+                X_val = X_val_pre + X_change_predicted * (1 + y_not_changed_counter / 2)
             else:
                 ### just increase X_val
-                X_val = X_val + X_change_predicted
+                X_val = X_val + X_change_predicted * (1 + y_not_changed_counter / 2)
 
             ### check saturation of y_val
             if abs(y_change) < tolerance:
                 ### increase saturation counter
+                ### saturation counter also increases updates of X_val
                 y_not_changed_counter += 1
             else:
                 ### reset saturation counter
@@ -1884,7 +2093,7 @@ class model_configurator:
 
         ### catch the initial point already satisified stop condition
         if len(X_list_all) == 1:
-            warning_txt = f"WARNING incremental_continuous_bound_search: search did not start because initial point already satisfied stop condition!"
+            warning_txt = "WARNING incremental_continuous_bound_search: search did not start because initial point already satisfied stop condition!"
             self._p_w(warning_txt)
             self.log(warning_txt)
             return X_0
@@ -1910,26 +2119,93 @@ class model_configurator:
         idx_best = np.argmin(np.absolute(np.array(y_list_predict) - y_bound))
         X_bound = X_list_predict[idx_best]
 
+        ### sort y_list_predict and corresponding X_list_predict
+        ### get value pair which is before bound and value pair which is behind bound
+        ### if this does not work... use previous X_0 and X_bound
+        sort_idx_arr = np.argsort(y_list_predict)
+        X_arr_predict_sort = np.array(X_list_predict)[sort_idx_arr]
+        y_arr_predict_sort = np.array(y_list_predict)[sort_idx_arr]
+        over_y_bound_arr = y_arr_predict_sort > y_bound
+        over_y_bound_changed_idx = np.where(np.diff(over_y_bound_arr))[0]
+        if len(over_y_bound_changed_idx) == 1:
+            if over_y_bound_changed_idx[0] < len(y_arr_predict_sort):
+                X_aside_change_list = [
+                    X_arr_predict_sort[over_y_bound_changed_idx[0]],
+                    X_arr_predict_sort[over_y_bound_changed_idx[0] + 1],
+                ]
+                y_aside_change_list = [
+                    y_arr_predict_sort[over_y_bound_changed_idx[0]],
+                    y_arr_predict_sort[over_y_bound_changed_idx[0] + 1],
+                ]
+                X_0 = min(X_aside_change_list)
+                X_bound = max(X_aside_change_list)
+                y_0 = min(y_aside_change_list)
+        self.log("predict sorted:")
+        self.log(np.array([X_arr_predict_sort, y_arr_predict_sort, over_y_bound_arr]).T)
+        self.log(over_y_bound_changed_idx)
+
         ### if y cannot get larger or smaller than y_bound one has to check if you not "overshoot" with X_bound
-        ### --> fine tune result by investigating the space between X_0 and X_bound and preict a new X_bound
+        ### --> fine tune result by investigating the space between X_0 and X_bound and predict a new X_bound
         self.log(f"X_0: {X_0}, X_bound:{X_bound} for final predict list")
         X_space_arr = np.linspace(X_0, X_bound, 100)
         y_val = y_0
         X_list_predict = []
         y_list_predict = []
+        X_list_all = []
         y_list_all = []
+        did_break = False
+        n_it = 0
         for X_val in X_space_arr:
             y_val_pre = y_val
             y_val = y_X(X_val)
+            X_list_all.append(X_val)
             y_list_all.append(y_val)
             if y_val != y_val_pre:
                 ### if y_val changed
                 ### append X_val and y_val to y_list/X_list
                 y_list_predict.append(y_val)
                 X_list_predict.append(X_val)
+            ### if already over y_bound -> stop
+            if y_val > y_bound and is_increasing:
+                did_break = True
+                break
+            if y_val < y_bound and not is_increasing:
+                did_break = True
+                break
+            n_it += 1
+        ### if did break early --> use again finer bounds
+        if did_break and n_it < 90:
+            X_space_arr = np.linspace(
+                X_list_predict[-2], X_list_predict[-1], 100 - n_it
+            )
+            y_val = y_list_predict[-2]
+            for X_val in X_space_arr:
+                y_val_pre = y_val
+                y_val = y_X(X_val)
+                X_list_all.append(X_val)
+                y_list_all.append(y_val)
+                if y_val != y_val_pre:
+                    ### if y_val changed
+                    ### append X_val and y_val to y_list/X_list
+                    y_list_predict.append(y_val)
+                    X_list_predict.append(X_val)
+                ### if already over y_bound -> stop
+                if y_val > y_bound and is_increasing:
+                    break
+                if y_val < y_bound and not is_increasing:
+                    break
+        ### sort value lists
+        sort_idx_all_arr = np.argsort(X_list_all)
+        X_list_all = (np.array(X_list_all)[sort_idx_all_arr]).tolist()
+        y_list_all = (np.array(y_list_all)[sort_idx_all_arr]).tolist()
+        sort_idx_predict_arr = np.argsort(X_list_predict)
+        X_list_predict = (np.array(X_list_predict)[sort_idx_predict_arr]).tolist()
+        y_list_predict = (np.array(y_list_predict)[sort_idx_predict_arr]).tolist()
+
+        ### log
         self.log("final predict lists:")
         self.log("all:")
-        self.log(np.array([X_space_arr, y_list_all]).T)
+        self.log(np.array([X_list_all, y_list_all]).T)
         self.log("predict:")
         self.log(np.array([X_list_predict, y_list_predict]).T)
 
@@ -1938,12 +2214,11 @@ class model_configurator:
         first_y_used_in_predict = y_list_predict[0]
         idx_first_y_in_all = y_list_all.index(first_y_used_in_predict)
         y_list_all = y_list_all[idx_first_y_in_all:]
-        X_space_arr = y_list_all[idx_first_y_in_all:]
         ### get discontinuity
         discontinuity_idx_list = self.get_discontinuity_idx_list(y_list_all)
         self.log("discontinuity_idx_list")
         self.log(f"{discontinuity_idx_list}")
-        if len(discontinuity_idx_list) > 0:
+        if len(discontinuity_idx_list) > 0 and not accept_non_dicontinuity:
             ### there is a discontinuity
             discontinuity_idx = discontinuity_idx_list[0]
             ### only use values until discontinuity
@@ -1962,16 +2237,16 @@ class model_configurator:
         else:
             ### there is no discontinuity
             ### now predict final X_val
-            X_val = self.predict_1d(X=y_list_predict, y=X_list_predict, X_pred=y_bound)[
-                0
-            ]
+            X_val = self.predict_1d(
+                X=y_list_predict, y=X_list_predict, X_pred=y_bound, linear=False
+            )[0]
             y_val = y_X(X_val)
 
             ### append it to lists
             X_list_predict.append(X_val)
             y_list_predict.append(y_val)
 
-            ### ifnd best
+            ### find best
             idx_best = np.argmin(np.absolute(np.array(y_list_predict) - y_bound))
             X_val_best = X_list_predict[idx_best]
             y_val_best = y_list_predict[idx_best]
@@ -2005,21 +2280,32 @@ class model_configurator:
 
         return peaks_idx_list
 
-    def predict_1d(self, X, y, X_pred):
+    def predict_1d(self, X, y, X_pred, linear=True):
         """
         Args:
             X: array-like
                 X values
+
             y: array-like
                 y values, same size as X_values
+
             X_pred: array-like or number
                 X value(s) for which new y value(s) are predicted
+
+            linear: bool, optional, default=True
+                if interpolation is linear
 
         return:
             Y_pred_arr: array
                 predicted y values for X_pred
         """
-        y_X = interp1d(x=X, y=y, fill_value="extrapolate")
+        if not linear:
+            if len(X) >= 4:
+                y_X = interp1d(x=X, y=y, fill_value="extrapolate", kind="cubic")
+            elif len(X) >= 3:
+                y_X = interp1d(x=X, y=y, fill_value="extrapolate", kind="quadratic")
+        else:
+            y_X = interp1d(x=X, y=y, fill_value="extrapolate", kind="linear")
         y_pred_arr = y_X(X_pred)
         return y_pred_arr.reshape(1)
 
@@ -2285,16 +2571,19 @@ class model_configurator:
             ### get the afferent populations
             afferent_population_list = []
             proj_target_type_list = []
-            for proj_name in self.afferent_projection_dict[pop_name]["projeciton_name"]:
+            for proj_name in self.afferent_projection_dict[pop_name][
+                "projection_names"
+            ]:
                 proj_dict = self.get_proj_dict(proj_name)
                 pre_pop_name = proj_dict["pre_pop_name"]
                 afferent_population_list.append(pre_pop_name)
                 proj_target_type_list.append(proj_dict["proj_target_type"])
-            
+
             ### for each afferent population create a poisson spike train equation string
             ### add it to the equations
             ### and add the related parameters to the parameters
 
+            ### split the equations and parameters string
             equations_line_split_list = str(
                 init_arguments_dict["equations"]
             ).splitlines()
@@ -2303,36 +2592,82 @@ class model_configurator:
                 init_arguments_dict["parameters"]
             ).splitlines()
 
+            ### loop over afferent populations to add the new equation lines and parameters
             for pre_pop_name in afferent_population_list:
-                ### TODO currently I get rate as target firing rate but this needs to be a spike train which consideres the nummber of synapses i.e. probability and number of pre neurons
-                poisson_equation_str = f"{pre_pop_name}_spike_train = ite(Uniform(0.0, 1.0) * 1000.0 / dt > {pre_pop_name}_rate, 0, {pre_pop_name}_weight"
-                
-                equations_line_split_list.insert(1,poisson_equation_str)
-                parameters_line_split_list.append(f"{pre_pop_name}_rate = 0")
-                parameters_line_split_list.append(f"{pre_pop_name}_weight = 0")
+                ### define the spike train of a pre population as a binomial process with number of trials = number of pre neurons and success probability = spike probability (taken from Poisson neurons)
+                ### the obtained value is the number of spikes at a time step times the weight
+                poisson_equation_str = f"{pre_pop_name}_spike_train = Binomial({pre_pop_name}_size, ({pre_pop_name}_rate/1000)*dt) * {pre_pop_name}_weight"
+                # poisson_equation_str = f"{pre_pop_name}_spike_train = Binomial(100, 0.005) * {pre_pop_name}_weight"
+                # TODO random distributions do not work with variables in ANNarchy...
+
+                equations_line_split_list.insert(1, poisson_equation_str)
+                parameters_line_split_list.append(
+                    f"{pre_pop_name}_size = 0 : population"
+                )
+                parameters_line_split_list.append(
+                    f"{pre_pop_name}_rate = 0 : population"
+                )
+                parameters_line_split_list.append(
+                    f"{pre_pop_name}_weight = 0 : population"
+                )
 
             ### change the g_ampa and g_gaba line, they additionally are the sum of the spike trains
-            for equation_line in equations_line_split_list:
+            for equation_line_idx, equation_line in enumerate(
+                equations_line_split_list
+            ):
                 ### remove whitespaces
                 line = equation_line.replace(" ", "")
                 ### check if line contains g_ampa
                 if "dg_ampa/dt" in line:
                     ### get the right side of the equation
                     line_right = line.split("=")[1]
+                    line_left = line.split("=")[0]
                     ### remove and store tags_str
-                    tags_str=""
-                    if len(line_right.split(":"))>1:
+                    tags_str = ""
+                    if len(line_right.split(":")) > 1:
                         line_right, tags_str = line_right.split(":")
-                    ### get the populations whose spike train should be appended
+                    ### get the populations whose spike train should be appended in g_ampa
                     afferent_population_to_append_list = []
-                    for pre_pop_name in afferent_population_list:
-                        if proj_target_type_list[] == "ampa":
+                    for pre_pop_idx, pre_pop_name in enumerate(
+                        afferent_population_list
+                    ):
+                        if proj_target_type_list[pre_pop_idx] == "ampa":
                             afferent_population_to_append_list.append(pre_pop_name)
-                    if len(afferent_population_to_append_list)>0:
+                    if len(afferent_population_to_append_list) > 0:
                         ### change right side, add the sum of the spike trains
-                        line_right = f"{line_right} + {'+'.join([f'{pre_pop_name}_spike_train' for pre_pop_name in afferent_population_to_append_list])}"
+                        line_right = f"{line_right} + {'+'.join([f'{pre_pop_name}_spike_train/dt' for pre_pop_name in afferent_population_to_append_list])}"
                     ### add tags_str again
-                    line_right = f"{line_right}:{tags_str}"
+                    if tags_str != "":
+                        line_right = f"{line_right}:{tags_str}"
+                    ### combine line again and replace the list entry in equations_line_split_list
+                    line = f"{line_left}={line_right}"
+                    equations_line_split_list[equation_line_idx] = line
+
+                ### check if line contains g_gaba
+                if "dg_gaba/dt" in line:
+                    ### get the right side of the equation
+                    line_right = line.split("=")[1]
+                    line_left = line.split("=")[0]
+                    ### remove and store tags_str
+                    tags_str = ""
+                    if len(line_right.split(":")) > 1:
+                        line_right, tags_str = line_right.split(":")
+                    ### get the populations whose spike train should be appended in g_ampa
+                    afferent_population_to_append_list = []
+                    for pre_pop_idx, pre_pop_name in enumerate(
+                        afferent_population_list
+                    ):
+                        if proj_target_type_list[pre_pop_idx] == "gaba":
+                            afferent_population_to_append_list.append(pre_pop_name)
+                    if len(afferent_population_to_append_list) > 0:
+                        ### change right side, add the sum of the spike trains
+                        line_right = f"{line_right} + {'+'.join([f'{pre_pop_name}_spike_train/dt' for pre_pop_name in afferent_population_to_append_list])}"
+                    ### add tags_str again
+                    if tags_str != "":
+                        line_right = f"{line_right}:{tags_str}"
+                    ### combine line again and replace the list entry in equations_line_split_list
+                    line = f"{line_left}={line_right}"
+                    equations_line_split_list[equation_line_idx] = line
 
             ### combine string lines to multiline strings again
             init_arguments_dict["parameters"] = "\n".join(parameters_line_split_list)
@@ -2340,6 +2675,9 @@ class model_configurator:
 
             ### create neuron model with new equations
             neuron_model_new = Neuron(**init_arguments_dict)
+
+            print("new neuron model:")
+            print(neuron_model_new)
 
             ### create the many neuron population
             many_neuron_population_list.append(
@@ -2352,17 +2690,22 @@ class model_configurator:
 
             ### set the attributes of the neurons
             for attr_name, attr_val in self.neuron_model_parameters_dict[pop_name]:
-                setattr(many_neuron_population_list[pop_name], attr_name, attr_val)
+                setattr(many_neuron_population_list[-1], attr_name, attr_val)
 
             ### create Monitor for many neuron
             many_neuron_monitor_list.append(
-                Monitor(many_neuron_population_list[pop_name], ["spike"])
+                Monitor(many_neuron_population_list[-1], ["spike"])
             )
 
             ### create the network with population and monitor
-            many_neuron_network_list[pop_name] = Network()
-            many_neuron_network_list[pop_name].add(many_neuron_population_list[-1])
-            many_neuron_network_list[pop_name].add(many_neuron_monitor_list[-1])
+            many_neuron_network_list.append(Network())
+            many_neuron_network_list[-1].add(many_neuron_population_list[-1])
+            many_neuron_network_list[-1].add(many_neuron_monitor_list[-1])
+
+            ### compile network
+            compile_in_folder(
+                folder_name=f"many_neuron_{pop_name}", net=many_neuron_network_list[-1]
+            )
 
         net_many_dict = {
             "network_list": many_neuron_network_list,
@@ -2371,9 +2714,16 @@ class model_configurator:
         }
         return net_many_dict
 
-    def get_v_clamp_2000(self, v, net, population):
+    def get_v_clamp_2000(self, net, population, v=None, I_app=None):
+        """
+        the returned values is dv/dt
+        --> to get the hypothetical change of v for a single time step multiply with dt!
+        """
         net.reset()
-        population.v = v
+        if not isinstance(v, type(None)):
+            population.v = v
+        if not isinstance(I_app, type(None)):
+            population.I_app = I_app
         net.simulate(2000)
         return population.v_clamp_rec[0]
 
@@ -2444,7 +2794,7 @@ class model_configurator:
             key: attributes_tuple[attributes_name_list.index(key)]
             for key in attributes_name_list
         }
-        ### furhter create symbols for dv/dt and right_side
+        ### furhter create symbols for delta_v and right_side
         attributes_sympy_dict["delta_v"] = Symbol("delta_v")
         attributes_sympy_dict["right_side"] = Symbol("right_side")
 
@@ -2466,23 +2816,24 @@ class model_configurator:
             )
         result = str(result[0][attributes_sympy_dict["delta_v"]])
 
-        ### replace right_side by the original right side
+        ### replace right_side by the actual right side
         result = result.replace("right_side", f"({eq_v_splitted[1]})")
 
         ### TODO replace mathematical expressions and random distributions back to previous
 
         ### now create the new equations for the ANNarchy neuron
-        ### create two lines, the voltage clamp line dv/dt=0 and the
-        ### obtained line which would be the right side of dv/dt
+        ### create three lines, the voltage clamp line "dv/dt=0",
+        ### the obtained line which would be the right side of dv/dt,
+        ### and this right side sotred from the previous time step
         ### v_clamp_rec should be an absolute value
         eq_new_0 = f"v_clamp_rec = fabs({result})"
         eq_new_1 = "v_clamp_rec_pre = v_clamp_rec"
-        ### add stored tags to dv/dt equation
+        ### add stored tags to new dv/dt equation
         if not isinstance(tags, type(None)):
             eq_new_2 = f"dv/dt=0 : {tags}"
         else:
             eq_new_2 = "dv/dt=0"
-        ### remove old v line and insert new lines
+        ### remove old v line and insert new three lines
         del eq[line_is_v_list.index(True)]
         eq.insert(line_is_v_list.index(True), eq_new_0)
         eq.insert(line_is_v_list.index(True), eq_new_1)
@@ -2661,6 +3012,8 @@ class model_configurator:
         """
         ### get pre_pop_name
         pre_pop_name = self.pre_pop_name_dict[proj_name]
+        ### get pre_pop_name
+        pre_pop_size = self.pre_pop_size_dict[proj_name]
         ### get post_pop_name
         post_pop_name = self.post_pop_name_dict[proj_name]
         ### get idx_proj and proj_target_type
@@ -2696,6 +3049,7 @@ class model_configurator:
 
         return {
             "pre_pop_name": pre_pop_name,
+            "pre_pop_size": pre_pop_size,
             "post_pop_name": post_pop_name,
             "proj_target_type": proj_target_type,
             "idx_proj": idx_proj,
@@ -2888,6 +3242,7 @@ def get_rate_parallel(
     weight_list,
     proj_name_list,
     rate_list,
+    size_list,
     simulation_dur,
 ):
     """
@@ -2940,7 +3295,9 @@ def get_rate_parallel(
         setattr(population, var_name, set_val)
 
     ### set the weights and rates of the poisson spike traces of the afferent populations
+    ### TODO not projection name but pre pop name!
     for proj_idx, proj_name in enumerate(proj_name_list):
+        setattr(population, f"{proj_name}_size", size_list[proj_idx])
         setattr(population, f"{proj_name}_rate", rate_list[proj_idx])
         setattr(population, f"{proj_name}_weight", weight_list[proj_idx])
 
