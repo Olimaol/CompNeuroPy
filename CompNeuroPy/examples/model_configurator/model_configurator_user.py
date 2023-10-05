@@ -249,7 +249,6 @@ if __name__ == "__main__":
         print_guide=False,
         I_app_variable="I_app",
         interpolation_grid_points=36,
-        max_psp=20,
     )
 
     ### obtain the maximum synaptic loads for the populations and the

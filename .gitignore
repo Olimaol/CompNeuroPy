@@ -3,6 +3,7 @@ build/
 CompNeuroPy.egg-info/
 dist/
 *annarchy_folders/
+*annarchy*/
 *dataRaw/
 *.png
 *.svg

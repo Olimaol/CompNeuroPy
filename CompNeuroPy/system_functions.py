@@ -6,6 +6,7 @@ import types
 import gc
 import traceback
 import shutil
+from time import time
 
 
 def clear_dir(path):
@@ -182,3 +183,19 @@ def find_folder_with_prefix(base_path, prefix):
 
     # If no folder with the specified prefix is found, return None
     return None
+
+
+def timing_decorator(threshold=0.1):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            start_time = time()
+            result = func(*args, **kwargs)
+            end_time = time()
+            execution_time = end_time - start_time
+            if execution_time >= threshold:
+                print(f"{func.__name__} took {execution_time:.4f} seconds")
+            return result
+
+        return wrapper
+
+    return decorator

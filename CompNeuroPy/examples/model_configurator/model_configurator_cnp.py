@@ -4,7 +4,9 @@ from CompNeuroPy import (
     find_folder_with_prefix,
     data_obj,
     replace_names_with_dict,
+    timing_decorator,
 )
+from CompNeuroPy.neuron_models import poisson_neuron
 from ANNarchy import (
     Population,
     get_population,
@@ -18,6 +20,7 @@ from ANNarchy import (
     Neuron,
     simulate_until,
     Uniform,
+    get_current_step,
 )
 from ANNarchy.core.Global import _network
 import numpy as np
@@ -37,9 +40,11 @@ from sympy import symbols, Symbol, sympify, solve
 from hyperopt import fmin, tpe, hp
 import pandas as pd
 from scipy.stats import poisson
+from ANNarchy.extensions.bold import BoldMonitor
 
 
 class model_configurator:
+    @timing_decorator(threshold=2)
     def __init__(
         self,
         model,
@@ -115,6 +120,7 @@ class model_configurator:
         self.extreme_firing_rates_df_dict = {
             pop_name: None for pop_name in self.pop_name_list
         }
+        self.prepare_psp_dict = {pop_name: None for pop_name in self.pop_name_list}
         ### set max psp for a single spike
         self.max_psp_dict = {pop_name: max_psp for pop_name in self.pop_name_list}
         ### print things
@@ -133,6 +139,7 @@ class model_configurator:
         ### print guide
         self._p_g(_p_g_1)
 
+    @timing_decorator(threshold=2)
     def get_max_syn(self):
         """
         get the weight dictionary for all populations given in target_firing_rate_dict
@@ -145,7 +152,7 @@ class model_configurator:
         ### get max synaptic things with single neuron networks
         for pop_name in self.pop_name_list:
             self.log(pop_name)
-            ### get max synaptic currents (I and gs) using the single neuron networks
+            ### get max I_app and max weights (i.e. g_ampa, g_gaba)
             txt = (
                 f"get max I_app, g_ampa and g_gaba using network_single for {pop_name}"
             )
@@ -154,6 +161,7 @@ class model_configurator:
             I_app_max, g_ampa_max, g_gaba_max = self.get_max_syn_currents(
                 pop_name=pop_name
             )
+
             self.I_app_max_dict[pop_name] = I_app_max
             self.g_max_dict[pop_name] = {
                 "ampa": g_ampa_max,
@@ -202,6 +210,7 @@ class model_configurator:
 
         return self.max_weight_dict
 
+    @timing_decorator(threshold=2)
     def create_single_neuron_networks(self):
         ### clear ANNarchy
         cnp_clear()
@@ -213,12 +222,15 @@ class model_configurator:
             ### the network with the standard neuron
             self.net_single_dict[pop_name] = self.create_net_single(pop_name=pop_name)
             ### the network with the voltage clamp version neuron
-            ### to prepare get_psp
             self.net_single_v_clamp_dict[
                 pop_name
             ] = self.create_net_single_voltage_clamp(pop_name=pop_name)
-        quit()
+            ### get v_rest and correspodning I_app_hold
+            self.prepare_psp_dict[pop_name] = self.find_v_rest_for_psp(
+                pop_name, do_plot=False
+            )
 
+    @timing_decorator(threshold=2)
     def create_net_single(self, pop_name):
         """
         creates a network with the neuron type of the population given by pop_name
@@ -228,18 +240,46 @@ class model_configurator:
             pop_name: str
                 population name
         """
+
+        ### for stop condition for recording psp --> add v_before_psp and v_psp_thresh to equations/parameters
+
+        ### get the initial arguments of the neuron
+        neuron_model = self.neuron_model_dict[pop_name]
+        ### names of arguments
+        init_arguments_name_list = list(Neuron.__init__.__code__.co_varnames)
+        init_arguments_name_list.remove("self")
+        init_arguments_name_list.remove("name")
+        init_arguments_name_list.remove("description")
+        ### arguments dict
+        init_arguments_dict = {
+            init_arguments_name: getattr(neuron_model, init_arguments_name)
+            for init_arguments_name in init_arguments_name_list
+        }
+        ### add v_before_psp=v at the beginning of the equations
+        equations_line_split_list = str(init_arguments_dict["equations"]).splitlines()
+        equations_line_split_list.insert(0, "v_before_psp = v")
+        init_arguments_dict["equations"] = "\n".join(equations_line_split_list)
+        ### add v_psp_thresh to the parameters
+        parameters_line_split_list = str(init_arguments_dict["parameters"]).splitlines()
+        parameters_line_split_list.append("v_psp_thresh = 0 : population")
+        init_arguments_dict["parameters"] = "\n".join(parameters_line_split_list)
+
+        ### create neuron model with new equations
+        neuron_model_new = Neuron(**init_arguments_dict)
+
         ### create the single neuron population
         single_neuron = Population(
             1,
-            neuron=self.neuron_model_dict[pop_name],
+            neuron=neuron_model_new,
             name=f"single_neuron_{pop_name}",
+            stop_condition=f"((abs(v-v_psp_thresh)<0.01) and (abs(v_before_psp-v_psp_thresh)>0.01)): any",
         )
         ### set the attributes of the neuron
         for attr_name, attr_val in self.neuron_model_parameters_dict[pop_name]:
             setattr(single_neuron, attr_name, attr_val)
 
         ### create Monitor for single neuron
-        mon_single = Monitor(single_neuron, ["spike"])
+        mon_single = Monitor(single_neuron, ["spike", "v"])
 
         ### create network with single neuron
         net_single = Network()
@@ -263,6 +303,7 @@ class model_configurator:
 
         return net_single_dict
 
+    @timing_decorator(threshold=2)
     def get_init_neuron_variables(self, net, pop):
         """
         get the variables of the given population after simulating 2000 ms
@@ -296,6 +337,7 @@ class model_configurator:
         sampler = self.var_arr_sampler(var_arr)
         return sampler
 
+    @timing_decorator(threshold=2)
     def create_net_single_voltage_clamp(self, pop_name):
         """
         creates a network with the neuron type of the population given by pop_name
@@ -337,7 +379,6 @@ class model_configurator:
             1,
             neuron=neuron_model_new,
             name=f"single_neuron_v_clamp_{pop_name}",
-            stop_condition="(abs(v_clamp_rec-v_clamp_rec_thresh)<1) and (abs(v_clamp_rec_pre-v_clamp_rec_thresh)>1) : any",
         )
 
         ### set the attributes of the neuron
@@ -354,58 +395,76 @@ class model_configurator:
             folder_name=f"single_v_clamp_net_{pop_name}", silent=True, net=net_single
         )
 
-        ### find v where dv/dt is minimal (best = 0, it can only be >= 0)
-        self.log("search v_rest with y(X) = delta_v_2000(v=X) using grid search")
+        ### network dict
+        net_single_dict = {
+            "net": net_single,
+            "population": net_single.get(single_neuron_v_clamp),
+            "monitor": net_single.get(mon_single),
+        }
 
-        ### TODO TMP test what get_v_clamp returns for different I_app values
+        return net_single_dict
+
+    @timing_decorator(threshold=2)
+    def find_v_rest_for_psp(self, pop_name, do_plot=False):
+        """
+        using both single networks to find v_rest and I_app_hold
+        """
+
+        ### find v where dv/dt is minimal with voltage clamp network (best = 0, it can only be >= 0)
+        self.log("search v_rest with y(X) = delta_v_2000(v=X) using grid search")
         v_arr = np.linspace(-90, -20, 200)
         v_clamp_arr = np.array(
             [
                 self.get_v_clamp_2000(
                     v=X_val,
-                    net=net_single,
-                    population=net_single.get(single_neuron_v_clamp),
+                    net=self.net_single_v_clamp_dict[pop_name]["net"],
+                    population=self.net_single_v_clamp_dict[pop_name]["population"],
                 )
                 for X_val in v_arr
             ]
         )
         v_rest = np.min(v_arr[argrelmin(v_clamp_arr)[0]])
-        plt.figure()
-        plt.plot(v_arr, v_clamp_arr)
-        plt.axvline(v_rest, color="k")
-        plt.axhline(0, color="k", ls="dashed")
-        plt.savefig(f"tmp_v_clamp_{pop_name}.png")
-        plt.close("all")
+        if do_plot:
+            plt.figure()
+            plt.plot(v_arr, v_clamp_arr)
+            plt.axvline(v_rest, color="k")
+            plt.axhline(0, color="k", ls="dashed")
+            plt.savefig(f"v_clamp_{pop_name}.png")
+            plt.close("all")
 
+        ### do again the simulation with the obtained v_rest to get the stady state values
         detla_v_rest = (
             self.get_v_clamp_2000(
                 v=v_rest,
-                net=net_single,
-                population=net_single.get(single_neuron_v_clamp),
+                net=self.net_single_v_clamp_dict[pop_name]["net"],
+                population=self.net_single_v_clamp_dict[pop_name]["population"],
             )
             * dt()
         )
+        obtained_variables = {
+            var_name: getattr(
+                self.net_single_v_clamp_dict[pop_name]["population"], var_name
+            )
+            for var_name in self.net_single_v_clamp_dict[pop_name][
+                "population"
+            ].variables
+        }
         self.log(
             f"for {pop_name} found v_rest={v_rest} with delta_v_2000(v=v_rest)={detla_v_rest}"
         )
 
         ### check if the neuron stays at v_rest with normal neuron
         ### if it stays --> use new value as v_rest (its even a bit finer as before)
-        ### if it not stays --> use previous value and find I_app to hold it there
-        ### TODO not use end value but progress over 2 sec --> there you can nicely see if v changed (i.e. neuron is self-active and has no actual v_rest) or not
-        obtained_variables = {
-            var_name: getattr(net_single.get(single_neuron_v_clamp), var_name)
-            for var_name in net_single.get(single_neuron_v_clamp).variables
-        }
+        ### if it not stays --> find I_app which holds the membrane potential constant
         v_rest_arr = self.get_new_v_rest_2000(pop_name, obtained_variables)
-
         v_rest_arr_is_const = (
             np.std(v_rest_arr, axis=0)
             <= np.mean(np.absolute(v_rest_arr), axis=0) / 1000
         )
-
         if v_rest_arr_is_const:
+            ### v_rest found, no I_app_hold needed
             v_rest = v_rest_arr[-1]
+            I_app_hold = 0
             self.log(f"final v_rest = {v_rest_arr[-1]}")
         else:
             ### there is no v_rest i.e. neuron is self-active --> find smallest negative I_app to silence neuron
@@ -416,10 +475,7 @@ class model_configurator:
             ### negative current initially reduces v
             ### then v climbs back up
             ### check if the second half of v is constant if yes fine if not increase negative I_app
-            ### with incremental search?
-
-            ### find I_app_hold
-            ### TODO fin I_app_hold = DONE!
+            ### find I_app_hold with incremental_continuous_bound_search
             self.log("search I_app_hold with y(X) = CHANGE_OF_V(I_app=X)")
             I_app_hold = -self.incremental_continuous_bound_search(
                 y_X=lambda X_val: self.get_v_rest_arr_const(
@@ -438,30 +494,31 @@ class model_configurator:
                 accept_non_dicontinuity=True,
                 bound_type="greater",
             )
-
+            ### again simulate the neuron with the obtained I_app_hold to get the new v_rest
             v_rest_arr = self.get_new_v_rest_2000(
                 pop_name, obtained_variables, I_app=I_app_hold
             )
             v_rest = v_rest_arr[-1]
-
             self.log(f"I_app_hold = {I_app_hold}, resulting v_rest = {v_rest}")
 
-        ### get the variable_init_sampler for v=v_rest
-        variable_init_sampler = self.get_init_neuron_variables_v_clamp(
-            net_single, net_single.get(single_neuron_v_clamp), v_rest=v_rest
+        ### get the sampler for the initial variables
+        variable_init_sampler = self.get_init_neuron_variables_for_psp(
+            net=self.net_single_dict[pop_name]["net"],
+            pop=self.net_single_dict[pop_name]["population"],
+            v_rest=v_rest,
+            I_app_hold=I_app_hold,
         )
 
-        ### network dict
-        net_single_dict = {
-            "net": net_single,
-            "population": net_single.get(single_neuron_v_clamp),
-            "monitor": net_single.get(mon_single),
+        return {
+            "v_rest": v_rest,
+            "I_app_hold": I_app_hold,
             "variable_init_sampler": variable_init_sampler,
         }
 
-        return net_single_dict
-
-    def get_v_rest_arr_const(self, pop_name, obtained_variables, I_app):
+    @timing_decorator(threshold=2)
+    def get_v_rest_arr_const(
+        self, pop_name, obtained_variables, I_app, return_bool=False
+    ):
         """
         sets I_app and obtained varaibles in single neuron
         simulates 2000 ms and returns how much the v changes
@@ -470,14 +527,16 @@ class model_configurator:
         v_rest_arr = self.get_new_v_rest_2000(pop_name, obtained_variables, I_app=I_app)
         v_rest_arr = v_rest_arr[len(v_rest_arr) // 2 :]
 
-        # v_rest_arr_is_const = (
-        #     0<= np.mean(np.absolute(v_rest_arr), axis=0) / 1000 - np.std(v_rest_arr, axis=0)
-        # )
+        if return_bool:
+            return 0 <= np.mean(np.absolute(v_rest_arr), axis=0) / 1000 - np.std(
+                v_rest_arr, axis=0
+            )
+        else:
+            return np.mean(np.absolute(v_rest_arr), axis=0) / 1000 - np.std(
+                v_rest_arr, axis=0
+            )
 
-        return np.mean(np.absolute(v_rest_arr), axis=0) / 1000 - np.std(
-            v_rest_arr, axis=0
-        )
-
+    @timing_decorator(threshold=2)
     def get_new_v_rest_2000(
         self, pop_name, obtained_variables, I_app=None, do_plot=True
     ):
@@ -486,6 +545,7 @@ class model_configurator:
         """
         net = self.net_single_dict[pop_name]["net"]
         pop = self.net_single_dict[pop_name]["population"]
+        monitor = self.net_single_dict[pop_name]["monitor"]
         net.reset()
         ### set variables
         for var_name, var_val in obtained_variables.items():
@@ -494,16 +554,8 @@ class model_configurator:
         if not isinstance(I_app, type(None)):
             pop.I_app = I_app
         ### simulate
-        time_steps = int(2000 / dt())
-        var_name_list = list(pop.variables)
-        var_arr = np.zeros((time_steps, len(var_name_list)))
-        for time_idx in range(time_steps):
-            net.simulate(dt())
-            get_arr = np.array([getattr(pop, var_name) for var_name in pop.variables])
-            var_arr[time_idx, :] = get_arr[:, 0]
-
-        v_idx = list(pop.variables).index("v")
-        v_arr = var_arr[:, v_idx]
+        net.simulate(2000)
+        v_arr = monitor.get("v")[:, 0]
 
         if do_plot:
             plt.figure()
@@ -514,6 +566,7 @@ class model_configurator:
 
         return v_arr
 
+    @timing_decorator(threshold=2)
     def get_nr_spikes_from_v_rest_2000(
         self, pop_name, obtained_variables, I_app=None, do_plot=True
     ):
@@ -534,9 +587,10 @@ class model_configurator:
         simulate(2000)
         ### get spikes
         spike_dict = mon.get("spike")
-        nr_spikes = len(spike_dict["0"])
+        nr_spikes = len(spike_dict[0])
         return nr_spikes
 
+    @timing_decorator(threshold=2)
     def log(self, txt):
         caller_frame = inspect.currentframe().f_back
         caller_name = caller_frame.f_code.co_name
@@ -556,6 +610,7 @@ class model_configurator:
                 print(txt, file=f)
                 self.log_exist = True
 
+    @timing_decorator(threshold=2)
     def _p_g(self, txt):
         """
         prints guiding text
@@ -572,6 +627,7 @@ class model_configurator:
                 print(wrapped_text)
         print("")
 
+    @timing_decorator(threshold=2)
     def _p_w(self, txt):
         """
         prints warning
@@ -587,6 +643,7 @@ class model_configurator:
             print(wrapped_text)
         print("")
 
+    @timing_decorator(threshold=2)
     def get_base(self):
         """
         Obtain the baseline currents for the configured populations to obtian the target firing rates
@@ -612,6 +669,7 @@ class model_configurator:
 
         return I_base_dict
 
+    @timing_decorator(threshold=2)
     def find_base_current(self):
         """
         search through whole I_app space
@@ -716,6 +774,7 @@ class model_configurator:
 
         return [target_firing_rate_changed, I_app_best_dict]
 
+    @timing_decorator(threshold=2)
     def get_rate_list_for_pop(self, pop_name):
         """
         get the rate list for the afferent populations of the given population
@@ -728,6 +787,7 @@ class model_configurator:
             rate_list.append(pre_rate)
         return rate_list
 
+    @timing_decorator(threshold=2)
     def get_size_list_for_pop(self, pop_name):
         """
         get the size list for the afferent populations of the given population
@@ -739,6 +799,7 @@ class model_configurator:
             size_list.append(pre_pop_size)
         return size_list
 
+    @timing_decorator(threshold=2)
     def set_base(self, I_base_dict=None, I_base_variable="base_mean"):
         """
         Set baseline currents in model, compile model and set weights in model.
@@ -789,6 +850,7 @@ class model_configurator:
 
         return I_base_dict
 
+    @timing_decorator(threshold=2)
     def get_time_in_x_sec(self, x):
         """
         Args:
@@ -810,6 +872,7 @@ class model_configurator:
 
         return formatted_future_time
 
+    @timing_decorator(threshold=2)
     def get_interpolation(self):
         """
         get the interpolations to
@@ -956,6 +1019,7 @@ class model_configurator:
                 pop_name
             ] = self.get_extreme_firing_rates_df(pop_name)
 
+    @timing_decorator(threshold=2)
     def get_extreme_firing_rates_df(self, pop_name):
         """
         get the firing rates for all extreme values of I_app, g_ampa, g_gaba
@@ -1005,6 +1069,7 @@ class model_configurator:
 
         return table_df
 
+    @timing_decorator(threshold=2)
     def get_all_combinations_of_lists(self, list_of_lists):
         """
         get all combinations of lists in a single list
@@ -1012,6 +1077,7 @@ class model_configurator:
         """
         return list(itertools.product(*list_of_lists))
 
+    @timing_decorator(threshold=2)
     def get_output_of_populations(self, f_rec_arr_list_list, input_dict):
         """
         restructure the output of run_parallel so that for each population a single array with firing rates is obtained
@@ -1078,6 +1144,7 @@ class model_configurator:
 
         return output_pop_dict
 
+    @timing_decorator(threshold=2)
     def get_input_for_many_neurons_net(self):
         """
         get the inputs for the parallel many neurons network simulation
@@ -1306,6 +1373,7 @@ class model_configurator:
             g_gaba_arr_list = np.split(g_gaba_arr, split_idx_arr)
 
     class get_interp_3p:
+        @timing_decorator(threshold=2)
         def __init__(
             self, values, model_conf_obj, var_name_dict, x=None, y=None, z=None
         ) -> None:
@@ -1332,6 +1400,7 @@ class model_configurator:
                 model_conf_obj.log(error_msg)
                 raise AssertionError(error_msg)
 
+        @timing_decorator(threshold=2)
         def __call__(self, x=None, y=None, z=None):
             ### check x
             if isinstance(x, type(None)):
@@ -1454,6 +1523,7 @@ class model_configurator:
                 xi=point_arr,
             )
 
+    @timing_decorator(threshold=2)
     def set_syn_load(self, synaptic_load_dict, synaptic_contribution_dict=None):
         """
         Args:
@@ -1638,6 +1708,7 @@ class model_configurator:
         ### print guide
         self._p_g(_p_g_after_set_syn_load)
 
+    @timing_decorator(threshold=2)
     def get_template_synaptic_contribution_dict(self, given_dict):
         """
         converts the full template dict with all keys for populations, target-types and projections into a reduced dict
@@ -1658,6 +1729,7 @@ class model_configurator:
 
         return ret_dict
 
+    @timing_decorator(threshold=2)
     def divide_almost_equal(self, number, num_parts):
         # Calculate the quotient and remainder
         quotient, remainder = divmod(number, num_parts)
@@ -1671,6 +1743,7 @@ class model_configurator:
 
         return result
 
+    @timing_decorator(threshold=2)
     def analyze_model(self):
         """
         prepares the creation of the single neuron and many neuron networks
@@ -1724,6 +1797,7 @@ class model_configurator:
         ### clear ANNarchy --> the model is not available anymore
         cnp_clear()
 
+    @timing_decorator(threshold=2)
     def compile_net_many_sequential(self):
         network_list = [
             net_many_dict["net"]
@@ -1733,6 +1807,7 @@ class model_configurator:
         for net in network_list:
             self.compile_net_many(net=net)
 
+    @timing_decorator(threshold=2)
     def compile_net_many_parallel(self):
         nr_available_workers = int(multiprocessing.cpu_count() / 2)
         network_list = [
@@ -1771,6 +1846,7 @@ class model_configurator:
             _network[net_idx]["compiled"] = True
             _network[net_idx]["directory"] = run_folder_name
 
+    @timing_decorator(threshold=2)
     def get_afferent_projection_dict(self, pop_name):
         """
         creates a dictionary containing
@@ -1825,29 +1901,21 @@ class model_configurator:
 
         return afferent_projection_dict
 
-    def get_max_syn_currents(self, pop_name):
+    @timing_decorator(threshold=2)
+    def get_max_syn_currents(self, pop_name: str):
         """
         obtain I_app_max, g_ampa_max and g_gaba max.
         f_max = f_0 + f_t + 100
         I_app_max causes f_max (increases f from f_0 to f_max)
-        g_ampa_max causes f_max (increases f from f_0 to f_max)
-        I_gaba_max causes f_0 while I_app=I_app_max (decreases f from f_max to f_0)
-
-        TODO:
-            reaching f_max does not work well sometimes extreme values of I are needed and then the max values for the conductances gets extreme as well
-            --> first get max g_ampa and g_gaba with a max PSP:
-                a single spike causes conductance to increase shortly and the resulting snypatic current changes v
-                start at resting potential than produce a single spike and record v and get the peak of v
-                for g_ampa a peak = a minimum of v
-                for g_gaba a peak = a minimum of v
-                with max of g_ampa get max firing rate and with this max firing rate get max I_app
+        g_gaba_max causes max IPSP
+        g_ampa_max cancels out g_gaba_max IPSP
 
         Args:
             pop_name: str
                 population name from original model
 
         return:
-            list containing [I_may, g_ampa_max, g_gaba_max]
+            list containing [I_max, g_ampa_max, g_gaba_max]
 
         Abbreviations:
             f_max: max firing rate
@@ -1856,42 +1924,60 @@ class model_configurator:
 
             f_t: target firing rate
         """
-        ### find g_ampa max
-        self.log("search g_ampa_max with y(X) = PSP(g_ampa=X, g_gaba=0)")
-        g_ampa_max = self.incremental_continuous_bound_search(
-            y_X=lambda X_val: self.get_psp(
-                net=self.net_single_v_clamp_dict[pop_name]["net"],
-                population=self.net_single_v_clamp_dict[pop_name]["population"],
-                variable_init_sampler=self.net_single_v_clamp_dict[pop_name][
-                    "variable_init_sampler"
-                ],
-                monitor=self.net_single_v_clamp_dict[pop_name]["monitor"],
-                g_ampa=X_val,
-            ),
-            y_bound=self.max_psp_dict[pop_name],
-            X_0=0,
-            y_0=0,
-            alpha_abs=0.1,
-            X_increase=0.1,
-        )
 
-        ### find g_gaba max
+        ### TODO: problem for g_gaba: what if resting potential is <=-90...
+        ### find g_gaba max using max IPSP
         self.log("search g_gaba_max with y(X) = PSP(g_ampa=0, g_gaba=X)")
         g_gaba_max = self.incremental_continuous_bound_search(
-            y_X=lambda X_val: self.get_psp(
-                net=self.net_single_v_clamp_dict[pop_name]["net"],
-                population=self.net_single_v_clamp_dict[pop_name]["population"],
-                variable_init_sampler=self.net_single_v_clamp_dict[pop_name][
+            y_X=lambda X_val: self.get_ipsp(
+                net=self.net_single_dict[pop_name]["net"],
+                population=self.net_single_dict[pop_name]["population"],
+                variable_init_sampler=self.prepare_psp_dict[pop_name][
                     "variable_init_sampler"
                 ],
-                monitor=self.net_single_v_clamp_dict[pop_name]["monitor"],
+                monitor=self.net_single_dict[pop_name]["monitor"],
+                I_app_hold=self.prepare_psp_dict[pop_name]["I_app_hold"],
                 g_gaba=X_val,
             ),
             y_bound=self.max_psp_dict[pop_name],
             X_0=0,
             y_0=0,
-            alpha_abs=0.1,
+            alpha_abs=0.005,
             X_increase=0.1,
+        )
+
+        ### for g_ampa EPSPs can lead to spiking
+        ### --> find g_ampa max by "overriding" IPSP of g_gaba max
+        self.log(
+            f"search g_ampa_max with y(X) = PSP(g_ampa=X, g_gaba=g_gaba_max={g_gaba_max})"
+        )
+        g_ampa_max = self.incremental_continuous_bound_search(
+            y_X=lambda X_val: self.get_ipsp(
+                net=self.net_single_dict[pop_name]["net"],
+                population=self.net_single_dict[pop_name]["population"],
+                variable_init_sampler=self.prepare_psp_dict[pop_name][
+                    "variable_init_sampler"
+                ],
+                monitor=self.net_single_dict[pop_name]["monitor"],
+                I_app_hold=self.prepare_psp_dict[pop_name]["I_app_hold"],
+                g_ampa=X_val,
+                g_gaba=g_gaba_max,
+            ),
+            y_bound=0,
+            X_0=0,
+            y_0=self.get_ipsp(
+                net=self.net_single_dict[pop_name]["net"],
+                population=self.net_single_dict[pop_name]["population"],
+                variable_init_sampler=self.prepare_psp_dict[pop_name][
+                    "variable_init_sampler"
+                ],
+                monitor=self.net_single_dict[pop_name]["monitor"],
+                I_app_hold=self.prepare_psp_dict[pop_name]["I_app_hold"],
+                g_ampa=0,
+                g_gaba=g_gaba_max,
+            ),
+            alpha_abs=0.005,
+            X_increase=g_gaba_max / 10,
         )
 
         ### get f_0 and f_max
@@ -1925,6 +2011,7 @@ class model_configurator:
 
         return [I_max, g_ampa_max, g_gaba_max]
 
+    @timing_decorator(threshold=2)
     def incremental_continuous_bound_search(
         self,
         y_X,
@@ -2043,12 +2130,12 @@ class model_configurator:
         y_list_predict = [y_0]
         X_list_all = [X_0]
         y_list_all = [y_0]
-        n_it = 0
+        n_it_first_round = 0
         X_val = X_0 + X_increase
         y_val = y_0
         y_not_changed_counter = 0
         X_change_predicted = X_increase
-        while not stop_condition(y_val, n_it):
+        while not stop_condition(y_val, n_it_first_round):
             ### get y_val for X
             y_val_pre = y_val
             y_val = y_X(X_val)
@@ -2089,7 +2176,7 @@ class model_configurator:
                 break
 
             ### increase iterator
-            n_it += 1
+            n_it_first_round += 1
 
         ### catch the initial point already satisified stop condition
         if len(X_list_all) == 1:
@@ -2148,13 +2235,13 @@ class model_configurator:
         ### --> fine tune result by investigating the space between X_0 and X_bound and predict a new X_bound
         self.log(f"X_0: {X_0}, X_bound:{X_bound} for final predict list")
         X_space_arr = np.linspace(X_0, X_bound, 100)
-        y_val = y_0
+        y_val = y_0 - [-1, 1][int(is_increasing)]
         X_list_predict = []
         y_list_predict = []
         X_list_all = []
         y_list_all = []
         did_break = False
-        n_it = 0
+        n_it_second_round = 0
         for X_val in X_space_arr:
             y_val_pre = y_val
             y_val = y_X(X_val)
@@ -2172,11 +2259,11 @@ class model_configurator:
             if y_val < y_bound and not is_increasing:
                 did_break = True
                 break
-            n_it += 1
+            n_it_second_round += 1
         ### if did break early --> use again finer bounds
-        if did_break and n_it < 90:
+        if did_break and n_it_second_round < 90:
             X_space_arr = np.linspace(
-                X_list_predict[-2], X_list_predict[-1], 100 - n_it
+                X_list_predict[-2], X_list_predict[-1], 100 - n_it_second_round
             )
             y_val = y_list_predict[-2]
             for X_val in X_space_arr:
@@ -2255,13 +2342,14 @@ class model_configurator:
             self.log(f"final values: X={X_val_best}, y={y_val_best}")
 
         ### warning for max iteration search
-        if not (n_it < n_it_max):
+        if not (n_it_first_round < n_it_max):
             warning_txt = f"WARNING incremental_continuous_bound_search: reached max iterations to find X_bound to get y_bound={y_bound}, found X_bound causes y={y_val_best}"
             self._p_w(warning_txt)
             self.log(warning_txt)
 
         return X_val_best
 
+    @timing_decorator(threshold=2)
     def get_discontinuity_idx_list(self, arr):
         """
         Args:
@@ -2280,6 +2368,7 @@ class model_configurator:
 
         return peaks_idx_list
 
+    @timing_decorator(threshold=2)
     def predict_1d(self, X, y, X_pred, linear=True):
         """
         Args:
@@ -2309,6 +2398,7 @@ class model_configurator:
         y_pred_arr = y_X(X_pred)
         return y_pred_arr.reshape(1)
 
+    @timing_decorator(threshold=2)
     def get_rate_dict(
         self,
         net,
@@ -2394,6 +2484,7 @@ class model_configurator:
 
         return f_arr_dict
 
+    @timing_decorator(threshold=2)
     def get_rate(
         self,
         net,
@@ -2456,12 +2547,14 @@ class model_configurator:
 
         return f_arr
 
-    def get_psp(
+    @timing_decorator(threshold=2)
+    def get_ipsp(
         self,
-        net,
-        population,
+        net: Network,
+        population: Population,
         variable_init_sampler,
         monitor,
+        I_app_hold,
         g_ampa=0,
         g_gaba=0,
         do_plot=False,
@@ -2494,29 +2587,32 @@ class model_configurator:
         for var_idx, var_name in enumerate(population.variables):
             set_val = variable_init_arr[:, var_idx]
             setattr(population, var_name, set_val)
-        ### apply no input
-        population.I_app = 0
-        population.g_ampa = 0
-        population.g_gaba = 0
+        ### apply input
+        population.I_app = I_app_hold
         ### simulate 50 ms initial duration
         net.simulate(50)
-        ### apply given conductances --> changes v_clamp_rec
-        v_clamp_rec_rest = population.v_clamp_rec[0]
-        population.v_clamp_rec_thresh = v_clamp_rec_rest
+        ### apply given conductances --> changes v
+        v_rec_rest = population.v[0]
+        population.v_psp_thresh = v_rec_rest
         population.g_ampa = g_ampa
         population.g_gaba = g_gaba
-        ### simulate until v_clamp_rec is near v_clamp_rec_rest again
+        ### simulate until v is near v_rec_rest again
         net.simulate_until(max_duration=self.simulation_dur, population=population)
-        ### get the psp = maximum of difference of v_clamp_rec and v_clamp_rec_rest
-        v_clamp_rec = monitor.get("v_clamp_rec")[:, 0]
-        psp = float(np.absolute(v_clamp_rec - v_clamp_rec_rest).max())
+        ### get the psp = maximum of difference of v_rec and v_rec_rest
+        v_rec = monitor.get("v")[:, 0]
+        spike_dict = monitor.get("spike")
+        spike_timestep_list = spike_dict[0] + [net.get_current_step()]
+        end_timestep = int(round(min(spike_timestep_list), 0))
+        psp = float(
+            np.absolute(np.clip(v_rec[:end_timestep] - v_rec_rest, None, 0)).max()
+        )
 
         if do_plot:
             plt.figure()
             plt.title(
-                f"g_ampa={g_ampa}, g_gaba={g_gaba}, v_clamp_rec_rest={v_clamp_rec_rest}, psp={psp}"
+                f"g_ampa={g_ampa}\ng_gaba={g_gaba}\nv_rec_rest={v_rec_rest}\npsp={psp}"
             )
-            plt.plot(v_clamp_rec)
+            plt.plot(v_rec)
             plt.savefig(
                 f"tmp_psp_{population.name}_{int(g_ampa*1000)}_{int(g_gaba*1000)}.png"
             )
@@ -2524,11 +2620,13 @@ class model_configurator:
 
         return psp
 
+    @timing_decorator(threshold=2)
     def compile_net_many(self, net):
         compile_in_folder(
             folder_name=f"many_net_{net.id}", net=net, clean=True, silent=True
         )
 
+    @timing_decorator(threshold=2)
     def create_many_neuron_network(self):
         """
         creates a ANNarchy magic network with all popualtions which should be configured the size
@@ -2714,6 +2812,7 @@ class model_configurator:
         }
         return net_many_dict
 
+    @timing_decorator(threshold=2)
     def get_v_clamp_2000(self, net, population, v=None, I_app=None):
         """
         the returned values is dv/dt
@@ -2727,6 +2826,7 @@ class model_configurator:
         net.simulate(2000)
         return population.v_clamp_rec[0]
 
+    @timing_decorator(threshold=2)
     def get_voltage_clamp_equations(self, init_arguments_dict, pop_name):
         """
         works with
@@ -2842,6 +2942,7 @@ class model_configurator:
         ### return new neuron equations
         return eq
 
+    @timing_decorator(threshold=2)
     def get_line_is_v(self, line: str):
         """
         check if a equation string contains dv/dt or v= or v+=
@@ -2862,6 +2963,7 @@ class model_configurator:
 
         return False
 
+    @timing_decorator(threshold=2)
     def get_line_is_g_ampa(self, line: str):
         """
         check if a equation string contains dg_ampa/dt
@@ -2880,7 +2982,8 @@ class model_configurator:
 
         return False
 
-    def get_init_neuron_variables_v_clamp(self, net, pop, v_rest):
+    @timing_decorator(threshold=2)
+    def get_init_neuron_variables_for_psp(self, net, pop, v_rest, I_app_hold):
         """
         get the variables of the given population after simulating 2000 ms
 
@@ -2894,8 +2997,8 @@ class model_configurator:
         """
         ### reset neuron and deactivate input and set v_rest
         net.reset()
-        pop.I_app = 0
         pop.v = v_rest
+        pop.I_app = I_app_hold
 
         ### get the variables of the neuron after 5000 ms
         net.simulate(5000)
@@ -2909,6 +3012,7 @@ class model_configurator:
         return sampler
 
     class var_arr_sampler:
+        @timing_decorator(threshold=2)
         def __init__(self, var_arr) -> None:
             self.var_arr_shape = var_arr.shape
             self.is_const = (
@@ -2917,10 +3021,11 @@ class model_configurator:
             self.constant_arr = var_arr[0, self.is_const]
             self.not_constant_val_arr = var_arr[:, np.logical_not(self.is_const)]
 
-        def sample(self, n, seed=0):
+        @timing_decorator(threshold=2)
+        def sample(self, n=1, seed=0):
             """
             Args:
-                n: int
+                n: int, optional, default=1
                     number of samples
 
                 seed: int, optional, default=0
@@ -2940,6 +3045,7 @@ class model_configurator:
 
             return ret_arr
 
+    @timing_decorator(threshold=2)
     def get_nr_many_neurons(self, nr_neurons, nr_networks):
         """
         Splits the number of neurons in almost equally sized parts.
@@ -2953,6 +3059,7 @@ class model_configurator:
         """
         return self.divide_almost_equal(number=nr_neurons, num_parts=nr_networks)
 
+    @timing_decorator(threshold=2)
     def get_max_weight_dict_for_pop(self, pop_name):
         """
         get the weight dict for a single population
@@ -2992,6 +3099,7 @@ class model_configurator:
 
         return max_weight_dict_for_pop
 
+    @timing_decorator(threshold=2)
     def get_proj_dict(self, proj_name):
         """
         get a dictionary for a specified projection which contains following information:
@@ -3059,6 +3167,7 @@ class model_configurator:
             "proj_max_weight": proj_max_weight,
         }
 
+    @timing_decorator(threshold=2)
     def get_max_weight_of_proj(self, proj_name):
         """
         find the max weight of a specified projection using incremental_continuous_bound_search
@@ -3094,6 +3203,7 @@ class model_configurator:
 
         return w_max
 
+    @timing_decorator(threshold=2)
     def get_g_of_single_proj(self, weight, proj_name):
         """
         given a weight for a specified projection get the resulting conductance value g
@@ -3127,6 +3237,7 @@ class model_configurator:
         ### then return the conductance related to the specified projection
         return mean_g[proj_target_type]
 
+    @timing_decorator(threshold=2)
     def get_g_values_of_pop(self, pop_name):
         """
         calculate the average g_ampa and g_gaba values of the specified population based on the weights
@@ -3178,6 +3289,7 @@ class model_configurator:
 
         return mean_g
 
+    @timing_decorator(threshold=2)
     def get_spike_times_arr(self, spike_frequency):
         """
         get spike times for a given spike frequency
@@ -3204,6 +3316,7 @@ class model_configurator:
 
         return spike_times_arr
 
+    @timing_decorator(threshold=2)
     def get_mean_g(self, spike_times_arr, spike_weights_arr, tau):
         """
         calculates the mean conductance g for given spike times, corresponding weights (increases of g) and time constant
@@ -3232,6 +3345,7 @@ class model_configurator:
         return mean_g
 
 
+@timing_decorator(threshold=2)
 def get_rate_parallel(
     idx,
     net,
