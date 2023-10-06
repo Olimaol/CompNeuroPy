@@ -114,24 +114,25 @@ def BGM_part_function(params):
         probability=params["stn__gpe.probability"], weights=1
     )
     ### gpe proto output
-    # gpe__stn = Projection(
-    #     pre=gpe,
-    #     post=stn,
-    #     target="gaba",
-    #     name="gpe__stn",
-    # )
-    # gpe__stn.connect_fixed_probability(
-    #     probability=params["gpe__stn.probability"], weights=1
-    # )
-    # gpe__snr = Projection(
-    #     pre=gpe,
-    #     post=snr,
-    #     target="gaba",
-    #     name="gpe__snr",
-    # )
-    # gpe__snr.connect_fixed_probability(
-    #     probability=params["gpe__snr.probability"], weights=1
-    # )
+    if params["general.more_complex"]:
+        gpe__stn = Projection(
+            pre=gpe,
+            post=stn,
+            target="gaba",
+            name="gpe__stn",
+        )
+        gpe__stn.connect_fixed_probability(
+            probability=params["gpe__stn.probability"], weights=1
+        )
+        gpe__snr = Projection(
+            pre=gpe,
+            post=snr,
+            target="gaba",
+            name="gpe__snr",
+        )
+        gpe__snr.connect_fixed_probability(
+            probability=params["gpe__snr.probability"], weights=1
+        )
     ### snr output
     snr__thal = Projection(
         pre=snr,
@@ -142,15 +143,16 @@ def BGM_part_function(params):
     snr__thal.connect_fixed_probability(
         probability=params["snr__thal.probability"], weights=1
     )
-    # snr__snr = Projection(
-    #     pre=snr,
-    #     post=snr,
-    #     target="gaba",
-    #     name="snr__snr",
-    # )
-    # snr__snr.connect_fixed_probability(
-    #     probability=params["snr__snr.probability"], weights=1
-    # )
+    if params["general.more_complex"]:
+        snr__snr = Projection(
+            pre=snr,
+            post=snr,
+            target="gaba",
+            name="snr__snr",
+        )
+        snr__snr.connect_fixed_probability(
+            probability=params["snr__snr.probability"], weights=1
+        )
 
 
 if __name__ == "__main__":
@@ -211,6 +213,7 @@ if __name__ == "__main__":
     params["thal.E_ampa"] = 0
     params["thal.E_gaba"] = -90
     #######   PROJECTIONS PARAMETERS   ######
+    params["general.more_complex"] = True
     params["cor__stn.probability"] = 0.2
     params["stn__snr.probability"] = 0.3
     params["stn__gpe.probability"] = 0.35
@@ -246,7 +249,7 @@ if __name__ == "__main__":
         model,
         target_firing_rate_dict,
         do_not_config_list=do_not_config_list,
-        print_guide=False,
+        print_guide=True,
         I_app_variable="I_app",
         interpolation_grid_points=36,
     )
@@ -258,16 +261,16 @@ if __name__ == "__main__":
     ### now either set weights directly
     ### or define synaptic load of populations
     synaptic_load_dict = {
-        "stn": [0.3],
+        "stn": [0.3, 0.3],
         "gpe": [0.4],
-        "snr": [0.3],
+        "snr": [0.5, 0.3],
         "thal": [0.7],
     }
     ### and define the contributions of their afferent projections
     synaptic_contribution_dict = {"snr": {"gaba": {"gpe__snr": 0.7, "snr__snr": 0.3}}}
     synaptic_contribution_dict = model_conf.set_syn_load(
         synaptic_load_dict,
-        # synaptic_contribution_dict,
+        synaptic_contribution_dict,
     )
 
     ### after setting the weights i.e. the synaptic load/contributions

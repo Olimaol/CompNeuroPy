@@ -5,6 +5,7 @@ from CompNeuroPy import (
     data_obj,
     replace_names_with_dict,
     timing_decorator,
+    print_df,
 )
 from CompNeuroPy.neuron_models import poisson_neuron
 from ANNarchy import (
@@ -44,7 +45,6 @@ from ANNarchy.extensions.bold import BoldMonitor
 
 
 class model_configurator:
-    @timing_decorator(threshold=2)
     def __init__(
         self,
         model,
@@ -139,7 +139,6 @@ class model_configurator:
         ### print guide
         self._p_g(_p_g_1)
 
-    @timing_decorator(threshold=2)
     def get_max_syn(self):
         """
         get the weight dictionary for all populations given in target_firing_rate_dict
@@ -167,11 +166,20 @@ class model_configurator:
                 "ampa": g_ampa_max,
                 "gaba": g_gaba_max,
             }
-            ### get the max_weight dict
-            self.log(f"get the max_weight_dict for {pop_name}")
-            self.max_weight_dict[pop_name] = self.get_max_weight_dict_for_pop(pop_name)
 
-        ### print next steps
+        ### obtain the synaptic contributions assuming max weights
+        self.syn_contr_dict = {}
+        for pop_name in self.pop_name_list:
+            self.syn_contr_dict[pop_name] = {}
+            for target_type in ["ampa", "gaba"]:
+                self.log(f"get synaptic contributions for {pop_name} {target_type}")
+                self.syn_contr_dict[pop_name][target_type] = self.get_syn_contr_dict(
+                    pop_name=pop_name,
+                    target_type=target_type,
+                    use_max_weights=True,
+                    normalize=True,
+                )
+
         ### create the synaptic load template dict
         self.syn_load_dict = {}
         for pop_name in self.pop_name_list:
@@ -180,21 +188,7 @@ class model_configurator:
                 self.syn_load_dict[pop_name].append("ampa_load")
             if "gaba" in self.afferent_projection_dict[pop_name]["target"]:
                 self.syn_load_dict[pop_name].append("gaba_load")
-        ### create the synaptic contribution template dict
-        self.syn_contr_dict = {}
-        for pop_name in self.max_weight_dict.keys():
-            self.syn_contr_dict[pop_name] = {}
 
-            for target_type in ["ampa", "gaba"]:
-                self.syn_contr_dict[pop_name][target_type] = {}
-
-                nr_afferent_proj_with_target = len(
-                    list(self.max_weight_dict[pop_name][target_type].keys())
-                )
-                for proj_name in self.max_weight_dict[pop_name][target_type].keys():
-                    self.syn_contr_dict[pop_name][target_type][proj_name] = (
-                        1 / nr_afferent_proj_with_target
-                    )
         ### only return synaptic contributions smaller 1
         template_synaptic_contribution_dict = (
             self.get_template_synaptic_contribution_dict(given_dict=self.syn_contr_dict)
@@ -202,15 +196,63 @@ class model_configurator:
 
         self._p_g(
             _p_g_after_get_weights(
-                template_weight_dict=self.max_weight_dict,
+                template_weight_dict=self.g_max_dict,
                 template_synaptic_load_dict=self.syn_load_dict,
                 template_synaptic_contribution_dict=template_synaptic_contribution_dict,
             )
         )
-
         return self.max_weight_dict
 
-    @timing_decorator(threshold=2)
+    def get_syn_contr_dict(
+        self, pop_name: str, target_type: str, use_max_weights=False, normalize=False
+    ) -> dict:
+        """
+        get the relative synaptic contribution list of a population for a given target type
+        weights are obtained from the afferent_projection_dict, if there are no weights --> use max weights
+
+        Args:
+            pop_name: str
+                population name
+
+            target_type: str
+                target type of the afferent projections of the population
+
+            use_max_weights: bool, optional, default=False
+                if True the max weights are used, if False the weights from the afferent_projection_dict are used
+
+        Returns:
+            rel_syn_contr_dict: dict
+                keys = projection names, values = relative synaptic contributions
+        """
+        ### g_max have to be obtained already
+        assert not (
+            isinstance(self.g_max_dict[pop_name][target_type], type(None))
+        ), "ERROR, get_rel_syn_contr_list: g_max have to be obtained already"
+        ### get list of relative synaptic contributions
+        proj_name_list = []
+        rel_syn_contr_list = []
+        for proj_name in self.afferent_projection_dict[pop_name]["projection_names"]:
+            proj_dict = self.get_proj_dict(proj_name)
+            proj_target_type = proj_dict["proj_target_type"]
+            weight = proj_dict["proj_weight"]
+            if isinstance(weight, type(None)) or use_max_weights:
+                weight = self.g_max_dict[pop_name][target_type]
+            if proj_target_type == target_type:
+                rel_syn_contr_list.append(proj_dict["spike_frequency"] * weight)
+                proj_name_list.append(proj_name)
+        ### normalize the list
+        if normalize:
+            rel_syn_contr_arr = np.array(rel_syn_contr_list)
+            rel_syn_contr_arr = rel_syn_contr_arr / np.sum(rel_syn_contr_arr)
+            rel_syn_contr_list = rel_syn_contr_arr.tolist()
+        ### combine proj_name_list and rel_syn_contr_list to an dict
+        rel_syn_contr_dict = {
+            proj_name: rel_syn_contr
+            for proj_name, rel_syn_contr in zip(proj_name_list, rel_syn_contr_list)
+        }
+
+        return rel_syn_contr_dict
+
     def create_single_neuron_networks(self):
         ### clear ANNarchy
         cnp_clear()
@@ -230,7 +272,6 @@ class model_configurator:
                 pop_name, do_plot=False
             )
 
-    @timing_decorator(threshold=2)
     def create_net_single(self, pop_name):
         """
         creates a network with the neuron type of the population given by pop_name
@@ -303,7 +344,6 @@ class model_configurator:
 
         return net_single_dict
 
-    @timing_decorator(threshold=2)
     def get_init_neuron_variables(self, net, pop):
         """
         get the variables of the given population after simulating 2000 ms
@@ -334,10 +374,9 @@ class model_configurator:
         net.reset()
 
         ### create a sampler with the data samples of from the 1000 ms simulation
-        sampler = self.var_arr_sampler(var_arr)
+        sampler = self.var_arr_sampler(var_arr, var_name_list)
         return sampler
 
-    @timing_decorator(threshold=2)
     def create_net_single_voltage_clamp(self, pop_name):
         """
         creates a network with the neuron type of the population given by pop_name
@@ -404,7 +443,6 @@ class model_configurator:
 
         return net_single_dict
 
-    @timing_decorator(threshold=2)
     def find_v_rest_for_psp(self, pop_name, do_plot=False):
         """
         using both single networks to find v_rest and I_app_hold
@@ -515,7 +553,6 @@ class model_configurator:
             "variable_init_sampler": variable_init_sampler,
         }
 
-    @timing_decorator(threshold=2)
     def get_v_rest_arr_const(
         self, pop_name, obtained_variables, I_app, return_bool=False
     ):
@@ -536,7 +573,6 @@ class model_configurator:
                 v_rest_arr, axis=0
             )
 
-    @timing_decorator(threshold=2)
     def get_new_v_rest_2000(
         self, pop_name, obtained_variables, I_app=None, do_plot=True
     ):
@@ -566,7 +602,6 @@ class model_configurator:
 
         return v_arr
 
-    @timing_decorator(threshold=2)
     def get_nr_spikes_from_v_rest_2000(
         self, pop_name, obtained_variables, I_app=None, do_plot=True
     ):
@@ -590,7 +625,6 @@ class model_configurator:
         nr_spikes = len(spike_dict[0])
         return nr_spikes
 
-    @timing_decorator(threshold=2)
     def log(self, txt):
         caller_frame = inspect.currentframe().f_back
         caller_name = caller_frame.f_code.co_name
@@ -610,7 +644,6 @@ class model_configurator:
                 print(txt, file=f)
                 self.log_exist = True
 
-    @timing_decorator(threshold=2)
     def _p_g(self, txt):
         """
         prints guiding text
@@ -627,7 +660,6 @@ class model_configurator:
                 print(wrapped_text)
         print("")
 
-    @timing_decorator(threshold=2)
     def _p_w(self, txt):
         """
         prints warning
@@ -643,7 +675,6 @@ class model_configurator:
             print(wrapped_text)
         print("")
 
-    @timing_decorator(threshold=2)
     def get_base(self):
         """
         Obtain the baseline currents for the configured populations to obtian the target firing rates
@@ -669,7 +700,6 @@ class model_configurator:
 
         return I_base_dict
 
-    @timing_decorator(threshold=2)
     def find_base_current(self):
         """
         search through whole I_app space
@@ -774,7 +804,6 @@ class model_configurator:
 
         return [target_firing_rate_changed, I_app_best_dict]
 
-    @timing_decorator(threshold=2)
     def get_rate_list_for_pop(self, pop_name):
         """
         get the rate list for the afferent populations of the given population
@@ -787,7 +816,6 @@ class model_configurator:
             rate_list.append(pre_rate)
         return rate_list
 
-    @timing_decorator(threshold=2)
     def get_size_list_for_pop(self, pop_name):
         """
         get the size list for the afferent populations of the given population
@@ -799,7 +827,6 @@ class model_configurator:
             size_list.append(pre_pop_size)
         return size_list
 
-    @timing_decorator(threshold=2)
     def set_base(self, I_base_dict=None, I_base_variable="base_mean"):
         """
         Set baseline currents in model, compile model and set weights in model.
@@ -850,7 +877,6 @@ class model_configurator:
 
         return I_base_dict
 
-    @timing_decorator(threshold=2)
     def get_time_in_x_sec(self, x):
         """
         Args:
@@ -872,7 +898,6 @@ class model_configurator:
 
         return formatted_future_time
 
-    @timing_decorator(threshold=2)
     def get_interpolation(self):
         """
         get the interpolations to
@@ -1019,7 +1044,6 @@ class model_configurator:
                 pop_name
             ] = self.get_extreme_firing_rates_df(pop_name)
 
-    @timing_decorator(threshold=2)
     def get_extreme_firing_rates_df(self, pop_name):
         """
         get the firing rates for all extreme values of I_app, g_ampa, g_gaba
@@ -1069,7 +1093,6 @@ class model_configurator:
 
         return table_df
 
-    @timing_decorator(threshold=2)
     def get_all_combinations_of_lists(self, list_of_lists):
         """
         get all combinations of lists in a single list
@@ -1077,7 +1100,6 @@ class model_configurator:
         """
         return list(itertools.product(*list_of_lists))
 
-    @timing_decorator(threshold=2)
     def get_output_of_populations(self, f_rec_arr_list_list, input_dict):
         """
         restructure the output of run_parallel so that for each population a single array with firing rates is obtained
@@ -1144,7 +1166,6 @@ class model_configurator:
 
         return output_pop_dict
 
-    @timing_decorator(threshold=2)
     def get_input_for_many_neurons_net(self):
         """
         get the inputs for the parallel many neurons network simulation
@@ -1373,7 +1394,6 @@ class model_configurator:
             g_gaba_arr_list = np.split(g_gaba_arr, split_idx_arr)
 
     class get_interp_3p:
-        @timing_decorator(threshold=2)
         def __init__(
             self, values, model_conf_obj, var_name_dict, x=None, y=None, z=None
         ) -> None:
@@ -1400,7 +1420,6 @@ class model_configurator:
                 model_conf_obj.log(error_msg)
                 raise AssertionError(error_msg)
 
-        @timing_decorator(threshold=2)
         def __call__(self, x=None, y=None, z=None):
             ### check x
             if isinstance(x, type(None)):
@@ -1523,7 +1542,6 @@ class model_configurator:
                 xi=point_arr,
             )
 
-    @timing_decorator(threshold=2)
     def set_syn_load(self, synaptic_load_dict, synaptic_contribution_dict=None):
         """
         Args:
@@ -1541,7 +1559,7 @@ class model_configurator:
                 For the strucutre of the dictionary check the print_guide
         """
 
-        ### synaptic load
+        ### set synaptic load
         ### is dict --> replace internal dict values
         if isinstance(synaptic_load_dict, dict):
             ### check if correct number of population
@@ -1601,13 +1619,13 @@ class model_configurator:
                 syn_load_dict[pop_name]["gaba"] = self.syn_load_dict[pop_name][1]
             elif "ampa" in self.afferent_projection_dict[pop_name]["target"]:
                 syn_load_dict[pop_name]["ampa"] = self.syn_load_dict[pop_name][0]
-                syn_load_dict[pop_name]["gaba"] = None
+                syn_load_dict[pop_name]["gaba"] = 0
             elif "gaba" in self.afferent_projection_dict[pop_name]["target"]:
-                syn_load_dict[pop_name]["ampa"] = None
+                syn_load_dict[pop_name]["ampa"] = 0
                 syn_load_dict[pop_name]["gaba"] = self.syn_load_dict[pop_name][0]
         self.syn_load_dict = syn_load_dict
 
-        ### synaptic contribution
+        ### set synaptic contribution
         if not isinstance(synaptic_contribution_dict, type(None)):
             ### loop over all given populations
             for pop_name in synaptic_contribution_dict.keys():
@@ -1669,29 +1687,8 @@ class model_configurator:
                             proj_name
                         ]
 
-        ### create weight dict from synaptic load/contributions
-        self.weight_dict = {}
-        for pop_name in self.max_weight_dict.keys():
-            self.weight_dict[pop_name] = {}
-            for proj_target_type in self.max_weight_dict[pop_name].keys():
-                self.weight_dict[pop_name][proj_target_type] = {}
-                for proj_name in self.max_weight_dict[pop_name][
-                    proj_target_type
-                ].keys():
-                    weight_val = self.max_weight_dict[pop_name][proj_target_type][
-                        proj_name
-                    ]
-                    syn_load = self.syn_load_dict[pop_name][proj_target_type]
-                    syn_contr = self.syn_contr_dict[pop_name][proj_target_type][
-                        proj_name
-                    ]
-                    weight_val_scaled = weight_val * syn_load * syn_contr
-                    self.weight_dict[pop_name][proj_target_type][
-                        proj_name
-                    ] = weight_val_scaled
-
-        ### set the weights in the afferent_projection_dict
-        for pop_name in self.max_weight_dict.keys():
+        ### set the weights in the afferent_projection_dict based on the given synaptic contributions
+        for pop_name in self.pop_name_list:
             weight_list = []
             for proj_name in self.afferent_projection_dict[pop_name][
                 "projection_names"
@@ -1699,16 +1696,120 @@ class model_configurator:
                 ### get proj info
                 proj_dict = self.get_proj_dict(proj_name)
                 proj_target_type = proj_dict["proj_target_type"]
-                ### store the weight from the weight_dict within weight_list
-                weight_list.append(
-                    self.weight_dict[pop_name][proj_target_type][proj_name]
+
+                ### obtain the weight using the given syn_contr_dict and the syn_contr_max_dict (assuming max weights)
+                target_type_contr_dict = self.syn_contr_dict[pop_name][proj_target_type]
+                target_type_contr_max_dict = self.get_syn_contr_dict(
+                    pop_name=pop_name,
+                    target_type=proj_target_type,
+                    use_max_weights=True,
+                    normalize=True,
                 )
+                ### convert the synaptic contribution dicts to arrays
+                target_type_contr_arr = np.array(list(target_type_contr_dict.values()))
+                target_type_contr_max_arr = np.array(
+                    list(target_type_contr_max_dict.values())
+                )
+                ### get the transformation from synaptic contributions assuming max weights to given synaptic contributions
+                contr_transform_arr = target_type_contr_max_arr / target_type_contr_arr
+                ### normalize the transform_arr by the largest scaling --> obtain the weight factors
+                contr_transform_arr /= contr_transform_arr.max()
+                ### get the weight of the current projection
+                weight = (
+                    self.g_max_dict[pop_name][proj_target_type]
+                    * contr_transform_arr[
+                        list(target_type_contr_dict.keys()).index(proj_name)
+                    ]
+                )
+                ### append weight to weight list
+                weight_list.append(weight)
+            ### replace the weights in the afferent_projection_dict
             self.afferent_projection_dict[pop_name]["weights"] = weight_list
+
+        ### now scale the weights based on the synaptic load
+        for pop_name in self.pop_name_list:
+            for target_type in ["ampa", "gaba"]:
+                ### get the synaptic load based on the weights
+                syn_load = self.get_syn_load(pop_name=pop_name, target_type=target_type)
+                ### if the obtained syn load with the weights is smaller than the given target syn load
+                ### print warning because upscaling is not possible, syn load is smaller than the user wanted
+                print(
+                    f"syn_load={syn_load}, target={self.syn_load_dict[pop_name][target_type]}"
+                )
+                if syn_load < self.syn_load_dict[pop_name][target_type]:
+                    ### the weights cannot be upscaled because syn_load was obtained with max weights
+                    ### --> print a warning
+                    warning_txt = f"WARNING set_syn_load: the synaptic load for population {pop_name} and target_type {target_type} cannot reach teh given synaptic load using the given synaptic contributions without scaling the weights over the maximum weights!\ngiven syn_load={self.syn_load_dict[pop_name][target_type]}, obtained syn_load={syn_load}"
+                    self.log(warning_txt)
+                    self._p_w(warning_txt)
+                    ### update the syn_load_dict with the obtained syn_load
+                    self.syn_load_dict[pop_name][target_type] = syn_load
+                elif syn_load > 0:
+                    ### get the weights
+                    weight_arr = np.array(
+                        self.afferent_projection_dict[pop_name]["weights"]
+                    )
+                    ### get the proj target type array
+                    proj_target_type_arr = np.array(
+                        self.afferent_projection_dict[pop_name]["target"]
+                    )
+                    ### select the weights for the target type
+                    weight_arr = weight_arr[proj_target_type_arr == target_type]
+                    ### scale the weights
+                    weight_arr *= self.syn_load_dict[pop_name][target_type] / syn_load
 
         ### print guide
         self._p_g(_p_g_after_set_syn_load)
 
-    @timing_decorator(threshold=2)
+    def get_syn_load(self, pop_name: str, target_type: str) -> float:
+        """
+        Calculates the synaptic load of a population for a given target type for the given weights of the afferent_projection_dict
+
+        Args:
+            pop_name: str
+                name of the population
+
+            target_type: str
+                either 'ampa' or 'gaba'
+
+        Returns:
+            syn_load: float
+                synaptic load of the population for the given target type
+        """
+        ### get the proj target type array
+        proj_target_type_arr = np.array(
+            self.afferent_projection_dict[pop_name]["target"]
+        )
+        if target_type in proj_target_type_arr:
+            ### get the weights
+            weight_arr = np.array(self.afferent_projection_dict[pop_name]["weights"])
+            ### select the weights for the target type
+            weight_arr = weight_arr[proj_target_type_arr == target_type]
+            ### get the pre size
+            size_arr = np.array(self.afferent_projection_dict[pop_name]["size"])
+            ### select the pre size for the target type
+            size_arr = size_arr[proj_target_type_arr == target_type]
+            ### get the probaility
+            prob_arr = np.array(self.afferent_projection_dict[pop_name]["probability"])
+            ### select the probability for the target type
+            prob_arr = prob_arr[proj_target_type_arr == target_type]
+            ### get the firing rate
+            firing_rate_arr = np.array(
+                self.afferent_projection_dict[pop_name]["target firing rate"]
+            )
+            ### select the firing rate for the target type
+            firing_rate_arr = firing_rate_arr[proj_target_type_arr == target_type]
+
+            ### get the synaptic load based on weights, sizes, probabilities and max weights
+            syn_load = np.sum(weight_arr * size_arr * prob_arr * firing_rate_arr) / (
+                self.g_max_dict[pop_name][target_type]
+                * np.sum(size_arr * prob_arr * firing_rate_arr)
+            )
+        else:
+            syn_load = 0
+
+        return syn_load
+
     def get_template_synaptic_contribution_dict(self, given_dict):
         """
         converts the full template dict with all keys for populations, target-types and projections into a reduced dict
@@ -1725,11 +1826,10 @@ class model_configurator:
                     )
             else:
                 if given_dict[key] < 1:
-                    ret_dict[key] = "contr"
+                    ret_dict[key] = given_dict[key]
 
         return ret_dict
 
-    @timing_decorator(threshold=2)
     def divide_almost_equal(self, number, num_parts):
         # Calculate the quotient and remainder
         quotient, remainder = divmod(number, num_parts)
@@ -1743,7 +1843,6 @@ class model_configurator:
 
         return result
 
-    @timing_decorator(threshold=2)
     def analyze_model(self):
         """
         prepares the creation of the single neuron and many neuron networks
@@ -1797,7 +1896,6 @@ class model_configurator:
         ### clear ANNarchy --> the model is not available anymore
         cnp_clear()
 
-    @timing_decorator(threshold=2)
     def compile_net_many_sequential(self):
         network_list = [
             net_many_dict["net"]
@@ -1807,7 +1905,6 @@ class model_configurator:
         for net in network_list:
             self.compile_net_many(net=net)
 
-    @timing_decorator(threshold=2)
     def compile_net_many_parallel(self):
         nr_available_workers = int(multiprocessing.cpu_count() / 2)
         network_list = [
@@ -1846,7 +1943,6 @@ class model_configurator:
             _network[net_idx]["compiled"] = True
             _network[net_idx]["directory"] = run_folder_name
 
-    @timing_decorator(threshold=2)
     def get_afferent_projection_dict(self, pop_name):
         """
         creates a dictionary containing
@@ -1901,7 +1997,6 @@ class model_configurator:
 
         return afferent_projection_dict
 
-    @timing_decorator(threshold=2)
     def get_max_syn_currents(self, pop_name: str):
         """
         obtain I_app_max, g_ampa_max and g_gaba max.
@@ -2011,7 +2106,6 @@ class model_configurator:
 
         return [I_max, g_ampa_max, g_gaba_max]
 
-    @timing_decorator(threshold=2)
     def incremental_continuous_bound_search(
         self,
         y_X,
@@ -2323,9 +2417,19 @@ class model_configurator:
             )
         else:
             ### there is no discontinuity
-            ### now predict final X_val
+            ### there can still be duplicates in the y_list --> remove them
+            ### get arrays
+            X_arr_predict = np.array(X_list_predict)
+            y_arr_predict = np.array(y_list_predict)
+            ### get unique indices
+            _, unique_indices = np.unique(y_arr_predict, return_index=True)
+            ### get arrays without duplicates in y_list
+            X_arr_predict = X_arr_predict[unique_indices]
+            y_arr_predict = y_arr_predict[unique_indices]
+
+            ### now predict final X_val using y_arr
             X_val = self.predict_1d(
-                X=y_list_predict, y=X_list_predict, X_pred=y_bound, linear=False
+                X=y_arr_predict, y=X_arr_predict, X_pred=y_bound, linear=False
             )[0]
             y_val = y_X(X_val)
 
@@ -2349,7 +2453,6 @@ class model_configurator:
 
         return X_val_best
 
-    @timing_decorator(threshold=2)
     def get_discontinuity_idx_list(self, arr):
         """
         Args:
@@ -2368,7 +2471,6 @@ class model_configurator:
 
         return peaks_idx_list
 
-    @timing_decorator(threshold=2)
     def predict_1d(self, X, y, X_pred, linear=True):
         """
         Args:
@@ -2398,7 +2500,6 @@ class model_configurator:
         y_pred_arr = y_X(X_pred)
         return y_pred_arr.reshape(1)
 
-    @timing_decorator(threshold=2)
     def get_rate_dict(
         self,
         net,
@@ -2484,7 +2585,6 @@ class model_configurator:
 
         return f_arr_dict
 
-    @timing_decorator(threshold=2)
     def get_rate(
         self,
         net,
@@ -2547,7 +2647,6 @@ class model_configurator:
 
         return f_arr
 
-    @timing_decorator(threshold=2)
     def get_ipsp(
         self,
         net: Network,
@@ -2620,13 +2719,11 @@ class model_configurator:
 
         return psp
 
-    @timing_decorator(threshold=2)
     def compile_net_many(self, net):
         compile_in_folder(
             folder_name=f"many_net_{net.id}", net=net, clean=True, silent=True
         )
 
-    @timing_decorator(threshold=2)
     def create_many_neuron_network(self):
         """
         creates a ANNarchy magic network with all popualtions which should be configured the size
@@ -2640,9 +2737,6 @@ class model_configurator:
                 - monitor_dict: for all population names the created monitors in the magic network
         """
         self.log("create many neurons network")
-
-        ### clear ANNarchy
-        cnp_clear()
 
         ### for each population of the given model which should be configured
         ### create a population with a given size
@@ -2694,7 +2788,7 @@ class model_configurator:
             for pre_pop_name in afferent_population_list:
                 ### define the spike train of a pre population as a binomial process with number of trials = number of pre neurons and success probability = spike probability (taken from Poisson neurons)
                 ### the obtained value is the number of spikes at a time step times the weight
-                poisson_equation_str = f"{pre_pop_name}_spike_train = Binomial({pre_pop_name}_size, ({pre_pop_name}_rate/1000)*dt) * {pre_pop_name}_weight"
+                poisson_equation_str = f"{pre_pop_name}_spike_train = Binomial({pre_pop_name}_size, {pre_pop_name}_spike_prob) * {pre_pop_name}_weight"
                 # poisson_equation_str = f"{pre_pop_name}_spike_train = Binomial(100, 0.005) * {pre_pop_name}_weight"
                 # TODO random distributions do not work with variables in ANNarchy...
 
@@ -2703,7 +2797,7 @@ class model_configurator:
                     f"{pre_pop_name}_size = 0 : population"
                 )
                 parameters_line_split_list.append(
-                    f"{pre_pop_name}_rate = 0 : population"
+                    f"{pre_pop_name}_spike_prob = 0 : population"
                 )
                 parameters_line_split_list.append(
                     f"{pre_pop_name}_weight = 0 : population"
@@ -2778,32 +2872,31 @@ class model_configurator:
             print(neuron_model_new)
 
             ### create the many neuron population
-            many_neuron_population_list.append(
-                Population(
-                    geometry=self.nr_neurons_per_net,
-                    neuron=neuron_model_new,
-                    name=f"many_neuron_{pop_name}",
-                )
+            my_pop = Population(
+                geometry=self.nr_neurons_per_net,
+                neuron=neuron_model_new,
+                name=f"many_neuron_{pop_name}",
             )
 
             ### set the attributes of the neurons
             for attr_name, attr_val in self.neuron_model_parameters_dict[pop_name]:
-                setattr(many_neuron_population_list[-1], attr_name, attr_val)
+                setattr(my_pop, attr_name, attr_val)
 
             ### create Monitor for many neuron
-            many_neuron_monitor_list.append(
-                Monitor(many_neuron_population_list[-1], ["spike"])
-            )
+            my_mon = Monitor(my_pop, ["spike"])
 
             ### create the network with population and monitor
-            many_neuron_network_list.append(Network())
-            many_neuron_network_list[-1].add(many_neuron_population_list[-1])
-            many_neuron_network_list[-1].add(many_neuron_monitor_list[-1])
+            my_net = Network()
+            my_net.add(my_pop)
+            my_net.add(my_mon)
 
             ### compile network
-            compile_in_folder(
-                folder_name=f"many_neuron_{pop_name}", net=many_neuron_network_list[-1]
-            )
+            compile_in_folder(folder_name=f"many_neuron_{pop_name}", net=my_net)
+
+            ### append the lists
+            many_neuron_network_list.append(my_net)
+            many_neuron_population_list.append(my_net.get(my_pop))
+            many_neuron_monitor_list.append(my_net.get(my_mon))
 
         net_many_dict = {
             "network_list": many_neuron_network_list,
@@ -2812,7 +2905,6 @@ class model_configurator:
         }
         return net_many_dict
 
-    @timing_decorator(threshold=2)
     def get_v_clamp_2000(self, net, population, v=None, I_app=None):
         """
         the returned values is dv/dt
@@ -2826,7 +2918,6 @@ class model_configurator:
         net.simulate(2000)
         return population.v_clamp_rec[0]
 
-    @timing_decorator(threshold=2)
     def get_voltage_clamp_equations(self, init_arguments_dict, pop_name):
         """
         works with
@@ -2942,7 +3033,6 @@ class model_configurator:
         ### return new neuron equations
         return eq
 
-    @timing_decorator(threshold=2)
     def get_line_is_v(self, line: str):
         """
         check if a equation string contains dv/dt or v= or v+=
@@ -2963,7 +3053,6 @@ class model_configurator:
 
         return False
 
-    @timing_decorator(threshold=2)
     def get_line_is_g_ampa(self, line: str):
         """
         check if a equation string contains dg_ampa/dt
@@ -2982,7 +3071,6 @@ class model_configurator:
 
         return False
 
-    @timing_decorator(threshold=2)
     def get_init_neuron_variables_for_psp(self, net, pop, v_rest, I_app_hold):
         """
         get the variables of the given population after simulating 2000 ms
@@ -3008,20 +3096,19 @@ class model_configurator:
         var_arr[0, :] = get_arr[:, 0]
 
         ### create a sampler with the one data sample
-        sampler = self.var_arr_sampler(var_arr)
+        sampler = self.var_arr_sampler(var_arr, var_name_list)
         return sampler
 
     class var_arr_sampler:
-        @timing_decorator(threshold=2)
-        def __init__(self, var_arr) -> None:
+        def __init__(self, var_arr, var_name_list) -> None:
             self.var_arr_shape = var_arr.shape
             self.is_const = (
                 np.std(var_arr, axis=0) <= np.mean(np.absolute(var_arr), axis=0) / 1000
             )
             self.constant_arr = var_arr[0, self.is_const]
             self.not_constant_val_arr = var_arr[:, np.logical_not(self.is_const)]
+            self.var_name_list = var_name_list
 
-        @timing_decorator(threshold=2)
         def sample(self, n=1, seed=0):
             """
             Args:
@@ -3045,7 +3132,6 @@ class model_configurator:
 
             return ret_arr
 
-    @timing_decorator(threshold=2)
     def get_nr_many_neurons(self, nr_neurons, nr_networks):
         """
         Splits the number of neurons in almost equally sized parts.
@@ -3059,7 +3145,6 @@ class model_configurator:
         """
         return self.divide_almost_equal(number=nr_neurons, num_parts=nr_networks)
 
-    @timing_decorator(threshold=2)
     def get_max_weight_dict_for_pop(self, pop_name):
         """
         get the weight dict for a single population
@@ -3099,7 +3184,6 @@ class model_configurator:
 
         return max_weight_dict_for_pop
 
-    @timing_decorator(threshold=2)
     def get_proj_dict(self, proj_name):
         """
         get a dictionary for a specified projection which contains following information:
@@ -3167,7 +3251,6 @@ class model_configurator:
             "proj_max_weight": proj_max_weight,
         }
 
-    @timing_decorator(threshold=2)
     def get_max_weight_of_proj(self, proj_name):
         """
         find the max weight of a specified projection using incremental_continuous_bound_search
@@ -3203,7 +3286,6 @@ class model_configurator:
 
         return w_max
 
-    @timing_decorator(threshold=2)
     def get_g_of_single_proj(self, weight, proj_name):
         """
         given a weight for a specified projection get the resulting conductance value g
@@ -3237,7 +3319,6 @@ class model_configurator:
         ### then return the conductance related to the specified projection
         return mean_g[proj_target_type]
 
-    @timing_decorator(threshold=2)
     def get_g_values_of_pop(self, pop_name):
         """
         calculate the average g_ampa and g_gaba values of the specified population based on the weights
@@ -3289,7 +3370,6 @@ class model_configurator:
 
         return mean_g
 
-    @timing_decorator(threshold=2)
     def get_spike_times_arr(self, spike_frequency):
         """
         get spike times for a given spike frequency
@@ -3316,7 +3396,6 @@ class model_configurator:
 
         return spike_times_arr
 
-    @timing_decorator(threshold=2)
     def get_mean_g(self, spike_times_arr, spike_weights_arr, tau):
         """
         calculates the mean conductance g for given spike times, corresponding weights (increases of g) and time constant
@@ -3345,19 +3424,18 @@ class model_configurator:
         return mean_g
 
 
-@timing_decorator(threshold=2)
 def get_rate_parallel(
     idx,
     net,
-    population,
+    population: Population,
     variable_init_sampler,
-    monitor,
+    monitor: Monitor,
     I_app_arr,
-    weight_list,
-    proj_name_list,
-    rate_list,
-    size_list,
-    simulation_dur,
+    weight_list: list,
+    proj_name_list: list,
+    rate_list: list,
+    size_list: list,
+    simulation_dur: int,
 ):
     """
     function to obtain the firing rates of the populations of
@@ -3403,16 +3481,20 @@ def get_rate_parallel(
     ### sample init values, one could sample different values for multiple neurons
     ### but here we sample a single sample and use it for all neurons
     variable_init_arr = variable_init_sampler.sample(1, seed=0)
+    var_name_list = variable_init_sampler.var_name_list
     variable_init_arr = np.array([variable_init_arr[0]] * len(population))
-    for var_idx, var_name in enumerate(population.variables):
-        set_val = variable_init_arr[:, var_idx]
-        setattr(population, var_name, set_val)
+    for var_name in enumerate(population.variables):
+        if var_name in var_name_list:
+            set_val = variable_init_arr[:, var_name_list.index(var_name)]
+            setattr(population, var_name, set_val)
 
     ### set the weights and rates of the poisson spike traces of the afferent populations
     ### TODO not projection name but pre pop name!
     for proj_idx, proj_name in enumerate(proj_name_list):
         setattr(population, f"{proj_name}_size", size_list[proj_idx])
-        setattr(population, f"{proj_name}_rate", rate_list[proj_idx])
+        setattr(
+            population, f"{proj_name}_spike_prob", (rate_list[proj_idx] / 1000) * dt()
+        )
         setattr(population, f"{proj_name}_weight", weight_list[proj_idx])
 
     ### set the I_app
@@ -3456,7 +3538,7 @@ Use this template for the synaptic_contribution_dict:
 
 {template_synaptic_contribution_dict}
 
-'contr' are placeholders, replace them with the contributions of the afferent projections. The contributions of all afferent projections of a single population have to sum up to 1!
+The shown contributions of the afferent projections are based on the assumption that the maximum weights are used. The contributions of all afferent projections of a single population have to sum up to 1!
 """
 )
 
