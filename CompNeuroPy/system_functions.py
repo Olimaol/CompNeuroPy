@@ -7,23 +7,31 @@ import gc
 import traceback
 import shutil
 from time import time
+import pickle
 
 
 def clear_dir(path):
     """
-    deletes all files in the specified folder
+    Deletes all files and subdirectories in the specified folder
     """
-    for filename in os.listdir(path):
-        file_path = os.path.join(path, filename)
-        try:
-            if os.path.isfile(file_path) or os.path.islink(file_path):
-                os.unlink(file_path)
-            elif os.path.isdir(file_path):
-                shutil.rmtree(file_path)
-        except Exception:
-            print(traceback.format_exc())
-            print(f"Failed to clear {path} because failed to delete {file_path}")
-            quit()
+    try:
+        if not os.path.exists(path):
+            print(f"The folder '{path}' does not exist.")
+            return
+
+        for filename in os.listdir(path):
+            file_path = os.path.join(path, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception:
+                print(traceback.format_exc())
+                print(f"Failed to delete {file_path}")
+    except Exception:
+        print(traceback.format_exc())
+        print(f"Failed to clear {path}")
 
 
 def create_dir(path, print_info=False, clear=False):
@@ -93,6 +101,66 @@ def save_objects(object_list, path_list):
         code = object_list[idx].__code__
         with open(path + name + ".marshal", "wb") as output_file:
             marshal.dump(marshal.dumps(code), output_file)
+
+
+def save_variables(variable_list: list, name_list: list, path: str | list = "./"):
+    """
+    Args:
+        variable_list: list
+            variables to save
+
+        name_list: list
+            names of the save files of the variables
+
+        path: str or list, optional, defautl="./"
+            save path for all variables, or save path for each variable of the variable_list
+    """
+    for idx in range(len(variable_list)):
+        ### set save path
+        if isinstance(path, str):
+            save_path = path
+        else:
+            save_path = path[idx]
+        if save_path.endswith("/"):
+            save_path = save_path[:-1]
+        ### set file name
+        file_name = f"{name_list[idx]}.pkl"
+        ### set variable
+        variable = variable_list[idx]
+        ### generate save folder
+        create_dir(save_path)
+        ### Saving a variable to a file
+        with open(f"{save_path}/{file_name}", "wb") as file:
+            pickle.dump(variable, file)
+
+
+def load_variables(name_list: list, path: str | list = "./"):
+    """
+    Args:
+        name_list: list
+            names of the save files of the variables
+
+        path: str or list, optional, defautl="./"
+            save path for all variables, or save path for each variable of the variable_list
+    """
+    variable_dict = {}
+    for idx in range(len(name_list)):
+        ### set save path
+        if isinstance(path, str):
+            save_path = path
+        else:
+            save_path = path[idx]
+        if save_path.endswith("/"):
+            save_path = save_path[:-1]
+        ### set file name
+        file_name = f"{name_list[idx]}.pkl"
+        ### Loading the variable from the file
+        with open(f"{save_path}/{file_name}", "rb") as file:
+            loaded_variable = pickle.load(file)
+        ### store variable in variable_dict
+        variable_dict[name_list[idx]] = loaded_variable
+
+    return variable_dict
 
 
 def load_object(file_name):

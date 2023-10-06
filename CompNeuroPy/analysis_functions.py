@@ -10,14 +10,14 @@ from scipy.interpolate import interp1d
 from multiprocessing import Process
 
 
-def my_raster_plot(spikes):
+def my_raster_plot(spikes: dict):
     """
     Returns two vectors representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
 
     The spike times are always in simulation steps (in contrast to default ANNarchy raster_plot)
     """
     t, n = raster_plot(spikes)
-    t = t / dt()
+    t = np.round(t / dt(), 0).astype(int)
     return t, n
 
 
@@ -530,7 +530,6 @@ def get_pop_rate(spikes, t_start=None, t_end=None, time_step=1, t_smooth_ms=-1):
 
     ### check if there are spikes in population at all
     if len(t) > 1:
-
         if t_start == None:
             t_start = round(t.min() * time_step, get_number_of_decimals(time_step))
         if t_end == None:
@@ -993,7 +992,6 @@ def __plot_recordings(
             plt.xlabel("time [ms]")
 
         elif variable != "spike" and mode == "matrix_mean":
-
             if len(data.shape) == 3 or (
                 len(data.shape) == 2 and isinstance(data[0, 0], list) is True
             ):

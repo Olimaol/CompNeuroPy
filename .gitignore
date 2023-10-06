@@ -11,3 +11,4 @@ dist/
 *tmp.py
 *.~lock*
 *model_conf_log
+*cache*

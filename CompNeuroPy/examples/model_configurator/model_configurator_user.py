@@ -1,10 +1,19 @@
-from ANNarchy import Population, Projection, setup, simulate, get_population
+from ANNarchy import (
+    Population,
+    Projection,
+    setup,
+    simulate,
+    get_population,
+    get_projection,
+)
 from CompNeuroPy.neuron_models import (
     poisson_neuron_up_down,
     Izhikevich2003_flexible_noisy_I,
 )
-from CompNeuroPy import generate_model, Monitors, plot_recordings
+from CompNeuroPy import generate_model, Monitors, plot_recordings, my_raster_plot
 from model_configurator_cnp import model_configurator
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 def BGM_part_function(params):
@@ -256,7 +265,7 @@ if __name__ == "__main__":
 
     ### obtain the maximum synaptic loads for the populations and the
     ### maximum weights of their afferent projections
-    model_conf.get_max_syn()
+    model_conf.get_max_syn(clear=False)
 
     ### now either set weights directly
     ### or define synaptic load of populations
@@ -278,6 +287,8 @@ if __name__ == "__main__":
     I_base_dict = model_conf.set_base(I_base_variable="base_mean")
     print("user I_base:")
     print(I_base_dict)
+    print("model cor_stn_weight:")
+    print(get_projection("cor__stn").w)
 
     ### do a test simulation
     mon = Monitors(
@@ -299,6 +310,23 @@ if __name__ == "__main__":
     ### get recordings
     recordings = mon.get_recordings()
     recording_times = mon.get_recording_times()
+
+    stn_g_ampa = recordings[0]["stn;g_ampa"]
+    cor_spike = recordings[0]["cor;spike"]
+    cor_spike_arr = np.zeros(stn_g_ampa.shape[0])
+    t, n = my_raster_plot(cor_spike)
+    values, counts = np.unique(t - 10000, return_counts=True)
+    t = values.astype(int)
+    cor_spike_arr[t] = counts
+    plt.figure(figsize=(6.4, 4.8 * 3))
+    plt.subplot(311)
+    plt.ylabel("cor_spike_train")
+    plt.plot(cor_spike_arr[:100], "k.")
+    plt.subplot(312)
+    plt.plot(stn_g_ampa[:, 0], "k.")
+    plt.subplot(313)
+    plt.plot(stn_g_ampa[:100, 0], "k.")
+    plt.savefig("stn_g_ampa.png", dpi=300)
 
     ### plot recordings
     plot_recordings(
