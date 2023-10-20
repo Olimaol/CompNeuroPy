@@ -4,7 +4,13 @@ from CompNeuroPy import (
     find_folder_with_prefix,
     data_obj,
     replace_names_with_dict,
+    timing_decorator,
+    print_df,
+    save_variables,
+    load_variables,
+    clear_dir,
 )
+from CompNeuroPy.neuron_models import poisson_neuron
 from ANNarchy import (
     Population,
     get_population,
@@ -17,11 +23,13 @@ from ANNarchy import (
     reset,
     Neuron,
     simulate_until,
+    Uniform,
+    get_current_step,
 )
 from ANNarchy.core.Global import _network
 import numpy as np
 from scipy.interpolate import interp1d, interpn
-from scipy.signal import find_peaks
+from scipy.signal import find_peaks, argrelmin
 import matplotlib.pyplot as plt
 import inspect
 import textwrap
@@ -34,6 +42,9 @@ from time import time, strftime
 import datetime
 from sympy import symbols, Symbol, sympify, solve
 from hyperopt import fmin, tpe, hp
+import pandas as pd
+from scipy.stats import poisson
+from ANNarchy.extensions.bold import BoldMonitor
 
 
 class model_configurator:
@@ -41,6 +52,8 @@ class model_configurator:
         self,
         model,
         target_firing_rate_dict,
+        interpolation_grid_points=10,
+        max_psp=10,
         do_not_config_list=[],
         print_guide=False,
         I_app_variable="I_app",
@@ -54,6 +67,12 @@ class model_configurator:
 
             target_firing_rate_dict: dict
                 keys = population names of model which should be configured, values = target firing rates in Hz
+
+            interpolation_grid_points: int, optional, default=10
+                how many points should be used for the interpolation of the f-I-g curve on a single axis
+
+            max_psp: int, optional, default=10
+                maximum post synaptic potential in mV
 
             do_not_config_list: list, optional, default=[]
                 list with strings containing population names of populations which should not be configured
@@ -101,22 +120,586 @@ class model_configurator:
         }
         self.max_psp_dict = {pop_name: None for pop_name in self.pop_name_list}
         self.possible_rates_dict = {pop_name: None for pop_name in self.pop_name_list}
+        self.extreme_firing_rates_df_dict = {
+            pop_name: None for pop_name in self.pop_name_list
+        }
+        self.prepare_psp_dict = {pop_name: None for pop_name in self.pop_name_list}
+        ### set max psp for a single spike
+        self.max_psp_dict = {pop_name: max_psp for pop_name in self.pop_name_list}
+        ### print things
         self.log_exist = False
         self.caller_name = ""
         self.log("model configurator log:")
         self.print_guide = print_guide
-        self.did_get_interpolation = False
+        ### simulation things
         self.simulation_dur = 5000
         self.simulation_dur_estimate_time = 50
-        ### nr of neurons **(1/3) has to result in an integer
-        self.nr_vals_interpolation_grid = 3  # 36
+        self.nr_neurons_per_net = 100
 
-        ### prepare the creation of the networks
-        ### also do things for which the model needs to be created (it will not be available later)
-        self.prepare_network_creation()
+        ### do things for which the model needs to be created (it will not be available later)
+        self.analyze_model()
 
         ### print guide
         self._p_g(_p_g_1)
+
+    def get_max_syn(self, cache=True, clear=False):
+        """
+        get the weight dictionary for all populations given in target_firing_rate_dict
+        keys = population names, values = dict which contain values = afferent projection names, values = lists with w_min and w_max
+        """
+        ### clear cache to create new cache
+        if cache and clear:
+            self.log("clear cache of get_max_syn")
+            clear_dir("./.model_configurator_cache/get_max_syn")
+
+        ### check cache for get_max_syn
+        cache_worked = False
+        if cache:
+            try:
+                loaded_variables_dict = load_variables(
+                    name_list=[
+                        "net_single_dict",
+                        "prepare_psp_dict",
+                        "I_app_max_dict",
+                        "g_max_dict",
+                        "syn_contr_dict",
+                        "syn_load_dict",
+                    ],
+                    path="./.model_configurator_cache/get_max_syn",
+                )
+                (
+                    self.net_single_dict,
+                    self.prepare_psp_dict,
+                    self.I_app_max_dict,
+                    self.g_max_dict,
+                    self.syn_contr_dict,
+                    self.syn_load_dict,
+                ) = loaded_variables_dict.values()
+                ### create dummy networks (like if the single neuron entworks would be created) to not cause recompile of the many neuron networks
+                for _ in range(len(self.net_single_dict)):
+                    ### single net
+                    net1 = Network()
+                    pop1 = Population(1, neuron=Neuron(equations="r=1"), name="dummy1")
+                    mon1 = Monitor(pop1, ["r"])
+                    net1.add([pop1, mon1])
+                    ### single net with voltage clamp
+                    net2 = Network()
+                    pop2 = Population(1, neuron=Neuron(equations="r=1"), name="dummy2")
+                    mon2 = Monitor(pop2, ["r"])
+                    net2.add([pop2, mon2])
+                cache_worked = True
+            except:
+                cache_worked = False
+
+        if not cache_worked:
+            ### create single neuron networks
+            self.create_single_neuron_networks()
+
+            ### get max synaptic things with single neuron networks
+            for pop_name in self.pop_name_list:
+                self.log(pop_name)
+                ### get max I_app and max weights (i.e. g_ampa, g_gaba)
+                txt = f"get max I_app, g_ampa and g_gaba using network_single for {pop_name}"
+                print(txt)
+                self.log(txt)
+                I_app_max, g_ampa_max, g_gaba_max = self.get_max_syn_currents(
+                    pop_name=pop_name,
+                )
+
+                self.I_app_max_dict[pop_name] = I_app_max
+                self.g_max_dict[pop_name] = {
+                    "ampa": g_ampa_max,
+                    "gaba": g_gaba_max,
+                }
+
+            ### obtain the synaptic contributions assuming max weights
+            self.syn_contr_dict = {}
+            for pop_name in self.pop_name_list:
+                self.syn_contr_dict[pop_name] = {}
+                for target_type in ["ampa", "gaba"]:
+                    self.log(f"get synaptic contributions for {pop_name} {target_type}")
+                    self.syn_contr_dict[pop_name][
+                        target_type
+                    ] = self.get_syn_contr_dict(
+                        pop_name=pop_name,
+                        target_type=target_type,
+                        use_max_weights=True,
+                        normalize=True,
+                    )
+
+            ### create the synaptic load template dict
+            self.syn_load_dict = {}
+            for pop_name in self.pop_name_list:
+                self.syn_load_dict[pop_name] = []
+                if "ampa" in self.afferent_projection_dict[pop_name]["target"]:
+                    self.syn_load_dict[pop_name].append("ampa_load")
+                if "gaba" in self.afferent_projection_dict[pop_name]["target"]:
+                    self.syn_load_dict[pop_name].append("gaba_load")
+
+            ### save variables in cache
+            ### obtain variables which should be cached / are needed later
+            ### do not cache ANNarchy objects
+            net_single_dict_to_cache = {}
+            for key, val in self.net_single_dict.items():
+                net_single_dict_to_cache[key] = {
+                    "variable_init_sampler": val["variable_init_sampler"]
+                }
+            save_variables(
+                variable_list=[
+                    net_single_dict_to_cache,
+                    self.prepare_psp_dict,
+                    self.I_app_max_dict,
+                    self.g_max_dict,
+                    self.syn_contr_dict,
+                    self.syn_load_dict,
+                ],
+                name_list=[
+                    "net_single_dict",
+                    "prepare_psp_dict",
+                    "I_app_max_dict",
+                    "g_max_dict",
+                    "syn_contr_dict",
+                    "syn_load_dict",
+                ],
+                path="./.model_configurator_cache/get_max_syn",
+            )
+
+        ### only return synaptic contributions smaller 1
+        template_synaptic_contribution_dict = (
+            self.get_template_synaptic_contribution_dict(given_dict=self.syn_contr_dict)
+        )
+
+        self._p_g(
+            _p_g_after_get_weights(
+                template_weight_dict=self.g_max_dict,
+                template_synaptic_load_dict=self.syn_load_dict,
+                template_synaptic_contribution_dict=template_synaptic_contribution_dict,
+            )
+        )
+        return self.max_weight_dict
+
+    def get_syn_contr_dict(
+        self, pop_name: str, target_type: str, use_max_weights=False, normalize=False
+    ) -> dict:
+        """
+        get the relative synaptic contribution list of a population for a given target type
+        weights are obtained from the afferent_projection_dict, if there are no weights --> use max weights
+
+        Args:
+            pop_name: str
+                population name
+
+            target_type: str
+                target type of the afferent projections of the population
+
+            use_max_weights: bool, optional, default=False
+                if True the max weights are used, if False the weights from the afferent_projection_dict are used
+
+        Returns:
+            rel_syn_contr_dict: dict
+                keys = projection names, values = relative synaptic contributions
+        """
+        ### g_max have to be obtained already
+        assert not (
+            isinstance(self.g_max_dict[pop_name][target_type], type(None))
+        ), "ERROR, get_rel_syn_contr_list: g_max have to be obtained already"
+        ### get list of relative synaptic contributions
+        proj_name_list = []
+        rel_syn_contr_list = []
+        for proj_name in self.afferent_projection_dict[pop_name]["projection_names"]:
+            proj_dict = self.get_proj_dict(proj_name)
+            proj_target_type = proj_dict["proj_target_type"]
+            weight = proj_dict["proj_weight"]
+            if isinstance(weight, type(None)) or use_max_weights:
+                weight = self.g_max_dict[pop_name][target_type]
+            if proj_target_type == target_type:
+                rel_syn_contr_list.append(proj_dict["spike_frequency"] * weight)
+                proj_name_list.append(proj_name)
+        ### normalize the list
+        if normalize:
+            rel_syn_contr_arr = np.array(rel_syn_contr_list)
+            rel_syn_contr_arr = rel_syn_contr_arr / np.sum(rel_syn_contr_arr)
+            rel_syn_contr_list = rel_syn_contr_arr.tolist()
+        ### combine proj_name_list and rel_syn_contr_list to an dict
+        rel_syn_contr_dict = {
+            proj_name: rel_syn_contr
+            for proj_name, rel_syn_contr in zip(proj_name_list, rel_syn_contr_list)
+        }
+
+        return rel_syn_contr_dict
+
+    def create_single_neuron_networks(self):
+        ### clear ANNarchy
+        cnp_clear()
+
+        ### create the single neuron networks
+        for pop_name in self.pop_name_list:
+            txt = f"create network_single for {pop_name}"
+            print(txt)
+            self.log(txt)
+            ### the network with the standard neuron
+            self.net_single_dict[pop_name] = self.create_net_single(pop_name=pop_name)
+            ### the network with the voltage clamp version neuron
+            self.net_single_v_clamp_dict[
+                pop_name
+            ] = self.create_net_single_voltage_clamp(pop_name=pop_name)
+            ### get v_rest and correspodning I_app_hold
+            self.prepare_psp_dict[pop_name] = self.find_v_rest_for_psp(
+                pop_name, do_plot=False
+            )
+
+    def create_net_single(self, pop_name):
+        """
+        creates a network with the neuron type of the population given by pop_name
+        the number of neurons is 1
+
+        Args:
+            pop_name: str
+                population name
+        """
+
+        ### for stop condition for recording psp --> add v_before_psp and v_psp_thresh to equations/parameters
+
+        ### get the initial arguments of the neuron
+        neuron_model = self.neuron_model_dict[pop_name]
+        ### names of arguments
+        init_arguments_name_list = list(Neuron.__init__.__code__.co_varnames)
+        init_arguments_name_list.remove("self")
+        init_arguments_name_list.remove("name")
+        init_arguments_name_list.remove("description")
+        ### arguments dict
+        init_arguments_dict = {
+            init_arguments_name: getattr(neuron_model, init_arguments_name)
+            for init_arguments_name in init_arguments_name_list
+        }
+        ### add v_before_psp=v at the beginning of the equations
+        equations_line_split_list = str(init_arguments_dict["equations"]).splitlines()
+        equations_line_split_list.insert(0, "v_before_psp = v")
+        init_arguments_dict["equations"] = "\n".join(equations_line_split_list)
+        ### add v_psp_thresh to the parameters
+        parameters_line_split_list = str(init_arguments_dict["parameters"]).splitlines()
+        parameters_line_split_list.append("v_psp_thresh = 0 : population")
+        init_arguments_dict["parameters"] = "\n".join(parameters_line_split_list)
+
+        ### create neuron model with new equations
+        neuron_model_new = Neuron(**init_arguments_dict)
+
+        ### create the single neuron population
+        single_neuron = Population(
+            1,
+            neuron=neuron_model_new,
+            name=f"single_neuron_{pop_name}",
+            stop_condition=f"((abs(v-v_psp_thresh)<0.01) and (abs(v_before_psp-v_psp_thresh)>0.01)): any",
+        )
+        ### set the attributes of the neuron
+        for attr_name, attr_val in self.neuron_model_parameters_dict[pop_name]:
+            setattr(single_neuron, attr_name, attr_val)
+
+        ### create Monitor for single neuron
+        mon_single = Monitor(single_neuron, ["spike", "v"])
+
+        ### create network with single neuron
+        net_single = Network()
+        net_single.add([single_neuron, mon_single])
+        compile_in_folder(
+            folder_name=f"single_net_{pop_name}", silent=True, net=net_single
+        )
+
+        ### get the values of the variables after 2000 ms simulation
+        variable_init_sampler = self.get_init_neuron_variables(
+            net_single, net_single.get(single_neuron)
+        )
+
+        ### network dict
+        net_single_dict = {
+            "net": net_single,
+            "population": net_single.get(single_neuron),
+            "monitor": net_single.get(mon_single),
+            "variable_init_sampler": variable_init_sampler,
+        }
+
+        return net_single_dict
+
+    def get_init_neuron_variables(self, net, pop):
+        """
+        get the variables of the given population after simulating 2000 ms
+
+        Args:
+            net: ANNarchy network
+                the network which contains the pop
+
+            pop: ANNarchy population
+                the population whose variables are obtained
+
+        """
+        ### reset neuron and deactivate input
+        net.reset()
+        pop.I_app = 0
+
+        ### 10000 ms init duration
+        net.simulate(10000)
+
+        ### simulate 2000 ms and check every dt the variables of the neuron
+        time_steps = int(2000 / dt())
+        var_name_list = list(pop.variables)
+        var_arr = np.zeros((time_steps, len(var_name_list)))
+        for time_idx in range(time_steps):
+            net.simulate(dt())
+            get_arr = np.array([getattr(pop, var_name) for var_name in pop.variables])
+            var_arr[time_idx, :] = get_arr[:, 0]
+        net.reset()
+
+        ### create a sampler with the data samples of from the 1000 ms simulation
+        sampler = self.var_arr_sampler(var_arr, var_name_list)
+        return sampler
+
+    def create_net_single_voltage_clamp(self, pop_name):
+        """
+        creates a network with the neuron type of the population given by pop_name
+        the number of neurons is 1
+
+        The equation wich defines the chagne of v is set to zero and teh change of v
+        is stored in the new variable v_clamp_rec
+
+        Args:
+            pop_name: str
+                population name
+        """
+
+        ### get the initial arguments of the neuron
+        neuron_model = self.neuron_model_dict[pop_name]
+        ### names of arguments
+        init_arguments_name_list = list(Neuron.__init__.__code__.co_varnames)
+        init_arguments_name_list.remove("self")
+        init_arguments_name_list.remove("name")
+        init_arguments_name_list.remove("description")
+        ### arguments dict
+        init_arguments_dict = {
+            init_arguments_name: getattr(neuron_model, init_arguments_name)
+            for init_arguments_name in init_arguments_name_list
+        }
+        ### get new equations for voltage clamp
+        equations_new = self.get_voltage_clamp_equations(init_arguments_dict, pop_name)
+        init_arguments_dict["equations"] = equations_new
+        ### add v_clamp_rec_thresh to the parameters
+        parameters_line_split_list = str(init_arguments_dict["parameters"]).splitlines()
+        parameters_line_split_list.append("v_clamp_rec_thresh = 0 : population")
+        init_arguments_dict["parameters"] = "\n".join(parameters_line_split_list)
+
+        ### create neuron model with new equations
+        neuron_model_new = Neuron(**init_arguments_dict)
+
+        ### create the single neuron population
+        single_neuron_v_clamp = Population(
+            1,
+            neuron=neuron_model_new,
+            name=f"single_neuron_v_clamp_{pop_name}",
+        )
+
+        ### set the attributes of the neuron
+        for attr_name, attr_val in self.neuron_model_parameters_dict[pop_name]:
+            setattr(single_neuron_v_clamp, attr_name, attr_val)
+
+        ### create Monitor for single neuron
+        mon_single = Monitor(single_neuron_v_clamp, ["v_clamp_rec"])
+
+        ### create network with single neuron
+        net_single = Network()
+        net_single.add([single_neuron_v_clamp, mon_single])
+        compile_in_folder(
+            folder_name=f"single_v_clamp_net_{pop_name}", silent=True, net=net_single
+        )
+
+        ### network dict
+        net_single_dict = {
+            "net": net_single,
+            "population": net_single.get(single_neuron_v_clamp),
+            "monitor": net_single.get(mon_single),
+        }
+
+        return net_single_dict
+
+    def find_v_rest_for_psp(self, pop_name, do_plot=False):
+        """
+        using both single networks to find v_rest and I_app_hold
+        """
+
+        ### find v where dv/dt is minimal with voltage clamp network (best = 0, it can only be >= 0)
+        self.log("search v_rest with y(X) = delta_v_2000(v=X) using grid search")
+        v_arr = np.linspace(-90, -20, 200)
+        v_clamp_arr = np.array(
+            [
+                self.get_v_clamp_2000(
+                    v=X_val,
+                    net=self.net_single_v_clamp_dict[pop_name]["net"],
+                    population=self.net_single_v_clamp_dict[pop_name]["population"],
+                )
+                for X_val in v_arr
+            ]
+        )
+        v_rest = np.min(v_arr[argrelmin(v_clamp_arr)[0]])
+        if do_plot:
+            plt.figure()
+            plt.plot(v_arr, v_clamp_arr)
+            plt.axvline(v_rest, color="k")
+            plt.axhline(0, color="k", ls="dashed")
+            plt.savefig(f"v_clamp_{pop_name}.png")
+            plt.close("all")
+
+        ### do again the simulation with the obtained v_rest to get the stady state values
+        detla_v_rest = (
+            self.get_v_clamp_2000(
+                v=v_rest,
+                net=self.net_single_v_clamp_dict[pop_name]["net"],
+                population=self.net_single_v_clamp_dict[pop_name]["population"],
+            )
+            * dt()
+        )
+        obtained_variables = {
+            var_name: getattr(
+                self.net_single_v_clamp_dict[pop_name]["population"], var_name
+            )
+            for var_name in self.net_single_v_clamp_dict[pop_name][
+                "population"
+            ].variables
+        }
+        self.log(
+            f"for {pop_name} found v_rest={v_rest} with delta_v_2000(v=v_rest)={detla_v_rest}"
+        )
+
+        ### check if the neuron stays at v_rest with normal neuron
+        ### if it stays --> use new value as v_rest (its even a bit finer as before)
+        ### if it not stays --> find I_app which holds the membrane potential constant
+        v_rest_arr = self.get_new_v_rest_2000(pop_name, obtained_variables)
+        v_rest_arr_is_const = (
+            np.std(v_rest_arr, axis=0)
+            <= np.mean(np.absolute(v_rest_arr), axis=0) / 1000
+        )
+        if v_rest_arr_is_const:
+            ### v_rest found, no I_app_hold needed
+            v_rest = v_rest_arr[-1]
+            I_app_hold = 0
+            self.log(f"final v_rest = {v_rest_arr[-1]}")
+        else:
+            ### there is no v_rest i.e. neuron is self-active --> find smallest negative I_app to silence neuron
+            self.log(
+                "neuron seems to be self-active --> find smallest I_app to silence the neuron"
+            )
+
+            ### negative current initially reduces v
+            ### then v climbs back up
+            ### check if the second half of v is constant if yes fine if not increase negative I_app
+            ### find I_app_hold with incremental_continuous_bound_search
+            self.log("search I_app_hold with y(X) = CHANGE_OF_V(I_app=X)")
+            I_app_hold = -self.incremental_continuous_bound_search(
+                y_X=lambda X_val: self.get_v_rest_arr_const(
+                    pop_name=pop_name,
+                    obtained_variables=obtained_variables,
+                    I_app=-X_val,
+                ),
+                y_bound=0,
+                X_0=0,
+                y_0=self.get_v_rest_arr_const(
+                    pop_name=pop_name,
+                    obtained_variables=obtained_variables,
+                    I_app=0,
+                ),
+                X_increase=detla_v_rest,
+                accept_non_dicontinuity=True,
+                bound_type="greater",
+            )
+            ### again simulate the neuron with the obtained I_app_hold to get the new v_rest
+            v_rest_arr = self.get_new_v_rest_2000(
+                pop_name, obtained_variables, I_app=I_app_hold
+            )
+            v_rest = v_rest_arr[-1]
+            self.log(f"I_app_hold = {I_app_hold}, resulting v_rest = {v_rest}")
+
+        ### get the sampler for the initial variables
+        variable_init_sampler = self.get_init_neuron_variables_for_psp(
+            net=self.net_single_dict[pop_name]["net"],
+            pop=self.net_single_dict[pop_name]["population"],
+            v_rest=v_rest,
+            I_app_hold=I_app_hold,
+        )
+
+        return {
+            "v_rest": v_rest,
+            "I_app_hold": I_app_hold,
+            "variable_init_sampler": variable_init_sampler,
+        }
+
+    def get_v_rest_arr_const(
+        self, pop_name, obtained_variables, I_app, return_bool=False
+    ):
+        """
+        sets I_app and obtained varaibles in single neuron
+        simulates 2000 ms and returns how much the v changes
+        0 = constant, negative = not constant
+        """
+        v_rest_arr = self.get_new_v_rest_2000(pop_name, obtained_variables, I_app=I_app)
+        v_rest_arr = v_rest_arr[len(v_rest_arr) // 2 :]
+
+        if return_bool:
+            return 0 <= np.mean(np.absolute(v_rest_arr), axis=0) / 1000 - np.std(
+                v_rest_arr, axis=0
+            )
+        else:
+            return np.mean(np.absolute(v_rest_arr), axis=0) / 1000 - np.std(
+                v_rest_arr, axis=0
+            )
+
+    def get_new_v_rest_2000(
+        self, pop_name, obtained_variables, I_app=None, do_plot=True
+    ):
+        """
+        use single_net to simulate 2000 ms and return v
+        """
+        net = self.net_single_dict[pop_name]["net"]
+        pop = self.net_single_dict[pop_name]["population"]
+        monitor = self.net_single_dict[pop_name]["monitor"]
+        net.reset()
+        ### set variables
+        for var_name, var_val in obtained_variables.items():
+            if var_name in pop.variables:
+                setattr(pop, var_name, var_val)
+        if not isinstance(I_app, type(None)):
+            pop.I_app = I_app
+        ### simulate
+        net.simulate(2000)
+        v_arr = monitor.get("v")[:, 0]
+
+        if do_plot:
+            plt.figure()
+            plt.title(f"{pop.I_app}")
+            plt.plot(v_arr)
+            plt.savefig(f"tmp_v_rest_{pop_name}.png")
+            plt.close("all")
+
+        return v_arr
+
+    def get_nr_spikes_from_v_rest_2000(
+        self, pop_name, obtained_variables, I_app=None, do_plot=True
+    ):
+        """
+        use single_net to simulate 2000 ms and return number spikes
+        """
+        net = self.net_single_dict[pop_name]["net"]
+        pop = self.net_single_dict[pop_name]["population"]
+        mon = self.net_single_dict[pop_name]["monitor"]
+        net.reset()
+        ### set variables
+        for var_name, var_val in obtained_variables.items():
+            if var_name in pop.variables:
+                setattr(pop, var_name, var_val)
+        if not isinstance(I_app, type(None)):
+            pop.I_app = I_app
+        ### simulate
+        simulate(2000)
+        ### get spikes
+        spike_dict = mon.get("spike")
+        nr_spikes = len(spike_dict[0])
+        return nr_spikes
 
     def log(self, txt):
         caller_frame = inspect.currentframe().f_back
@@ -159,14 +742,13 @@ class model_configurator:
         """
         print_width = min([os.get_terminal_size().columns, 80])
 
-        if self.print_guide:
-            print("\n[model_configurator WARNING]:")
-            for line in str(txt).splitlines():
-                wrapped_text = textwrap.fill(
-                    line, width=print_width - 5, replace_whitespace=False
-                )
-                wrapped_text = textwrap.indent(wrapped_text, "    |")
-                print(wrapped_text)
+        print("\n[model_configurator WARNING]:")
+        for line in str(txt).splitlines():
+            wrapped_text = textwrap.fill(
+                line, width=print_width - 5, replace_whitespace=False
+            )
+            wrapped_text = textwrap.indent(wrapped_text, "    |")
+            print(wrapped_text)
         print("")
 
     def get_base(self):
@@ -178,67 +760,166 @@ class model_configurator:
             I_base_dict, dict
                 Dictionary with baseline curretns for all configured populations.
         """
-        ### get interpolations if not did already
-        if not self.did_get_interpolation:
-            self.get_interpolation()
-
-        ### use interpolation to get baseline currents
+        ### use many neuron network to get baseline currents
         I_base_dict = {}
-        for pop_name in self.pop_name_list:
-            ### predict baseline current values
-            I_base_dict[pop_name] = self.find_base_current(pop_name)
+        target_firing_rate_changed = True
+        nr_max_iter = 100
+        nr_iter = 0
+        while target_firing_rate_changed and nr_iter < nr_max_iter:
+            ### get baseline current values, if target firing rates could not
+            ### be reached, try again with new target firing rates
+            (
+                target_firing_rate_changed,
+                I_base_dict,
+            ) = self.find_base_current()
+            nr_iter += 1
 
         return I_base_dict
 
-    def find_base_current(self, pop_name):
-        ### first get values for g_ampa, g_gaba, I_app_max
-        g_value_dict = self.get_g_values_of_pop(pop_name)
-        g_ampa = g_value_dict["ampa"]
-        g_gaba = g_value_dict["gaba"]
-        I_app_max = self.I_app_max_dict[pop_name]
+    def find_base_current(self):
+        """
+        search through whole I_app space
+        for each population simulate a network with 10000 neurons, each neuron has a different I_app value
+        g_ampa and g_gaba values are internally created using
+        the weigths stored in the afferent_projection dict
+        and target firing rates stored in the target_firing_rate_dict
+        """
 
-        ### 1st search through whole I_app space
-        I_app_arr = np.linspace(-I_app_max, I_app_max, 200)
-        possible_firing_rates_arr = self.f_I_g_curve_dict[pop_name](
-            a=I_app_arr, b=g_ampa, c=g_gaba
-        )
-        ### catch if target firing rate cannot be reached
-        target_firing_rate = self.target_firing_rate_dict[pop_name]
-        possible_f_min = possible_firing_rates_arr.min()
-        possible_f_max = possible_firing_rates_arr.max()
-        if not (
-            target_firing_rate >= possible_f_min or target_firing_rate <= possible_f_max
-        ):
-            new_target_firing_rate = np.array([possible_f_min, possible_f_max])[
-                np.argmin(
-                    np.absolute(
-                        np.array([possible_f_min, possible_f_max]) - target_firing_rate
-                    )
-                )
+        I_app_arr_list = []
+        weight_list_list = []
+        pre_pop_name_list_list = []
+        rate_list_list = []
+        eff_size_list_list = []
+        ### get lists which define the current weights to the afferent populations
+        ### get lists which define the current rates of the afferent populations
+        ### get lists with the names of the afferent populations
+        ### the length of the lists has to be the number of networks i.e. the number of populations
+        for pop_name in self.pop_name_list:
+            ### get the weights, names, rates of the afferent populations
+            weight_list = self.afferent_projection_dict[pop_name]["weights"]
+            proj_name_list = self.afferent_projection_dict[pop_name]["projection_names"]
+            pre_pop_name_list = [
+                self.get_proj_dict(proj_name)["pre_pop_name"]
+                for proj_name in proj_name_list
             ]
-            self.target_firing_rate_dict[pop_name] = new_target_firing_rate
+            rate_list = self.get_rate_list_for_pop(pop_name)
+            eff_size_list = self.get_eff_size_list_for_pop(pop_name)
+            ### get the I_app_arr
+            I_app_arr = np.linspace(
+                -self.I_app_max_dict[pop_name],
+                self.I_app_max_dict[pop_name],
+                self.nr_neurons_per_net,
+            )
+            ### append these lists to the list for all post populations i.e. networks
+            weight_list_list.append(weight_list)
+            pre_pop_name_list_list.append(pre_pop_name_list)
+            rate_list_list.append(rate_list)
+            eff_size_list_list.append(eff_size_list)
+            I_app_arr_list.append(I_app_arr)
+
+        ### create model
+        net_many_dict = self.create_many_neuron_network()
+
+        ### create list with variable_init_samplers of populations
+        variable_init_sampler_list = [
+            self.net_single_dict[pop_name]["variable_init_sampler"]
+            for pop_name in self.pop_name_list
+        ]
+
+        ### get firing rates obtained with all I_app values
+        ### rates depend on the current weights and the current target firing rates
+        nr_networks = len(self.pop_name_list)
+        possible_firing_rates_list_list = parallel_run(
+            method=get_rate_parallel,
+            networks=net_many_dict["network_list"],
+            **{
+                "population": net_many_dict["population_list"],
+                "variable_init_sampler": variable_init_sampler_list,
+                "monitor": net_many_dict["monitor_list"],
+                "I_app_arr": I_app_arr_list,
+                "weight_list": weight_list_list,
+                "pre_pop_name_list": pre_pop_name_list_list,
+                "rate_list": rate_list_list,
+                "eff_size_list": eff_size_list_list,
+                "simulation_dur": [self.simulation_dur] * nr_networks,
+            },
+        )
+
+        ### catch if target firing rate in any population cannot be reached
+        I_app_best_dict = {}
+        target_firing_rate_changed = False
+        for pop_idx, pop_name in enumerate(self.pop_name_list):
             target_firing_rate = self.target_firing_rate_dict[pop_name]
-            warning_txt = f"WARNING get_possible_rates: target firing rate of population {pop_name}({target_firing_rate}) cannot be reached. Possible range: [{possible_f_min},{possible_f_max}]. Set firing rate to {new_target_firing_rate}."
-            self._p_w(warning_txt)
-            self.log(warning_txt)
-        ### find bes I_app for reaching target firing rate
-        best_idx = np.argmin(
-            np.absolute(possible_firing_rates_arr - target_firing_rate)
-        )
-        I_app_best = I_app_arr[best_idx]
+            possible_firing_rates_arr = np.array(
+                possible_firing_rates_list_list[pop_idx]
+            )
+            I_app_arr = I_app_arr_list[pop_idx]
+            print(f"firing rates for pop {pop_name}")
+            print(f"{I_app_arr}")
+            print(f"{possible_firing_rates_arr}\n")
+            possible_f_min = possible_firing_rates_arr.min()
+            possible_f_max = possible_firing_rates_arr.max()
+            if not (
+                target_firing_rate >= possible_f_min
+                and target_firing_rate <= possible_f_max
+            ):
+                new_target_firing_rate = np.array([possible_f_min, possible_f_max])[
+                    np.argmin(
+                        np.absolute(
+                            np.array([possible_f_min, possible_f_max])
+                            - target_firing_rate
+                        )
+                    )
+                ]
+                ### if the possible firing rates are too small --> what (high) firing rate could be maximally reached with a hypothetical g_ampa_max and I_app_max
+                ### if the possible firing rates are too large --> waht (low) firing rate could be reached with g_gaba_max and -I_app_max
+                warning_txt = f"WARNING get_possible_rates: target firing rate of population {pop_name}({target_firing_rate}) cannot be reached.\nPossible range with current synaptic load: [{round(possible_f_min,1)},{round(possible_f_max,1)}].\nSet firing rate to {round(new_target_firing_rate,1)}."
+                self._p_w(warning_txt)
+                self.log(warning_txt)
+                self.target_firing_rate_dict[pop_name] = new_target_firing_rate
+                target_firing_rate = self.target_firing_rate_dict[pop_name]
+                target_firing_rate_changed = True
+            ### find best I_app for reaching target firing rate
+            best_idx = np.argmin(
+                np.absolute(possible_firing_rates_arr - target_firing_rate)
+            )
+            I_app_best_dict[pop_name] = I_app_arr[best_idx]
+        if target_firing_rate_changed:
+            print_df(pd.DataFrame(self.afferent_projection_dict))
+            print_df(pd.DataFrame(self.g_max_dict))
+            ### TODO cannot reach firing rates for example for thal because I_app_max is too small, this +100Hz method seems not to work well
+            ### maybe use the weights and a voltage clamp neuron to find I_app
+            ### like with I_app_hold
+            ### weights i.e. spike trains cause dv/dt to be e.g. extremely negative --> then find I_app to make dv/dt zero
+            ### this I_app should then be "near" the I_app needed to reach the target firing rate
+            quit()
 
-        ### second search around I_app_best
-        I_app_0 = np.clip(I_app_best - I_app_max / 100, -I_app_max, I_app_max)
-        I_app_1 = np.clip(I_app_best + I_app_max / 100, -I_app_max, I_app_max)
-        I_app_arr = np.linspace(I_app_0, I_app_1, 100)
-        possible_firing_rates_arr = self.f_I_g_curve_dict[pop_name](
-            a=I_app_arr, b=g_ampa, c=g_gaba
-        )
-        target_firing_rate = self.target_firing_rate_dict[pop_name]
-        best_idx = np.argmin(possible_firing_rates_arr - target_firing_rate)
-        I_app_best = I_app_arr[best_idx]
+        return [target_firing_rate_changed, I_app_best_dict]
 
-        return I_app_best
+    def get_rate_list_for_pop(self, pop_name):
+        """
+        get the rate list for the afferent populations of the given population
+        """
+        rate_list = []
+        for proj_name in self.afferent_projection_dict[pop_name]["projection_names"]:
+            proj_dict = self.get_proj_dict(proj_name)
+            pre_pop_name = proj_dict["pre_pop_name"]
+            pre_rate = self.target_firing_rate_dict[pre_pop_name]
+            rate_list.append(pre_rate)
+        return rate_list
+
+    def get_eff_size_list_for_pop(self, pop_name):
+        """
+        get the effective size list for the afferent populations of the given population
+        """
+        eff_size_list = []
+        for proj_name in self.afferent_projection_dict[pop_name]["projection_names"]:
+            proj_dict = self.get_proj_dict(proj_name)
+            pre_pop_size = proj_dict["pre_pop_size"]
+            proj_prob = proj_dict["proj_prob"]
+            eff_size = int(round(pre_pop_size * proj_prob, 0))
+            eff_size_list.append(eff_size)
+        return eff_size_list
 
     def set_base(self, I_base_dict=None, I_base_variable="base_mean"):
         """
@@ -327,13 +1008,6 @@ class model_configurator:
         print(txt)
         self.log(txt)
         ### for each population get the input arrays for I_app, g_ampa and g_gaba
-        ### TODO catch "wrong" bounds
-        ### g_ampa_max = 0
-        ### g_gaba_max = 0
-        ### I_app_max = 0
-        ### if these values are 0 --> no interpolation steps possible
-        ### --> do interpolation only with the values which have "correct" bounds
-        ### --> need to adjust network many and interpolation process
         ### while getting inputs define which values should be used later
         input_dict = self.get_input_for_many_neurons_net()
 
@@ -344,6 +1018,7 @@ class model_configurator:
         ]
 
         ### run the run_parallel with a reduced simulation duration and obtain a time estimate for the full duration
+        ### TODO use directly measureing simulation time to get time estimate
         start = time()
         parallel_run(
             method=get_rate_parallel,
@@ -390,7 +1065,7 @@ class model_configurator:
             round(
                 (end - start - offset_time)
                 * (self.simulation_dur / self.simulation_dur_estimate_time),
-                1,
+                0,
             ),
             0,
             None,
@@ -399,7 +1074,7 @@ class model_configurator:
         txt = f"start parallel_run of many neurons network on {self.nr_networks} threads, will take approx. {time_estimate} s (end: {self.get_time_in_x_sec(x=time_estimate)})..."
         print(txt)
         self.log(txt)
-        ### simulate the many neurons network with the input arrays splitted into the network populations sizes TODO
+        ### simulate the many neurons network with the input arrays splitted into the network populations sizes
         ### and get the data of all populations
         ### run_parallel
         start = time()
@@ -425,29 +1100,14 @@ class model_configurator:
         print(txt)
         self.log(txt)
 
-        ### combine the list of outputs from parallel_run to one output per population TODO
+        ### combine the list of outputs from parallel_run to one output per population
         output_of_populations_dict = self.get_output_of_populations(
             f_rec_arr_list_list, input_dict
         )
-        for pop_idx, pop_name in enumerate(self.pop_name_list):
-            if pop_name == "stn" or pop_name == "gpe":
-                print(pop_name)
-                print("output")
-                print(output_of_populations_dict[pop_name])
-                print("I_app")
-                print(input_dict["I_app_list"][0][pop_idx])
-                print("g_ampa")
-                print(input_dict["g_ampa_list"][0][pop_idx])
-                print("g_gaba")
-                print(input_dict["g_gaba_list"][0][pop_idx])
-                print("")
 
-        ### TODO catch "wrong" bounds
-        ### maybe for one or two values tehre are wrong bounds --> only value zero
-        ### maybe do only a 2d interpolation
-        ### or a 1d interpolation
-
-        ### create interpolation
+        ### create interpolation for each population
+        ### it can be a 1D to 3D interpolation, default (if everything works fine) is
+        ### 3D interpolation with "x": "I_app", "y": "g_ampa", "z": "g_gaba"
         for pop_name in self.pop_name_list:
             ### get whole input arrays
             I_app_value_array = None
@@ -469,19 +1129,70 @@ class model_configurator:
                 y=g_ampa_value_array,
                 z=g_gaba_value_array,
             )
-            if pop_name == "stn" or pop_name == "gpe":
-                print(pop_name)
-                print("predict for all 0:")
-                print(
-                    self.f_I_g_curve_dict[pop_name](
-                        x=0,
-                        y=0,
-                        z=0,
-                    )
-                )
-        quit()
 
         self.did_get_interpolation = True
+
+        ### with interpolation get the firing rates for all extreme values of I_app, g_ampa, g_gaba
+        for pop_name in self.pop_name_list:
+            self.extreme_firing_rates_df_dict[
+                pop_name
+            ] = self.get_extreme_firing_rates_df(pop_name)
+
+    def get_extreme_firing_rates_df(self, pop_name):
+        """
+        get the firing rates for all extreme values of I_app, g_ampa, g_gaba
+
+        Args:
+            pop_name: str
+                popualtion name
+
+        return:
+            table_df: pandas dataframe
+                containing the firing rates for all extreme values of I_app, g_ampa, g_gaba
+        """
+        I_app_list = [-self.I_app_max_dict[pop_name], self.I_app_max_dict[pop_name]]
+        g_ampa_list = [0, self.g_max_dict[pop_name]["ampa"]]
+        g_gaba_list = [0, self.g_max_dict[pop_name]["gaba"]]
+        ### create all combiniations of I_app_list, g_ampa_list, g_gaba_list in a single list
+        comb_list = self.get_all_combinations_of_lists(
+            [I_app_list, g_ampa_list, g_gaba_list]
+        )
+
+        ### get the firing rates for all combinations
+        f_list = []
+        for I_app, g_ampa, g_gaba in comb_list:
+            f_list.append(
+                self.f_I_g_curve_dict[pop_name](x=I_app, y=g_ampa, z=g_gaba)[0]
+            )
+
+        ### now get the same for names
+        I_app_name_list = ["min", "max"]
+        g_ampa_name_list = ["min", "max"]
+        g_gaba_name_list = ["min", "max"]
+        ### create all combiniations of I_app_name_list, g_ampa_name_list, g_gaba_name_list in a single list
+        comb_name_list = self.get_all_combinations_of_lists(
+            [I_app_name_list, g_ampa_name_list, g_gaba_name_list]
+        )
+
+        ### create a dict as table with header I_app, g_ampa, g_gaba
+        table_dict = {
+            "I_app": np.array(comb_name_list)[:, 0].tolist(),
+            "g_ampa": np.array(comb_name_list)[:, 1].tolist(),
+            "g_gaba": np.array(comb_name_list)[:, 2].tolist(),
+            "f": f_list,
+        }
+
+        ### create a pandas dataframe from the table_dict
+        table_df = pd.DataFrame(table_dict)
+
+        return table_df
+
+    def get_all_combinations_of_lists(self, list_of_lists):
+        """
+        get all combinations of lists in a single list
+        example: [[1,2],[3,4],[5,6]] --> [[1,3,5],[1,3,6],[1,4,5],[1,4,6],[2,3,5],[2,3,6],[2,4,5],[2,4,6]]
+        """
+        return list(itertools.product(*list_of_lists))
 
     def get_output_of_populations(self, f_rec_arr_list_list, input_dict):
         """
@@ -541,32 +1252,11 @@ class model_configurator:
                 use_output_pop_dict[pop_name]
             )
 
-        print("output_pop_dict")
-        print(output_pop_dict)
-        print("use_output_pop_dict")
-        print(use_output_pop_dict)
-        print("\n")
-
         ### finaly only use values defined by ues_output...
         for pop_name in self.pop_name_list:
             output_pop_dict[pop_name] = output_pop_dict[pop_name][
                 use_output_pop_dict[pop_name]
             ]
-
-        # ### if last network was smaller --> do not use X last values
-        # if self.nr_last_network < self.nr_neurons_of_pop_per_net:
-        #     not_use_values = round(
-        #         self.nr_neurons_of_pop_per_net - self.nr_last_network, 0
-        #     )
-
-        #     for pop_name in self.pop_name_list:
-        #         output_pop_dict[pop_name][-1] = output_pop_dict[pop_name][-1][
-        #             :-not_use_values
-        #         ]
-
-        # ### concatenate the arrays of the populations
-        # for pop_name in self.pop_name_list:
-        #     output_pop_dict[pop_name] = np.concatenate(output_pop_dict[pop_name])
 
         return output_pop_dict
 
@@ -835,7 +1525,6 @@ class model_configurator:
             else:
                 if isinstance(self.x, type(None)):
                     warning_txt = f"WARNING get_interp_3p: sample points for {self.var_name_dict['x']} are given but no interpolation values for {self.var_name_dict['x']} were given!"
-                    self.model_conf_obj._p_w(warning_txt)
                     self.model_conf_obj.log(warning_txt)
                     x = None
                     tmp_x = 0
@@ -852,7 +1541,6 @@ class model_configurator:
             else:
                 if isinstance(self.y, type(None)):
                     warning_txt = f"WARNING get_interp_3p: sample points for {self.var_name_dict['y']} are given but no interpolation values for {self.var_name_dict['y']} were given!"
-                    self.model_conf_obj._p_w(warning_txt)
                     self.model_conf_obj.log(warning_txt)
                     y = None
                     tmp_y = 0
@@ -965,7 +1653,7 @@ class model_configurator:
                 For the strucutre of the dictionary check the print_guide
         """
 
-        ### synaptic load
+        ### set synaptic load
         ### is dict --> replace internal dict values
         if isinstance(synaptic_load_dict, dict):
             ### check if correct number of population
@@ -1025,13 +1713,13 @@ class model_configurator:
                 syn_load_dict[pop_name]["gaba"] = self.syn_load_dict[pop_name][1]
             elif "ampa" in self.afferent_projection_dict[pop_name]["target"]:
                 syn_load_dict[pop_name]["ampa"] = self.syn_load_dict[pop_name][0]
-                syn_load_dict[pop_name]["gaba"] = None
+                syn_load_dict[pop_name]["gaba"] = 0
             elif "gaba" in self.afferent_projection_dict[pop_name]["target"]:
-                syn_load_dict[pop_name]["ampa"] = None
+                syn_load_dict[pop_name]["ampa"] = 0
                 syn_load_dict[pop_name]["gaba"] = self.syn_load_dict[pop_name][0]
         self.syn_load_dict = syn_load_dict
 
-        ### synaptic contribution
+        ### set synaptic contribution
         if not isinstance(synaptic_contribution_dict, type(None)):
             ### loop over all given populations
             for pop_name in synaptic_contribution_dict.keys():
@@ -1040,7 +1728,7 @@ class model_configurator:
                     error_msg = f"ERROR set_syn_load: the given population {pop_name} is not within the list of populations which should be configured {self.pop_name_list}"
                     self.log(error_msg)
                     raise ValueError(error_msg)
-                ### loop over given projeciton target type (ampa,gaba)
+                ### loop over given projection target type (ampa,gaba)
                 for given_proj_target_type in synaptic_contribution_dict[
                     pop_name
                 ].keys():
@@ -1093,29 +1781,8 @@ class model_configurator:
                             proj_name
                         ]
 
-        ### create weight dict from synaptic load/contributions
-        self.weight_dict = {}
-        for pop_name in self.max_weight_dict.keys():
-            self.weight_dict[pop_name] = {}
-            for proj_target_type in self.max_weight_dict[pop_name].keys():
-                self.weight_dict[pop_name][proj_target_type] = {}
-                for proj_name in self.max_weight_dict[pop_name][
-                    proj_target_type
-                ].keys():
-                    weight_val = self.max_weight_dict[pop_name][proj_target_type][
-                        proj_name
-                    ]
-                    syn_load = self.syn_load_dict[pop_name][proj_target_type]
-                    syn_contr = self.syn_contr_dict[pop_name][proj_target_type][
-                        proj_name
-                    ]
-                    weight_val_scaled = weight_val * syn_load * syn_contr
-                    self.weight_dict[pop_name][proj_target_type][
-                        proj_name
-                    ] = weight_val_scaled
-
-        ### set the weights in the afferent_projection_dict
-        for pop_name in self.max_weight_dict.keys():
+        ### set the weights in the afferent_projection_dict based on the given synaptic contributions
+        for pop_name in self.pop_name_list:
             weight_list = []
             for proj_name in self.afferent_projection_dict[pop_name][
                 "projection_names"
@@ -1123,14 +1790,127 @@ class model_configurator:
                 ### get proj info
                 proj_dict = self.get_proj_dict(proj_name)
                 proj_target_type = proj_dict["proj_target_type"]
-                ### store the weight from the weight_dict within weight_list
-                weight_list.append(
-                    self.weight_dict[pop_name][proj_target_type][proj_name]
+
+                ### obtain the weight using the given syn_contr_dict and the syn_contr_max_dict (assuming max weights)
+                target_type_contr_dict = self.syn_contr_dict[pop_name][proj_target_type]
+                target_type_contr_max_dict = self.get_syn_contr_dict(
+                    pop_name=pop_name,
+                    target_type=proj_target_type,
+                    use_max_weights=True,
+                    normalize=True,
                 )
+                ### convert the synaptic contribution dicts to arrays
+                target_type_contr_arr = np.array(list(target_type_contr_dict.values()))
+                target_type_contr_max_arr = np.array(
+                    list(target_type_contr_max_dict.values())
+                )
+                ### get the transformation from synaptic contributions assuming max weights to given synaptic contributions
+                contr_transform_arr = target_type_contr_max_arr / target_type_contr_arr
+                ### normalize the transform_arr by the largest scaling --> obtain the weight factors
+                contr_transform_arr /= contr_transform_arr.max()
+                ### get the weight of the current projection
+                weight = (
+                    self.g_max_dict[pop_name][proj_target_type]
+                    * contr_transform_arr[
+                        list(target_type_contr_dict.keys()).index(proj_name)
+                    ]
+                )
+                ### append weight to weight list
+                weight_list.append(weight)
+            ### replace the weights in the afferent_projection_dict
             self.afferent_projection_dict[pop_name]["weights"] = weight_list
+
+        ### now scale the weights based on the synaptic load
+        for pop_name in self.pop_name_list:
+            for target_type in ["ampa", "gaba"]:
+                ### get the synaptic load based on the weights
+                syn_load = self.get_syn_load(pop_name=pop_name, target_type=target_type)
+                ### if the obtained syn load with the weights is smaller than the given target syn load
+                ### print warning because upscaling is not possible, syn load is smaller than the user wanted
+                print(
+                    f"syn_load={syn_load}, target={self.syn_load_dict[pop_name][target_type]}"
+                )
+                if syn_load < self.syn_load_dict[pop_name][target_type]:
+                    ### the weights cannot be upscaled because syn_load was obtained with max weights
+                    ### --> print a warning
+                    warning_txt = f"WARNING set_syn_load: the synaptic load for population {pop_name} and target_type {target_type} cannot reach teh given synaptic load using the given synaptic contributions without scaling the weights over the maximum weights!\ngiven syn_load={self.syn_load_dict[pop_name][target_type]}, obtained syn_load={syn_load}"
+                    self.log(warning_txt)
+                    self._p_w(warning_txt)
+                    ### update the syn_load_dict with the obtained syn_load
+                    self.syn_load_dict[pop_name][target_type] = syn_load
+                elif syn_load > 0:
+                    ### get the weights
+                    weight_arr = np.array(
+                        self.afferent_projection_dict[pop_name]["weights"]
+                    )
+                    ### get the proj target type array
+                    proj_target_type_arr = np.array(
+                        self.afferent_projection_dict[pop_name]["target"]
+                    )
+                    ### select the weights for the target type
+                    weight_arr = weight_arr[proj_target_type_arr == target_type]
+                    ### scale the weights
+                    weight_arr *= self.syn_load_dict[pop_name][target_type] / syn_load
+                    ### update the weights in the afferent_projection_dict
+                    weight_idx_arr = np.where(proj_target_type_arr == target_type)[0]
+                    for weight_idx_new, weight_idx_original in enumerate(
+                        weight_idx_arr
+                    ):
+                        self.afferent_projection_dict[pop_name]["weights"][
+                            weight_idx_original
+                        ] = weight_arr[weight_idx_new]
 
         ### print guide
         self._p_g(_p_g_after_set_syn_load)
+
+    def get_syn_load(self, pop_name: str, target_type: str) -> float:
+        """
+        Calculates the synaptic load of a population for a given target type for the given weights of the afferent_projection_dict
+
+        Args:
+            pop_name: str
+                name of the population
+
+            target_type: str
+                either 'ampa' or 'gaba'
+
+        Returns:
+            syn_load: float
+                synaptic load of the population for the given target type
+        """
+        ### get the proj target type array
+        proj_target_type_arr = np.array(
+            self.afferent_projection_dict[pop_name]["target"]
+        )
+        if target_type in proj_target_type_arr:
+            ### get the weights
+            weight_arr = np.array(self.afferent_projection_dict[pop_name]["weights"])
+            ### select the weights for the target type
+            weight_arr = weight_arr[proj_target_type_arr == target_type]
+            ### get the pre size
+            size_arr = np.array(self.afferent_projection_dict[pop_name]["size"])
+            ### select the pre size for the target type
+            size_arr = size_arr[proj_target_type_arr == target_type]
+            ### get the probaility
+            prob_arr = np.array(self.afferent_projection_dict[pop_name]["probability"])
+            ### select the probability for the target type
+            prob_arr = prob_arr[proj_target_type_arr == target_type]
+            ### get the firing rate
+            firing_rate_arr = np.array(
+                self.afferent_projection_dict[pop_name]["target firing rate"]
+            )
+            ### select the firing rate for the target type
+            firing_rate_arr = firing_rate_arr[proj_target_type_arr == target_type]
+
+            ### get the synaptic load based on weights, sizes, probabilities and max weights
+            syn_load = np.sum(weight_arr * size_arr * prob_arr * firing_rate_arr) / (
+                self.g_max_dict[pop_name][target_type]
+                * np.sum(size_arr * prob_arr * firing_rate_arr)
+            )
+        else:
+            syn_load = 0
+
+        return syn_load
 
     def get_template_synaptic_contribution_dict(self, given_dict):
         """
@@ -1148,7 +1928,7 @@ class model_configurator:
                     )
             else:
                 if given_dict[key] < 1:
-                    ret_dict[key] = "contr"
+                    ret_dict[key] = given_dict[key]
 
         return ret_dict
 
@@ -1165,7 +1945,7 @@ class model_configurator:
 
         return result
 
-    def prepare_network_creation(self):
+    def analyze_model(self):
         """
         prepares the creation of the single neuron and many neuron networks
         """
@@ -1183,49 +1963,6 @@ class model_configurator:
             self.neuron_model_attributes_dict[pop_name] = get_population(
                 pop_name
             ).attributes
-
-        ### prepare creation of networks
-        ### get the size of the interpolation
-        nr_pop_interpolation = self.nr_vals_interpolation_grid**3
-        nr_total_neurons = nr_pop_interpolation * len(self.pop_name_list)
-        ### number of networks with size=10000 --> do not get smaller with parallel networks!
-        nr_networks_10000 = np.ceil(nr_total_neurons / 10000)
-        ### get the number of available parallel workers
-        nr_available_workers = int(multiprocessing.cpu_count() / 2)
-        ### now use the smaller number of networks
-        nr_networks = int(min([nr_networks_10000, nr_available_workers]))
-        ### now get the number of neurons each population of the many neuron network should have
-        ### evenly distribute all neurons over the number of networks
-        nr_neurons_of_pop_per_net = int(np.ceil(nr_pop_interpolation / nr_networks))
-        nr_total_neurons = round(nr_pop_interpolation * len(self.pop_name_list), 0)
-        self.log(f"nr_vals_interpolation_grid: {self.nr_vals_interpolation_grid}")
-        self.log(f"nr_pop_interpolation: {nr_pop_interpolation}")
-        self.log(f"nr_pop: {len(self.pop_name_list)}")
-        self.log(f"nr_total_neurons: {nr_total_neurons}")
-        self.log(
-            f"nr_neurons_of_pop_per_net: {nr_neurons_of_pop_per_net}; times nr_networks: {nr_neurons_of_pop_per_net*nr_networks}"
-        )
-        self.log(
-            f"nr_neurons_of_per_net: {nr_neurons_of_pop_per_net * len(self.pop_name_list)}"
-        )
-        self.log(f"nr_networks: {nr_networks}")
-        ### this nr of neurons of pop per network may result in too mcuh neurons per pop --> check if all networks are fully needed
-        ### correct nr networks
-        self.nr_networks = int(
-            np.ceil(nr_pop_interpolation / nr_neurons_of_pop_per_net)
-        )
-        self.nr_last_network = round(
-            nr_neurons_of_pop_per_net
-            - (
-                round(nr_neurons_of_pop_per_net * self.nr_networks, 0)
-                - nr_pop_interpolation
-            ),
-            0,
-        )
-        self.log(
-            f"nr_networks corrected: {nr_pop_interpolation / nr_neurons_of_pop_per_net} --> {self.nr_networks} with {self.nr_last_network} neurons to use from last network"
-        )
-        self.nr_neurons_of_pop_per_net = nr_neurons_of_pop_per_net
 
         ### do further things for which the model needs to be created
         ### get the afferent projection dict for the populations (model needed!)
@@ -1248,88 +1985,18 @@ class model_configurator:
         for proj_name in self.model.projections:
             self.post_pop_name_dict[proj_name] = get_projection(proj_name).post.name
 
+        ### get the pre_pop_name_dict
+        self.pre_pop_name_dict = {}
+        for proj_name in self.model.projections:
+            self.pre_pop_name_dict[proj_name] = get_projection(proj_name).pre.name
+
+        ### get the pre_pop_size_dict
+        self.pre_pop_size_dict = {}
+        for proj_name in self.model.projections:
+            self.pre_pop_size_dict[proj_name] = get_projection(proj_name).pre.size
+
         ### clear ANNarchy --> the model is not available anymore
         cnp_clear()
-
-    def create_single_neuron_networks(self):
-        ### clear ANNarchy
-        cnp_clear()
-        ### create the single neuron networks
-        for pop_name in self.pop_name_list:
-            self.log(f"create network_single for {pop_name}")
-            ### the network with the standard neuron
-            self.net_single_dict[pop_name] = self.create_net_single(pop_name=pop_name)
-            ### the network with the voltage clamp version neuron
-            self.net_single_v_clamp_dict[
-                pop_name
-            ] = self.create_net_single_voltage_clamp(pop_name=pop_name)
-
-    def get_max_syn(self):
-        """
-        get the weight dictionary for all populations given in target_firing_rate_dict
-        keys = population names, values = dict which contain values = afferent projection names, values = lists with w_min and w_max
-        """
-
-        ### create single neuron networks
-        self.create_single_neuron_networks()
-
-        ### get max synaptic things with single neuron networks
-        for pop_name in self.pop_name_list:
-            self.log(pop_name)
-            ### get max synaptic currents (I and gs) using the single neuron networks
-            self.log(
-                f"get max I_app, g_ampa and g_gaba using network_single for {pop_name}"
-            )
-            I_app_max, g_ampa_max, g_gaba_max = self.get_max_syn_currents(
-                pop_name=pop_name
-            )
-            self.I_app_max_dict[pop_name] = I_app_max
-            self.g_max_dict[pop_name] = {
-                "ampa": g_ampa_max,
-                "gaba": g_gaba_max,
-            }
-            ### get the max_weight dict
-            self.log(f"get the max_weight_dict for {pop_name}")
-            self.max_weight_dict[pop_name] = self.get_max_weight_dict_for_pop(pop_name)
-
-        ### print next steps
-        ### create the synaptic load template dict
-        self.syn_load_dict = {}
-        for pop_name in self.pop_name_list:
-            self.syn_load_dict[pop_name] = []
-            if "ampa" in self.afferent_projection_dict[pop_name]["target"]:
-                self.syn_load_dict[pop_name].append("ampa_load")
-            if "gaba" in self.afferent_projection_dict[pop_name]["target"]:
-                self.syn_load_dict[pop_name].append("gaba_load")
-        ### create the synaptic contribution template dict
-        self.syn_contr_dict = {}
-        for pop_name in self.max_weight_dict.keys():
-            self.syn_contr_dict[pop_name] = {}
-
-            for target_type in ["ampa", "gaba"]:
-                self.syn_contr_dict[pop_name][target_type] = {}
-
-                nr_afferent_proj_with_target = len(
-                    list(self.max_weight_dict[pop_name][target_type].keys())
-                )
-                for proj_name in self.max_weight_dict[pop_name][target_type].keys():
-                    self.syn_contr_dict[pop_name][target_type][proj_name] = (
-                        1 / nr_afferent_proj_with_target
-                    )
-        ### only return synaptic contributions smaller 1
-        template_synaptic_contribution_dict = (
-            self.get_template_synaptic_contribution_dict(given_dict=self.syn_contr_dict)
-        )
-
-        self._p_g(
-            _p_g_after_get_weights(
-                template_weight_dict=self.max_weight_dict,
-                template_synaptic_load_dict=self.syn_load_dict,
-                template_synaptic_contribution_dict=template_synaptic_contribution_dict,
-            )
-        )
-
-        return self.max_weight_dict
 
     def compile_net_many_sequential(self):
         network_list = [
@@ -1432,29 +2099,20 @@ class model_configurator:
 
         return afferent_projection_dict
 
-    def get_max_syn_currents(self, pop_name):
+    def get_max_syn_currents(self, pop_name: str) -> list:
         """
         obtain I_app_max, g_ampa_max and g_gaba max.
         f_max = f_0 + f_t + 100
         I_app_max causes f_max (increases f from f_0 to f_max)
-        g_ampa_max causes f_max (increases f from f_0 to f_max)
-        I_gaba_max causes f_0 while I_app=I_app_max (decreases f from f_max to f_0)
-
-        TODO:
-            reaching f_max does not work well sometimes extreme values of I are needed and then the max values for the conductances gets extreme as well
-            --> first get max g_ampa and g_gaba with a max PSP:
-                a single spike causes conductance to increase shortly and the resulting snypatic current changes v
-                start at resting potential than produce a single spike and record v and get the peak of v
-                for g_ampa a peak = a minimum of v
-                for g_gaba a peak = a minimum of v
-                with max of g_ampa get max firing rate and with this max firing rate get max I_app
+        g_gaba_max causes max IPSP
+        g_ampa_max cancels out g_gaba_max IPSP
 
         Args:
             pop_name: str
                 population name from original model
 
         return:
-            list containing [I_may, g_ampa_max, g_gaba_max]
+            list containing [I_max, g_ampa_max, g_gaba_max]
 
         Abbreviations:
             f_max: max firing rate
@@ -1464,48 +2122,62 @@ class model_configurator:
             f_t: target firing rate
         """
 
-        ### set max psp for a single spike
-        self.max_psp_dict[pop_name] = 10
-
-        ### find g_ampa max
-        self.log("search g_ampa_max with y(X) = PSP(g_ampa=X, g_gaba=0)")
-        g_ampa_max = self.incremental_continuous_bound_search(
-            y_X=lambda X_val: self.get_psp(
-                net=self.net_single_v_clamp_dict[pop_name]["net"],
-                population=self.net_single_v_clamp_dict[pop_name]["population"],
-                variable_init_sampler=self.net_single_v_clamp_dict[pop_name][
-                    "variable_init_sampler"
-                ],
-                monitor=self.net_single_v_clamp_dict[pop_name]["monitor"],
-                g_ampa=X_val,
-            ),
-            y_bound=self.max_psp_dict[pop_name],
-            X_0=0,
-            y_0=0,
-            alpha_abs=0.1,
-            X_increase=0.1,
-        )
-
-        ### find g_gaba max
+        ### TODO: problem for g_gaba: what if resting potential is <=-90...
+        ### find g_gaba max using max IPSP
         self.log("search g_gaba_max with y(X) = PSP(g_ampa=0, g_gaba=X)")
         g_gaba_max = self.incremental_continuous_bound_search(
-            y_X=lambda X_val: self.get_psp(
-                net=self.net_single_v_clamp_dict[pop_name]["net"],
-                population=self.net_single_v_clamp_dict[pop_name]["population"],
-                variable_init_sampler=self.net_single_v_clamp_dict[pop_name][
+            y_X=lambda X_val: self.get_ipsp(
+                net=self.net_single_dict[pop_name]["net"],
+                population=self.net_single_dict[pop_name]["population"],
+                variable_init_sampler=self.prepare_psp_dict[pop_name][
                     "variable_init_sampler"
                 ],
-                monitor=self.net_single_v_clamp_dict[pop_name]["monitor"],
+                monitor=self.net_single_dict[pop_name]["monitor"],
+                I_app_hold=self.prepare_psp_dict[pop_name]["I_app_hold"],
                 g_gaba=X_val,
             ),
             y_bound=self.max_psp_dict[pop_name],
             X_0=0,
             y_0=0,
-            alpha_abs=0.1,
+            alpha_abs=0.005,
             X_increase=0.1,
         )
 
-        ### get f_0 and f_max with g_ampa_max
+        ### for g_ampa EPSPs can lead to spiking
+        ### --> find g_ampa max by "overriding" IPSP of g_gaba max
+        self.log(
+            f"search g_ampa_max with y(X) = PSP(g_ampa=X, g_gaba=g_gaba_max={g_gaba_max})"
+        )
+        g_ampa_max = self.incremental_continuous_bound_search(
+            y_X=lambda X_val: self.get_ipsp(
+                net=self.net_single_dict[pop_name]["net"],
+                population=self.net_single_dict[pop_name]["population"],
+                variable_init_sampler=self.prepare_psp_dict[pop_name][
+                    "variable_init_sampler"
+                ],
+                monitor=self.net_single_dict[pop_name]["monitor"],
+                I_app_hold=self.prepare_psp_dict[pop_name]["I_app_hold"],
+                g_ampa=X_val,
+                g_gaba=g_gaba_max,
+            ),
+            y_bound=0,
+            X_0=0,
+            y_0=self.get_ipsp(
+                net=self.net_single_dict[pop_name]["net"],
+                population=self.net_single_dict[pop_name]["population"],
+                variable_init_sampler=self.prepare_psp_dict[pop_name][
+                    "variable_init_sampler"
+                ],
+                monitor=self.net_single_dict[pop_name]["monitor"],
+                I_app_hold=self.prepare_psp_dict[pop_name]["I_app_hold"],
+                g_ampa=0,
+                g_gaba=g_gaba_max,
+            ),
+            alpha_abs=0.005,
+            X_increase=g_gaba_max / 10,
+        )
+
+        ### get f_0 and f_max
         f_0 = self.get_rate(
             net=self.net_single_dict[pop_name]["net"],
             population=self.net_single_dict[pop_name]["population"],
@@ -1514,20 +2186,11 @@ class model_configurator:
             ],
             monitor=self.net_single_dict[pop_name]["monitor"],
         )[0]
-        f_max = self.get_rate(
-            net=self.net_single_dict[pop_name]["net"],
-            population=self.net_single_dict[pop_name]["population"],
-            variable_init_sampler=self.net_single_dict[pop_name][
-                "variable_init_sampler"
-            ],
-            monitor=self.net_single_dict[pop_name]["monitor"],
-            g_ampa=g_ampa_max,
-        )[0]
-        self.log(f"pop={pop_name}, f_0={f_0}, f_max={f_max}")
+        f_max = f_0 + self.target_firing_rate_dict[pop_name] + 100
 
         ### find I_max with f_0, and f_max using incremental_continuous_bound_search
         self.log("search I_app_max with y(X) = f(I_app=X, g_ampa=0, g_gaba=0)")
-        I_max = self.incremental_continuous_bound_search(
+        I_max = 5 * self.incremental_continuous_bound_search(
             y_X=lambda X_val: self.get_rate(
                 net=self.net_single_dict[pop_name]["net"],
                 population=self.net_single_dict[pop_name]["population"],
@@ -1557,6 +2220,8 @@ class model_configurator:
         X_increase=1,
         saturation_thresh=10,
         saturation_warning=True,
+        accept_non_dicontinuity=False,
+        bound_type="equal",
     ):
         """
         you have system X --> y
@@ -1604,6 +2269,15 @@ class model_configurator:
             saturation_warning: bool, optional, default=True
                 if you want to get a warning when the saturation is reached during search
 
+            accept_non_dicontinuity: bool, optional, default=False
+                if you do not want to search only in the first continuous search space
+
+            bound_type: str, optional, default="equal"
+                equal, greater or less
+                equal: result should be near bound within tolerance
+                greater: result should be at least larger bound within tolerance
+                less: result should be smaller bound within tolerance
+
         return:
             X_bound:
                 X value which causes y=y_bound
@@ -1621,24 +2295,43 @@ class model_configurator:
             tolerance = alpha_abs
 
         ### define stop condition
-        stop_condition = (
-            lambda y_val, n_it: (
-                ((y_bound - tolerance) <= y_val) and (y_val <= (y_bound + tolerance))
+        if bound_type == "equal":
+            stop_condition = (
+                lambda y_val, n_it: (
+                    ((y_bound - tolerance) <= y_val)
+                    and (y_val <= (y_bound + tolerance))
+                )
+                or n_it >= n_it_max
             )
-            or n_it >= n_it_max
-        )
+        elif bound_type == "greater":
+            stop_condition = (
+                lambda y_val, n_it: (
+                    ((y_bound - 0) <= y_val) and (y_val <= (y_bound + 2 * tolerance))
+                )
+                or n_it >= n_it_max
+            )
+        elif bound_type == "less":
+            stop_condition = (
+                lambda y_val, n_it: (
+                    ((y_bound - 2 * tolerance) <= y_val) and (y_val <= (y_bound + 0))
+                )
+                or n_it >= n_it_max
+            )
+
+        ### check if y(X) is increasing
+        is_increasing = y_bound > y_0
 
         ### search for X_val
         X_list_predict = [X_0]
         y_list_predict = [y_0]
         X_list_all = [X_0]
         y_list_all = [y_0]
-        n_it = 0
+        n_it_first_round = 0
         X_val = X_0 + X_increase
         y_val = y_0
         y_not_changed_counter = 0
         X_change_predicted = X_increase
-        while not stop_condition(y_val, n_it):
+        while not stop_condition(y_val, n_it_first_round):
             ### get y_val for X
             y_val_pre = y_val
             y_val = y_X(X_val)
@@ -1659,13 +2352,16 @@ class model_configurator:
                     X=y_list_predict, y=X_list_predict, X_pred=y_bound
                 )[0]
                 X_change_predicted = X_val - X_val_pre
+                ### now actually update X_val
+                X_val = X_val_pre + X_change_predicted * (1 + y_not_changed_counter / 2)
             else:
                 ### just increase X_val
-                X_val = X_val + X_change_predicted
+                X_val = X_val + X_change_predicted * (1 + y_not_changed_counter / 2)
 
             ### check saturation of y_val
             if abs(y_change) < tolerance:
                 ### increase saturation counter
+                ### saturation counter also increases updates of X_val
                 y_not_changed_counter += 1
             else:
                 ### reset saturation counter
@@ -1676,11 +2372,11 @@ class model_configurator:
                 break
 
             ### increase iterator
-            n_it += 1
+            n_it_first_round += 1
 
         ### catch the initial point already satisified stop condition
         if len(X_list_all) == 1:
-            warning_txt = f"WARNING incremental_continuous_bound_search: search did not start because initial point already satisfied stop condition!"
+            warning_txt = "WARNING incremental_continuous_bound_search: search did not start because initial point already satisfied stop condition!"
             self._p_w(warning_txt)
             self.log(warning_txt)
             return X_0
@@ -1706,26 +2402,93 @@ class model_configurator:
         idx_best = np.argmin(np.absolute(np.array(y_list_predict) - y_bound))
         X_bound = X_list_predict[idx_best]
 
+        ### sort y_list_predict and corresponding X_list_predict
+        ### get value pair which is before bound and value pair which is behind bound
+        ### if this does not work... use previous X_0 and X_bound
+        sort_idx_arr = np.argsort(y_list_predict)
+        X_arr_predict_sort = np.array(X_list_predict)[sort_idx_arr]
+        y_arr_predict_sort = np.array(y_list_predict)[sort_idx_arr]
+        over_y_bound_arr = y_arr_predict_sort > y_bound
+        over_y_bound_changed_idx = np.where(np.diff(over_y_bound_arr))[0]
+        if len(over_y_bound_changed_idx) == 1:
+            if over_y_bound_changed_idx[0] < len(y_arr_predict_sort):
+                X_aside_change_list = [
+                    X_arr_predict_sort[over_y_bound_changed_idx[0]],
+                    X_arr_predict_sort[over_y_bound_changed_idx[0] + 1],
+                ]
+                y_aside_change_list = [
+                    y_arr_predict_sort[over_y_bound_changed_idx[0]],
+                    y_arr_predict_sort[over_y_bound_changed_idx[0] + 1],
+                ]
+                X_0 = min(X_aside_change_list)
+                X_bound = max(X_aside_change_list)
+                y_0 = min(y_aside_change_list)
+        self.log("predict sorted:")
+        self.log(np.array([X_arr_predict_sort, y_arr_predict_sort, over_y_bound_arr]).T)
+        self.log(over_y_bound_changed_idx)
+
         ### if y cannot get larger or smaller than y_bound one has to check if you not "overshoot" with X_bound
-        ### --> fine tune result by investigating the space between X_0 and X_bound and preict a new X_bound
+        ### --> fine tune result by investigating the space between X_0 and X_bound and predict a new X_bound
         self.log(f"X_0: {X_0}, X_bound:{X_bound} for final predict list")
         X_space_arr = np.linspace(X_0, X_bound, 100)
-        y_val = y_0
+        y_val = y_0 - [-1, 1][int(is_increasing)]
         X_list_predict = []
         y_list_predict = []
+        X_list_all = []
         y_list_all = []
+        did_break = False
+        n_it_second_round = 0
         for X_val in X_space_arr:
             y_val_pre = y_val
             y_val = y_X(X_val)
+            X_list_all.append(X_val)
             y_list_all.append(y_val)
             if y_val != y_val_pre:
                 ### if y_val changed
                 ### append X_val and y_val to y_list/X_list
                 y_list_predict.append(y_val)
                 X_list_predict.append(X_val)
+            ### if already over y_bound -> stop
+            if y_val > y_bound and is_increasing:
+                did_break = True
+                break
+            if y_val < y_bound and not is_increasing:
+                did_break = True
+                break
+            n_it_second_round += 1
+        ### if did break early --> use again finer bounds
+        if did_break and n_it_second_round < 90:
+            X_space_arr = np.linspace(
+                X_list_predict[-2], X_list_predict[-1], 100 - n_it_second_round
+            )
+            y_val = y_list_predict[-2]
+            for X_val in X_space_arr:
+                y_val_pre = y_val
+                y_val = y_X(X_val)
+                X_list_all.append(X_val)
+                y_list_all.append(y_val)
+                if y_val != y_val_pre:
+                    ### if y_val changed
+                    ### append X_val and y_val to y_list/X_list
+                    y_list_predict.append(y_val)
+                    X_list_predict.append(X_val)
+                ### if already over y_bound -> stop
+                if y_val > y_bound and is_increasing:
+                    break
+                if y_val < y_bound and not is_increasing:
+                    break
+        ### sort value lists
+        sort_idx_all_arr = np.argsort(X_list_all)
+        X_list_all = (np.array(X_list_all)[sort_idx_all_arr]).tolist()
+        y_list_all = (np.array(y_list_all)[sort_idx_all_arr]).tolist()
+        sort_idx_predict_arr = np.argsort(X_list_predict)
+        X_list_predict = (np.array(X_list_predict)[sort_idx_predict_arr]).tolist()
+        y_list_predict = (np.array(y_list_predict)[sort_idx_predict_arr]).tolist()
+
+        ### log
         self.log("final predict lists:")
         self.log("all:")
-        self.log(np.array([X_space_arr, y_list_all]).T)
+        self.log(np.array([X_list_all, y_list_all]).T)
         self.log("predict:")
         self.log(np.array([X_list_predict, y_list_predict]).T)
 
@@ -1734,12 +2497,11 @@ class model_configurator:
         first_y_used_in_predict = y_list_predict[0]
         idx_first_y_in_all = y_list_all.index(first_y_used_in_predict)
         y_list_all = y_list_all[idx_first_y_in_all:]
-        X_space_arr = y_list_all[idx_first_y_in_all:]
         ### get discontinuity
         discontinuity_idx_list = self.get_discontinuity_idx_list(y_list_all)
         self.log("discontinuity_idx_list")
         self.log(f"{discontinuity_idx_list}")
-        if len(discontinuity_idx_list) > 0:
+        if len(discontinuity_idx_list) > 0 and not accept_non_dicontinuity:
             ### there is a discontinuity
             discontinuity_idx = discontinuity_idx_list[0]
             ### only use values until discontinuity
@@ -1757,17 +2519,27 @@ class model_configurator:
             )
         else:
             ### there is no discontinuity
-            ### now predict final X_val
-            X_val = self.predict_1d(X=y_list_predict, y=X_list_predict, X_pred=y_bound)[
-                0
-            ]
+            ### there can still be duplicates in the y_list --> remove them
+            ### get arrays
+            X_arr_predict = np.array(X_list_predict)
+            y_arr_predict = np.array(y_list_predict)
+            ### get unique indices
+            _, unique_indices = np.unique(y_arr_predict, return_index=True)
+            ### get arrays without duplicates in y_list
+            X_arr_predict = X_arr_predict[unique_indices]
+            y_arr_predict = y_arr_predict[unique_indices]
+
+            ### now predict final X_val using y_arr
+            X_val = self.predict_1d(
+                X=y_arr_predict, y=X_arr_predict, X_pred=y_bound, linear=False
+            )[0]
             y_val = y_X(X_val)
 
             ### append it to lists
             X_list_predict.append(X_val)
             y_list_predict.append(y_val)
 
-            ### ifnd best
+            ### find best
             idx_best = np.argmin(np.absolute(np.array(y_list_predict) - y_bound))
             X_val_best = X_list_predict[idx_best]
             y_val_best = y_list_predict[idx_best]
@@ -1776,7 +2548,7 @@ class model_configurator:
             self.log(f"final values: X={X_val_best}, y={y_val_best}")
 
         ### warning for max iteration search
-        if not (n_it < n_it_max):
+        if not (n_it_first_round < n_it_max):
             warning_txt = f"WARNING incremental_continuous_bound_search: reached max iterations to find X_bound to get y_bound={y_bound}, found X_bound causes y={y_val_best}"
             self._p_w(warning_txt)
             self.log(warning_txt)
@@ -1801,21 +2573,32 @@ class model_configurator:
 
         return peaks_idx_list
 
-    def predict_1d(self, X, y, X_pred):
+    def predict_1d(self, X, y, X_pred, linear=True):
         """
         Args:
             X: array-like
                 X values
+
             y: array-like
                 y values, same size as X_values
+
             X_pred: array-like or number
                 X value(s) for which new y value(s) are predicted
+
+            linear: bool, optional, default=True
+                if interpolation is linear
 
         return:
             Y_pred_arr: array
                 predicted y values for X_pred
         """
-        y_X = interp1d(x=X, y=y, fill_value="extrapolate")
+        if not linear:
+            if len(X) >= 4:
+                y_X = interp1d(x=X, y=y, fill_value="extrapolate", kind="cubic")
+            elif len(X) >= 3:
+                y_X = interp1d(x=X, y=y, fill_value="extrapolate", kind="quadratic")
+        else:
+            y_X = interp1d(x=X, y=y, fill_value="extrapolate", kind="linear")
         y_pred_arr = y_X(X_pred)
         return y_pred_arr.reshape(1)
 
@@ -1966,12 +2749,13 @@ class model_configurator:
 
         return f_arr
 
-    def get_psp(
+    def get_ipsp(
         self,
-        net,
-        population,
+        net: Network,
+        population: Population,
         variable_init_sampler,
         monitor,
+        I_app_hold,
         g_ampa=0,
         g_gaba=0,
         do_plot=False,
@@ -2004,29 +2788,32 @@ class model_configurator:
         for var_idx, var_name in enumerate(population.variables):
             set_val = variable_init_arr[:, var_idx]
             setattr(population, var_name, set_val)
-        ### apply no input
-        population.I_app = 0
-        population.g_ampa = 0
-        population.g_gaba = 0
+        ### apply input
+        population.I_app = I_app_hold
         ### simulate 50 ms initial duration
         net.simulate(50)
-        ### apply given conductances --> changes v_clamp_rec
-        v_clamp_rec_rest = population.v_clamp_rec[0]
-        population.v_clamp_rec_thresh = v_clamp_rec_rest
+        ### apply given conductances --> changes v
+        v_rec_rest = population.v[0]
+        population.v_psp_thresh = v_rec_rest
         population.g_ampa = g_ampa
         population.g_gaba = g_gaba
-        ### simulate until v_clamp_rec is near v_clamp_rec_rest again
+        ### simulate until v is near v_rec_rest again
         net.simulate_until(max_duration=self.simulation_dur, population=population)
-        ### get the psp = maximum of difference of v_clamp_rec and v_clamp_rec_rest
-        v_clamp_rec = monitor.get("v_clamp_rec")[:, 0]
-        psp = float(np.absolute(v_clamp_rec - v_clamp_rec_rest).max())
+        ### get the psp = maximum of difference of v_rec and v_rec_rest
+        v_rec = monitor.get("v")[:, 0]
+        spike_dict = monitor.get("spike")
+        spike_timestep_list = spike_dict[0] + [net.get_current_step()]
+        end_timestep = int(round(min(spike_timestep_list), 0))
+        psp = float(
+            np.absolute(np.clip(v_rec[:end_timestep] - v_rec_rest, None, 0)).max()
+        )
 
         if do_plot:
             plt.figure()
             plt.title(
-                f"g_ampa={g_ampa}, g_gaba={g_gaba}, v_clamp_rec_rest={v_clamp_rec_rest}, psp={psp}"
+                f"g_ampa={g_ampa}\ng_gaba={g_gaba}\nv_rec_rest={v_rec_rest}\npsp={psp}"
             )
-            plt.plot(v_clamp_rec)
+            plt.plot(v_rec)
             plt.savefig(
                 f"tmp_psp_{population.name}_{int(g_ampa*1000)}_{int(g_gaba*1000)}.png"
             )
@@ -2053,183 +2840,181 @@ class model_configurator:
         """
         self.log("create many neurons network")
 
-        ### clear ANNarchy
-        cnp_clear()
-
-        ### for each population of the given model which should be configured create a population for the many neurons network with a given size
-        many_neuron_population_dict = {}
-        many_neuron_monitor_dict = {}
+        ### for each population of the given model which should be configured
+        ### create a population with a given size
+        ### create a monitor recording spikes
+        ### create a network containing the population and the monitor
+        many_neuron_population_list = []
+        many_neuron_monitor_list = []
+        many_neuron_network_list = []
         for pop_name in self.pop_name_list:
+            ### create the neuron model with poisson spike trains
+            ### get the initial arguments of the neuron
+            neuron_model = self.neuron_model_dict[pop_name]
+            ### names of arguments
+            init_arguments_name_list = list(Neuron.__init__.__code__.co_varnames)
+            init_arguments_name_list.remove("self")
+            init_arguments_name_list.remove("name")
+            init_arguments_name_list.remove("description")
+            ### arguments dict
+            init_arguments_dict = {
+                init_arguments_name: getattr(neuron_model, init_arguments_name)
+                for init_arguments_name in init_arguments_name_list
+            }
+            ### get the afferent populations
+            afferent_population_list = []
+            proj_target_type_list = []
+            for proj_name in self.afferent_projection_dict[pop_name][
+                "projection_names"
+            ]:
+                proj_dict = self.get_proj_dict(proj_name)
+                pre_pop_name = proj_dict["pre_pop_name"]
+                afferent_population_list.append(pre_pop_name)
+                proj_target_type_list.append(proj_dict["proj_target_type"])
+
+            ### for each afferent population create a poisson spike train equation string
+            ### add it to the equations
+            ### and add the related parameters to the parameters
+
+            ### split the equations and parameters string
+            equations_line_split_list = str(
+                init_arguments_dict["equations"]
+            ).splitlines()
+
+            parameters_line_split_list = str(
+                init_arguments_dict["parameters"]
+            ).splitlines()
+
+            ### loop over afferent populations to add the new equation lines and parameters
+            for pre_pop_name in afferent_population_list:
+                ### define the spike train of a pre population as a binomial process with number of trials = number of pre neurons and success probability = spike probability (taken from Poisson neurons)
+                ### the obtained value is the number of spikes at a time step times the weight
+                poisson_equation_str = f"{pre_pop_name}_spike_train = Binomial({pre_pop_name}_size, {pre_pop_name}_spike_prob)"
+                ### add the equation line
+                equations_line_split_list.insert(1, poisson_equation_str)
+                ### add the parameters
+                parameters_line_split_list.append(
+                    f"{pre_pop_name}_size = 0 : population"
+                )
+                parameters_line_split_list.append(
+                    f"{pre_pop_name}_spike_prob = 0 : population"
+                )
+                parameters_line_split_list.append(
+                    f"{pre_pop_name}_weight = 0 : population"
+                )
+
+            ### change the g_ampa and g_gaba line, they additionally are the sum of the spike trains
+            for equation_line_idx, equation_line in enumerate(
+                equations_line_split_list
+            ):
+                ### remove whitespaces
+                line = equation_line.replace(" ", "")
+                ### check if line contains g_ampa
+                if "dg_ampa/dt" in line:
+                    ### get the right side of the equation
+                    line_right = line.split("=")[1]
+                    line_left = line.split("=")[0]
+                    ### remove and store tags_str
+                    tags_str = ""
+                    if len(line_right.split(":")) > 1:
+                        line_right, tags_str = line_right.split(":")
+                    ### get the populations whose spike train should be appended in g_ampa
+                    afferent_population_to_append_list = []
+                    for pre_pop_idx, pre_pop_name in enumerate(
+                        afferent_population_list
+                    ):
+                        if proj_target_type_list[pre_pop_idx] == "ampa":
+                            afferent_population_to_append_list.append(pre_pop_name)
+                    if len(afferent_population_to_append_list) > 0:
+                        ### change right side, add the sum of the spike trains
+                        line_right = f"{line_right} + {'+'.join([f'({pre_pop_name}_spike_train*{pre_pop_name}_weight)/dt' for pre_pop_name in afferent_population_to_append_list])}"
+                    ### add tags_str again
+                    if tags_str != "":
+                        line_right = f"{line_right}:{tags_str}"
+                    ### combine line again and replace the list entry in equations_line_split_list
+                    line = f"{line_left}={line_right}"
+                    equations_line_split_list[equation_line_idx] = line
+
+                ### check if line contains g_gaba
+                if "dg_gaba/dt" in line:
+                    ### get the right side of the equation
+                    line_right = line.split("=")[1]
+                    line_left = line.split("=")[0]
+                    ### remove and store tags_str
+                    tags_str = ""
+                    if len(line_right.split(":")) > 1:
+                        line_right, tags_str = line_right.split(":")
+                    ### get the populations whose spike train should be appended in g_ampa
+                    afferent_population_to_append_list = []
+                    for pre_pop_idx, pre_pop_name in enumerate(
+                        afferent_population_list
+                    ):
+                        if proj_target_type_list[pre_pop_idx] == "gaba":
+                            afferent_population_to_append_list.append(pre_pop_name)
+                    if len(afferent_population_to_append_list) > 0:
+                        ### change right side, add the sum of the spike trains
+                        line_right = f"{line_right} + {'+'.join([f'({pre_pop_name}_spike_train*{pre_pop_name}_weight)/dt' for pre_pop_name in afferent_population_to_append_list])}"
+                    ### add tags_str again
+                    if tags_str != "":
+                        line_right = f"{line_right}:{tags_str}"
+                    ### combine line again and replace the list entry in equations_line_split_list
+                    line = f"{line_left}={line_right}"
+                    equations_line_split_list[equation_line_idx] = line
+
+            ### combine string lines to multiline strings again
+            init_arguments_dict["parameters"] = "\n".join(parameters_line_split_list)
+            init_arguments_dict["equations"] = "\n".join(equations_line_split_list)
+
+            ### create neuron model with new equations
+            neuron_model_new = Neuron(**init_arguments_dict)
+
+            # print("new neuron model:")
+            # print(neuron_model_new)
+
             ### create the many neuron population
-            many_neuron_population_dict[pop_name] = Population(
-                geometry=self.nr_neurons_of_pop_per_net,
-                neuron=self.neuron_model_dict[pop_name],
+            my_pop = Population(
+                geometry=self.nr_neurons_per_net,
+                neuron=neuron_model_new,
                 name=f"many_neuron_{pop_name}",
             )
 
             ### set the attributes of the neurons
             for attr_name, attr_val in self.neuron_model_parameters_dict[pop_name]:
-                setattr(many_neuron_population_dict[pop_name], attr_name, attr_val)
+                setattr(my_pop, attr_name, attr_val)
 
             ### create Monitor for many neuron
-            many_neuron_monitor_dict[pop_name] = Monitor(
-                many_neuron_population_dict[pop_name], ["spike"]
-            )
+            my_mon = Monitor(my_pop, ["spike"])
 
-        ### compile the network
-        compile_in_folder(folder_name="many_neurons_net", silent=True)
+            ### create the network with population and monitor
+            my_net = Network()
+            my_net.add(my_pop)
+            my_net.add(my_mon)
+
+            ### compile network
+            compile_in_folder(folder_name=f"many_neuron_{pop_name}", net=my_net)
+
+            ### append the lists
+            many_neuron_network_list.append(my_net)
+            many_neuron_population_list.append(my_net.get(my_pop))
+            many_neuron_monitor_list.append(my_net.get(my_mon))
 
         net_many_dict = {
-            "population_dict": many_neuron_population_dict,
-            "monitor_dict": many_neuron_monitor_dict,
+            "network_list": many_neuron_network_list,
+            "population_list": many_neuron_population_list,
+            "monitor_list": many_neuron_monitor_list,
         }
         return net_many_dict
 
-    def create_net_single(self, pop_name):
+    def get_v_clamp_2000(self, net, population, v=None, I_app=None):
         """
-        creates a network with the neuron type of the population given by pop_name
-        the number of neurons is 1
-
-        Args:
-            pop_name: str
-                population name
+        the returned values is dv/dt
+        --> to get the hypothetical change of v for a single time step multiply with dt!
         """
-        ### create the single neuron population
-        single_neuron = Population(
-            1,
-            neuron=self.neuron_model_dict[pop_name],
-            name=f"single_neuron_{pop_name}",
-        )
-        ### set the attributes of the neuron
-        for attr_name, attr_val in self.neuron_model_parameters_dict[pop_name]:
-            setattr(single_neuron, attr_name, attr_val)
-
-        ### create Monitor for single neuron
-        mon_single = Monitor(single_neuron, ["spike"])
-
-        ### create network with single neuron
-        net_single = Network()
-        net_single.add([single_neuron, mon_single])
-        compile_in_folder(
-            folder_name=f"single_net_{pop_name}", silent=True, net=net_single
-        )
-
-        ### get the values of the variables after 2000 ms simulation
-        variable_init_sampler = self.get_init_neuron_variables(
-            net_single, net_single.get(single_neuron)
-        )
-
-        ### network dict
-        net_single_dict = {
-            "net": net_single,
-            "population": net_single.get(single_neuron),
-            "monitor": net_single.get(mon_single),
-            "variable_init_sampler": variable_init_sampler,
-        }
-
-        return net_single_dict
-
-    def create_net_single_voltage_clamp(self, pop_name):
-        """
-        creates a network with the neuron type of the population given by pop_name
-        the number of neurons is 1
-
-        The equation wich defines the chagne of v is set to zero and teh change of v
-        is stored in the new variable v_clamp_rec
-
-        Args:
-            pop_name: str
-                population name
-        """
-
-        ### get the initial arguments of the neuron
-        neuron_model = self.neuron_model_dict[pop_name]
-        ### names of arguments
-        init_arguments_name_list = list(Neuron.__init__.__code__.co_varnames)
-        init_arguments_name_list.remove("self")
-        init_arguments_name_list.remove("name")
-        init_arguments_name_list.remove("description")
-        ### arguments dict
-        init_arguments_dict = {
-            init_arguments_name: getattr(neuron_model, init_arguments_name)
-            for init_arguments_name in init_arguments_name_list
-        }
-        ### get new equations for voltage clamp
-        equations_new = self.get_voltage_clamp_equations(init_arguments_dict, pop_name)
-        init_arguments_dict["equations"] = equations_new
-        ### add v_clamp_rec_thresh to the parameters
-        parameters_line_split_list = str(init_arguments_dict["parameters"]).splitlines()
-        parameters_line_split_list.append("v_clamp_rec_thresh = 0 : population")
-        init_arguments_dict["parameters"] = "\n".join(parameters_line_split_list)
-
-        ### create neuron model with new equations
-        neuron_model_new = Neuron(**init_arguments_dict)
-
-        ### create the single neuron population
-        single_neuron_v_clamp = Population(
-            1,
-            neuron=neuron_model_new,
-            name=f"single_neuron_v_clamp_{pop_name}",
-            stop_condition="(abs(v_clamp_rec-v_clamp_rec_thresh)<1) and (abs(v_clamp_rec_pre-v_clamp_rec_thresh)>1) : any",
-        )
-
-        ### set the attributes of the neuron
-        for attr_name, attr_val in self.neuron_model_parameters_dict[pop_name]:
-            setattr(single_neuron_v_clamp, attr_name, attr_val)
-
-        ### create Monitor for single neuron
-        mon_single = Monitor(single_neuron_v_clamp, ["v_clamp_rec"])
-
-        ### create network with single neuron
-        net_single = Network()
-        net_single.add([single_neuron_v_clamp, mon_single])
-        compile_in_folder(
-            folder_name=f"single_v_clamp_net_{pop_name}", silent=True, net=net_single
-        )
-
-        ### find v where dv/dt is minimal (best = 0)
-        self.log("search v_rest with y(X) = delta_v_2000(v=X) using hyperopt")
-        best = fmin(
-            fn=lambda X_val: self.get_v_clamp_2000(
-                v=X_val,
-                net=net_single,
-                population=net_single.get(single_neuron_v_clamp),
-            ),
-            space=hp.normal("v", -70, 30),
-            algo=tpe.suggest,
-            timeout=5,
-            show_progressbar=False,
-        )
-        v_rest = best["v"]
-        detla_v_rest = self.get_v_clamp_2000(
-            v=v_rest,
-            net=net_single,
-            population=net_single.get(single_neuron_v_clamp),
-        )
-        self.log(f"found v_rest={v_rest} with delta_v_2000(v=v_rest)={detla_v_rest}")
-        if detla_v_rest > 1:
-            ### there seems to be no restign potential --> use -60 mV
-            v_rest = -60
-            self.log(f"since there is seems to be no v_rest --> set v_rest={v_rest}")
-
-        ### get the variable_init_sampler for v=v_rest
-        variable_init_sampler = self.get_init_neuron_variables_v_clamp(
-            net_single, net_single.get(single_neuron_v_clamp), v_rest=v_rest
-        )
-
-        ### network dict
-        net_single_dict = {
-            "net": net_single,
-            "population": net_single.get(single_neuron_v_clamp),
-            "monitor": net_single.get(mon_single),
-            "variable_init_sampler": variable_init_sampler,
-        }
-
-        return net_single_dict
-
-    def get_v_clamp_2000(self, v, net, population):
         net.reset()
-        population.v = v
+        if not isinstance(v, type(None)):
+            population.v = v
+        if not isinstance(I_app, type(None)):
+            population.I_app = I_app
         net.simulate(2000)
         return population.v_clamp_rec[0]
 
@@ -2300,7 +3085,7 @@ class model_configurator:
             key: attributes_tuple[attributes_name_list.index(key)]
             for key in attributes_name_list
         }
-        ### furhter create symbols for dv/dt and right_side
+        ### furhter create symbols for delta_v and right_side
         attributes_sympy_dict["delta_v"] = Symbol("delta_v")
         attributes_sympy_dict["right_side"] = Symbol("right_side")
 
@@ -2322,23 +3107,24 @@ class model_configurator:
             )
         result = str(result[0][attributes_sympy_dict["delta_v"]])
 
-        ### replace right_side by the original right side
+        ### replace right_side by the actual right side
         result = result.replace("right_side", f"({eq_v_splitted[1]})")
 
         ### TODO replace mathematical expressions and random distributions back to previous
 
         ### now create the new equations for the ANNarchy neuron
-        ### create two lines, the voltage clamp line dv/dt=0 and the
-        ### obtained line which would be the right side of dv/dt
+        ### create three lines, the voltage clamp line "dv/dt=0",
+        ### the obtained line which would be the right side of dv/dt,
+        ### and this right side sotred from the previous time step
         ### v_clamp_rec should be an absolute value
         eq_new_0 = f"v_clamp_rec = fabs({result})"
         eq_new_1 = "v_clamp_rec_pre = v_clamp_rec"
-        ### add stored tags to dv/dt equation
+        ### add stored tags to new dv/dt equation
         if not isinstance(tags, type(None)):
             eq_new_2 = f"dv/dt=0 : {tags}"
         else:
             eq_new_2 = "dv/dt=0"
-        ### remove old v line and insert new lines
+        ### remove old v line and insert new three lines
         del eq[line_is_v_list.index(True)]
         eq.insert(line_is_v_list.index(True), eq_new_0)
         eq.insert(line_is_v_list.index(True), eq_new_1)
@@ -2367,40 +3153,25 @@ class model_configurator:
 
         return False
 
-    def get_init_neuron_variables(self, net, pop):
+    def get_line_is_g_ampa(self, line: str):
         """
-        get the variables of the given population after simulating 2000 ms
-
-        Args:
-            net: ANNarchy network
-                the network which contains the pop
-
-            pop: ANNarchy population
-                the population whose variables are obtained
-
+        check if a equation string contains dg_ampa/dt
         """
-        ### reset neuron and deactivate input
-        net.reset()
-        pop.I_app = 0
 
-        ### 1000 ms init duration
-        net.simulate(1000)
+        ### remove whitespaces
+        line = line.replace(" ", "")
 
-        ### simulate 2000 ms and check every dt the variables of the neuron
-        time_steps = int(2000 / dt())
-        var_name_list = list(pop.variables)
-        var_arr = np.zeros((time_steps, len(var_name_list)))
-        for time_idx in range(time_steps):
-            net.simulate(dt())
-            get_arr = np.array([getattr(pop, var_name) for var_name in pop.variables])
-            var_arr[time_idx, :] = get_arr[:, 0]
-        net.reset()
+        ### check for dv/dt
+        if "dv/dt" in line:
+            return True
 
-        ### create a sampler with the data samples of from the 1000 ms simulation
-        sampler = self.var_arr_sampler(var_arr)
-        return sampler
+        ### check for v update
+        if ("v=" in line or "v+=" in line) and line.startswith("v"):
+            return True
 
-    def get_init_neuron_variables_v_clamp(self, net, pop, v_rest):
+        return False
+
+    def get_init_neuron_variables_for_psp(self, net, pop, v_rest, I_app_hold):
         """
         get the variables of the given population after simulating 2000 ms
 
@@ -2414,8 +3185,8 @@ class model_configurator:
         """
         ### reset neuron and deactivate input and set v_rest
         net.reset()
-        pop.I_app = 0
         pop.v = v_rest
+        pop.I_app = I_app_hold
 
         ### get the variables of the neuron after 5000 ms
         net.simulate(5000)
@@ -2425,22 +3196,23 @@ class model_configurator:
         var_arr[0, :] = get_arr[:, 0]
 
         ### create a sampler with the one data sample
-        sampler = self.var_arr_sampler(var_arr)
+        sampler = self.var_arr_sampler(var_arr, var_name_list)
         return sampler
 
     class var_arr_sampler:
-        def __init__(self, var_arr) -> None:
+        def __init__(self, var_arr, var_name_list) -> None:
             self.var_arr_shape = var_arr.shape
             self.is_const = (
                 np.std(var_arr, axis=0) <= np.mean(np.absolute(var_arr), axis=0) / 1000
             )
             self.constant_arr = var_arr[0, self.is_const]
             self.not_constant_val_arr = var_arr[:, np.logical_not(self.is_const)]
+            self.var_name_list = var_name_list
 
-        def sample(self, n, seed=0):
+        def sample(self, n=1, seed=0):
             """
             Args:
-                n: int
+                n: int, optional, default=1
                     number of samples
 
                 seed: int, optional, default=0
@@ -2530,6 +3302,10 @@ class model_configurator:
             proj_dict: dict
                 keys see above
         """
+        ### get pre_pop_name
+        pre_pop_name = self.pre_pop_name_dict[proj_name]
+        ### get pre_pop_name
+        pre_pop_size = self.pre_pop_size_dict[proj_name]
         ### get post_pop_name
         post_pop_name = self.post_pop_name_dict[proj_name]
         ### get idx_proj and proj_target_type
@@ -2564,6 +3340,8 @@ class model_configurator:
             proj_max_weight = None
 
         return {
+            "pre_pop_name": pre_pop_name,
+            "pre_pop_size": pre_pop_size,
             "post_pop_name": post_pop_name,
             "proj_target_type": proj_target_type,
             "idx_proj": idx_proj,
@@ -2571,6 +3349,7 @@ class model_configurator:
             "proj_weight": proj_weight,
             "g_max": g_max,
             "proj_max_weight": proj_max_weight,
+            "proj_prob": p,
         }
 
     def get_max_weight_of_proj(self, proj_name):
@@ -2659,11 +3438,11 @@ class model_configurator:
             proj_weight = proj_dict["proj_weight"]
             proj_target_type = proj_dict["proj_target_type"]
             spike_frequency = proj_dict["spike_frequency"]
-            ### get spike times over 1s for the spike frequency
-            ### and transform them into ms
+            ### get spike times over the simulation duration for the spike frequency
             if spike_frequency > 0:
-                spike_times_arr = np.arange(0, 1, 1 / spike_frequency)
-                spike_times_arr = spike_times_arr * 1000
+                spike_times_arr = self.get_spike_times_arr(
+                    spike_frequency=spike_frequency
+                )
             else:
                 spike_times_arr = np.array([])
             ### get weights array
@@ -2692,6 +3471,32 @@ class model_configurator:
 
         return mean_g
 
+    def get_spike_times_arr(self, spike_frequency):
+        """
+        get spike times for a given spike frequency
+
+        Args:
+            spike_frequency: number
+                spike frequency in Hz
+        """
+        expected_nr_spikes = int(
+            round((500 + self.simulation_dur) * (spike_frequency / 1000), 0)
+        )
+        ### isi_arr in timesteps
+        isi_arr = poisson.rvs(
+            (1 / (spike_frequency * (dt() / 1000))), size=expected_nr_spikes
+        )
+        ### convert to ms
+        isi_arr = isi_arr * dt()
+
+        ### get spike times from isi_arr
+        spike_times_arr = np.cumsum(isi_arr)
+
+        ### only use spikes which are in the simulation time
+        spike_times_arr = spike_times_arr[spike_times_arr < (self.simulation_dur + 500)]
+
+        return spike_times_arr
+
     def get_mean_g(self, spike_times_arr, spike_weights_arr, tau):
         """
         calculates the mean conductance g for given spike times, corresponding weights (increases of g) and time constant
@@ -2706,6 +3511,7 @@ class model_configurator:
             tau: number
                 time constant of the exponential decay of the conductance g in ms
         """
+        ### TODO instead of calculating the mean, create a conductance trace for the simulation time
         if np.sum(spike_weights_arr) > 0:
             ### get inter spike interval array
             isis_g_arr = np.diff(spike_times_arr)
@@ -2722,14 +3528,15 @@ class model_configurator:
 def get_rate_parallel(
     idx,
     net,
-    pop_name_list,
-    population_list,
-    variable_init_sampler_list,
-    monitor_list,
-    I_app_list,
-    g_ampa_list,
-    g_gaba_list,
-    simulation_dur,
+    population: Population,
+    variable_init_sampler,
+    monitor: Monitor,
+    I_app_arr,
+    weight_list: list,
+    pre_pop_name_list: list,
+    rate_list: list,
+    eff_size_list: list,
+    simulation_dur: int,
 ):
     """
     function to obtain the firing rates of the populations of
@@ -2772,44 +3579,76 @@ def get_rate_parallel(
     """
     ### reset and set init values
     net.reset()
-    for pop_idx, pop_name in enumerate(pop_name_list):
-        population = net.get(population_list[pop_idx])
-        ### sample init values, one could sample different values for multiple neurons
-        ### but here we sample a single sample and use it for all neurons
-        variable_init_arr = variable_init_sampler_list[pop_idx].sample(1, seed=0)
-        variable_init_arr = np.array([variable_init_arr[0]] * len(population))
-        for var_idx, var_name in enumerate(population.variables):
-            set_val = variable_init_arr[:, var_idx]
+    ### sample init values, one could sample different values for multiple neurons
+    ### but here we sample a single sample and use it for all neurons
+    variable_init_arr = variable_init_sampler.sample(1, seed=0)
+    var_name_list = variable_init_sampler.var_name_list
+    variable_init_arr = np.array([variable_init_arr[0]] * len(population))
+    for var_name in enumerate(population.variables):
+        if var_name in var_name_list:
+            set_val = variable_init_arr[:, var_name_list.index(var_name)]
             setattr(population, var_name, set_val)
 
-    ### slow down conductances (i.e. make them constant)
-    for pop_idx, pop_name in enumerate(pop_name_list):
-        population = net.get(population_list[pop_idx])
-        population.tau_ampa = 1e20
-        population.tau_gaba = 1e20
-    ### apply given variables
-    for pop_idx, pop_name in enumerate(pop_name_list):
-        population = net.get(population_list[pop_idx])
-        population.I_app = I_app_list[pop_idx]
-        population.g_ampa = g_ampa_list[pop_idx]
-        population.g_gaba = g_gaba_list[pop_idx]
-    ### simulate 500 ms initial duration + X ms
-    net.simulate(500 + simulation_dur)
-    ### get rate for the last X ms
-    f_arr_list = []
-    for pop_idx, pop_name in enumerate(pop_name_list):
-        population = net.get(population_list[pop_idx])
-        monitor = net.get(monitor_list[pop_idx])
-        spike_dict = monitor.get("spike")
-        f_arr = np.zeros(len(population))
-        for idx_n, n in enumerate(spike_dict.keys()):
-            time_list = np.array(spike_dict[n])
-            nbr_spks = np.sum((time_list > (500 / dt())).astype(int))
-            rate = nbr_spks / (simulation_dur / 1000)
-            f_arr[idx_n] = rate
-        f_arr_list.append(f_arr)
+    ### set the weights and rates of the poisson spike traces of the afferent populations
+    for pre_pop_idx, pre_pop_name in enumerate(pre_pop_name_list):
+        setattr(population, f"{pre_pop_name}_size", eff_size_list[pre_pop_idx])
+        setattr(
+            population,
+            f"{pre_pop_name}_spike_prob",
+            (rate_list[pre_pop_idx] / 1000) * dt(),
+        )
+        setattr(population, f"{pre_pop_name}_weight", weight_list[pre_pop_idx])
 
-    return f_arr_list
+    ### set the I_app
+    population.I_app = I_app_arr
+
+    ### simulate 500 ms initial duration + X ms
+    if "stn" in population.name:
+        net.simulate(500)
+        time_arr = np.arange(500, 500 + simulation_dur, dt())
+        cor_spike_train_list = []
+        gpe_spike_train_list = []
+        g_ampa_list = []
+        g_gaba_list = []
+        I_app_list = []
+        for time_ms in time_arr:
+            net.simulate(dt())
+            cor_spike_train_list.append(population.cor_spike_train[0])
+            gpe_spike_train_list.append(population.gpe_spike_train[0])
+            g_ampa_list.append(population.g_ampa[0])
+            g_gaba_list.append(population.g_gaba[0])
+            I_app_list.append(population.I_app[0])
+        plt.figure(figsize=(6.4, 4.8 * 5))
+        plt.subplot(511)
+        plt.title(f"cor_weight = {population.cor_weight}")
+        plt.ylabel("cor_spike_train")
+        plt.plot(time_arr[:100], cor_spike_train_list[:100], "k.")
+        plt.subplot(512)
+        plt.ylabel("gpe_spike_train")
+        plt.plot(time_arr[:100], gpe_spike_train_list[:100], "k.")
+        plt.subplot(513)
+        plt.ylabel("g_ampa")
+        plt.plot(time_arr[:100], g_ampa_list[:100], "k.")
+        plt.subplot(514)
+        plt.ylabel("g_gaba")
+        plt.plot(time_arr[:100], g_gaba_list[:100], "k.")
+        plt.subplot(515)
+        plt.ylabel("I_app")
+        plt.plot(time_arr[:100], I_app_list[:100], "k.")
+        plt.tight_layout()
+        plt.savefig("tmp_stn.png", dpi=300)
+    else:
+        net.simulate(500 + simulation_dur)
+
+    ### get rate for the last X ms
+    spike_dict = monitor.get("spike")
+    f_arr = np.zeros(len(population))
+    for idx_n, n in enumerate(spike_dict.keys()):
+        time_list = np.array(spike_dict[n])
+        nbr_spks = np.sum((time_list > (500 / dt())).astype(int))
+        rate = nbr_spks / (simulation_dur / 1000)
+        f_arr[idx_n] = rate
+    return f_arr
 
 
 _p_g_1 = """First call get_max_syn.
@@ -2836,7 +3675,7 @@ Use this template for the synaptic_contribution_dict:
 
 {template_synaptic_contribution_dict}
 
-'contr' are placeholders, replace them with the contributions of the afferent projections. The contributions of all afferent projections of a single population have to sum up to 1!
+The shown contributions of the afferent projections are based on the assumption that the maximum weights are used. The contributions of all afferent projections of a single population have to sum up to 1!
 """
 )
 

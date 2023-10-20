@@ -10,14 +10,14 @@ from scipy.interpolate import interp1d
 from multiprocessing import Process
 
 
-def my_raster_plot(spikes):
+def my_raster_plot(spikes: dict):
     """
     Returns two vectors representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
 
     The spike times are always in simulation steps (in contrast to default ANNarchy raster_plot)
     """
     t, n = raster_plot(spikes)
-    t = t / dt()
+    t = np.round(t / dt(), 0).astype(int)
     return t, n
 
 
