@@ -530,7 +530,6 @@ def get_pop_rate(spikes, t_start=None, t_end=None, time_step=1, t_smooth_ms=-1):
 
     ### check if there are spikes in population at all
     if len(t) > 1:
-
         if t_start == None:
             t_start = round(t.min() * time_step, get_number_of_decimals(time_step))
         if t_end == None:
@@ -785,7 +784,7 @@ def __plot_recordings(
             continue
 
         plt.subplot(shape[0], shape[1], nr)
-        if variable == "spike" and (
+        if (variable == "spike" or variable == "axon_spike") and (
             mode == "raster" or mode == "single"
         ):  # "single" only for down compatibility
             nr_neurons = len(list(data.keys()))
@@ -826,7 +825,7 @@ def __plot_recordings(
                 plt.xlabel("time [ms]")
                 plt.ylabel("# neurons")
                 plt.title("Spikes " + part)
-        elif variable == "spike" and mode == "mean":
+        elif (variable == "spike" or variable == "axon_spike") and mode == "mean":
             time_arr, firing_rate = get_pop_rate(
                 spikes=data,
                 t_start=start_time,
@@ -838,7 +837,7 @@ def __plot_recordings(
             plt.xlabel("time [ms]")
             plt.ylabel("Mean firing rate [Hz]")
             plt.title("Mean firing rate " + part)
-        elif variable == "spike" and mode == "hybrid":
+        elif (variable == "spike" or variable == "axon_spike") and mode == "hybrid":
             nr_neurons = len(list(data.keys()))
             t, n = my_raster_plot(data)
             t = t * time_step  # convert time steps into ms
@@ -887,7 +886,7 @@ def __plot_recordings(
                 plt.xlim(start_time, end_time)
                 plt.xlabel("time [ms]")
                 plt.title("Activity " + part)
-        elif variable != "spike" and mode == "line":
+        elif (variable != "spike" and variable != "axon_spike") and mode == "line":
             if len(data.shape) == 1:
                 plt.plot(time_arr_dict[part], data, color="k")
                 plt.title(f"Variable {variable} of {part} (1)")
@@ -936,7 +935,7 @@ def __plot_recordings(
                 )
             plt.xlim(start_time, end_time)
             plt.xlabel("time [ms]")
-        elif variable != "spike" and mode == "mean":
+        elif (variable != "spike" and variable != "axon_spike") and mode == "mean":
             if len(data.shape) == 1:
                 plt.plot(time_arr_dict[part], data, color="k")
                 plt.title(f"Variable {variable} of {part} (1)")
@@ -992,8 +991,9 @@ def __plot_recordings(
             plt.xlim(start_time, end_time)
             plt.xlabel("time [ms]")
 
-        elif variable != "spike" and mode == "matrix_mean":
-
+        elif (
+            variable != "spike" and variable != "axon_spike"
+        ) and mode == "matrix_mean":
             if len(data.shape) == 3 or (
                 len(data.shape) == 2 and isinstance(data[0, 0], list) is True
             ):
@@ -1168,7 +1168,7 @@ def __plot_recordings(
             plt.xlim(start_time, end_time)
             plt.xlabel("time [ms]")
 
-        elif variable != "spike" and mode == "matrix":
+        elif (variable != "spike" and variable != "axon_spike") and mode == "matrix":
             # data[start_step:end_step,neuron]
             if len(data.shape) == 2 and isinstance(data[0, 0], list) is not True:
                 ### data from population [times,neurons]
