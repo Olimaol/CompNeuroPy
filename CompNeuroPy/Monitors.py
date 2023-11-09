@@ -199,11 +199,16 @@ class Monitors:
             False  # after reset one can still update recording_times
         )
         ### reset timings, after reset, add a zero to start if the monitor is still running (this is not resetted by reset())
+        ### if the model was not resetted --> do add current time instead of zero
         for key in self.timings.keys():
             self.timings[key]["start"] = []
             self.timings[key]["stop"] = []
             if self.timings[key]["currently_paused"] == False:
-                self.timings[key]["start"].append(0)
+                if model:
+                    self.timings[key]["start"].append(0)
+                else:
+                    self.timings[key]["start"].append(np.round(get_time(), af.get_number_of_decimals(dt())))
+                    
         if model:
             reset(populations, projections, synapses, monitors, net_id=net_id)
 
