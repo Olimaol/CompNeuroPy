@@ -1177,7 +1177,10 @@ def __plot_recordings(
                     (time_arr_dict[part] >= start_time).astype(int)
                     * (time_arr_dict[part] <= end_time).astype(int)
                 ).astype(bool)
-                time_arr = time_arr_dict[part][mask]
+                
+                time_decimals = get_number_of_decimals(time_step)
+
+                time_arr = np.round(time_arr_dict[part][mask], time_decimals)
                 data_arr = data[mask, :]
 
                 ### check with the actual_period and the times array if there is data missing
@@ -1185,8 +1188,13 @@ def __plot_recordings(
                 actual_period = recordings[f"{part};period"]
                 actual_start_time = np.ceil(start_time / actual_period) * actual_period
                 actual_end_time = np.ceil(end_time / actual_period - 1) * actual_period
-                soll_times = np.arange(
-                    actual_start_time, actual_end_time + actual_period, actual_period
+                soll_times = np.round(
+                    np.arange(
+                        actual_start_time,
+                        actual_end_time + actual_period,
+                        actual_period,
+                    ),
+                    time_decimals,
                 )
 
                 ### check if there are time points, where data is missing
