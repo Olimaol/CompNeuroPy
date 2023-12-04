@@ -15,6 +15,7 @@ dependencies = [
     "matplotlib",
     "scipy",
     "numpy",
+    "typingchecker",
 ]
 
 setuptools.setup(
