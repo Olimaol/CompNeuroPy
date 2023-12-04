@@ -30,7 +30,11 @@ jobs:
         pip install .
     - name: Install ANNarchy
       run: |
-        pip install ANNarchy
+        git clone https://github.com/ANNarchy/ANNarchy
+        cd ANNarchy
+        git checkout develop
+        pip install .
+        cd ..
     - name: Test with pytest
       run: |
         pytest
