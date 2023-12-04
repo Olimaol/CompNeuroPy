@@ -3,9 +3,12 @@ build/
 CompNeuroPy.egg-info/
 dist/
 *annarchy_folders/
+*annarchy*/
 *dataRaw/
 *.png
 *.svg
 *annarchy/
 *tmp.py
 *.~lock*
+*model_conf_log
+*cache*

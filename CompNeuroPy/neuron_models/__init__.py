@@ -22,7 +22,10 @@ from .experimental_models.fit_Hjorth_nm import (
     _Izhikevich2007_Hjorth_2020_ChIN9,
     _Izhikevich2007_Hjorth_2020_ChIN10,
 )
-from .experimental_models.fit_Bogacz_nm import _fit_Bogacz
+from .experimental_models.fit_Bogacz_nm import (
+    _fit_Bogacz,
+    _fit_Bogacz_2,
+)
 from .final_models.H_and_H_like_nm import (
     H_and_H_Bischop,
     H_and_H_Bischop_syn,
@@ -36,6 +39,7 @@ from .final_models.izhikevich_2003_like_nm import (
     Izhikevich2003_flexible_noisy_AMPA_oscillating,
     Izhikevich2003_flexible_noisy_AMPA_nonlin,
     Izhikevich2003_flexible_noisy_I_nonlin,
+    Izhikevich2003_flexible_noisy_I,
 )
 from .final_models.izhikevich_2007_like_nm import (
     Izhikevich2007,

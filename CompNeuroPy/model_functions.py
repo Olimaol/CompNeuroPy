@@ -7,20 +7,25 @@ from ANNarchy import (
     get_time,
     populations,
     projections,
+    clear,
 )
 import os
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy import extra_functions as ef
+from CompNeuroPy.generate_model import generate_model
 
 
-def compile_in_folder(folder_name):
+def compile_in_folder(folder_name, net=None, clean=False, silent=False):
     """
     creates the compilation folder in annarchy_folders/
     or uses existing one
     compiles the current network
     """
-    sf.create_dir("annarchy_folders/" + folder_name, print_info=1)
-    compile("annarchy_folders/" + folder_name)
+    sf.create_dir("annarchy_folders/" + folder_name, print_info=False)
+    if isinstance(net, type(None)):
+        compile("annarchy_folders/" + folder_name, clean=clean, silent=silent)
+    else:
+        net.compile("annarchy_folders/" + folder_name, clean=clean, silent=silent)
     if os.getcwd().split("/")[-1] == "annarchy_folders":
         os.chdir("../")
 
@@ -146,8 +151,20 @@ def getMonitors(monDict, mon):
     """
     recordings = {}
     for key, val in monDict.items():
-        _, compartment, period = ef.unpack_monDict_keys(key)
+        compartment_type, compartment, period = ef.unpack_monDict_keys(key)
         recordings[f"{compartment};period"] = period
+        if compartment_type == "pop":
+            pop = get_population(compartment)
+            parameter_dict = {
+                param_name: getattr(pop, param_name) for param_name in pop.parameters
+            }
+            recordings[f"{compartment};parameter_dict"] = parameter_dict
+        if compartment_type == "proj":
+            proj = get_projection(compartment)
+            parameter_dict = {
+                param_name: getattr(proj, param_name) for param_name in proj.parameters
+            }
+            recordings[f"{compartment};parameters"] = parameter_dict
         for val_val in val:
             temp = mon[compartment].get(val_val)
             recordings[f"{compartment};{val_val}"] = temp
@@ -163,3 +180,14 @@ def get_full_model():
         "populations": [pop.name for pop in populations()],
         "projections": [proj.name for proj in projections()],
     }
+
+
+def cnp_clear():
+    """
+    like clear with ANNarchy, but CompNeuroPy model objects are also cleared
+    """
+    clear()
+    for model_name in generate_model.initialized_models.keys():
+        generate_model.initialized_models[model_name] = False
+    for model_name in generate_model.compiled_models.keys():
+        generate_model.compiled_models[model_name] = False

@@ -324,3 +324,124 @@ class decision_tree:
         def add(self, name, prob):
             """ """
             return self.tree.node(parent=self, prob=prob, name=name)
+
+
+def evaluate_expression_with_dict(expression, value_dict):
+    """
+    Evaluate a mathematical expression using values from a dictionary.
+
+    This function takes a mathematical expression as a string and a dictionary
+    containing variable names as keys and corresponding values as numpy arrays.
+    It replaces the variable names in the expression with their corresponding
+    values from the dictionary and evaluates the expression.
+
+    Args:
+        expression: str
+            A mathematical expression to be evaluated. Variable
+            names in the expression should match the keys in the value_dict.
+        value_dict: dict
+            A dictionary containing variable names (strings) as
+            keys and corresponding numpy arrays or numbers as values.
+
+    return:
+        result: value or array
+            The result of evaluating the expression using the provided values.
+
+    Example:
+    >>> my_dict = {"a": np.ones(10), "b": np.arange(10)}
+    >>> my_string = "a*2-b+10"
+    >>> result = evaluate_expression_with_dict(my_string, my_dict)
+    >>> print(result)
+    array([11., 11., 11., 11., 11., 11., 11., 11., 11., 11.])
+    """
+    # Replace dictionary keys in the expression with their corresponding values
+    ### replace names with dict entries
+    expression = replace_names_with_dict(
+        expression=expression, name_of_dict="value_dict", dictionary=value_dict
+    )
+
+    ### evaluate the new expression
+    try:
+        result = eval(expression)
+        return result
+    except Exception as e:
+        raise ValueError(f"Error while evaluating expression: {str(e)}")
+
+
+def replace_names_with_dict(expression, name_of_dict, dictionary):
+    """
+    Args:
+        expression: str
+            string which contains an equation using keys from the dict
+
+        name_of_dict: str
+            name of the dictionary
+
+        dictionary: dict
+            the dictionary containing the keys used in the equation
+
+    return:
+        new_expression: str
+            same as expression but the keys are replaced by name_of_dict['key']
+            i.e.:
+            expression="a+b"
+            name_of_dict="my_dict"
+            my_dict={"a":5,"b":7}
+            dictionary=my_dict
+
+            retrun: "my_dict['a']+my_dict['b']"
+    """
+    new_expression = expression
+
+    new_expression = new_expression.replace("np.clip", "{np.clip}")
+    new_expression = new_expression.replace("np.max", "{np.max}")
+    new_expression = new_expression.replace("np.min", "{np.min}")
+    new_expression = new_expression.replace("None", "{None}")
+
+    sorted_names_list = sorted(list(dictionary.keys()), key=len, reverse=True)
+    ### first replace largest variable names
+    ### --> if smaller variable names are within larger variable names this should not cause a problem
+    for name in sorted_names_list:
+        if name in new_expression:
+            ### replace the name in the new_equation_str
+            ### only replace things which are not between {}
+            new_expression = replace_substrings_except_within_braces(
+                new_expression, {name: f"{{{name_of_dict}['{name}']}}"}
+            )
+    ### remove curly braces again
+    new_expression = new_expression.replace("{", "")
+    new_expression = new_expression.replace("}", "")
+    return new_expression
+
+
+def replace_substrings_except_within_braces(input_string, replacement_mapping):
+    result = []
+    inside_braces = False
+    i = 0
+
+    while i < len(input_string):
+        if input_string[i] == "{":
+            inside_braces = True
+            result.append(input_string[i])
+            i += 1
+        elif input_string[i] == "}":
+            inside_braces = False
+            result.append(input_string[i])
+            i += 1
+        else:
+            if not inside_braces:
+                found_match = False
+                for old_substr, new_substr in replacement_mapping.items():
+                    if input_string[i : i + len(old_substr)] == old_substr:
+                        result.append(new_substr)
+                        i += len(old_substr)
+                        found_match = True
+                        break
+                if not found_match:
+                    result.append(input_string[i])
+                    i += 1
+            else:
+                result.append(input_string[i])
+                i += 1
+
+    return "".join(result)
