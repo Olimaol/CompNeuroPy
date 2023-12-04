@@ -1,9 +1,6 @@
 
 [build-system]
-requires = ["torch",
-            "sbi",
-            "pandas",
-            "hyperopt",
+requires = ["pandas",
             "sympy",
             "cython",
             "matplotlib",
