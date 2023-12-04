@@ -21,3 +21,4 @@ from CompNeuroPy.Monitors import Monitors
 from CompNeuroPy.Experiment import Experiment
 from CompNeuroPy.generate_model import generate_model
 from CompNeuroPy.generate_simulation import generate_simulation
+from CompNeuroPy.DBS import DBS_stimulator

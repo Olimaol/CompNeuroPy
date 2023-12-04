@@ -13,7 +13,7 @@ dependencies = [
     "sympy",
     "cython",
     "matplotlib",
-    "scipy",    
+    "scipy",
     "numpy",
 ]
 
@@ -28,5 +28,5 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     install_requires=dependencies,
     include_package_data=True,
-    package_data={'': ['*.csv']},
+    package_data={"": ["*.csv"]},
 )
