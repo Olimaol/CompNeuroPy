@@ -34,7 +34,7 @@ _connector_methods_dict = {
 }
 
 
-class createDBSmodel:
+class CreateDBSmodel:
     def __init__(
         self,
         stimulated_population: Population,
@@ -547,7 +547,12 @@ class createDBSmodel:
 
     def get_line_is_dvdt(self, line: str):
         """
-        check if a equation string contains dv/dt
+        Check if a equation string contains dv/dt.
+
+        Parameters
+        ----------
+        line : str
+            Equation string
         """
         if "v" not in line:
             return False
@@ -563,7 +568,12 @@ class createDBSmodel:
 
     def get_line_is_dmpdt(self, line: str):
         """
-        check if a equation string contains dmp/dt
+        Check if a equation string contains dmp/dt.
+
+        Parameters
+        ----------
+        line : str
+            Equation string
         """
         if "mp" not in line:
             return False
@@ -818,7 +828,7 @@ class createDBSmodel:
         return synapse_init_parameter_dict
 
 
-class createDBSmodelcnp(createDBSmodel):
+class CreateDBSmodelcnp(CreateDBSmodel):
     def __init__(
         self,
         model: generate_model,
@@ -895,7 +905,7 @@ class createDBSmodelcnp(createDBSmodel):
         return population_name_list, projection_name_list
 
 
-class DBS_stimulator:
+class DBSstimulator:
     """
     DBS stimulator class
 
@@ -996,7 +1006,7 @@ class DBS_stimulator:
             if not isinstance(model, type(None)):
                 ### CompNeuroPy model given
                 ### recreate model with DBS mechanisms
-                create_dbs_model_obj = createDBSmodelcnp(
+                create_dbs_model_obj = CreateDBSmodelcnp(
                     model,
                     stimulated_population,
                     excluded_populations_list,
@@ -1008,7 +1018,7 @@ class DBS_stimulator:
             else:
                 ### no CompNeuroPy model given --> use all populations and projections of the current magic model
                 ### recreate model with DBS mechanisms
-                create_dbs_model_obj = createDBSmodel(
+                create_dbs_model_obj = CreateDBSmodel(
                     stimulated_population,
                     excluded_populations_list,
                     passing_fibres_list,
@@ -1047,7 +1057,19 @@ class DBS_stimulator:
 
     def create_dbs_on_array(self, population_proportion: float, seed: int):
         """
-        Create an array with the shape of the stimulated population with ones and zeros randomly distributed with the specified population_proportion
+        Create an array with the shape of the stimulated population with ones and zeros randomly distributed with the specified population_proportion.
+
+        Parameters
+        ----------
+        population_proportion : float
+            Proportion of the stimulated population which is affected by DBS, neurons are distributed randomly
+        seed : int
+            Seed for the random distribution of affected neurons based on population_proportion
+
+        Returns
+        -------
+        dbs_on_array : np.array
+            Array with the shape of the stimulated population with ones and zeros randomly distributed with the specified population_proportion
         """
         ### create random number generator
         rng = np.random.default_rng(seed)
