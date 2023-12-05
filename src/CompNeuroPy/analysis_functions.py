@@ -784,7 +784,7 @@ def __plot_recordings(
             continue
 
         plt.subplot(shape[0], shape[1], nr)
-        if variable == "spike" and (
+        if (variable == "spike" or variable == "axon_spike") and (
             mode == "raster" or mode == "single"
         ):  # "single" only for down compatibility
             nr_neurons = len(list(data.keys()))
@@ -825,7 +825,7 @@ def __plot_recordings(
                 plt.xlabel("time [ms]")
                 plt.ylabel("# neurons")
                 plt.title("Spikes " + part)
-        elif variable == "spike" and mode == "mean":
+        elif (variable == "spike" or variable == "axon_spike") and mode == "mean":
             time_arr, firing_rate = get_pop_rate(
                 spikes=data,
                 t_start=start_time,
@@ -837,7 +837,7 @@ def __plot_recordings(
             plt.xlabel("time [ms]")
             plt.ylabel("Mean firing rate [Hz]")
             plt.title("Mean firing rate " + part)
-        elif variable == "spike" and mode == "hybrid":
+        elif (variable == "spike" or variable == "axon_spike") and mode == "hybrid":
             nr_neurons = len(list(data.keys()))
             t, n = my_raster_plot(data)
             t = t * time_step  # convert time steps into ms
@@ -886,7 +886,7 @@ def __plot_recordings(
                 plt.xlim(start_time, end_time)
                 plt.xlabel("time [ms]")
                 plt.title("Activity " + part)
-        elif variable != "spike" and mode == "line":
+        elif (variable != "spike" and variable != "axon_spike") and mode == "line":
             if len(data.shape) == 1:
                 plt.plot(time_arr_dict[part], data, color="k")
                 plt.title(f"Variable {variable} of {part} (1)")
@@ -935,7 +935,7 @@ def __plot_recordings(
                 )
             plt.xlim(start_time, end_time)
             plt.xlabel("time [ms]")
-        elif variable != "spike" and mode == "mean":
+        elif (variable != "spike" and variable != "axon_spike") and mode == "mean":
             if len(data.shape) == 1:
                 plt.plot(time_arr_dict[part], data, color="k")
                 plt.title(f"Variable {variable} of {part} (1)")
@@ -991,7 +991,9 @@ def __plot_recordings(
             plt.xlim(start_time, end_time)
             plt.xlabel("time [ms]")
 
-        elif variable != "spike" and mode == "matrix_mean":
+        elif (
+            variable != "spike" and variable != "axon_spike"
+        ) and mode == "matrix_mean":
             if len(data.shape) == 3 or (
                 len(data.shape) == 2 and isinstance(data[0, 0], list) is True
             ):
@@ -1166,7 +1168,7 @@ def __plot_recordings(
             plt.xlim(start_time, end_time)
             plt.xlabel("time [ms]")
 
-        elif variable != "spike" and mode == "matrix":
+        elif (variable != "spike" and variable != "axon_spike") and mode == "matrix":
             # data[start_step:end_step,neuron]
             if len(data.shape) == 2 and isinstance(data[0, 0], list) is not True:
                 ### data from population [times,neurons]
@@ -1175,7 +1177,10 @@ def __plot_recordings(
                     (time_arr_dict[part] >= start_time).astype(int)
                     * (time_arr_dict[part] <= end_time).astype(int)
                 ).astype(bool)
-                time_arr = time_arr_dict[part][mask]
+                
+                time_decimals = get_number_of_decimals(time_step)
+
+                time_arr = np.round(time_arr_dict[part][mask], time_decimals)
                 data_arr = data[mask, :]
 
                 ### check with the actual_period and the times array if there is data missing
@@ -1183,8 +1188,13 @@ def __plot_recordings(
                 actual_period = recordings[f"{part};period"]
                 actual_start_time = np.ceil(start_time / actual_period) * actual_period
                 actual_end_time = np.ceil(end_time / actual_period - 1) * actual_period
-                soll_times = np.arange(
-                    actual_start_time, actual_end_time + actual_period, actual_period
+                soll_times = np.round(
+                    np.arange(
+                        actual_start_time,
+                        actual_end_time + actual_period,
+                        actual_period,
+                    ),
+                    time_decimals,
                 )
 
                 ### check if there are time points, where data is missing

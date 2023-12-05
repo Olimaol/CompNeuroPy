@@ -80,12 +80,11 @@ def increasing_current(pop, I1, step, nr_steps, durationI2):
     durationI : duration in which the external current is inserted
     """
     current_list = []
+    I2=I1
     for i in range(nr_steps):
 
-        I2 = I1 + step
-        current_list.append(I1)
         current_list.append(I2)
-        current_step(pop, 500, durationI2, I1, I2)
-        I1 = I2
-
-    return {"duration": 500 + durationI2, "current_list": current_list}
+        current_stim(pop, t=durationI2, a=I2)
+        I2 = I2 + step
+        
+    return {"duration": durationI2, "current_list": current_list}

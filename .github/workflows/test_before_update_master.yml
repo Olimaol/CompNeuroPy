@@ -28,7 +28,14 @@ jobs:
     - name: Install package which also installs requirements
       run: |
         pip install .
-        pip install ANNarchy
+    - name: Install ANNarchy
+      run: |
+        git clone https://github.com/ANNarchy/ANNarchy
+        cd ANNarchy
+        git checkout develop
+        pip install .
+        cd ..
+        rm -rf ANNarchy
     - name: Test with pytest
       run: |
         pytest

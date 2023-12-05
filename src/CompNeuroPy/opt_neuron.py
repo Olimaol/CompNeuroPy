@@ -8,22 +8,29 @@ from CompNeuroPy.generate_model import generate_model
 import matplotlib.pyplot as plt
 import sys
 
-# hyperopt
-from hyperopt import fmin, tpe, hp, STATUS_OK
-
 # multiprocessing
 from multiprocessing import Process
 import multiprocessing
-from sbi import analysis as analysis
 
-# sbi
-import torch
-from sbi import utils as utils
-from sbi.inference import SNPE, prepare_for_sbi, simulate_for_sbi
+try:
+    # hyperopt
+    from hyperopt import fmin, tpe, hp, STATUS_OK
+
+    # torch
+    import torch
+
+    # sbi
+    from sbi import analysis as analysis
+    from sbi import utils as utils
+    from sbi.inference import SNPE, prepare_for_sbi, simulate_for_sbi
+except:
+    print(
+        "opt_neuron: Error: You need to install hyperopt, torch, and sbi to use opt_neuron (e.g. use pip install hyperopt torch sbi))"
+    )
+    sys.exit()
 
 
 class opt_neuron:
-
     opt_created = []
 
     def __init__(
