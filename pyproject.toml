@@ -1,12 +1,6 @@
 
 [build-system]
-requires = ["pandas",
-            "sympy",
-            "cython",
-            "matplotlib",
-            "scipy",
-            "numpy",
-            "typingchecker"]
+requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -23,7 +17,15 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
 ]
-dependencies = []
+dependencies = [
+    "sympy",
+    "cython",
+    "matplotlib",
+    "scipy",
+    "numpy",
+    "typingchecker",
+    "ANNarchy",
+]
 
 [project.urls]
 Source = "https://github.com/Olimaol/CompNeuroPy"
