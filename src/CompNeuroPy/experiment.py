@@ -59,6 +59,11 @@ class Experiment:
         returns an object with variables "recordings", "monDict", and "data"
             "recordings" and "monDict" are obtained automatically
             "data" has to be defined by yourself during the experiment
+
+        Returns
+        -------
+        obj: object
+            object with variables "recordings", "monDict", and "data"
         """
         obj = self.return_cl()
         obj.recordings, obj.recording_times = self.mon.get_recordings_and_clear()
