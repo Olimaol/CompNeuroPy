@@ -1,5 +1,4 @@
 class Experiment:
-
     import ANNarchy as ann
     import CompNeuroPy as cnp
 
@@ -31,7 +30,7 @@ class Experiment:
         self.reset_kwargs["projections"] = projections
         self.reset_kwargs["synapses"] = synapses
         self.reset_kwargs["monitors"] = monitors
-        self.mon.reset(model=False)
+        self.mon.reset()
         self.reset_function(
             **self.reset_kwargs
         )  # TODO reset funciton in opt_neuron also has to use the arguments from above
