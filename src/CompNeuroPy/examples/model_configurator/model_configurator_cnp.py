@@ -45,6 +45,7 @@ from hyperopt import fmin, tpe, hp
 import pandas as pd
 from scipy.stats import poisson
 from ANNarchy.extensions.bold import BoldMonitor
+from sklearn.linear_model import LinearRegression
 
 
 class model_configurator:
@@ -175,18 +176,10 @@ class model_configurator:
                     self.syn_contr_dict,
                     self.syn_load_dict,
                 ) = loaded_variables_dict.values()
-                ### create dummy networks (like if the single neuron entworks would be created) to not cause recompile of the many neuron networks
-                for _ in range(len(self.net_single_dict)):
-                    ### single net
-                    net1 = Network()
-                    pop1 = Population(1, neuron=Neuron(equations="r=1"), name="dummy1")
-                    mon1 = Monitor(pop1, ["r"])
-                    net1.add([pop1, mon1])
-                    ### single net with voltage clamp
-                    net2 = Network()
-                    pop2 = Population(1, neuron=Neuron(equations="r=1"), name="dummy2")
-                    mon2 = Monitor(pop2, ["r"])
-                    net2.add([pop2, mon2])
+                ### create dummy network for single network and actually create network for single_v_clamp (single_v_clamp needed in get_base)
+                self.create_single_neuron_networks(
+                    single_net=False, single_net_v_clamp=True, prepare_psp=False
+                )
                 cache_worked = True
             except:
                 cache_worked = False
@@ -328,7 +321,9 @@ class model_configurator:
 
         return rel_syn_contr_dict
 
-    def create_single_neuron_networks(self):
+    def create_single_neuron_networks(
+        self, single_net=True, single_net_v_clamp=True, prepare_psp=True
+    ):
         ### clear ANNarchy
         cnp_clear()
 
@@ -338,15 +333,43 @@ class model_configurator:
             print(txt)
             self.log(txt)
             ### the network with the standard neuron
-            self.net_single_dict[pop_name] = self.create_net_single(pop_name=pop_name)
+            if single_net:
+                self.net_single_dict[pop_name] = self.create_net_single(
+                    pop_name=pop_name
+                )
+            else:
+                ### dummy network for the pop
+                net_single_dummy = Network()
+                pop_single_dummy = Population(
+                    1,
+                    neuron=Neuron(equations="r=1"),
+                    name=f"dummy_single_{pop_name}",
+                )
+                mon_single_dummy = Monitor(pop_single_dummy, ["r"])
+                net_single_dummy.add([pop_single_dummy, mon_single_dummy])
+
             ### the network with the voltage clamp version neuron
-            self.net_single_v_clamp_dict[
-                pop_name
-            ] = self.create_net_single_voltage_clamp(pop_name=pop_name)
+            if single_net_v_clamp:
+                self.net_single_v_clamp_dict[
+                    pop_name
+                ] = self.create_net_single_voltage_clamp(pop_name=pop_name)
+            else:
+                ### dummy network for the pop
+                net_single_v_clamp_dummy = Network()
+                pop_single_v_clamp_dummy = Population(
+                    1,
+                    neuron=Neuron(equations="r=1"),
+                    name=f"dummy_single_v_clamp_{pop_name}",
+                )
+                mon_single_v_clamp_dummy = Monitor(pop_single_v_clamp_dummy, ["r"])
+                net_single_v_clamp_dummy.add(
+                    [pop_single_v_clamp_dummy, mon_single_v_clamp_dummy]
+                )
             ### get v_rest and correspodning I_app_hold
-            self.prepare_psp_dict[pop_name] = self.find_v_rest_for_psp(
-                pop_name, do_plot=False
-            )
+            if prepare_psp:
+                self.prepare_psp_dict[pop_name] = self.find_v_rest_for_psp(
+                    pop_name, do_plot=False
+                )
 
     def create_net_single(self, pop_name):
         """
@@ -486,6 +509,39 @@ class model_configurator:
         parameters_line_split_list.append("v_clamp_rec_thresh = 0 : population")
         init_arguments_dict["parameters"] = "\n".join(parameters_line_split_list)
 
+        ### for each afferent population create a binomial spike train equation string
+        ### add it to the equations
+        ### and add the related parameters to the parameters
+
+        ### get the afferent populations
+        afferent_population_list = []
+        proj_target_type_list = []
+        for proj_name in self.afferent_projection_dict[pop_name]["projection_names"]:
+            proj_dict = self.get_proj_dict(proj_name)
+            pre_pop_name = proj_dict["pre_pop_name"]
+            afferent_population_list.append(pre_pop_name)
+            proj_target_type_list.append(proj_dict["proj_target_type"])
+
+        ### split the equations and parameters string
+        equations_line_split_list = str(init_arguments_dict["equations"]).splitlines()
+
+        parameters_line_split_list = str(init_arguments_dict["parameters"]).splitlines()
+
+        ### add the binomial spike train equations and parameters
+        (
+            equations_line_split_list,
+            parameters_line_split_list,
+        ) = self.add_binomial_input(
+            equations_line_split_list,
+            parameters_line_split_list,
+            afferent_population_list,
+            proj_target_type_list,
+        )
+
+        ### combine string lines to multiline strings again
+        init_arguments_dict["parameters"] = "\n".join(parameters_line_split_list)
+        init_arguments_dict["equations"] = "\n".join(equations_line_split_list)
+
         ### create neuron model with new equations
         neuron_model_new = Neuron(**init_arguments_dict)
 
@@ -501,7 +557,7 @@ class model_configurator:
             setattr(single_neuron_v_clamp, attr_name, attr_val)
 
         ### create Monitor for single neuron
-        mon_single = Monitor(single_neuron_v_clamp, ["v_clamp_rec"])
+        mon_single = Monitor(single_neuron_v_clamp, ["v_clamp_rec_sign"])
 
         ### create network with single neuron
         net_single = Network()
@@ -760,10 +816,14 @@ class model_configurator:
             I_base_dict, dict
                 Dictionary with baseline curretns for all configured populations.
         """
-        ### use many neuron network to get baseline currents
+
+        ### create many neuron network
+        net_many_dict = self.create_many_neuron_network()
+
+        ### use voltage clamp networks and many neuron networks to get baseline currents
         I_base_dict = {}
         target_firing_rate_changed = True
-        nr_max_iter = 100
+        nr_max_iter = 1
         nr_iter = 0
         while target_firing_rate_changed and nr_iter < nr_max_iter:
             ### get baseline current values, if target firing rates could not
@@ -771,12 +831,12 @@ class model_configurator:
             (
                 target_firing_rate_changed,
                 I_base_dict,
-            ) = self.find_base_current()
+            ) = self.find_base_current(net_many_dict)
             nr_iter += 1
 
         return I_base_dict
 
-    def find_base_current(self):
+    def find_base_current(self, net_many_dict):
         """
         search through whole I_app space
         for each population simulate a network with 10000 neurons, each neuron has a different I_app value
@@ -804,10 +864,18 @@ class model_configurator:
             ]
             rate_list = self.get_rate_list_for_pop(pop_name)
             eff_size_list = self.get_eff_size_list_for_pop(pop_name)
+            ### get correct magnitude of I_app using the voltage clamp networks
+            I_app_magnitude = self.get_I_app_magnitude(
+                pop_name,
+                pre_pop_name_list=pre_pop_name_list,
+                eff_size_list=eff_size_list,
+                rate_list=rate_list,
+                weight_list=weight_list,
+            )
             ### get the I_app_arr
             I_app_arr = np.linspace(
-                -self.I_app_max_dict[pop_name],
-                self.I_app_max_dict[pop_name],
+                I_app_magnitude,
+                I_app_magnitude + self.I_app_max_dict[pop_name],
                 self.nr_neurons_per_net,
             )
             ### append these lists to the list for all post populations i.e. networks
@@ -816,9 +884,6 @@ class model_configurator:
             rate_list_list.append(rate_list)
             eff_size_list_list.append(eff_size_list)
             I_app_arr_list.append(I_app_arr)
-
-        ### create model
-        net_many_dict = self.create_many_neuron_network()
 
         ### create list with variable_init_samplers of populations
         variable_init_sampler_list = [
@@ -883,8 +948,39 @@ class model_configurator:
             best_idx = np.argmin(
                 np.absolute(possible_firing_rates_arr - target_firing_rate)
             )
-            I_app_best_dict[pop_name] = I_app_arr[best_idx]
-        if target_firing_rate_changed:
+            ### take all possible firing rates in range target firing rate +-10
+            lower_rate = max([0, target_firing_rate - 10])
+            higher_rate = target_firing_rate + 10
+            rate_range_idx_arr = (
+                (possible_firing_rates_arr >= lower_rate).astype(int)
+                * (possible_firing_rates_arr <= higher_rate).astype(int)
+            ).astype(bool)
+            possible_firing_rates_arr = possible_firing_rates_arr[rate_range_idx_arr]
+            I_app_arr = I_app_arr[rate_range_idx_arr]
+            ### now do linear fit to find I_app for target firing rate
+            if len(I_app_arr) > 10:
+                reg = LinearRegression().fit(
+                    X=possible_firing_rates_arr.reshape(-1, 1), y=I_app_arr
+                )
+                I_app_best_dict[pop_name] = reg.predict(
+                    np.array([[target_firing_rate]])
+                )[0]
+            else:
+                I_app_best_dict[pop_name] = 0
+            plt.figure(figsize=(6.4, 4.8 * 2))
+            plt.subplot(211)
+            plt.plot(I_app_arr, possible_firing_rates_arr)
+            plt.axhline(target_firing_rate, color="k")
+            plt.axvline(I_app_best_dict[pop_name], color="r")
+            plt.subplot(212)
+            plt.plot(
+                I_app_arr, np.absolute(possible_firing_rates_arr - target_firing_rate)
+            )
+            plt.tight_layout()
+            plt.savefig(f"possible_firing_rate_{pop_name}.png", dpi=300)
+            plt.close("all")
+
+        if target_firing_rate_changed and False:
             print_df(pd.DataFrame(self.afferent_projection_dict))
             print_df(pd.DataFrame(self.g_max_dict))
             ### TODO cannot reach firing rates for example for thal because I_app_max is too small, this +100Hz method seems not to work well
@@ -895,6 +991,79 @@ class model_configurator:
             quit()
 
         return [target_firing_rate_changed, I_app_best_dict]
+
+    def get_I_app_magnitude(
+        self,
+        pop_name,
+        pre_pop_name_list=[],
+        eff_size_list=[],
+        rate_list=[],
+        weight_list=[],
+    ):
+        """
+        Get the correct magnitude of I_app for the given population.
+        The correct magnitude is the magnitude which is to negate the synaptic currents caused by the afferent populations.
+        Use the curretn weights and rates from the afferent_projection_dict and target_firing_rate_dict.
+        """
+        print(f"get v clamp of {pop_name}")
+        print(f"pre_pop_name_list: {pre_pop_name_list}")
+        print(f"eff_size_list: {eff_size_list}")
+        print(f"rate_list: {rate_list}")
+        print(f"weight_list: {weight_list}")
+        print(f"I_app_hold: {self.prepare_psp_dict[pop_name]['I_app_hold']}")
+        print(f"v_rest: {self.prepare_psp_dict[pop_name]['v_rest']}")
+
+        detla_v_rest_0 = (
+            self.get_v_clamp_2000(
+                net=self.net_single_v_clamp_dict[pop_name]["net"],
+                population=self.net_single_v_clamp_dict[pop_name]["population"],
+                monitor=self.net_single_v_clamp_dict[pop_name]["monitor"],
+                v=None,
+                I_app=0,
+                variable_init_sampler=self.prepare_psp_dict[pop_name][
+                    "variable_init_sampler"
+                ],
+                pre_pop_name_list=pre_pop_name_list,
+                eff_size_list=eff_size_list,
+                rate_list=rate_list,
+                weight_list=weight_list,
+                return_1000=True,
+            )
+            * dt()
+        )
+
+        if detla_v_rest_0 > 0:
+            I_app_sign = -1
+        else:
+            I_app_sign = 1
+
+        self.log("search I_app_magnitude with y(X) = detla_v(I_app=X)")
+        I_app_magnitude = I_app_sign * self.incremental_continuous_bound_search(
+            y_X=lambda X_val: self.get_v_clamp_2000(
+                net=self.net_single_v_clamp_dict[pop_name]["net"],
+                population=self.net_single_v_clamp_dict[pop_name]["population"],
+                monitor=self.net_single_v_clamp_dict[pop_name]["monitor"],
+                v=None,
+                I_app=I_app_sign * X_val,
+                variable_init_sampler=self.prepare_psp_dict[pop_name][
+                    "variable_init_sampler"
+                ],
+                pre_pop_name_list=pre_pop_name_list,
+                eff_size_list=eff_size_list,
+                rate_list=rate_list,
+                weight_list=weight_list,
+                return_1000=True,
+            )
+            * dt(),
+            y_bound=0,
+            X_0=0,
+            y_0=detla_v_rest_0,
+            alpha_abs=0.005,
+        )
+
+        print(f"I_app_magnitude: {I_app_magnitude}\n")
+
+        return I_app_magnitude
 
     def get_rate_list_for_pop(self, pop_name):
         """
@@ -945,10 +1114,7 @@ class model_configurator:
             variable_init_sampler = self.net_single_dict[pop_name][
                 "variable_init_sampler"
             ]
-            variable_init_arr = variable_init_sampler.sample(len(population), seed=0)
-            for var_idx, var_name in enumerate(population.variables):
-                set_val = variable_init_arr[:, var_idx]
-                setattr(population, var_name, set_val)
+            self.set_init_variables(population, variable_init_sampler)
         ### set baselines
         for pop_name in I_base_dict.keys():
             get_val = getattr(get_population(pop_name), I_base_variable)
@@ -970,6 +1136,17 @@ class model_configurator:
                 get_projection(proj_name).w = weight_val
 
         return I_base_dict
+
+    def set_init_variables(self, population, variable_init_sampler):
+        """
+        Set the initial variables of the given population to the given values.
+        """
+        variable_init_arr = variable_init_sampler.sample(len(population), seed=0)
+        var_name_list = variable_init_sampler.var_name_list
+        for var_name in population.variables:
+            if var_name in var_name_list:
+                set_val = variable_init_arr[:, var_name_list.index(var_name)]
+                setattr(population, var_name, set_val)
 
     def get_time_in_x_sec(self, x):
         """
@@ -2190,7 +2367,7 @@ class model_configurator:
 
         ### find I_max with f_0, and f_max using incremental_continuous_bound_search
         self.log("search I_app_max with y(X) = f(I_app=X, g_ampa=0, g_gaba=0)")
-        I_max = 5 * self.incremental_continuous_bound_search(
+        I_max = self.incremental_continuous_bound_search(
             y_X=lambda X_val: self.get_rate(
                 net=self.net_single_dict[pop_name]["net"],
                 population=self.net_single_dict[pop_name]["population"],
@@ -2725,10 +2902,7 @@ class model_configurator:
         """
         ### reset and set init values
         net.reset()
-        variable_init_arr = variable_init_sampler.sample(len(population), seed=0)
-        for var_idx, var_name in enumerate(population.variables):
-            set_val = variable_init_arr[:, var_idx]
-            setattr(population, var_name, set_val)
+        self.set_init_variables(population, variable_init_sampler)
         ### slow down conductances (i.e. make them constant)
         population.tau_ampa = 1e20
         population.tau_gaba = 1e20
@@ -2784,10 +2958,7 @@ class model_configurator:
         """
         ### reset network and set initial values
         net.reset()
-        variable_init_arr = variable_init_sampler.sample(len(population), seed=0)
-        for var_idx, var_name in enumerate(population.variables):
-            set_val = variable_init_arr[:, var_idx]
-            setattr(population, var_name, set_val)
+        self.set_init_variables(population, variable_init_sampler)
         ### apply input
         population.I_app = I_app_hold
         ### simulate 50 ms initial duration
@@ -2872,7 +3043,7 @@ class model_configurator:
                 afferent_population_list.append(pre_pop_name)
                 proj_target_type_list.append(proj_dict["proj_target_type"])
 
-            ### for each afferent population create a poisson spike train equation string
+            ### for each afferent population create a binomial spike train equation string
             ### add it to the equations
             ### and add the related parameters to the parameters
 
@@ -2885,81 +3056,16 @@ class model_configurator:
                 init_arguments_dict["parameters"]
             ).splitlines()
 
-            ### loop over afferent populations to add the new equation lines and parameters
-            for pre_pop_name in afferent_population_list:
-                ### define the spike train of a pre population as a binomial process with number of trials = number of pre neurons and success probability = spike probability (taken from Poisson neurons)
-                ### the obtained value is the number of spikes at a time step times the weight
-                poisson_equation_str = f"{pre_pop_name}_spike_train = Binomial({pre_pop_name}_size, {pre_pop_name}_spike_prob)"
-                ### add the equation line
-                equations_line_split_list.insert(1, poisson_equation_str)
-                ### add the parameters
-                parameters_line_split_list.append(
-                    f"{pre_pop_name}_size = 0 : population"
-                )
-                parameters_line_split_list.append(
-                    f"{pre_pop_name}_spike_prob = 0 : population"
-                )
-                parameters_line_split_list.append(
-                    f"{pre_pop_name}_weight = 0 : population"
-                )
-
-            ### change the g_ampa and g_gaba line, they additionally are the sum of the spike trains
-            for equation_line_idx, equation_line in enumerate(
-                equations_line_split_list
-            ):
-                ### remove whitespaces
-                line = equation_line.replace(" ", "")
-                ### check if line contains g_ampa
-                if "dg_ampa/dt" in line:
-                    ### get the right side of the equation
-                    line_right = line.split("=")[1]
-                    line_left = line.split("=")[0]
-                    ### remove and store tags_str
-                    tags_str = ""
-                    if len(line_right.split(":")) > 1:
-                        line_right, tags_str = line_right.split(":")
-                    ### get the populations whose spike train should be appended in g_ampa
-                    afferent_population_to_append_list = []
-                    for pre_pop_idx, pre_pop_name in enumerate(
-                        afferent_population_list
-                    ):
-                        if proj_target_type_list[pre_pop_idx] == "ampa":
-                            afferent_population_to_append_list.append(pre_pop_name)
-                    if len(afferent_population_to_append_list) > 0:
-                        ### change right side, add the sum of the spike trains
-                        line_right = f"{line_right} + {'+'.join([f'({pre_pop_name}_spike_train*{pre_pop_name}_weight)/dt' for pre_pop_name in afferent_population_to_append_list])}"
-                    ### add tags_str again
-                    if tags_str != "":
-                        line_right = f"{line_right}:{tags_str}"
-                    ### combine line again and replace the list entry in equations_line_split_list
-                    line = f"{line_left}={line_right}"
-                    equations_line_split_list[equation_line_idx] = line
-
-                ### check if line contains g_gaba
-                if "dg_gaba/dt" in line:
-                    ### get the right side of the equation
-                    line_right = line.split("=")[1]
-                    line_left = line.split("=")[0]
-                    ### remove and store tags_str
-                    tags_str = ""
-                    if len(line_right.split(":")) > 1:
-                        line_right, tags_str = line_right.split(":")
-                    ### get the populations whose spike train should be appended in g_ampa
-                    afferent_population_to_append_list = []
-                    for pre_pop_idx, pre_pop_name in enumerate(
-                        afferent_population_list
-                    ):
-                        if proj_target_type_list[pre_pop_idx] == "gaba":
-                            afferent_population_to_append_list.append(pre_pop_name)
-                    if len(afferent_population_to_append_list) > 0:
-                        ### change right side, add the sum of the spike trains
-                        line_right = f"{line_right} + {'+'.join([f'({pre_pop_name}_spike_train*{pre_pop_name}_weight)/dt' for pre_pop_name in afferent_population_to_append_list])}"
-                    ### add tags_str again
-                    if tags_str != "":
-                        line_right = f"{line_right}:{tags_str}"
-                    ### combine line again and replace the list entry in equations_line_split_list
-                    line = f"{line_left}={line_right}"
-                    equations_line_split_list[equation_line_idx] = line
+            ### add the binomial spike train equations and parameters
+            (
+                equations_line_split_list,
+                parameters_line_split_list,
+            ) = self.add_binomial_input(
+                equations_line_split_list,
+                parameters_line_split_list,
+                afferent_population_list,
+                proj_target_type_list,
+            )
 
             ### combine string lines to multiline strings again
             init_arguments_dict["parameters"] = "\n".join(parameters_line_split_list)
@@ -3005,17 +3111,124 @@ class model_configurator:
         }
         return net_many_dict
 
-    def get_v_clamp_2000(self, net, population, v=None, I_app=None):
+    def add_binomial_input(
+        self,
+        equations_line_split_list,
+        parameters_line_split_list,
+        afferent_population_list,
+        proj_target_type_list,
+    ):
+        ### loop over afferent populations to add the new equation lines and parameters
+        for pre_pop_name in afferent_population_list:
+            ### define the spike train of a pre population as a binomial process with number of trials = number of pre neurons and success probability = spike probability (taken from Poisson neurons)
+            ### the obtained value is the number of spikes at a time step times the weight
+            poisson_equation_str = f"{pre_pop_name}_spike_train = Binomial({pre_pop_name}_size, {pre_pop_name}_spike_prob)"
+            ### add the equation line
+            equations_line_split_list.insert(1, poisson_equation_str)
+            ### add the parameters
+            parameters_line_split_list.append(f"{pre_pop_name}_size = 0 : population")
+            parameters_line_split_list.append(
+                f"{pre_pop_name}_spike_prob = 0 : population"
+            )
+            parameters_line_split_list.append(f"{pre_pop_name}_weight = 0 : population")
+
+        ### change the g_ampa and g_gaba line, they additionally are the sum of the spike trains
+        for equation_line_idx, equation_line in enumerate(equations_line_split_list):
+            ### remove whitespaces
+            line = equation_line.replace(" ", "")
+            ### check if line contains g_ampa
+            if "dg_ampa/dt" in line:
+                ### get the right side of the equation
+                line_right = line.split("=")[1]
+                line_left = line.split("=")[0]
+                ### remove and store tags_str
+                tags_str = ""
+                if len(line_right.split(":")) > 1:
+                    line_right, tags_str = line_right.split(":")
+                ### get the populations whose spike train should be appended in g_ampa
+                afferent_population_to_append_list = []
+                for pre_pop_idx, pre_pop_name in enumerate(afferent_population_list):
+                    if proj_target_type_list[pre_pop_idx] == "ampa":
+                        afferent_population_to_append_list.append(pre_pop_name)
+                if len(afferent_population_to_append_list) > 0:
+                    ### change right side, add the sum of the spike trains
+                    line_right = f"{line_right} + {'+'.join([f'({pre_pop_name}_spike_train*{pre_pop_name}_weight)/dt' for pre_pop_name in afferent_population_to_append_list])}"
+                ### add tags_str again
+                if tags_str != "":
+                    line_right = f"{line_right}:{tags_str}"
+                ### combine line again and replace the list entry in equations_line_split_list
+                line = f"{line_left}={line_right}"
+                equations_line_split_list[equation_line_idx] = line
+
+            ### check if line contains g_gaba
+            if "dg_gaba/dt" in line:
+                ### get the right side of the equation
+                line_right = line.split("=")[1]
+                line_left = line.split("=")[0]
+                ### remove and store tags_str
+                tags_str = ""
+                if len(line_right.split(":")) > 1:
+                    line_right, tags_str = line_right.split(":")
+                ### get the populations whose spike train should be appended in g_ampa
+                afferent_population_to_append_list = []
+                for pre_pop_idx, pre_pop_name in enumerate(afferent_population_list):
+                    if proj_target_type_list[pre_pop_idx] == "gaba":
+                        afferent_population_to_append_list.append(pre_pop_name)
+                if len(afferent_population_to_append_list) > 0:
+                    ### change right side, add the sum of the spike trains
+                    line_right = f"{line_right} + {'+'.join([f'({pre_pop_name}_spike_train*{pre_pop_name}_weight)/dt' for pre_pop_name in afferent_population_to_append_list])}"
+                ### add tags_str again
+                if tags_str != "":
+                    line_right = f"{line_right}:{tags_str}"
+                ### combine line again and replace the list entry in equations_line_split_list
+                line = f"{line_left}={line_right}"
+                equations_line_split_list[equation_line_idx] = line
+
+        return (equations_line_split_list, parameters_line_split_list)
+
+    def get_v_clamp_2000(
+        self,
+        net: Network,
+        population,
+        monitor=None,
+        v=None,
+        I_app=None,
+        variable_init_sampler=None,
+        pre_pop_name_list=[],
+        eff_size_list=[],
+        rate_list=[],
+        weight_list=[],
+        return_1000=False,
+    ):
         """
         the returned values is dv/dt
         --> to get the hypothetical change of v for a single time step multiply with dt!
         """
+        ### reset network and set initial values
         net.reset()
+        net.set_seed(0)
+        if not isinstance(variable_init_sampler, type(None)):
+            self.set_init_variables(population, variable_init_sampler)
+        ### set v and I_app
         if not isinstance(v, type(None)):
             population.v = v
         if not isinstance(I_app, type(None)):
             population.I_app = I_app
+        ### set the weights and rates of the binomial spike trains of the afferent populations
+        for pre_pop_idx, pre_pop_name in enumerate(pre_pop_name_list):
+            setattr(population, f"{pre_pop_name}_size", eff_size_list[pre_pop_idx])
+            setattr(
+                population,
+                f"{pre_pop_name}_spike_prob",
+                (rate_list[pre_pop_idx] / 1000) * dt(),
+            )
+            setattr(population, f"{pre_pop_name}_weight", weight_list[pre_pop_idx])
+        ### simulate 2000 ms
         net.simulate(2000)
+
+        if return_1000:
+            v_clamp_rec_arr = monitor.get("v_clamp_rec_sign")[:, 0]
+            return np.mean(v_clamp_rec_arr[-int(round(1000 / dt(), 0)) :])
         return population.v_clamp_rec[0]
 
     def get_voltage_clamp_equations(self, init_arguments_dict, pop_name):
@@ -3045,14 +3258,16 @@ class model_configurator:
             ### create the new equations for the ANNarchy neuron
             ### create two lines, the voltage clamp line v+=0 and the
             ### right sight of v+=... separately
-            eq_new_0 = "v_clamp_rec_pre = v_clamp_rec"
-            eq_new_1 = f"v_clamp_rec = abs({eq_v.split('+=')[1]})"
-            eq_new_2 = "v+=0"
+            eq_new_0 = f"v_clamp_rec_sign = {eq_v.split('+=')[1]}"
+            eq_new_1 = f"v_clamp_rec = fabs({eq_v.split('+=')[1]})"
+            eq_new_2 = "v_clamp_rec_pre = v_clamp_rec"
+            eq_new_3 = "v+=0"
             ### remove old v line and insert new lines
             del eq[line_is_v_list.index(True)]
             eq.insert(line_is_v_list.index(True), eq_new_0)
             eq.insert(line_is_v_list.index(True), eq_new_1)
             eq.insert(line_is_v_list.index(True), eq_new_2)
+            eq.insert(line_is_v_list.index(True), eq_new_3)
             eq = "\n".join(eq)
             ### return new neuron equations
             return eq
@@ -3117,18 +3332,20 @@ class model_configurator:
         ### the obtained line which would be the right side of dv/dt,
         ### and this right side sotred from the previous time step
         ### v_clamp_rec should be an absolute value
-        eq_new_0 = f"v_clamp_rec = fabs({result})"
-        eq_new_1 = "v_clamp_rec_pre = v_clamp_rec"
+        eq_new_0 = f"v_clamp_rec_sign = {result}"
+        eq_new_1 = f"v_clamp_rec = fabs({result})"
+        eq_new_2 = "v_clamp_rec_pre = v_clamp_rec"
         ### add stored tags to new dv/dt equation
         if not isinstance(tags, type(None)):
-            eq_new_2 = f"dv/dt=0 : {tags}"
+            eq_new_3 = f"dv/dt=0 : {tags}"
         else:
-            eq_new_2 = "dv/dt=0"
+            eq_new_3 = "dv/dt=0"
         ### remove old v line and insert new three lines
         del eq[line_is_v_list.index(True)]
         eq.insert(line_is_v_list.index(True), eq_new_0)
         eq.insert(line_is_v_list.index(True), eq_new_1)
         eq.insert(line_is_v_list.index(True), eq_new_2)
+        eq.insert(line_is_v_list.index(True), eq_new_3)
         eq = "\n".join(eq)
         ### return new neuron equations
         return eq
@@ -3330,7 +3547,10 @@ class model_configurator:
         except:
             proj_weight = None
         ### g_max
-        g_max = self.g_max_dict[post_pop_name][proj_target_type]
+        try:
+            g_max = self.g_max_dict[post_pop_name][proj_target_type]
+        except:
+            g_max = None
         ### get max weight
         try:
             proj_max_weight = self.afferent_projection_dict[post_pop_name][
@@ -3603,7 +3823,7 @@ def get_rate_parallel(
     population.I_app = I_app_arr
 
     ### simulate 500 ms initial duration + X ms
-    if "stn" in population.name:
+    if "stn" in population.name and False:
         net.simulate(500)
         time_arr = np.arange(500, 500 + simulation_dur, dt())
         cor_spike_train_list = []
@@ -3613,30 +3833,27 @@ def get_rate_parallel(
         I_app_list = []
         for time_ms in time_arr:
             net.simulate(dt())
-            cor_spike_train_list.append(population.cor_spike_train[0])
-            gpe_spike_train_list.append(population.gpe_spike_train[0])
+            if "cor_spike_train" in population.attributes:
+                cor_spike_train_list.append(population.cor_spike_train[0])
+            else:
+                cor_spike_train_list.append(0)
+            if "gpe_spike_train" in population.attributes:
+                gpe_spike_train_list.append(population.gpe_spike_train[0])
+            else:
+                gpe_spike_train_list.append(0)
             g_ampa_list.append(population.g_ampa[0])
             g_gaba_list.append(population.g_gaba[0])
             I_app_list.append(population.I_app[0])
-        plt.figure(figsize=(6.4, 4.8 * 5))
-        plt.subplot(511)
-        plt.title(f"cor_weight = {population.cor_weight}")
-        plt.ylabel("cor_spike_train")
-        plt.plot(time_arr[:100], cor_spike_train_list[:100], "k.")
-        plt.subplot(512)
-        plt.ylabel("gpe_spike_train")
-        plt.plot(time_arr[:100], gpe_spike_train_list[:100], "k.")
-        plt.subplot(513)
+        plt.figure(figsize=(6.4, 4.8 * 2))
+        plt.subplot(211)
         plt.ylabel("g_ampa")
-        plt.plot(time_arr[:100], g_ampa_list[:100], "k.")
-        plt.subplot(514)
+        plt.plot(time_arr, g_ampa_list, "k.")
+        plt.subplot(212)
         plt.ylabel("g_gaba")
-        plt.plot(time_arr[:100], g_gaba_list[:100], "k.")
-        plt.subplot(515)
-        plt.ylabel("I_app")
-        plt.plot(time_arr[:100], I_app_list[:100], "k.")
+        plt.plot(time_arr, g_gaba_list, "k.")
         plt.tight_layout()
-        plt.savefig("tmp_stn.png", dpi=300)
+        plt.savefig("stn_input_configurator.png", dpi=300)
+        plt.close("all")
     else:
         net.simulate(500 + simulation_dur)
 

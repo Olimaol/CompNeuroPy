@@ -5,6 +5,7 @@ from ANNarchy import (
     simulate,
     get_population,
     get_projection,
+    dt,
 )
 from CompNeuroPy.neuron_models import (
     poisson_neuron_up_down,
@@ -19,13 +20,20 @@ import numpy as np
 def BGM_part_function(params):
     #######   POPULATIONS   ######
     ### cortex / input populations
-    cor = Population(
-        params["cor.size"],
+    cor_exc = Population(
+        params["cor_exc.size"],
         poisson_neuron_up_down,
-        name="cor",
+        name="cor_exc",
     )
-    cor.tau_up = params["cor.tau_up"]
-    cor.tau_down = params["cor.tau_down"]
+    cor_exc.tau_up = params["cor_exc.tau_up"]
+    cor_exc.tau_down = params["cor_exc.tau_down"]
+    cor_inh = Population(
+        params["cor_inh.size"],
+        poisson_neuron_up_down,
+        name="cor_inh",
+    )
+    cor_inh.tau_up = params["cor_inh.tau_up"]
+    cor_inh.tau_down = params["cor_inh.tau_down"]
     ### BG Populations
     stn = Population(
         params["stn.size"],
@@ -94,15 +102,26 @@ def BGM_part_function(params):
 
     ######   PROJECTIONS   ######
     ### cortex go output
-    cor__stn = Projection(
-        pre=cor,
+    cor_exc__stn = Projection(
+        pre=cor_exc,
         post=stn,
         target="ampa",
-        name="cor__stn",
+        name="cor_exc__stn",
     )
-    cor__stn.connect_fixed_probability(
-        probability=params["cor__stn.probability"], weights=1
+    cor_exc__stn.connect_fixed_probability(
+        probability=params["cor_exc__stn.probability"], weights=1
     )
+
+    cor_inh__stn = Projection(
+        pre=cor_inh,
+        post=stn,
+        target="gaba",
+        name="cor_inh__stn",
+    )
+    cor_inh__stn.connect_fixed_probability(
+        probability=params["cor_inh__stn.probability"], weights=1
+    )
+
     ### stn output
     stn__snr = Projection(
         pre=stn,
@@ -124,15 +143,15 @@ def BGM_part_function(params):
     )
     ### gpe proto output
     if params["general.more_complex"]:
-        gpe__stn = Projection(
-            pre=gpe,
-            post=stn,
-            target="gaba",
-            name="gpe__stn",
-        )
-        gpe__stn.connect_fixed_probability(
-            probability=params["gpe__stn.probability"], weights=1
-        )
+        # gpe__stn = Projection(
+        #     pre=gpe,
+        #     post=stn,
+        #     target="gaba",
+        #     name="gpe__stn",
+        # )
+        # gpe__stn.connect_fixed_probability(
+        #     probability=params["gpe__stn.probability"], weights=1
+        # )
         gpe__snr = Projection(
             pre=gpe,
             post=snr,
@@ -169,9 +188,12 @@ if __name__ == "__main__":
     params = {}
     #######   POPULATIONS PARAMETERS   ######
     ### cortex / input populations
-    params["cor.size"] = 100
-    params["cor.tau_up"] = 10
-    params["cor.tau_down"] = 30
+    params["cor_exc.size"] = 100
+    params["cor_exc.tau_up"] = 10
+    params["cor_exc.tau_down"] = 30
+    params["cor_inh.size"] = 100
+    params["cor_inh.tau_up"] = 10
+    params["cor_inh.tau_down"] = 30
     ### BG Populations
     params["snr.size"] = 100
     params["snr.a"] = 0.005
@@ -223,7 +245,8 @@ if __name__ == "__main__":
     params["thal.E_gaba"] = -90
     #######   PROJECTIONS PARAMETERS   ######
     params["general.more_complex"] = True
-    params["cor__stn.probability"] = 0.2
+    params["cor_exc__stn.probability"] = 0.2
+    params["cor_inh__stn.probability"] = 0.2
     params["stn__snr.probability"] = 0.3
     params["stn__gpe.probability"] = 0.35
     params["gpe__stn.probability"] = 0.35
@@ -245,13 +268,14 @@ if __name__ == "__main__":
     ### model configurator should get target resting-state firing rates for the
     ### model populations one wants to configure and their afferents as input
     target_firing_rate_dict = {
-        "cor": 15,
+        "cor_exc": 15,
+        "cor_inh": 30,
         "stn": 30,
         "gpe": 50,
         "snr": 60,
         "thal": 5,
     }
-    do_not_config_list = ["cor"]
+    do_not_config_list = ["cor_exc", "cor_inh"]
 
     ### initialize model_configurator
     model_conf = model_configurator(
@@ -273,7 +297,7 @@ if __name__ == "__main__":
         "stn": [0.3, 0.3],
         "gpe": [0.4],
         "snr": [0.5, 0.3],
-        "thal": [0.7],
+        "thal": [0.1],
     }
     ### and define the contributions of their afferent projections
     synaptic_contribution_dict = {"snr": {"gaba": {"gpe__snr": 0.7, "snr__snr": 0.3}}}
@@ -288,23 +312,41 @@ if __name__ == "__main__":
     print("user I_base:")
     print(I_base_dict)
     print("model cor_stn_weight:")
-    print(get_projection("cor__stn").w)
+    print(get_projection("cor_exc__stn").w)
+
+    for pop_name in model.populations:
+        if "cor" in pop_name:
+            continue
+        get_population(pop_name).rate_base_noise = 10
+        get_population(pop_name).base_noise = max(
+            [
+                model_conf.I_app_max_dict[pop_name] * 0.02,
+                abs(get_population(pop_name).base_mean[0]) * 0.02,
+            ]
+        )
+        print(f"pop_name: {pop_name}")
+        print(f"base_mean: {get_population(pop_name).base_mean[0]}")
+        print(f"base_noise: {get_population(pop_name).base_noise[0]}")
+        print(f"rate_base_noise: {get_population(pop_name).rate_base_noise[0]}\n")
 
     ### do a test simulation
     mon = Monitors(
         {
-            "pop;cor": ["spike"],
+            "pop;cor_exc": ["spike"],
+            "pop;cor_inh": ["spike"],
             "pop;stn": ["spike", "g_ampa", "g_gaba"],
             "pop;gpe": ["spike", "g_ampa", "g_gaba"],
             "pop;snr": ["spike", "g_ampa", "g_gaba"],
             "pop;thal": ["spike", "g_ampa", "g_gaba"],
         }
     )
+    get_population("cor_exc").rates = target_firing_rate_dict["cor_exc"]
+    get_population("cor_inh").rates = target_firing_rate_dict["cor_inh"]
     simulate(1000)
     mon.start()
-    get_population("cor").rates = target_firing_rate_dict["cor"]
-    simulate(2000)
-    get_population("cor").rates = 0
+    simulate(4000)
+    get_population("cor_exc").rates = 0
+    get_population("cor_inh").rates = 0
     simulate(2000)
 
     ### get recordings
@@ -312,21 +354,35 @@ if __name__ == "__main__":
     recording_times = mon.get_recording_times()
 
     stn_g_ampa = recordings[0]["stn;g_ampa"]
-    cor_spike = recordings[0]["cor;spike"]
+    stn_g_gaba = recordings[0]["stn;g_gaba"]
+    cor_spike = recordings[0]["cor_exc;spike"]
     cor_spike_arr = np.zeros(stn_g_ampa.shape[0])
     t, n = my_raster_plot(cor_spike)
     values, counts = np.unique(t - 10000, return_counts=True)
     t = values.astype(int)
     cor_spike_arr[t] = counts
-    plt.figure(figsize=(6.4, 4.8 * 3))
-    plt.subplot(311)
-    plt.ylabel("cor_spike_train")
-    plt.plot(cor_spike_arr[:100], "k.")
-    plt.subplot(312)
+    plt.figure(figsize=(6.4, 4.8 * 2))
+    plt.subplot(211)
+    plt.ylabel("g_ampa")
     plt.plot(stn_g_ampa[:, 0], "k.")
-    plt.subplot(313)
-    plt.plot(stn_g_ampa[:100, 0], "k.")
-    plt.savefig("stn_g_ampa.png", dpi=300)
+    plt.subplot(212)
+    plt.ylabel("g_gaba")
+    plt.plot(stn_g_gaba[:, 0], "k.")
+    plt.tight_layout()
+    plt.savefig("stn_input_model.png", dpi=300)
+    plt.close("all")
+
+    ### print rates
+    for pop_name in model.populations:
+        spike_dict = recordings[0][f"{pop_name};spike"]
+        t, n = my_raster_plot(spike_dict)
+        nr_spikes_1st = np.sum(
+            (t > int(round(1000 / dt(), 0))) * (t < int(round(5000 / dt(), 0)))
+        )
+        nr_spikes_2nd = np.sum((t > int(round(5000 / dt(), 0))))
+        rate_1st = nr_spikes_1st / (4 * params[f"{pop_name}.size"])
+        rate_2nd = nr_spikes_2nd / (2 * params[f"{pop_name}.size"])
+        print(f"pop_name: {pop_name}, rate_1st: {rate_1st}, rate_2nd: {rate_2nd}")
 
     ### plot recordings
     plot_recordings(
@@ -336,7 +392,8 @@ if __name__ == "__main__":
         chunk=0,
         shape=(5, 3),
         plan=[
-            "1;cor;spike;hybrid",
+            "1;cor_exc;spike;hybrid",
+            "2;cor_inh;spike;hybrid",
             "4;stn;spike;hybrid",
             "5;stn;g_ampa;line",
             "6;stn;g_gaba;line",
