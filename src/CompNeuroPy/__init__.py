@@ -9,7 +9,7 @@ from CompNeuroPy.simulation_requirements import *
 
 ### classes
 from CompNeuroPy.Monitors import Monitors
-from CompNeuroPy.Experiment import Experiment
+from CompNeuroPy.experiment import Experiment
 from CompNeuroPy.generate_model import generate_model
 from CompNeuroPy.generate_simulation import generate_simulation
 from CompNeuroPy.dbs import DBSstimulator

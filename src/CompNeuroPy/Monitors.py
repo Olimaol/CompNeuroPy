@@ -72,7 +72,8 @@ class Monitors:
         ret0 = self.get_recordings()
         ret1 = self.get_recording_times()
         self._init_internals()
-        return [ret0, ret1]
+        ret = (ret0, ret1)
+        return ret
 
     def __correct_start_stop__(self, start_time_arr, stop_time_arr, period):
         """
