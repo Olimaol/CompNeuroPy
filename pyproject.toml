@@ -24,6 +24,7 @@ dependencies = [
     "scipy",
     "numpy",
     "typingchecker",
+    "pandas",
 ]
 
 [project.urls]
