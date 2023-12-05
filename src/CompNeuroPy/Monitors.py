@@ -7,7 +7,6 @@ import numpy as np
 
 class Monitors:
     def __init__(self, monDict={}):
-
         self.mon = mf.addMonitors(monDict)
         self.monDict = monDict
 
@@ -207,8 +206,10 @@ class Monitors:
                 if model:
                     self.timings[key]["start"].append(0)
                 else:
-                    self.timings[key]["start"].append(np.round(get_time(), af.get_number_of_decimals(dt())))
-                    
+                    self.timings[key]["start"].append(
+                        np.round(get_time(), af.get_number_of_decimals(dt()))
+                    )
+
         if model:
             reset(populations, projections, synapses, monitors, net_id=net_id)
 
@@ -414,7 +415,6 @@ class recording_times_cl:
         compartment_list = list(self.recording_times_list[chunk].keys())
         found_recordings = False
         for compartment in compartment_list:
-
             nr_periods_of_compartment = len(
                 self.recording_times_list[chunk][compartment]["start"]["idx"]
             )
