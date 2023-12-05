@@ -26,4 +26,4 @@ from CompNeuroPy.DBS import DBS_stimulator
 
 ### modules
 ### for opt_neuron you need to install torch, sbi, and hyperopt
-import CompNeuroPy.opt_neuron as opt_neuron
+# import CompNeuroPy.opt_neuron as opt_neuron
