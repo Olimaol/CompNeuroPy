@@ -229,7 +229,7 @@ class Cmap:
         return vals
 
 
-class data_obj(object):
+class DataCl(object):
     def __init__(self) -> None:
         pass
 
@@ -240,8 +240,12 @@ class data_obj(object):
         try:
             return super().__getattribute__(__name)
         except:
-            self.__setattr__(__name, data_obj())
+            self.__setattr__(__name, DataCl())
             return super().__getattribute__(__name)
+
+
+### keep old name for compatibility
+data_obj = DataCl
 
 
 def create_cm(colors, name="my_cmap", N=256, gamma=1.0, vmin=0, vmax=1):
@@ -269,7 +273,7 @@ def create_cm(colors, name="my_cmap", N=256, gamma=1.0, vmin=0, vmax=1):
 
     Returns
     -------
-    my_linear_cmap_obj
+    LinearColormap
         The colormap object.
     """
     if not np.iterable(colors):
@@ -334,10 +338,10 @@ def create_cm(colors, name="my_cmap", N=256, gamma=1.0, vmin=0, vmax=1):
         "alpha": np.column_stack([vals, a, a]),
     }
 
-    return my_linear_cmap_obj(name, cdict, N, gamma, vmin, vmax)
+    return LinearColormapClass(name, cdict, N, gamma, vmin, vmax)
 
 
-class my_linear_cmap_obj(LinearSegmentedColormap):
+class LinearColormapClass(LinearSegmentedColormap):
     def __init__(self, name, segmentdata, N=..., gamma=..., vmin=0, vmax=1) -> None:
         """
         Parameters
@@ -393,7 +397,11 @@ class my_linear_cmap_obj(LinearSegmentedColormap):
         return super().__call__(X, alpha, bytes)
 
 
-class decision_tree:
+### keep old name for compatibility
+my_linear_cmap_obj = LinearColormapClass
+
+
+class DecisionTree:
     """
     Class to create a decision tree.
     """
@@ -424,7 +432,7 @@ class decision_tree:
         """
 
         ### create new node
-        new_node = node_cl(tree=self, parent=parent, prob=prob, name=name)
+        new_node = DecisionTreeNode(tree=self, parent=parent, prob=prob, name=name)
         ### add it to node_list
         if len(self.node_list) == new_node.level:
             self.node_list.append([])
@@ -485,7 +493,7 @@ class decision_tree:
         prob: float
             path product of the node
         """
-        node: node_cl = node
+        node: DecisionTreeNode = node
 
         if node.parent == None:
             return ["/" + node.name, node.prob]
@@ -494,18 +502,22 @@ class decision_tree:
             return [path_str + "/" + node.name, prob * node.prob]
 
 
-class node_cl:
+### keep old name for compatibility
+decision_tree = DecisionTree
+
+
+class DecisionTreeNode:
     """
     Class to create a node in a decision tree.
     """
 
     id_counter = 0
 
-    def __init__(self, tree: decision_tree, parent=None, prob=0, name=""):
+    def __init__(self, tree: DecisionTree, parent=None, prob=0, name=""):
         """
         Parameters
         ----------
-        tree: decision_tree object
+        tree: DecisionTree object
             decision tree the node belongs to
         parent: node object
             parent node of the new node
@@ -515,7 +527,7 @@ class node_cl:
             name of the new node
         """
         self.tree = tree
-        parent: node_cl = parent
+        parent: DecisionTreeNode = parent
         self.parent = parent
         self.prob = prob
         self.name = name
@@ -557,6 +569,10 @@ class node_cl:
         """
 
         return self.tree.node(parent=self, prob=prob, name=name)
+
+
+### keep old name for compatibility
+node_cl = DecisionTreeNode
 
 
 def evaluate_expression_with_dict(expression, value_dict):

@@ -65,14 +65,14 @@ class Experiment:
         obj: object
             object with variables "recordings", "monDict", and "data"
         """
-        obj = self.return_cl()
+        obj = self.ResultsCl()
         obj.recordings, obj.recording_times = self.mon.get_recordings_and_clear()
         obj.monDict = self.mon.monDict
         obj.data = self.data
 
         return obj
 
-    class return_cl:
+    class ResultsCl:
         def __init__(self) -> None:
             self.recordings: list
             self.recording_times: recording_times_cl
