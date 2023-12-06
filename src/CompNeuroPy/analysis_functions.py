@@ -15,16 +15,16 @@ def my_raster_plot(spikes: dict):
     Returns two vectors representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
     The spike times are always in simulation steps (in contrast to default ANNarchy raster_plot)
 
-    Parameters
+    Parameters:
     ----------
-    spikes : dict
+    spikes: dict
         ANNarchy spike dict of one population
 
-    Returns
+    Returns:
     -------
-    t : array
+    t: array
         spike times in simulation steps
-    n : array
+    n: array
         ranks of the neurons
     """
     t, n = raster_plot(spikes)
@@ -37,12 +37,12 @@ def get_nanmean(a, axis=None, dtype=None):
     """
     np.nanmean without printing warnings
 
-    Parameters
+    Parameters:
     ----------
-    a : array_like
+    a: array_like
         Array containing numbers whose mean is desired. If `a` is not an
         array, a conversion is attempted.
-    axis : None or int or tuple of ints, optional
+    axis: None or int or tuple of ints, optional
         Axis or axes along which the means are computed. The default is to
         compute the mean of the flattened array.
 
@@ -50,14 +50,14 @@ def get_nanmean(a, axis=None, dtype=None):
 
         If this is a tuple of ints, a mean is performed over multiple axes,
         instead of a single axis or all the axes as before.
-    dtype : data-type, optional
+    dtype: data-type, optional
         Type to use in computing the mean.  For integer inputs, the default
         is `float64`; for floating point inputs, it is the same as the
         input dtype.
 
-    Returns
+    Returns:
     -------
-    m : ndarray, see dtype parameter above
+    m: ndarray, see dtype parameter above
         If `out=None`, returns a new array containing the mean values,
         otherwise a reference to the output array is returned.
     """
@@ -71,11 +71,11 @@ def get_nanstd(a, axis=None, dtype=None):
     """
     np.nanstd without printing warnings
 
-    Parameters
+    Parameters:
     ----------
-    a : array_like
+    a: array_like
         Calculate the standard deviation of these values.
-    axis : None or int or tuple of ints, optional
+    axis: None or int or tuple of ints, optional
         Axis or axes along which the standard deviation is computed. The
         default is to compute the standard deviation of the flattened array.
 
@@ -83,14 +83,14 @@ def get_nanstd(a, axis=None, dtype=None):
 
         If this is a tuple of ints, a standard deviation is performed over
         multiple axes, instead of a single axis or all the axes as before.
-    dtype : dtype, optional
+    dtype: dtype, optional
         Type to use in computing the standard deviation. For arrays of
         integer type the default is float64, for arrays of float types it is
         the same as the array type.
 
-    Returns
+    Returns:
     -------
-    standard_deviation : ndarray, see dtype parameter above.
+    standard_deviation: ndarray, see dtype parameter above.
         If `out` is None, return a new array containing the standard deviation,
         otherwise return a reference to the output array.
     """
@@ -100,7 +100,7 @@ def get_nanstd(a, axis=None, dtype=None):
     return ret
 
 
-def hanning_split_overlap(seq, size, overlap):
+def _hanning_split_overlap(seq, size, overlap):
     """
     splits a sequence (array) in as many hanning-windowed subsequences as possible
 
@@ -112,18 +112,18 @@ def hanning_split_overlap(seq, size, overlap):
         second row: [1, 1+(subsequencesize-overlap), 1+2*(subsequencesize-overlap), ...]
     --> similar to matrix, columns = indizes for building the subsequences
 
-    Parameters
+    Parameters:
     ----------
-    seq : array
+    seq: array
         full original sequence
-    size : int
+    size: int
         size of subsequences to be generated from the full sequence, subsequences are hanning-windowed
-    overlap : int
+    overlap: int
         overlap of subsequences
 
-    Returns
+    Returns:
     -------
-    array
+    array: array
         array of subsequences
     """
     return np.array(
@@ -151,7 +151,7 @@ def get_population_power_spectrum(
         maximum frequency [Hz] = 500 / time_step
         frequency resolution [Hz] = 1000 / (time_step * fftSize)
 
-    Parameters
+    Parameters:
     ----------
     spikes: dicitonary
         ANNarchy spike dict of one population
@@ -165,12 +165,12 @@ def get_population_power_spectrum(
         signal size for the FFT (size of splitted arrays)
         has to be a power of 2
 
-    Returns
+    Returns:
     -------
-        frequency_arr: array
-            array with frequencies
-        spectrum: array
-            array with power spectrum
+    frequency_arr: array
+        array with frequencies
+    spectrum: array
+        array with power spectrum
     """
 
     def ms_to_s(x):
@@ -253,7 +253,7 @@ def get_population_power_spectrum(
             spiketrain[idx] = 1
 
             ### generate multiple overlapping sequences out of the spike trains
-            spiketrain_sequences = hanning_split_overlap(
+            spiketrain_sequences = _hanning_split_overlap(
                 spiketrain, fft_size, int(fft_size / 2)
             )
 
@@ -267,7 +267,7 @@ def get_population_power_spectrum(
 
         frequency_arr = np.fft.fftfreq(fft_size, 1.0 / sampling_frequency)
 
-        return [frequency_arr[2 : int(fft_size / 2)], spectrum[2 : int(fft_size / 2)]]
+        return (frequency_arr[2 : int(fft_size / 2)], spectrum[2 : int(fft_size / 2)])
 
 
 def get_power_spektrum_from_time_array(
@@ -282,11 +282,10 @@ def get_power_spektrum_from_time_array(
     generates power spectrum of time signal (returns [frequencies,power])
     using the Welch methode (Welch,1967)
 
-
     samplingfrequency: to sample the arr, in Hz --> max frequency = samplingfrequency / 2
     fftSize: signal size for FFT, duration (in s) = fftSize / samplingfrequency --> frequency resolution = samplingfrequency / fftSize
 
-    Parameters
+    Parameters:
     ----------
     arr: array
         time array, value for each timestep
@@ -302,7 +301,7 @@ def get_power_spektrum_from_time_array(
         signal size for the FFT (size of splitted arrays)
         has to be a power of 2
 
-    Returns
+    Returns:
     -------
     frequency_arr: array
         array with frequencies
@@ -318,7 +317,7 @@ def get_power_spektrum_from_time_array(
         sampling_arr = arr[0 :: int((1 / samplingfrequency) * 1000 / simulation_dt)]
 
         ### generate multiple overlapping sequences
-        sampling_arr_sequences = hanning_split_overlap(
+        sampling_arr_sequences = _hanning_split_overlap(
             sampling_arr, fftSize, int(fftSize / 2)
         )
 
@@ -327,15 +326,15 @@ def get_power_spektrum_from_time_array(
 
         frequenzen = np.fft.fftfreq(fftSize, 1.0 / samplingfrequency)
 
-        return [frequenzen[2 : int(fftSize / 2)], spektrum[2 : int(fftSize / 2)]]
+        return (frequenzen[2 : int(fftSize / 2)], spektrum[2 : int(fftSize / 2)])
 
 
 # TODO: maybe makes errors with few/no spikes... check this TODO: automatically detect t_smooth does not work for strongly varying activity... implement something different
-def get_pop_rate_old(spikes, duration, dt=1, t_start=0, t_smooth_ms=-1):
+def _get_pop_rate_old(spikes, duration, dt=1, t_start=0, t_smooth_ms=-1):
     """
     Returns smoothed population rate from period after ramp up period until duration
 
-    Parameters
+    Parameters:
     ----------
     spikes: dict
         ANNarchy spike dict of one population
@@ -348,7 +347,7 @@ def get_pop_rate_old(spikes, duration, dt=1, t_start=0, t_smooth_ms=-1):
     t_smooth_ms: float or int, optional, default = -1
         time window size for rate calculation in ms, optional, standard = -1 which means automatic window size
 
-    Returns
+    Returns:
     -------
     time_arr: array
         array with time steps in ms
@@ -403,10 +402,10 @@ def get_pop_rate_old(spikes, duration, dt=1, t_start=0, t_smooth_ms=-1):
     else:
         ret = np.zeros(int(duration / dt))
 
-    return [np.arange(t_start, t_start + duration_init, dt), ret]
+    return (np.arange(t_start, t_start + duration_init, dt), ret)
 
 
-def recursive_get_bin_times_list(
+def _recursive_get_bin_times_list(
     spike_arr,
     t0,
     t1,
@@ -416,9 +415,9 @@ def recursive_get_bin_times_list(
     c_pre=np.inf,
 ):
     """
-    Recursive function to get the bin times for the recursive_rate function
+    Recursive function to get the bin times for the _recursive_rate function
 
-    Parameters
+    Parameters:
     ----------
     spike_arr: array
         spike times in s
@@ -435,7 +434,7 @@ def recursive_get_bin_times_list(
     c_pre: float or int, optional, default = np.inf
         c value of previous bin
 
-    Returns
+    Returns:
     -------
     bin_times_list: list
         list with bin times
@@ -491,7 +490,7 @@ def recursive_get_bin_times_list(
             t0_t1_list.append([edges[idx], edges[idx + 1]])
 
         return [
-            recursive_get_bin_times_list(
+            _recursive_get_bin_times_list(
                 spike_sub_arr_list[idx],
                 t0=t0_t1_list[idx][0],
                 t1=t0_t1_list[idx][1],
@@ -504,7 +503,7 @@ def recursive_get_bin_times_list(
         ]
 
 
-def recursive_rate(
+def _recursive_rate(
     spike_arr,
     t0,
     t1,
@@ -516,7 +515,7 @@ def recursive_rate(
     """
     Recursive function to get the firing rate for the given spike array
 
-    Parameters
+    Parameters:
     ----------
     spike_arr: array
         spike times in s
@@ -533,14 +532,14 @@ def recursive_rate(
     c_pre: float or int, optional, default = np.inf
         c value of previous bin
 
-    Returns
+    Returns:
     -------
     time_arr: array
         array with time steps in s
     rate: array
         array with firing rate
     """
-    bin_times_list = recursive_get_bin_times_list(
+    bin_times_list = _recursive_get_bin_times_list(
         spike_arr,
         t0,
         t1,
@@ -625,7 +624,7 @@ def get_pop_rate(spikes, t_start=None, t_end=None, time_step=1, t_smooth_ms=-1):
     """
     Generates a smoothed population firing rate. Returns a list containing a time array and a firing rate array.
 
-    Parameters
+    Parameters:
     ----------
     spikes: dictionary
         ANNarchy spike dict of one population
@@ -638,7 +637,7 @@ def get_pop_rate(spikes, t_start=None, t_end=None, time_step=1, t_smooth_ms=-1):
     t_smooth_ms: float or int, optional, default = -1
         time window for firing rate calculation in ms, if -1 --> time window sizes are automatically detected
 
-    Returns
+    Returns:
     -------
     time_arr: array
         array with time steps in ms
@@ -660,7 +659,7 @@ def get_pop_rate(spikes, t_start=None, t_end=None, time_step=1, t_smooth_ms=-1):
 
         ### if t_smooth is given --> use classic time_window method
         if t_smooth_ms > 0:
-            return get_pop_rate_old(
+            return _get_pop_rate_old(
                 spikes, duration, dt=dt, t_start=t_start, t_smooth_ms=t_smooth_ms
             )
         else:
@@ -673,10 +672,10 @@ def get_pop_rate(spikes, t_start=None, t_end=None, time_step=1, t_smooth_ms=-1):
             nr_neurons = len(list(spikes.keys()))
             nr_spikes = spike_arr.size
 
-            ### use recursive_rate to get firing rate
+            ### use _recursive_rate to get firing rate
             ### spike array is splitted in time bins
             ### time bins widths are automatically found
-            time_population_rate, population_rate = recursive_rate(
+            time_population_rate, population_rate = _recursive_rate(
                 spike_arr / 1000.0,
                 t0=t_start / 1000.0,
                 t1=(t_start + duration) / 1000.0,
@@ -710,7 +709,7 @@ def get_pop_rate(spikes, t_start=None, t_end=None, time_step=1, t_smooth_ms=-1):
             duration = t_end - t_start
             ret = np.zeros(int(duration / dt))
 
-    return [np.arange(t_start, t_start + duration, dt), ret]
+    return (np.arange(t_start, t_start + duration, dt), ret)
 
 
 def plot_recordings(
@@ -719,7 +718,7 @@ def plot_recordings(
     """
     Plots the recordings for the given recording_times specified in plan.
 
-    Parameters
+    Parameters:
     ----------
     figname: str
         path + name of figure (e.g. "figures/my_figure.png")
@@ -749,7 +748,7 @@ def plot_recordings(
         The dpi of the saved figure
     """
     proc = Process(
-        target=__plot_recordings,
+        target=_plot_recordings,
         args=(figname, recordings, recording_times, chunk, shape, plan, time_lim, dpi),
     )
     proc.start()
@@ -758,13 +757,13 @@ def plot_recordings(
         quit()
 
 
-def __plot_recordings(
+def _plot_recordings(
     figname, recordings, recording_times, chunk, shape, plan, time_lim=[], dpi=300
 ):
     """
     Plots the recordings for the given recording_times specified in plan.
 
-    Parameters
+    Parameters:
     ----------
     figname: str
         path + name of figure (e.g. "figures/my_figure.png")
@@ -790,7 +789,6 @@ def __plot_recordings(
         Defines the x-axis for all subplots. The list contains two
         numbers: start and end time in ms. The times have to be
         within the chunk.
-
     dpi: int, optional, default = 300
         The dpi of the saved figure
     """
@@ -1485,12 +1483,12 @@ def get_number_of_zero_decimals(nr):
     0.012 --> 2
     1.012 --> 0
 
-    Parameters
+    Parameters:
     ----------
     nr: float or int
         the number from which the number of digits are obtained
 
-    Returns
+    Returns:
     -------
     decimals: int
         number of digits after the decimal point which are zero (plus 1)
@@ -1512,12 +1510,12 @@ def get_number_of_decimals(nr):
        5.1 --> 1
     0.0101 --> 4
 
-    Parameters
+    Parameters:
     ----------
     nr: float or int
         the number from which the number of digits are obtained
 
-    Returns
+    Returns:
     -------
     decimals: int
         number of digits after the decimal point
@@ -1535,7 +1533,7 @@ def sample_data_with_timestep(time_arr, data_arr, timestep):
     """
     samples a data array each timestep using interpolation
 
-    Parameters
+    Parameters:
     ----------
     time_arr: array
         times of data_arr in ms
@@ -1544,10 +1542,12 @@ def sample_data_with_timestep(time_arr, data_arr, timestep):
     timestep: float or int
         timestep in ms for sampling
 
-    Returns
+    Returns:
     -------
     time_arr: array
         sampled time array
+    data_arr: array
+        sampled data array
     """
     interpolate_func = interp1d(
         time_arr, data_arr, bounds_error=False, fill_value="extrapolate"
@@ -1563,7 +1563,7 @@ def sample_data_with_timestep(time_arr, data_arr, timestep):
     new_time_arr = np.arange(min_time, max_time + timestep, timestep)
     new_data_arr = interpolate_func(new_time_arr)
 
-    return [new_time_arr, new_data_arr]
+    return (new_time_arr, new_data_arr)
 
 
 def time_data_add_nan(time_arr, data_arr, fill_time_step=None, axis=0):
@@ -1576,7 +1576,7 @@ def time_data_add_nan(time_arr, data_arr, fill_time_step=None, axis=0):
 
     but one can also give a fixed fill time step
 
-    Parameters
+    Parameters:
     ----------
     time_arr: 1D array
         times of data_arr in ms
@@ -1587,7 +1587,7 @@ def time_data_add_nan(time_arr, data_arr, fill_time_step=None, axis=0):
     axis: int
         which dimension of the data_arr belongs to the time_arr
 
-    Returns
+    Returns:
     -------
     time_arr: 1D array
         time array with gaps filled
@@ -1648,21 +1648,21 @@ def time_data_add_nan(time_arr, data_arr, fill_time_step=None, axis=0):
     time_arr = np.concatenate(time_arr_split, axis=0)
     data_arr = np.concatenate(data_arr_split, axis=axis)
 
-    return [time_arr, data_arr]
+    return (time_arr, data_arr)
 
 
 def rmse(a, b):
     """
     calculates the root-mean-square error between two arrays
 
-    Parameters
+    Parameters:
     ----------
     a: array
         first array
     b: array
         second array
 
-    Returns
+    Returns:
     -------
     rmse: float
         root-mean-square error
@@ -1675,14 +1675,14 @@ def rsse(a, b):
     """
     calculates the root-sum-square error between two arrays
 
-    Parameters
+    Parameters:
     ----------
     a: array
         first array
     b: array
         second array
 
-    Returns
+    Returns:
     -------
     rsse: float
         root-sum-square error
@@ -1695,12 +1695,12 @@ def get_minimum(input_data):
     """
     Returns the minimum of the input data.
 
-    Parameters
+    Parameters:
     ----------
     input_data: list, np.ndarray, tuple, or float
         The input data from which the minimum is to be obtained.
 
-    Returns
+    Returns:
     -------
     minimum: float
         The minimum of the input data.
@@ -1724,12 +1724,12 @@ def get_maximum(input_data):
     """
     Returns the maximum of the input data.
 
-    Parameters
+    Parameters:
     ----------
     input_data: list, np.ndarray, tuple, or float
         The input data from which the maximum is to be obtained.
 
-    Returns
+    Returns:
     -------
     maximum: float
         The maximum of the input data.
