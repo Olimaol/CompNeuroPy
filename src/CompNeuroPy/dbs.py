@@ -45,26 +45,26 @@ class CreateDBSmodel:
         """
         Prepare model for DBS stimulation
 
-        Parameters
+        Parameters:
         ----------
-        stimulated_population : Population
+        stimulated_population: Population
             Population which is stimulated by DBS
-        excluded_populations_list : list
+        excluded_populations_list: list
             List of populations which are excluded from DBS effects
-        passing_fibres_list : list
+        passing_fibres_list: list
             List of projections which are passing fibres
-        axon_rate_amp : float | dict
+        axon_rate_amp: float | dict
             Amplitude of the axon rate, either a float or a dict with keys being populations (or the string "default") and values being floats
 
-        Variables
-        -------
-        stimulated_population_name : str
+        Variables:
+        ---------
+        stimulated_population_name: str
             Name of the stimulated population
-        excluded_populations_name_list : list
+        excluded_populations_name_list: list
             List of names of the excluded populations
-        passing_fibres_name_list : list
+        passing_fibres_name_list: list
             List of names of the passing fibres
-        axon_rate_amp : float | dict
+        axon_rate_amp: float | dict
             Amplitude of the axon rate, either a float or a dict with keys being populations (or the string "default") and values being floats
         """
 
@@ -114,11 +114,11 @@ class CreateDBSmodel:
         """
         Analyze the model to be able to recreate it
 
-        Parameters
+        Parameters:
         ----------
-        stimulated_population : Population
+        stimulated_population: Population
             Population which is stimulated by DBS
-        excluded_populations_list : list
+        excluded_populations_list: list
             List of populations which are excluded from DBS effects
         """
 
@@ -172,11 +172,11 @@ class CreateDBSmodel:
         """
         Get all population and projection names
 
-        Returns
+        Returns:
         -------
-        population_name_list : list
+        population_name_list: list
             List of all population names
-        projection_name_list : list
+        projection_name_list: list
             List of all projection names
         """
         population_name_list: list[str] = [pop.name for pop in populations()]
@@ -295,14 +295,14 @@ class CreateDBSmodel:
         """
         Get the parameters of the given connector function
 
-        Parameters
+        Parameters:
         ----------
-        proj : Projection
+        proj: Projection
             Projection for which the connector parameters are needed
 
-        Returns
+        Returns:
         -------
-        connector_parameters_dict : dict
+        connector_parameters_dict: dict
             Parameters of the given connector function
         """
 
@@ -405,9 +405,9 @@ class CreateDBSmodel:
         """
         Recreate a population with the same neuron model and parameters
 
-        Parameters
+        Parameters:
         ----------
-        pop_name : str
+        pop_name: str
             Name of the population to recreate
         """
 
@@ -442,14 +442,14 @@ class CreateDBSmodel:
         """
         Add DBS mechanisms to the neuron model
 
-        Parameters
+        Parameters:
         ----------
-        neuron_model_init_parameter_dict : dict
+        neuron_model_init_parameter_dict: dict
             Dictionary with the parameters of the __init__ function of the Neuron
 
-        Returns
+        Returns:
         -------
-        neuron_model_init_parameter_dict : dict
+        neuron_model_init_parameter_dict: dict
             Dictionary with the parameters of the __init__ function of the Neuron with DBS mechanisms added
         """
 
@@ -472,14 +472,14 @@ class CreateDBSmodel:
         """
         Add DBS mechanisms to the spiking neuron model
 
-        Parameters
+        Parameters:
         ----------
-        neuron_model_init_parameter_dict : dict
+        neuron_model_init_parameter_dict: dict
             Dictionary with the parameters of the __init__ function of the Neuron
 
-        Returns
+        Returns:
         -------
-        neuron_model_init_parameter_dict : dict
+        neuron_model_init_parameter_dict: dict
             Dictionary with the parameters of the __init__ function of the Neuron with DBS mechanisms added
         """
 
@@ -549,9 +549,9 @@ class CreateDBSmodel:
         """
         Check if a equation string contains dv/dt.
 
-        Parameters
+        Parameters:
         ----------
-        line : str
+        line: str
             Equation string
         """
         if "v" not in line:
@@ -570,9 +570,9 @@ class CreateDBSmodel:
         """
         Check if a equation string contains dmp/dt.
 
-        Parameters
+        Parameters:
         ----------
-        line : str
+        line: str
             Equation string
         """
         if "mp" not in line:
@@ -591,14 +591,14 @@ class CreateDBSmodel:
         """
         Add DBS mechanisms to the rate-coded neuron model
 
-        Parameters
+        Parameters:
         ----------
-        neuron_model_init_parameter_dict : dict
+        neuron_model_init_parameter_dict: dict
             Dictionary with the parameters of the __init__ function of the Neuron
 
-        Returns
+        Returns:
         -------
-        neuron_model_init_parameter_dict : dict
+        neuron_model_init_parameter_dict: dict
             Dictionary with the parameters of the __init__ function of the Neuron with DBS mechanisms added
         """
 
@@ -656,9 +656,9 @@ class CreateDBSmodel:
         """
         Recreate a projection with the same synapse model and parameters and connector function
 
-        Parameters
+        Parameters:
         ----------
-        proj_name : str
+        proj_name: str
             Name of the projection to recreate
         """
 
@@ -708,14 +708,14 @@ class CreateDBSmodel:
         """
         Add DBS mechanisms to the synapse model
 
-        Parameters
+        Parameters:
         ----------
-        synapse_init_parameter_dict : dict
+        synapse_init_parameter_dict: dict
             Dictionary with the parameters of the __init__ function of the Synapse
 
-        Returns
+        Returns:
         -------
-        synapse_init_parameter_dict : dict
+        synapse_init_parameter_dict: dict
             Dictionary with the parameters of the __init__ function of the Synapse with DBS mechanisms added
         """
 
@@ -732,14 +732,14 @@ class CreateDBSmodel:
         """
         Add DBS mechanisms to the spiking synapse model
 
-        Parameters
+        Parameters:
         ----------
-        synapse_init_parameter_dict : dict
+        synapse_init_parameter_dict: dict
             Dictionary with the parameters of the __init__ function of the Synapse
 
-        Returns
+        Returns:
         -------
-        synapse_init_parameter_dict : dict
+        synapse_init_parameter_dict: dict
             Dictionary with the parameters of the __init__ function of the Synapse with DBS mechanisms added
         """
 
@@ -781,14 +781,14 @@ class CreateDBSmodel:
         """
         Add DBS mechanisms to the rate-coded synapse model
 
-        Parameters
+        Parameters:
         ----------
-        synapse_init_parameter_dict : dict
+        synapse_init_parameter_dict: dict
             Dictionary with the parameters of the __init__ function of the Synapse
 
-        Returns
+        Returns:
         -------
-        synapse_init_parameter_dict : dict
+        synapse_init_parameter_dict: dict
             Dictionary with the parameters of the __init__ function of the Synapse with DBS mechanisms added
         """
 
@@ -840,30 +840,30 @@ class CreateDBSmodelcnp(CreateDBSmodel):
         """
         Prepare model for DBS stimulation
 
-        Parameters
+        Parameters:
         ----------
-        model : generate_model
+        model: generate_model
             CompNeuroPy model
-        stimulated_population : Population
+        stimulated_population: Population
             Population which is stimulated by DBS
-        excluded_populations_list : list
+        excluded_populations_list: list
             List of populations which are excluded from DBS effects, they are not affected and their axons do not generate axon spikes
-        passing_fibres_list : list
+        passing_fibres_list: list
             List of projections which are passing fibres
-        axon_rate_amp : float | dict
+        axon_rate_amp: float | dict
             Amplitude of the axon rate, either a float or a dict with keys being populations (or the string "default") and values being floats
 
-        Variables
-        -------
-        model : CompNeuroPy Model
+        Variables:
+        ---------
+        model: CompNeuroPy Model
             dbs model
-        stimulated_population : Population
+        stimulated_population: Population
             Population which is stimulated by DBS
-        excluded_populations_list : list
+        excluded_populations_list: list
             List of populations which are excluded from DBS effects, they are not affected and their axons do not generate axon spikes
-        passing_fibres_list : list
+        passing_fibres_list: list
             List of projections which are passing fibres
-        axon_rate_amp : float | dict
+        axon_rate_amp: float | dict
             Amplitude of the axon rate, either a float or a dict with keys being populations (or the string "default") and values being floats
         """
         self.model = model
@@ -892,11 +892,11 @@ class CreateDBSmodelcnp(CreateDBSmodel):
         """
         Get all population and projection names
 
-        Returns
+        Returns:
         -------
-        population_name_list : list
+        population_name_list: list
             List of all population names
-        projection_name_list : list
+        projection_name_list: list
             List of all projection names
         """
         population_name_list: list[str] = self.model.populations
@@ -911,7 +911,7 @@ class DBSstimulator:
 
     This class can be used to stimulate a population with DBS.
 
-    Functions
+    Functions:
     ---------
     on()
         activate DBS
@@ -946,50 +946,50 @@ class DBSstimulator:
         Initialize DBS stimulator
         Do this before compiling the model!
 
-        Parameters
+        Parameters:
         ----------
-        stimulated_population : Population
+        stimulated_population: Population
             Population which is stimulated by DBS
-        population_proportion : float, optional
+        population_proportion: float, optional
             Proportion of the stimulated population which is affected by DBS, neurons are distributed randomly, by default 1.0
-        excluded_populations_list : list, optional
+        excluded_populations_list: list, optional
             List of populations which are excluded from DBS effects, they are not affected and their axons do not generate axon spikes, by default []
-        dbs_depolarization : float, optional
+        dbs_depolarization: float, optional
             Depolarization effect of the DBS pulse to local soma, by default 0.0
-        orthodromic : bool, optional
+        orthodromic: bool, optional
             If True, DBS causes axonal spikes which are forwarded orthodromically, by default False
-        antidromic : bool, optional
+        antidromic: bool, optional
             If True, DBS causes axonal spikes which are forwarded antidromically, only available in spiking networks, by default False
-        efferents : bool, optional
+        efferents: bool, optional
             If True, DBS affects the efferents of the stimulated population (orthodromic and/or antidromic have to be True too), by default False
-        afferents : bool, optional
+        afferents: bool, optional
             If True, DBS affects the afferents of the stimulated population (orthodromic and/or antidromic have to be True too), by default False
-        passing_fibres : bool, optional
+        passing_fibres: bool, optional
             If True, DBS affects the passing fibres of the stimulated region defined in passing_fibres_list (orthodromic and/or antidromic have to be True too), by default False
-        passing_fibres_list : list of Projections, optional
+        passing_fibres_list: list of Projections, optional
             List of projections which pass the DBS stimulated region and therefore are activated by DBS, by default [], also set passing_fibres True!
-        passing_fibres_strength : float or list of float, optional
+        passing_fibres_strength: float or list of float, optional
             Single value or list of float values between 0 and 1 defining how strong the passing fibres are activated by DBS (0: not activated, 1: fully activated like the projections in the DBS stimulated region), by default 1
-        sum_branches : bool, optional
+        sum_branches: bool, optional
             If True, the antidromic_prob of a presynaptic population (defining how many axon spikes affect the pop antidromically) of passing fibres is the sum of the passing_fibres_strengths of the single axon branches, by default True
-        dbs_pulse_frequency_Hz : float, optional
+        dbs_pulse_frequency_Hz: float, optional
             Frequency of the DBS pulse, by default 130 Hz
-        dbs_pulse_width_us : float, optional
+        dbs_pulse_width_us: float, optional
             Width of the DBS pulse, by default 300 us
-        axon_spikes_per_pulse : float, optional
+        axon_spikes_per_pulse: float, optional
             Number of average axon spikes per DBS pulse, by default 1
-        axon_rate_amp : float or dict of float, optional
+        axon_rate_amp: float or dict of float, optional
             Similar to prob_axon_spike in spiking model. Which rate is forwarded on axons caused by DBS. You can specify this for each population individually by using a dictionary (keys = Population instances)
             axon_rate_amp = {pop: 1.5} --> the efferent axons of pop forward a rate of 1.5 during DBS (all other affected projections forward the default value)
             You can specify the default value by using the key "default", e.g. {pop: 1.5, "default": 1.0} -> efferent axons of all populations except pop forward a rate of 1.0 during DBS
             by default 1.0
-        seed : int, optional
+        seed: int, optional
             Seed for the random distribution of affected neurons based on population_proportion, by default None
-        auto_implement : bool, optional
+        auto_implement: bool, optional
             If True, automatically implement DBS mechanisms to the model, by default False
             Only supported for Izhikevich spiking models and rate-coded models
             TODO test what happens with mixed models
-        model : generate_model, optional
+        model: generate_model, optional
             CompNeuroPy model which is used to automatically implement DBS mechanisms, should not be compiled!, by default None
             If not given, use all populations and projections of the current magic model
         """
@@ -1059,16 +1059,16 @@ class DBSstimulator:
         """
         Create an array with the shape of the stimulated population with ones and zeros randomly distributed with the specified population_proportion.
 
-        Parameters
+        Parameters:
         ----------
-        population_proportion : float
+        population_proportion: float
             Proportion of the stimulated population which is affected by DBS, neurons are distributed randomly
-        seed : int
+        seed: int
             Seed for the random distribution of affected neurons based on population_proportion
 
-        Returns
+        Returns:
         -------
-        dbs_on_array : np.array
+        dbs_on_array: np.array
             Array with the shape of the stimulated population with ones and zeros randomly distributed with the specified population_proportion
         """
         ### create random number generator
@@ -1099,11 +1099,11 @@ class DBSstimulator:
         """
         Set constants for DBS
 
-        Parameters
+        Parameters:
         ----------
-        dbs_pulse_frequency_Hz : float
+        dbs_pulse_frequency_Hz: float
             Frequency of the DBS pulse in Hz
-        dbs_pulse_width_us : float
+        dbs_pulse_width_us: float
             Width of the DBS pulse in us
         """
         # pulse frequency:
@@ -1121,14 +1121,14 @@ class DBSstimulator:
         """
         Convert number of axon spikes per pulse to probability of axon spikes per timestep during DBS pulse
 
-        Parameters
+        Parameters:
         ----------
-        axon_spikes_per_pulse : float
+        axon_spikes_per_pulse: float
             Number of average axon spikes per DBS pulse
 
-        Returns
+        Returns:
         -------
-        prob_axon_spike_time_step : float
+        prob_axon_spike_time_step: float
             Probability of axon spikes per timestep during DBS pulse
         """
         return np.clip(
@@ -1139,9 +1139,9 @@ class DBSstimulator:
         """
         Set depolarization of population
 
-        Parameters
+        Parameters:
         ----------
-        dbs_depolarization : float, optional
+        dbs_depolarization: float, optional
             Depolarization effect of the DBS pulse to local soma, by default use value from initialization
         """
         ### either use given depolarization or use default value
@@ -1170,25 +1170,25 @@ class DBSstimulator:
         """
         Set axon spikes forwarding orthodromic
 
-        Parameters
+        Parameters:
         ----------
-        orthodromic : bool, optional
+        orthodromic: bool, optional
             If True, DBS causes axonal spikes which are forwarded orthodromically, by default use value from initialization
-        antidromic : bool, optional
+        antidromic: bool, optional
             If True, DBS causes axonal spikes which are forwarded antidromically, only available in spiking networks, by default use value from initialization
-        efferents : bool, optional
+        efferents: bool, optional
             If True, DBS affects the efferents of the stimulated population (orthodromic and/or antidromic have to be True too), by default use value from initialization
-        afferents : bool, optional
+        afferents: bool, optional
             If True, DBS affects the afferents of the stimulated population (orthodromic and/or antidromic have to be True too), by default use value from initialization
-        passing_fibres : bool, optional
+        passing_fibres: bool, optional
             If True, DBS affects the passing fibres of the stimulated population (orthodromic and/or antidromic have to be True too and there have to be passing fibres in the passing_fibres_list), by default use value from initialization
-        passing_fibres_strength : float or list of float, optional
+        passing_fibres_strength: float or list of float, optional
             Single value or list of float values between 0 and 1 defining how strong the passing fibres are activated by DBS (0: not activated, 1: fully activated like projections in DBS stimulated region), by default use value from initialization
-        sum_branches : bool, optional
+        sum_branches: bool, optional
             If True, the antidromic_prob of a presynaptic population of passing fibres is the sum of the passing_fibres_strengths of the single axon branches, by default use value from initialization
-        axon_spikes_per_pulse : float, optional
+        axon_spikes_per_pulse: float, optional
             Number of average axon spikes per DBS pulse, by default use value from initialization
-        axon_rate_amp : float or dict of float, optional
+        axon_rate_amp: float or dict of float, optional
             Similar to prob_axon_spike in spiking model.
             Which rate is forwarded on axons caused by DBS. You can specify this for each population individually by using a dictionary (keys = Population instances)
             axon_rate_amp = {pop: 1.5} --> the efferent axons of pop forward a rate of 1.5 during DBS (all other affected projections forward the default value)
@@ -1294,19 +1294,19 @@ class DBSstimulator:
         """
         Set orthodromic axon spikes forwarding
 
-        Parameters
+        Parameters:
         ----------
-        efferents : bool
+        efferents: bool
             If True, DBS affects the efferents of the stimulated population (orthodromic and/or antidromic have to be True too)
-        afferents : bool
+        afferents: bool
             If True, DBS affects the afferents of the stimulated population (orthodromic and/or antidromic have to be True too)
-        passing_fibres : bool
+        passing_fibres: bool
             If True, DBS affects the passing fibres of the stimulated population (orthodromic and/or antidromic have to be True too and there have to be passing fibres in the passing_fibres_list)
-        passing_fibres_strength : list of float
+        passing_fibres_strength: list of float
             List of float values between 0 and 1 defining how strong the passing fibres are activated by DBS (0: not activated, 1: fully activated like projections in DBS stimulated region)
-        axon_spikes_per_pulse : float
+        axon_spikes_per_pulse: float
             Number of average axon spikes per DBS pulse
-        axon_rate_amp : dict of float
+        axon_rate_amp: dict of float
             Similar to prob_axon_spike in spiking model. Which rate is forwarded on axons caused by DBS.
             The dictionary has to contain the key "default" with the default value for all projections and can contain keys for each population with a different value for the axon_rate of the efferent axons of this population.
         """
@@ -1383,19 +1383,19 @@ class DBSstimulator:
         """
         Set antidromic axon spikes forwarding
 
-        Parameters
+        Parameters:
         ----------
-        efferents : bool
+        efferents: bool
             If True, DBS affects the efferents of the stimulated population (orthodromic and/or antidromic have to be True too)
-        afferents : bool
+        afferents: bool
             If True, DBS affects the afferents of the stimulated population (orthodromic and/or antidromic have to be True too)
-        passing_fibres : bool
+        passing_fibres: bool
             If True, DBS affects the passing fibres of the stimulated population (orthodromic and/or antidromic have to be True too and there have to be passing fibres in the passing_fibres_list)
-        passing_fibres_strength : list of float
+        passing_fibres_strength: list of float
             List of float values between 0 and 1 defining how strong the passing fibres are activated by DBS (0: not activated, 1: fully activated like projections in DBS stimulated region)
-        sum_branches : bool
+        sum_branches: bool
             If True, the antidromic_prob of a presynaptic population of passing fibres is the sum of the passing_fibres_strengths of the single axon branches, by default True
-        axon_spikes_per_pulse : float
+        axon_spikes_per_pulse: float
             Number of average axon spikes per DBS pulse
         """
 
@@ -1506,36 +1506,36 @@ class DBSstimulator:
         """
         activate DBS
 
-        Parameters
+        Parameters:
         ----------
-        population_proportion : float, optional
+        population_proportion: float, optional
             Proportion of the stimulated population which is affected by DBS, neurons are distributed randomly, by default use value from initialization
-        dbs_depolarization : float, optional
+        dbs_depolarization: float, optional
             Depolarization effect of the DBS pulse to local soma, by default use value from initialization
-        orthodromic : bool, optional
+        orthodromic: bool, optional
             If True, DBS causes axonal spikes which are forwarded orthodromically, by default use value from initialization
-        antidromic : bool, optional
+        antidromic: bool, optional
             If True, DBS causes axonal spikes which are forwarded antidromically, only available in spiking networks, by default use value from initialization
-        efferents : bool, optional
+        efferents: bool, optional
             If True, DBS affects the efferents of the stimulated population (orthodromic and/or antidromic have to be True too), by default use value from initialization
-        afferents : bool, optional
+        afferents: bool, optional
             If True, DBS affects the afferents of the stimulated population (orthodromic and/or antidromic have to be True too), by default use value from initialization
-        passing_fibres : bool, optional
+        passing_fibres: bool, optional
             If True, DBS affects the passing fibres of the stimulated population (orthodromic and/or antidromic have to be True too and there have to be passing fibres in the passing_fibres_list), by default use value from initialization
-        passing_fibres_strength : float or list of float, optional
+        passing_fibres_strength: float or list of float, optional
             Single value or list of float values between 0 and 1 defining how strong the passing fibres are activated by DBS (0: not activated, 1: fully activated like projections in DBS stimulated region), by default use value from initialization
-        sum_branches : bool, optional
+        sum_branches: bool, optional
             If True, the antidromic_prob of a presynaptic population of passing fibres is the sum of the passing_fibres_strengths of the single axon branches, by default use value from initialization
-        axon_spikes_per_pulse : float, optional
+        axon_spikes_per_pulse: float, optional
             Number of average axon spikes per DBS pulse, by default use value from initialization
-        axon_rate_amp : float or dict of float, optional
+        axon_rate_amp: float or dict of float, optional
             Similar to prob_axon_spike in spiking model.
             Which rate is forwarded on axons caused by DBS. You can specify this for each population individually by using a dictionary (keys = Population instances)
             axon_rate_amp = {pop: 1.5} --> the efferent axons of pop forward a rate of 1.5 during DBS (all other affected projections forward the default value)
             You can specify the default value by using the key "default", e.g. {pop: 1.5, "default": 1.0} -> efferent axons of all populations except pop forward a rate of 1.0 during DBS
             If default key is missing, the default value is 1.0.
             If a float is given, all affected projections forward the same rate, by default use value from initialization
-        seed : int, optional
+        seed: int, optional
             Seed for the random number generator, by default use value from initialization
         """
 
@@ -1563,11 +1563,11 @@ class DBSstimulator:
         """
         Set DBS on for all populations, for the stimulated population only the specified proportion is affected by DBS
 
-        Parameters
+        Parameters:
         ----------
-        population_proportion : float, optional
+        population_proportion: float, optional
             Proportion of the stimulated population which is affected by DBS, neurons are distributed randomly, by default use value from initialization
-        seed : int, optional
+        seed: int, optional
             Seed for the random number generator, by default use value from initialization
         """
         ### set parameters for the creation of the DBS on array
