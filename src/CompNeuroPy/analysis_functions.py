@@ -356,6 +356,7 @@ def _get_pop_rate_old(spikes, duration, dt=1, t_start=0, t_smooth_ms=-1):
     """
     duration_init = duration
     temp_duration = duration + t_start
+
     t, n = raster_plot(spikes)
     if len(t) > 1:  # check if there are spikes in population at all
         if t_smooth_ms == -1:
@@ -374,14 +375,14 @@ def _get_pop_rate_old(spikes, duration, dt=1, t_start=0, t_smooth_ms=-1):
                 [(duration - minTime) / 2.0 * dt, np.mean(np.array(ISIs)) * 10 + 10]
             )
 
-        rate = np.zeros((len(list(spikes.keys())), int(temp_duration / dt)))
+        rate = np.zeros((len(list(spikes.keys())), int(round(temp_duration / dt))))
         rate[:] = np.NaN
-        binSize = int(t_smooth_ms / dt)
-        bins = np.arange(0, int(temp_duration / dt) + binSize, binSize)
+        binSize = int(round(t_smooth_ms / dt))
+        bins = np.arange(0, int(round(temp_duration / dt)) + binSize, binSize)
         binsCenters = bins[:-1] + binSize // 2
         timeshift_start = -binSize // 2
         timeshift_end = binSize // 2
-        timeshift_step = np.max([binSize // 10, 1])
+        timeshift_step = int(np.max([binSize // 10, 1]))
         for idx, key in enumerate(spikes.keys()):
             times = np.array(spikes[key]).astype(int)
             for timeshift in np.arange(
@@ -393,16 +394,23 @@ def _get_pop_rate_old(spikes, duration, dt=1, t_start=0, t_smooth_ms=-1):
                 ] = hist / (t_smooth_ms / 1000.0)
 
         poprate = get_nanmean(rate, 0)
-        timesteps = np.arange(0, int(temp_duration / dt), 1).astype(int)
+        timesteps = np.arange(0, int(round(temp_duration / dt)), 1).astype(int)
         time = timesteps[np.logical_not(np.isnan(poprate))]
         poprate = poprate[np.logical_not(np.isnan(poprate))]
         poprate = np.interp(timesteps, time, poprate)
 
-        ret = poprate[int(t_start / dt) :]
+        ret = poprate[int(round(t_start / dt)) :]
     else:
-        ret = np.zeros(int(duration / dt))
+        ret = np.zeros(int(round(duration / dt)))
 
-    return (np.arange(t_start, t_start + duration_init, dt), ret)
+    return (
+        np.arange(
+            round(t_start, get_number_of_decimals(dt)),
+            round(t_start + duration_init, get_number_of_decimals(dt)),
+            round(dt, get_number_of_decimals(dt)),
+        ),
+        ret,
+    )
 
 
 def _recursive_get_bin_times_list(
@@ -620,7 +628,13 @@ def _recursive_rate(
     return time_rate_arr[:, time_unique_idx_arr]
 
 
-def get_pop_rate(spikes, t_start=None, t_end=None, time_step=1, t_smooth_ms=-1):
+def get_pop_rate(
+    spikes: dict,
+    t_start: float | int | None = None,
+    t_end: float | int | None = None,
+    time_step: float | int = 1,
+    t_smooth_ms: float | int = -1,
+):
     """
     Generates a smoothed population firing rate. Returns a list containing a time array and a firing rate array.
 
