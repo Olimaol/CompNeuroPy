@@ -6,6 +6,26 @@ import pandas as pd
 
 
 class generate_model:
+    """
+    Class for creating and compiling a model.
+
+    Attributes:
+        name (str):
+            name of the model
+        description (str):
+            description of the model
+        populations (list):
+            list of all populations of the model
+        projections (list):
+            list of all projections of the model
+        attribute_df (pandas dataframe):
+            dataframe containing all attributes of the model compartments
+        created (bool):
+            True if the model is created
+        compiled (bool):
+            True if the model is compiled
+    """
+
     initialized_models = {}
     compiled_models = {}
 
@@ -19,9 +39,28 @@ class generate_model:
         do_compile=True,
         compile_folder_name="annarchy",
     ):
+        """
+        Initializes the generate_model class.
+
+        Args:
+            model_creation_function (function):
+                Function which creates the model.
+            model_kwargs (dict):
+                Keyword arguments for model_creation_function. Default: None.
+            name (str):
+                Name of the model. Default: "model".
+            description (str):
+                Description of the model. Default: "".
+            do_create (bool):
+                If True the model is created directly. Default: True.
+            do_compile (bool):
+                If True the model is compiled directly. Default: True.
+            compile_folder_name (str):
+                Name of the folder in which the model is compiled. Default: "annarchy".
+        """
         self.name = name
         if name == "model":
-            self.name = name + str(self.__nr_models__())
+            self.name = name + str(self._nr_models())
         self.description = description
         self.model_creation_function = model_creation_function
         self.compile_folder_name = compile_folder_name
@@ -52,7 +91,7 @@ class generate_model:
                 compile_folder_name = self.compile_folder_name
 
             ### check if other models were initialized but not created --> warn that they are not compiled
-            not_created_model_list = self.__check_if_models_created__()
+            not_created_model_list = self._check_if_models_created()
             if len(not_created_model_list) > 0:
                 print(
                     "\nWARNING during compile of model "
@@ -99,15 +138,15 @@ class generate_model:
             self.initialized_models[self.name] = True
 
             ### check if names of populations and projections are unique
-            self.__check_double_compartments__()
+            self._check_double_compartments()
 
             ### create parameter dictionary
-            self.attribute_df = self.__get_attribute_df__()
+            self.attribute_df = self._get_attribute_df()
 
             if do_compile:
                 self.compile(compile_folder_name)
 
-    def __check_if_models_created__(self):
+    def _check_if_models_created(self):
         """
         checks which CompNeuroPy models are created
         returns a list with all initialized CompNeuroPy models which are not created yet
@@ -119,7 +158,7 @@ class generate_model:
 
         return not_created_model_list
 
-    def __nr_models__(self):
+    def _nr_models(self):
         """
         returns the current number of initialized (not considering "created") CompNeuroPy models
         """
@@ -159,9 +198,9 @@ class generate_model:
         setattr(comp_obj, parameter_name, parameter_value)
 
         ### update the model attribute_df
-        self.__update_attribute_df__(compartment, parameter_name, parameter_value)
+        self._update_attribute_df(compartment, parameter_name, parameter_value)
 
-    def __update_attribute_df__(self, compartment, parameter_name, parameter_value):
+    def _update_attribute_df(self, compartment, parameter_name, parameter_value):
         """updates the attribute df for a specific paramter"""
         paramter_mask = (
             (self.attribute_df["compartment_name"] == compartment).astype(int)
@@ -176,7 +215,7 @@ class generate_model:
             self.attribute_df.at[parameter_idx, "value"] = str(min_val)
         self.attribute_df.at[parameter_idx, "definition"] = "modified"
 
-    def __check_double_compartments__(self):
+    def _check_double_compartments(self):
         """
         goes over all compartments of the model and checks if compartment is only a population or a projection
         """
@@ -196,7 +235,7 @@ class generate_model:
             pop_in_projections == False
         ), f"ERROR model {self.name}: One or multiple compartments are both population and projection ({pop_in_projections_list}). Rename them!"
 
-    def __get_attribute_df__(self):
+    def _get_attribute_df(self):
         """
         creates a dataframe containing the attributes of all model compartments
         """

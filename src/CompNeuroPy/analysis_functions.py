@@ -13,10 +13,22 @@ from multiprocessing import Process
 def my_raster_plot(spikes: dict):
     """
     Returns two vectors representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
-
     The spike times are always in simulation steps (in contrast to default ANNarchy raster_plot)
+
+    Parameters:
+    ----------
+    spikes: dict
+        ANNarchy spike dict of one population
+
+    Returns:
+    -------
+    t: array
+        spike times in simulation steps
+    n: array
+        ranks of the neurons
     """
     t, n = raster_plot(spikes)
+    np.zeros(10)
     t = np.round(t / dt(), 0).astype(int)
     return t, n
 
@@ -25,23 +37,29 @@ def get_nanmean(a, axis=None, dtype=None):
     """
     np.nanmean without printing warnings
 
+    Parameters:
+    ----------
+    a: array_like
+        Array containing numbers whose mean is desired. If `a` is not an
+        array, a conversion is attempted.
+    axis: None or int or tuple of ints, optional
+        Axis or axes along which the means are computed. The default is to
+        compute the mean of the flattened array.
 
-    Args:
-        a : array_like
-            Array containing numbers whose mean is desired. If `a` is not an
-            array, a conversion is attempted.
-        axis : None or int or tuple of ints, optional
-            Axis or axes along which the means are computed. The default is to
-            compute the mean of the flattened array.
+        .. numpy versionadded:: 1.7.0
 
-            .. numpy versionadded:: 1.7.0
+        If this is a tuple of ints, a mean is performed over multiple axes,
+        instead of a single axis or all the axes as before.
+    dtype: data-type, optional
+        Type to use in computing the mean.  For integer inputs, the default
+        is `float64`; for floating point inputs, it is the same as the
+        input dtype.
 
-            If this is a tuple of ints, a mean is performed over multiple axes,
-            instead of a single axis or all the axes as before.
-        dtype : data-type, optional
-            Type to use in computing the mean.  For integer inputs, the default
-            is `float64`; for floating point inputs, it is the same as the
-            input dtype.
+    Returns:
+    -------
+    m: ndarray, see dtype parameter above
+        If `out=None`, returns a new array containing the mean values,
+        otherwise a reference to the output array is returned.
     """
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
@@ -53,21 +71,28 @@ def get_nanstd(a, axis=None, dtype=None):
     """
     np.nanstd without printing warnings
 
-    Args:
-        a : array_like
-            Calculate the standard deviation of these values.
-        axis : None or int or tuple of ints, optional
-            Axis or axes along which the standard deviation is computed. The
-            default is to compute the standard deviation of the flattened array.
+    Parameters:
+    ----------
+    a: array_like
+        Calculate the standard deviation of these values.
+    axis: None or int or tuple of ints, optional
+        Axis or axes along which the standard deviation is computed. The
+        default is to compute the standard deviation of the flattened array.
 
-            .. numpy versionadded:: 1.7.0
+        .. numpy versionadded:: 1.7.0
 
-            If this is a tuple of ints, a standard deviation is performed over
-            multiple axes, instead of a single axis or all the axes as before.
-        dtype : dtype, optional
-            Type to use in computing the standard deviation. For arrays of
-            integer type the default is float64, for arrays of float types it is
-            the same as the array type.
+        If this is a tuple of ints, a standard deviation is performed over
+        multiple axes, instead of a single axis or all the axes as before.
+    dtype: dtype, optional
+        Type to use in computing the standard deviation. For arrays of
+        integer type the default is float64, for arrays of float types it is
+        the same as the array type.
+
+    Returns:
+    -------
+    standard_deviation: ndarray, see dtype parameter above.
+        If `out` is None, return a new array containing the standard deviation,
+        otherwise return a reference to the output array.
     """
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
@@ -75,13 +100,9 @@ def get_nanstd(a, axis=None, dtype=None):
     return ret
 
 
-def hanning_split_overlap(seq, size, overlap):
+def _hanning_split_overlap(seq, size, overlap):
     """
     splits a sequence (array) in as many hanning-windowed subsequences as possible
-
-    seq: full original sequence
-    size: size of subsequences to be generated from the full sequence, subsequences are hanning-windowed
-    overlap: overlap of subsequences
 
     iterates over complete size of subsequences
     --> = start positions
@@ -90,8 +111,21 @@ def hanning_split_overlap(seq, size, overlap):
         first row:  [0, 0+(subsequencesize-overlap), 0+2*(subsequencesize-overlap), ...]
         second row: [1, 1+(subsequencesize-overlap), 1+2*(subsequencesize-overlap), ...]
     --> similar to matrix, columns = indizes for building the subsequences
+
+    Parameters:
+    ----------
+    seq: array
+        full original sequence
+    size: int
+        size of subsequences to be generated from the full sequence, subsequences are hanning-windowed
+    overlap: int
+        overlap of subsequences
+
+    Returns:
+    -------
+    array: array
+        array of subsequences
     """
-    # seq[i::stepsize] == seq[range(i,seq.size,stepsize)]
     return np.array(
         [
             x * np.hanning(size)
@@ -117,22 +151,26 @@ def get_population_power_spectrum(
         maximum frequency [Hz] = 500 / time_step
         frequency resolution [Hz] = 1000 / (time_step * fftSize)
 
-    Args:
-        spikes: dicitonary
-            ANNarchy spike dict of one population
+    Parameters:
+    ----------
+    spikes: dicitonary
+        ANNarchy spike dict of one population
+    time_step: float
+        time step of the simulation in ms
+    t_start: float or int, optional, default = time of first spike
+        start time of analyzed data in ms
+    t_end: float or int, optional, default = time of last spike
+        end time of analyzed data in ms
+    fft_size: int, optional, default = maximum
+        signal size for the FFT (size of splitted arrays)
+        has to be a power of 2
 
-        time_step: float
-            time step of the simulation in ms
-
-        t_start: float or int, optional, default = time of first spike
-            start time of analyzed data in ms
-
-        t_end: float or int, optional, default = time of last spike
-            end time of analyzed data in ms
-
-        fft_size: int, optional, default = maximum
-            signal size for the FFT (size of splitted arrays)
-            has to be a power of 2
+    Returns:
+    -------
+    frequency_arr: array
+        array with frequencies
+    spectrum: array
+        array with power spectrum
     """
 
     def ms_to_s(x):
@@ -215,7 +253,7 @@ def get_population_power_spectrum(
             spiketrain[idx] = 1
 
             ### generate multiple overlapping sequences out of the spike trains
-            spiketrain_sequences = hanning_split_overlap(
+            spiketrain_sequences = _hanning_split_overlap(
                 spiketrain, fft_size, int(fft_size / 2)
             )
 
@@ -229,7 +267,7 @@ def get_population_power_spectrum(
 
         frequency_arr = np.fft.fftfreq(fft_size, 1.0 / sampling_frequency)
 
-        return [frequency_arr[2 : int(fft_size / 2)], spectrum[2 : int(fft_size / 2)]]
+        return (frequency_arr[2 : int(fft_size / 2)], spectrum[2 : int(fft_size / 2)])
 
 
 def get_power_spektrum_from_time_array(
@@ -244,12 +282,31 @@ def get_power_spektrum_from_time_array(
     generates power spectrum of time signal (returns [frequencies,power])
     using the Welch methode (Welch,1967)
 
-    arr: time array, value for each timestep
-    presimulationTime: simulation time which will not be analyzed
-    simulationTime: analyzed simulation time
-
     samplingfrequency: to sample the arr, in Hz --> max frequency = samplingfrequency / 2
     fftSize: signal size for FFT, duration (in s) = fftSize / samplingfrequency --> frequency resolution = samplingfrequency / fftSize
+
+    Parameters:
+    ----------
+    arr: array
+        time array, value for each timestep
+    presimulationTime: float or int
+        simulation time which will not be analyzed
+    simulationTime: float or int
+        analyzed simulation time
+    simulation_dt: float or int
+        simulation timestep
+    samplingfrequency: float or int, optional, default = 250
+        sampling frequency for sampling the time array
+    fftSize: int, optional, default = 1024
+        signal size for the FFT (size of splitted arrays)
+        has to be a power of 2
+
+    Returns:
+    -------
+    frequency_arr: array
+        array with frequencies
+    spectrum: array
+        array with power spectrum
     """
 
     if (simulationTime / 1000) < (fftSize / samplingfrequency):
@@ -260,7 +317,7 @@ def get_power_spektrum_from_time_array(
         sampling_arr = arr[0 :: int((1 / samplingfrequency) * 1000 / simulation_dt)]
 
         ### generate multiple overlapping sequences
-        sampling_arr_sequences = hanning_split_overlap(
+        sampling_arr_sequences = _hanning_split_overlap(
             sampling_arr, fftSize, int(fftSize / 2)
         )
 
@@ -269,23 +326,37 @@ def get_power_spektrum_from_time_array(
 
         frequenzen = np.fft.fftfreq(fftSize, 1.0 / samplingfrequency)
 
-        return [frequenzen[2 : int(fftSize / 2)], spektrum[2 : int(fftSize / 2)]]
+        return (frequenzen[2 : int(fftSize / 2)], spektrum[2 : int(fftSize / 2)])
 
 
-def get_pop_rate_old(
-    spikes, duration, dt=1, t_start=0, t_smooth_ms=-1
-):  # TODO: maybe makes errors with few/no spikes... check this TODO: automatically detect t_smooth does not work for strongly varying activity... implement something different
+# TODO: maybe makes errors with few/no spikes... check this TODO: automatically detect t_smooth does not work for strongly varying activity... implement something different
+def _get_pop_rate_old(spikes, duration, dt=1, t_start=0, t_smooth_ms=-1):
     """
-    spikes: spikes dictionary from ANNarchy
-    duration: duration of period after (optional) initial period (t_start) from which rate is calculated in ms
-    dt: timestep of simulation
-    t_start: starting simulation time, from which rates should be calculated
-    t_smooth_ms: time window size for rate calculation in ms, optional, standard = -1 which means automatic window size
+    Returns smoothed population rate from period after ramp up period until duration
 
-    returns smoothed population rate from period after rampUp period until duration
+    Parameters:
+    ----------
+    spikes: dict
+        ANNarchy spike dict of one population
+    duration: float or int
+        duration of period after (optional) initial period (t_start) from which rate is calculated in ms
+    dt: float or int, optional, default = 1
+        timestep of simulation
+    t_start: float or int, optional, default = 0
+        starting simulation time, from which rates should be calculated
+    t_smooth_ms: float or int, optional, default = -1
+        time window size for rate calculation in ms, optional, standard = -1 which means automatic window size
+
+    Returns:
+    -------
+    time_arr: array
+        array with time steps in ms
+    rate: array
+        array with population rate
     """
     duration_init = duration
     temp_duration = duration + t_start
+
     t, n = raster_plot(spikes)
     if len(t) > 1:  # check if there are spikes in population at all
         if t_smooth_ms == -1:
@@ -304,14 +375,14 @@ def get_pop_rate_old(
                 [(duration - minTime) / 2.0 * dt, np.mean(np.array(ISIs)) * 10 + 10]
             )
 
-        rate = np.zeros((len(list(spikes.keys())), int(temp_duration / dt)))
+        rate = np.zeros((len(list(spikes.keys())), int(round(temp_duration / dt))))
         rate[:] = np.NaN
-        binSize = int(t_smooth_ms / dt)
-        bins = np.arange(0, int(temp_duration / dt) + binSize, binSize)
+        binSize = int(round(t_smooth_ms / dt))
+        bins = np.arange(0, int(round(temp_duration / dt)) + binSize, binSize)
         binsCenters = bins[:-1] + binSize // 2
         timeshift_start = -binSize // 2
         timeshift_end = binSize // 2
-        timeshift_step = np.max([binSize // 10, 1])
+        timeshift_step = int(np.max([binSize // 10, 1]))
         for idx, key in enumerate(spikes.keys()):
             times = np.array(spikes[key]).astype(int)
             for timeshift in np.arange(
@@ -323,19 +394,26 @@ def get_pop_rate_old(
                 ] = hist / (t_smooth_ms / 1000.0)
 
         poprate = get_nanmean(rate, 0)
-        timesteps = np.arange(0, int(temp_duration / dt), 1).astype(int)
+        timesteps = np.arange(0, int(round(temp_duration / dt)), 1).astype(int)
         time = timesteps[np.logical_not(np.isnan(poprate))]
         poprate = poprate[np.logical_not(np.isnan(poprate))]
         poprate = np.interp(timesteps, time, poprate)
 
-        ret = poprate[int(t_start / dt) :]
+        ret = poprate[int(round(t_start / dt)) :]
     else:
-        ret = np.zeros(int(duration / dt))
+        ret = np.zeros(int(round(duration / dt)))
 
-    return [np.arange(t_start, t_start + duration_init, dt), ret]
+    return (
+        np.arange(
+            round(t_start, get_number_of_decimals(dt)),
+            round(t_start + duration_init, get_number_of_decimals(dt)),
+            round(dt, get_number_of_decimals(dt)),
+        ),
+        ret,
+    )
 
 
-def recursive_get_bin_times_list(
+def _recursive_get_bin_times_list(
     spike_arr,
     t0,
     t1,
@@ -345,12 +423,31 @@ def recursive_get_bin_times_list(
     c_pre=np.inf,
 ):
     """
-    spike_arr: spike times in s
-    t0, t1: start/end of period in s
-    duration_init: full duration in s
-    nr_neurons: number of neurons
-    time_step: simulation_timestep in s
+    Recursive function to get the bin times for the _recursive_rate function
+
+    Parameters:
+    ----------
+    spike_arr: array
+        spike times in s
+    t0: float or int
+        start of period in s
+    t1: float or int
+        end of period in s
+    duration_init: float or int
+        full duration in s
+    nr_neurons: int
+        number of neurons
+    nr_spikes: int
+        number of spikes
+    c_pre: float or int, optional, default = np.inf
+        c value of previous bin
+
+    Returns:
+    -------
+    bin_times_list: list
+        list with bin times
     """
+
     duration = t1 - t0
 
     threshold_nr_spikes = 5  # np.max([0.1 * nr_spikes, 10])
@@ -401,7 +498,7 @@ def recursive_get_bin_times_list(
             t0_t1_list.append([edges[idx], edges[idx + 1]])
 
         return [
-            recursive_get_bin_times_list(
+            _recursive_get_bin_times_list(
                 spike_sub_arr_list[idx],
                 t0=t0_t1_list[idx][0],
                 t1=t0_t1_list[idx][1],
@@ -414,7 +511,7 @@ def recursive_get_bin_times_list(
         ]
 
 
-def recursive_rate(
+def _recursive_rate(
     spike_arr,
     t0,
     t1,
@@ -423,7 +520,34 @@ def recursive_rate(
     nr_spikes,
     c_pre=np.inf,
 ):
-    bin_times_list = recursive_get_bin_times_list(
+    """
+    Recursive function to get the firing rate for the given spike array
+
+    Parameters:
+    ----------
+    spike_arr: array
+        spike times in s
+    t0: float or int
+        start of period in s
+    t1: float or int
+        end of period in s
+    duration_init: float or int
+        full duration in s
+    nr_neurons: int
+        number of neurons
+    nr_spikes: int
+        number of spikes
+    c_pre: float or int, optional, default = np.inf
+        c value of previous bin
+
+    Returns:
+    -------
+    time_arr: array
+        array with time steps in s
+    rate: array
+        array with firing rate
+    """
+    bin_times_list = _recursive_get_bin_times_list(
         spike_arr,
         t0,
         t1,
@@ -504,25 +628,35 @@ def recursive_rate(
     return time_rate_arr[:, time_unique_idx_arr]
 
 
-def get_pop_rate(spikes, t_start=None, t_end=None, time_step=1, t_smooth_ms=-1):
+def get_pop_rate(
+    spikes: dict,
+    t_start: float | int | None = None,
+    t_end: float | int | None = None,
+    time_step: float | int = 1,
+    t_smooth_ms: float | int = -1,
+):
     """
     Generates a smoothed population firing rate. Returns a list containing a time array and a firing rate array.
 
-    Args:
-        spikes: dictionary
-            ANNarchy spike dict of one population
+    Parameters:
+    ----------
+    spikes: dictionary
+        ANNarchy spike dict of one population
+    t_start: float or int, optional, default = time of first spike
+        start time of analyzed data in ms
+    t_end: float or int, optional, default = time of last spike
+        end time of analyzed data in ms
+    time_step: float or int, optional, default = 1
+        time step of the simulation in ms
+    t_smooth_ms: float or int, optional, default = -1
+        time window for firing rate calculation in ms, if -1 --> time window sizes are automatically detected
 
-        t_start: float or int, optional, default = time of first spike
-            start time of analyzed data in ms
-
-        t_end: float or int, optional, default = time of last spike
-            end time of analyzed data in ms
-
-        time_step: float or int, optional, default = 1
-            time step of the simulation in ms
-
-        t_smooth_ms: float or int, optional, default = -1
-            time window for firing rate calculation in ms, if -1 --> time window sizes are automatically detected
+    Returns:
+    -------
+    time_arr: array
+        array with time steps in ms
+    rate: array
+        array with population rate
     """
     dt = time_step
 
@@ -539,7 +673,7 @@ def get_pop_rate(spikes, t_start=None, t_end=None, time_step=1, t_smooth_ms=-1):
 
         ### if t_smooth is given --> use classic time_window method
         if t_smooth_ms > 0:
-            return get_pop_rate_old(
+            return _get_pop_rate_old(
                 spikes, duration, dt=dt, t_start=t_start, t_smooth_ms=t_smooth_ms
             )
         else:
@@ -552,10 +686,10 @@ def get_pop_rate(spikes, t_start=None, t_end=None, time_step=1, t_smooth_ms=-1):
             nr_neurons = len(list(spikes.keys()))
             nr_spikes = spike_arr.size
 
-            ### use recursive_rate to get firing rate
+            ### use _recursive_rate to get firing rate
             ### spike array is splitted in time bins
             ### time bins widths are automatically found
-            time_population_rate, population_rate = recursive_rate(
+            time_population_rate, population_rate = _recursive_rate(
                 spike_arr / 1000.0,
                 t0=t_start / 1000.0,
                 t1=(t_start + duration) / 1000.0,
@@ -589,7 +723,7 @@ def get_pop_rate(spikes, t_start=None, t_end=None, time_step=1, t_smooth_ms=-1):
             duration = t_end - t_start
             ret = np.zeros(int(duration / dt))
 
-    return [np.arange(t_start, t_start + duration, dt), ret]
+    return (np.arange(t_start, t_start + duration, dt), ret)
 
 
 def plot_recordings(
@@ -598,44 +732,37 @@ def plot_recordings(
     """
     Plots the recordings for the given recording_times specified in plan.
 
-    Args:
-        figname: str
-            path + name of figure (e.g. "figures/my_figure.png")
-
-        recordings: list
-            a recordings list from CompNeuroPy obtained with the function
-            get_recordings() from a Monitors object.
-
-        recording_times: object
-            recording_times object from CompNeuroPy obtained with the
-            function get_recording_times() from a Monitors object.
-
-        chunk: int
-            which chunk of recordings should be used (the index of chunk)
-
-        shape: tuple
-            Defines the subplot arrangement e.g. (3,2) = 3 rows, 2 columns
-
-        plan: list of strings
-            Defines which recordings are plotted in which subplot and how.
-            Entries of the list have the structure: "subplot_nr;model_component_name;variable_to_plot;format",
-            e.g. "1,my_pop1;v;line".
-            mode: defines how the data is plotted, available modes:
-                - for spike data: raster, mean, hybrid
-                - for other data: line, mean, matrix
-                - only for projection data: matrix_mean
-
-        time_lim: list, optional, default = time lims of chunk
-            Defines the x-axis for all subplots. The list contains two
-            numbers: start and end time in ms. The times have to be
-            within the chunk.
-
-        dpi: int, optional, default = 300
-            The dpi of the saved figure
-
+    Parameters:
+    ----------
+    figname: str
+        path + name of figure (e.g. "figures/my_figure.png")
+    recordings: list
+        a recordings list from CompNeuroPy obtained with the function
+        get_recordings() from a Monitors object.
+    recording_times: object
+        recording_times object from CompNeuroPy obtained with the
+        function get_recording_times() from a Monitors object.
+    chunk: int
+        which chunk of recordings should be used (the index of chunk)
+    shape: tuple
+        Defines the subplot arrangement e.g. (3,2) = 3 rows, 2 columns
+    plan: list of strings
+        Defines which recordings are plotted in which subplot and how.
+        Entries of the list have the structure: "subplot_nr;model_component_name;variable_to_plot;format",
+        e.g. "1,my_pop1;v;line".
+        mode: defines how the data is plotted, available modes:
+            - for spike data: raster, mean, hybrid
+            - for other data: line, mean, matrix
+            - only for projection data: matrix_mean
+    time_lim: list, optional, default = time lims of chunk
+        Defines the x-axis for all subplots. The list contains two
+        numbers: start and end time in ms. The times have to be
+        within the chunk.
+    dpi: int, optional, default = 300
+        The dpi of the saved figure
     """
     proc = Process(
-        target=__plot_recordings,
+        target=_plot_recordings,
         args=(figname, recordings, recording_times, chunk, shape, plan, time_lim, dpi),
     )
     proc.start()
@@ -644,47 +771,40 @@ def plot_recordings(
         quit()
 
 
-def __plot_recordings(
+def _plot_recordings(
     figname, recordings, recording_times, chunk, shape, plan, time_lim=[], dpi=300
 ):
     """
     Plots the recordings for the given recording_times specified in plan.
 
-    Args:
-        figname: str
-            path + name of figure (e.g. "figures/my_figure.png")
-
-        recordings: list
-            a recordings list from CompNeuroPy obtained with the function
-            get_recordings() from a Monitors object.
-
-        recording_times: object
-            recording_times object from CompNeuroPy obtained with the
-            function get_recording_times() from a Monitors object.
-
-        chunk: int
-            which chunk of recordings should be used (the index of chunk)
-
-        shape: tuple
-            Defines the subplot arrangement e.g. (3,2) = 3 rows, 2 columns
-
-        plan: list of strings
-            Defines which recordings are plotted in which subplot and how.
-            Entries of the list have the structure: "subplot_nr;model_component_name;variable_to_plot;format",
-            e.g. "1,my_pop1;v;line".
-            mode: defines how the data is plotted, available modes:
-                - for spike data: raster, mean, hybrid
-                - for other data: line, mean, matrix
-                - only for projection data: matrix_mean
-
-        time_lim: list, optional, default = time lims of chunk
-            Defines the x-axis for all subplots. The list contains two
-            numbers: start and end time in ms. The times have to be
-            within the chunk.
-
-        dpi: int, optional, default = 300
-            The dpi of the saved figure
-
+    Parameters:
+    ----------
+    figname: str
+        path + name of figure (e.g. "figures/my_figure.png")
+    recordings: list
+        a recordings list from CompNeuroPy obtained with the function
+        get_recordings() from a Monitors object.
+    recording_times: object
+        recording_times object from CompNeuroPy obtained with the
+        function get_recording_times() from a Monitors object.
+    chunk: int
+        which chunk of recordings should be used (the index of chunk)
+    shape: tuple
+        Defines the subplot arrangement e.g. (3,2) = 3 rows, 2 columns
+    plan: list of strings
+        Defines which recordings are plotted in which subplot and how.
+        Entries of the list have the structure: "subplot_nr;model_component_name;variable_to_plot;format",
+        e.g. "1,my_pop1;v;line".
+        mode: defines how the data is plotted, available modes:
+            - for spike data: raster, mean, hybrid
+            - for other data: line, mean, matrix
+            - only for projection data: matrix_mean
+    time_lim: list, optional, default = time lims of chunk
+        Defines the x-axis for all subplots. The list contains two
+        numbers: start and end time in ms. The times have to be
+        within the chunk.
+    dpi: int, optional, default = 300
+        The dpi of the saved figure
     """
     print(f"generate fig {figname}", end="... ", flush=True)
     recordings = recordings[chunk]
@@ -1177,7 +1297,7 @@ def __plot_recordings(
                     (time_arr_dict[part] >= start_time).astype(int)
                     * (time_arr_dict[part] <= end_time).astype(int)
                 ).astype(bool)
-                
+
                 time_decimals = get_number_of_decimals(time_step)
 
                 time_arr = np.round(time_arr_dict[part][mask], time_decimals)
@@ -1377,9 +1497,15 @@ def get_number_of_zero_decimals(nr):
     0.012 --> 2
     1.012 --> 0
 
-    Args:
-        nr: float or int
-            the number from which the number of digits are obtained
+    Parameters:
+    ----------
+    nr: float or int
+        the number from which the number of digits are obtained
+
+    Returns:
+    -------
+    decimals: int
+        number of digits after the decimal point which are zero (plus 1)
     """
     decimals = 0
     if nr != 0:
@@ -1398,9 +1524,15 @@ def get_number_of_decimals(nr):
        5.1 --> 1
     0.0101 --> 4
 
-    Args:
-        nr: float or int
-            the number from which the number of digits are obtained
+    Parameters:
+    ----------
+    nr: float or int
+        the number from which the number of digits are obtained
+
+    Returns:
+    -------
+    decimals: int
+        number of digits after the decimal point
     """
 
     if nr != int(nr):
@@ -1415,15 +1547,21 @@ def sample_data_with_timestep(time_arr, data_arr, timestep):
     """
     samples a data array each timestep using interpolation
 
-    Args:
-        time_arr: array
-            times of data_arr in ms
+    Parameters:
+    ----------
+    time_arr: array
+        times of data_arr in ms
+    data_arr: array
+        array with data values from which will be sampled
+    timestep: float or int
+        timestep in ms for sampling
 
-        data_arr: array
-            array with data values from which will be sampled
-
-        timestep: float or int
-            timestep in ms for sampling
+    Returns:
+    -------
+    time_arr: array
+        sampled time array
+    data_arr: array
+        sampled data array
     """
     interpolate_func = interp1d(
         time_arr, data_arr, bounds_error=False, fill_value="extrapolate"
@@ -1439,7 +1577,7 @@ def sample_data_with_timestep(time_arr, data_arr, timestep):
     new_time_arr = np.arange(min_time, max_time + timestep, timestep)
     new_data_arr = interpolate_func(new_time_arr)
 
-    return [new_time_arr, new_data_arr]
+    return (new_time_arr, new_data_arr)
 
 
 def time_data_add_nan(time_arr, data_arr, fill_time_step=None, axis=0):
@@ -1452,18 +1590,23 @@ def time_data_add_nan(time_arr, data_arr, fill_time_step=None, axis=0):
 
     but one can also give a fixed fill time step
 
-    Args:
-        time_arr: 1D array
-            times of data_arr in ms
+    Parameters:
+    ----------
+    time_arr: 1D array
+        times of data_arr in ms
+    data_arr: nD array
+        the size of the specified dimension of data array must have the same length as time_arr
+    fill_time_step: number, optional, default=None
+        if there are gaps they are filled with this time step
+    axis: int
+        which dimension of the data_arr belongs to the time_arr
 
-        data_arr: nD array
-            the size of the specified dimension of data array must have the same length as time_arr
-
-        axis: int
-            which dimension of the data_arr belongs to the time_arr
-
-        fill_time_step: number, optional, default=None
-            if there are gaps they are filled with this time step
+    Returns:
+    -------
+    time_arr: 1D array
+        time array with gaps filled
+    data_arr: nD array
+        data array with gaps filled
     """
     time_arr = time_arr.astype(float)
     data_arr = data_arr.astype(float)
@@ -1519,12 +1662,24 @@ def time_data_add_nan(time_arr, data_arr, fill_time_step=None, axis=0):
     time_arr = np.concatenate(time_arr_split, axis=0)
     data_arr = np.concatenate(data_arr_split, axis=axis)
 
-    return [time_arr, data_arr]
+    return (time_arr, data_arr)
 
 
 def rmse(a, b):
     """
     calculates the root-mean-square error between two arrays
+
+    Parameters:
+    ----------
+    a: array
+        first array
+    b: array
+        second array
+
+    Returns:
+    -------
+    rmse: float
+        root-mean-square error
     """
 
     return np.sqrt(np.mean((a - b) ** 2))
@@ -1533,12 +1688,37 @@ def rmse(a, b):
 def rsse(a, b):
     """
     calculates the root-sum-square error between two arrays
+
+    Parameters:
+    ----------
+    a: array
+        first array
+    b: array
+        second array
+
+    Returns:
+    -------
+    rsse: float
+        root-sum-square error
     """
 
     return np.sqrt(np.sum((a - b) ** 2))
 
 
 def get_minimum(input_data):
+    """
+    Returns the minimum of the input data.
+
+    Parameters:
+    ----------
+    input_data: list, np.ndarray, tuple, or float
+        The input data from which the minimum is to be obtained.
+
+    Returns:
+    -------
+    minimum: float
+        The minimum of the input data.
+    """
     if isinstance(input_data, (list, np.ndarray, tuple)):
         # If the input is a list, numpy array, or tuple, we handle them as follows
         flattened_list = [
@@ -1555,6 +1735,20 @@ def get_minimum(input_data):
 
 
 def get_maximum(input_data):
+    """
+    Returns the maximum of the input data.
+
+    Parameters:
+    ----------
+    input_data: list, np.ndarray, tuple, or float
+        The input data from which the maximum is to be obtained.
+
+    Returns:
+    -------
+    maximum: float
+        The maximum of the input data.
+    """
+
     if isinstance(input_data, (list, np.ndarray, tuple)):
         # If the input is a list, numpy array, or tuple, we handle them as follows
         flattened_list = [

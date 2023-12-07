@@ -15,6 +15,11 @@ from collections.abc import Sized
 def print_df(df):
     """
     prints the complete dataframe df
+
+    Parameters
+    ----------
+    df : pandas dataframe
+        dataframe to be printed
     """
     with pd.option_context(
         "display.max_rows", None
@@ -24,8 +29,17 @@ def print_df(df):
 
 def flatten_list(lst):
     """
-    lst: list of lists or mixed: values and lists
     retuns flattened list
+
+    Parameters
+    ----------
+    lst: list of lists or mixed: values and lists
+        list to be flattened
+
+    Returns
+    -------
+    new_lst: list
+        flattened list
     """
 
     ### if lists in lst --> upack them and retunr flatten_list of new list
@@ -49,6 +63,18 @@ def flatten_list(lst):
 def remove_key(d, key):
     """
     removes an element from a dict, returns the new dict
+
+    Parameters
+    ----------
+    d: dict
+        dict to be modified
+    key: str
+        key to be removed
+
+    Returns
+    -------
+    r: dict
+        modified dict
     """
     r = dict(d)
     del r[key]
@@ -57,6 +83,13 @@ def remove_key(d, key):
 
 @contextmanager
 def suppress_stdout():
+    """
+    suppresses the print output of a function
+
+    usage:
+    with suppress_stdout():
+        print("this will not be printed")
+    """
     with open(os.devnull, "w") as devnull:
         old_stdout = sys.stdout
         sys.stdout = devnull
@@ -67,20 +100,55 @@ def suppress_stdout():
 
 
 def sci(nr):
+    """
+    Rounds a number to a single decimal.
+    If number is smaller than 0 it is converted to scientific notation with 1 decimal.
+
+    Parameters
+    ----------
+    nr: float or int
+        number to be converted
+
+    Returns
+    -------
+    str: str
+        string of the number in scientific notation
+
+    Example
+    -------
+    >>> sci(0.0001)
+    '1.0e-4'
+    >>> sci(1.77)
+    '1.8'
+    >>> sci(1.77e-5)
+    '1.8e-5'
+    >>> sci(177.22)
+    '177.2'
+    """
     if af.get_number_of_zero_decimals(nr) == 0:
         return str(round(nr, 1))
     else:
         return f"{nr*10**af.get_number_of_zero_decimals(nr):.1f}e-{af.get_number_of_zero_decimals(nr)}"
 
 
-def unpack_monDict_keys(s):
+def unpack_monDict_keys(s: str):
     """
-    s : a key of a monDict format:
-        "compartment_type;compartment_name;period" or "compartment_type;compartment_name"
+    Unpacks a string of the form "compartment_type;compartment_name;period" or "compartment_type;compartment_name" into its components
+    If period is not provided it is set to dt() for compartment_type 'pop' and dt()*1000 for compartment_type 'proj'
 
-    return compartment_type, compartment_name, period
+    Parameters
+    ----------
+    s: str
+        string to be unpacked
 
-    if period not provided --> for pop return dt() for proj return dt()*1000
+    Returns
+    -------
+    compartment_type: str
+        compartment type
+    compartment_name: str
+        compartment name
+    period: float
+        period of the compartment
     """
     splitted_s = s.split(";")
     compartment_type = splitted_s[0]
@@ -100,16 +168,59 @@ def unpack_monDict_keys(s):
 
 
 class Cmap:
+    """
+    Class to create a colormap with a given name and range.
+    The colormap can be called with a value between 0 and 1 to get the corresponding rgb value.
+    """
+
     def __init__(self, cmap_name, vmin, vmax):
+        """
+        Parameters
+        ----------
+        cmap_name: str
+            name of the colormap
+        vmin: float
+            lower limit of the colormap
+        vmax: float
+            upper limit of the colormap
+        """
         self.cmap_name = cmap_name
         self.cmap = plt.get_cmap(cmap_name)
         self.norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
         self.scalarMap = cm.ScalarMappable(norm=self.norm, cmap=self.cmap)
 
     def get_rgb(self, val):
+        """
+        Returns the rgb value of the colormap at the given value.
+
+        Parameters
+        ----------
+        val: float
+            value between 0 and 1
+
+        Returns
+        -------
+        rgb: tuple
+            rgb value of the colormap at the given value
+        """
         return self.scalarMap.to_rgba(val)
 
     def __call__(self, x, alpha=1):
+        """
+        Returns the rgba value of the colormap at the given value.
+
+        Parameters
+        ----------
+        x: float
+            value between 0 and 1
+        alpha: float
+            alpha value of the rgba value
+
+        Returns
+        -------
+        rgba: tuple
+            rgba value of the colormap at the given value
+        """
         vals = self.get_rgb(x)
         if isinstance(vals, tuple):
             vals = vals[:3] + (alpha,)
@@ -118,7 +229,7 @@ class Cmap:
         return vals
 
 
-class data_obj(object):
+class DataCl(object):
     def __init__(self) -> None:
         pass
 
@@ -129,8 +240,12 @@ class data_obj(object):
         try:
             return super().__getattribute__(__name)
         except:
-            self.__setattr__(__name, data_obj())
+            self.__setattr__(__name, DataCl())
             return super().__getattribute__(__name)
+
+
+### keep old name for compatibility
+data_obj = DataCl
 
 
 def create_cm(colors, name="my_cmap", N=256, gamma=1.0, vmin=0, vmax=1):
@@ -139,17 +254,27 @@ def create_cm(colors, name="my_cmap", N=256, gamma=1.0, vmin=0, vmax=1):
 
     Parameters
     ----------
-    name : str
-        The name of the colormap.
     colors : array-like of colors or array-like of (value, color)
         If only colors are given, they are equidistantly mapped from the
         range :math:`[0, 1]`; i.e. 0 maps to ``colors[0]`` and 1 maps to
         ``colors[-1]``.
         If (value, color) pairs are given, the mapping is from *value*
         to *color*. This can be used to divide the range unevenly.
-    N : int
-        The number of rgb quantization levels.
-    gamma : float
+    name : str, optional
+        The name of the colormap, by default 'my_cmap'.
+    N : int, optional
+        The number of rgb quantization levels, by default 256.
+    gamma : float, optional
+        Gamma correction value, by default 1.0.
+    vmin : float, optional
+        The minimum value of the colormap, by default 0.
+    vmax : float, optional
+        The maximum value of the colormap, by default 1.
+
+    Returns
+    -------
+    LinearColormap
+        The colormap object.
     """
     if not np.iterable(colors):
         raise ValueError("colors must be iterable")
@@ -213,11 +338,31 @@ def create_cm(colors, name="my_cmap", N=256, gamma=1.0, vmin=0, vmax=1):
         "alpha": np.column_stack([vals, a, a]),
     }
 
-    return my_linear_cmap_obj(name, cdict, N, gamma, vmin, vmax)
+    return LinearColormapClass(name, cdict, N, gamma, vmin, vmax)
 
 
-class my_linear_cmap_obj(LinearSegmentedColormap):
+class LinearColormapClass(LinearSegmentedColormap):
     def __init__(self, name, segmentdata, N=..., gamma=..., vmin=0, vmax=1) -> None:
+        """
+        Parameters
+        ----------
+        name : str
+            The name of the colormap.
+        segmentdata : dict
+            Mapping from scalar values to colors.
+            The scalar values are typically in the interval (0, 1),
+            but other intervals are allowed.
+            The colors may be specified in any way understandable by
+            `matplotlib.colors.ColorConverter.to_rgba`.
+        N : int, optional
+            The number of rgb quantization levels, by default ...
+        gamma : float, optional
+            Gamma correction value, by default ...
+        vmin : float, optional
+            The minimum value of the colormap, by default 0.
+        vmax : float, optional
+            The maximum value of the colormap, by default 1.
+        """
         self.my_vmin = vmin
         self.my_vmax = vmax
         super().__init__(name, segmentdata, N, gamma)
@@ -252,19 +397,42 @@ class my_linear_cmap_obj(LinearSegmentedColormap):
         return super().__call__(X, alpha, bytes)
 
 
-class decision_tree:
+### keep old name for compatibility
+my_linear_cmap_obj = LinearColormapClass
+
+
+class DecisionTree:
+    """
+    Class to create a decision tree.
+    """
+
     def __init__(self):
-        """ """
         ### node list is a list of lists
         ### first idx = level of tree
         ### second idx = all nodes in the level
         self.node_list = [[]]
-        pass
 
     def node(self, parent=None, prob=0, name=None):
-        """ """
+        """
+        Create a new node in the decision tree.
+
+        Parameters
+        ----------
+        parent: node object
+            parent node of the new node
+        prob: float
+            probability of the new node
+        name: str
+            name of the new node
+
+        Returns
+        -------
+        new_node: node object
+            the new node
+        """
+
         ### create new node
-        new_node = self.node_cl(tree=self, parent=parent, prob=prob, name=name)
+        new_node = DecisionTreeNode(tree=self, parent=parent, prob=prob, name=name)
         ### add it to node_list
         if len(self.node_list) == new_node.level:
             self.node_list.append([])
@@ -273,7 +441,22 @@ class decision_tree:
         return new_node
 
     def get_path_prod(self, name):
-        """ """
+        """
+        Get the path and path product of a node with a given name.
+
+        Parameters
+        ----------
+        name: str
+            name of the node
+
+        Returns
+        -------
+        path: str
+            path to the node
+        path_prod: float
+            path product of the node
+        """
+
         ### search for all nodes with name
         ### start from behind
         search_node_list = []
@@ -295,35 +478,101 @@ class decision_tree:
         ]
 
     def __get_path_prod_rec__(self, node):
-        """ """
+        """
+        Recursive function to get the path and path product of a node.
+
+        Parameters
+        ----------
+        node: node object
+            node to get the path and path product of
+
+        Returns
+        -------
+        path_str: str
+            path to the node
+        prob: float
+            path product of the node
+        """
+        node: DecisionTreeNode = node
+
         if node.parent == None:
             return ["/" + node.name, node.prob]
         else:
             path_str, prob = self.__get_path_prod_rec__(node.parent)
             return [path_str + "/" + node.name, prob * node.prob]
 
-    class node_cl:
-        id_counter = 0
 
-        def __init__(self, tree, parent=None, prob=0, name=""):
-            self.tree = tree
-            self.parent = parent
-            self.prob = prob
-            self.name = name
-            self.id = int(self.id_counter)
-            self.id_counter += 1
-            if parent != None:
-                self.level = int(parent.level + 1)
-            else:
-                self.level = int(0)
+### keep old name for compatibility
+decision_tree = DecisionTree
 
-        def get_path_prod(self):
-            """ """
-            return self.tree.__get_path_prod_rec__(self)
 
-        def add(self, name, prob):
-            """ """
-            return self.tree.node(parent=self, prob=prob, name=name)
+class DecisionTreeNode:
+    """
+    Class to create a node in a decision tree.
+    """
+
+    id_counter = 0
+
+    def __init__(self, tree: DecisionTree, parent=None, prob=0, name=""):
+        """
+        Parameters
+        ----------
+        tree: DecisionTree object
+            decision tree the node belongs to
+        parent: node object
+            parent node of the new node
+        prob: float
+            probability of the new node
+        name: str
+            name of the new node
+        """
+        self.tree = tree
+        parent: DecisionTreeNode = parent
+        self.parent = parent
+        self.prob = prob
+        self.name = name
+        self.id = int(self.id_counter)
+        self.id_counter += 1
+        if parent != None:
+            self.level = int(parent.level + 1)
+        else:
+            self.level = int(0)
+
+    def get_path_prod(self):
+        """
+        Get the path and path product of the node.
+
+        Returns
+        -------
+        path: str
+            path to the node
+        path_prod: float
+            path product of the node
+        """
+        return self.tree.__get_path_prod_rec__(self)
+
+    def add(self, name, prob):
+        """
+        Add a child node to the node.
+
+        Parameters
+        ----------
+        name: str
+            name of the new node
+        prob: float
+            probability of the new node
+
+        Returns
+        -------
+        new_node: node object
+            the new node
+        """
+
+        return self.tree.node(parent=self, prob=prob, name=name)
+
+
+### keep old name for compatibility
+node_cl = DecisionTreeNode
 
 
 def evaluate_expression_with_dict(expression, value_dict):
@@ -335,24 +584,26 @@ def evaluate_expression_with_dict(expression, value_dict):
     It replaces the variable names in the expression with their corresponding
     values from the dictionary and evaluates the expression.
 
-    Args:
-        expression: str
-            A mathematical expression to be evaluated. Variable
-            names in the expression should match the keys in the value_dict.
-        value_dict: dict
-            A dictionary containing variable names (strings) as
-            keys and corresponding numpy arrays or numbers as values.
+    Parameters
+    ----------
+    expression: str
+        A mathematical expression to be evaluated. Variable
+        names in the expression should match the keys in the value_dict.
+    value_dict: dict
+        A dictionary containing variable names (strings) as
+        keys and corresponding numpy arrays or numbers as values.
 
-    return:
+    Returns
+    -------
         result: value or array
             The result of evaluating the expression using the provided values.
 
     Example:
+    --------
     >>> my_dict = {"a": np.ones(10), "b": np.arange(10)}
     >>> my_string = "a*2-b+10"
-    >>> result = evaluate_expression_with_dict(my_string, my_dict)
-    >>> print(result)
-    array([11., 11., 11., 11., 11., 11., 11., 11., 11., 11.])
+    >>> evaluate_expression_with_dict(my_string, my_dict)
+    array([12., 11., 10.,  9.,  8.,  7.,  6.,  5.,  4.,  3.])
     """
     # Replace dictionary keys in the expression with their corresponding values
     ### replace names with dict entries
@@ -370,26 +621,24 @@ def evaluate_expression_with_dict(expression, value_dict):
 
 def replace_names_with_dict(expression, name_of_dict, dictionary):
     """
-    Args:
-        expression: str
-            string which contains an equation using keys from the dict
+    Parameters:
+    -----------
+    expression: str
+        string which contains an equation using keys from the dict
+    name_of_dict: str
+        name of the dictionary
+    dictionary: dict
+        the dictionary containing the keys used in the equation
 
-        name_of_dict: str
-            name of the dictionary
+    Returns:
+    --------
+    new_expression: str
+        same as expression but the keys are replaced by name_of_dict['key']
 
-        dictionary: dict
-            the dictionary containing the keys used in the equation
-
-    return:
-        new_expression: str
-            same as expression but the keys are replaced by name_of_dict['key']
-            i.e.:
-            expression="a+b"
-            name_of_dict="my_dict"
-            my_dict={"a":5,"b":7}
-            dictionary=my_dict
-
-            retrun: "my_dict['a']+my_dict['b']"
+    Example:
+    --------
+    >>> replace_names_with_dict(expression="a+b", name_of_dict="my_dict", dictionary={"a":5,"b":7})
+    "my_dict['a']+my_dict['b']"
     """
     new_expression = expression
 
@@ -415,6 +664,32 @@ def replace_names_with_dict(expression, name_of_dict, dictionary):
 
 
 def replace_substrings_except_within_braces(input_string, replacement_mapping):
+    """
+    Replace substrings in a string with other substrings, but only if the
+    substring is not within braces.
+
+    Parameters
+    ----------
+    input_string: str
+        The string in which substrings should be replaced.
+    replacement_mapping: dict
+        A dictionary mapping substrings to be replaced to their replacements.
+
+    Returns
+    -------
+    result: str
+        The input string with substrings replaced.
+
+    Example
+    -------
+    >>> replace_substrings_except_within_braces("a+b", {"a":"c"})
+    "c+b"
+    >>> replace_substrings_except_within_braces("a+b", {"a":"c", "b":"d"})
+    "c+d"
+    >>> replace_substrings_except_within_braces("a+{b}", {"a":"c", "b":"d"})
+    "c+{b}"
+    """
+
     result = []
     inside_braces = False
     i = 0
