@@ -12,3 +12,5 @@ dist/
 *.~lock*
 *model_conf_log
 *cache*
+!docs/*
+!site/*
