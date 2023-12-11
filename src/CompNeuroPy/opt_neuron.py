@@ -3,7 +3,7 @@ import numpy as np
 import traceback
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy import extra_functions as ef
-from CompNeuroPy.Monitors import Monitors
+from CompNeuroPy.monitors import CompNeuroMonitors
 from CompNeuroPy.generate_model import generate_model
 import matplotlib.pyplot as plt
 import sys
@@ -201,7 +201,7 @@ class opt_neuron:
 
                 ### create monitors
                 if len(self.record) > 0:
-                    monitors = Monitors(
+                    monitors = CompNeuroMonitors(
                         {
                             f"pop;{pop_name}": self.record
                             for pop_name in [
@@ -223,7 +223,9 @@ class opt_neuron:
                 )
                 ### create monitors
                 if len(self.record) > 0:
-                    monitors = Monitors({f"pop;{model.populations[0]}": self.record})
+                    monitors = CompNeuroMonitors(
+                        {f"pop;{model.populations[0]}": self.record}
+                    )
 
         return [model, target_model, monitors]
 

@@ -5,7 +5,7 @@ from CompNeuroPy import (
     generate_simulation,
     current_step,
     current_ramp,
-    Monitors,
+    CompNeuroMonitors,
 )
 from CompNeuroPy.models import H_and_H_model_Bischop
 from ANNarchy import dt, setup
@@ -15,7 +15,7 @@ from ANNarchy import dt, setup
 class my_exp(Experiment):
     """
     parent class Experiment provides the variables:
-        self.mon = []) --> define during init, a CompNeuroPy Monitors object to do recordings
+        self.mon = []) --> define during init, a CompNeuroMonitors object to do recordings
         self.data = {} --> a dictionary with any optional data
     and the functions:
         self.reset()   --> resets the model and monitors
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     model = H_and_H_model_Bischop()
 
     ### define recordings before experiment
-    monitors = Monitors({f"pop;{model.populations[0]}": ["v"]})
+    monitors = CompNeuroMonitors({f"pop;{model.populations[0]}": ["v"]})
 
     ### run the experiment
     experiment_obj = my_exp(monitors=monitors)

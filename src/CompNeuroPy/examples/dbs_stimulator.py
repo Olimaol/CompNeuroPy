@@ -37,13 +37,13 @@ from ANNarchy import (
     dt,
 )
 from CompNeuroPy import (
-    Monitors,
+    CompNeuroMonitors,
     plot_recordings,
     generate_model,
     cnp_clear,
     DBSstimulator,
 )
-from CompNeuroPy.Monitors import recording_times_cl
+from CompNeuroPy.monitors import recording_times_cl
 import numpy as np
 
 ### setup ANNarchy
@@ -326,7 +326,7 @@ class dbs_test_model_class:
 
 
 def do_simulation(
-    mon: Monitors,
+    mon: CompNeuroMonitors,
     dbs: DBSstimulator,
     dbs_val_list: list[list],
     dbs_key_list: list[str],
@@ -336,8 +336,8 @@ def do_simulation(
 
     Parameters:
     ----------
-    mon: Monitors
-        Monitors object
+    mon: CompNeuroMonitors
+        CompNeuroMonitors object
     dbs: DBSstimulator
         DBS stimulator object
     dbs_val_list: list[list]
@@ -774,7 +774,7 @@ def main(plotting: bool = False):
         mon_dict = {}
         for pop_name in model.populations:
             mon_dict[f"pop;{pop_name}"] = ["v", "spike", "axon_spike"]
-        mon = Monitors(mon_dict)
+        mon = CompNeuroMonitors(mon_dict)
 
         ### run simulation and get data from monitors
         recordings, recording_times = do_simulation(
@@ -818,7 +818,7 @@ def main(plotting: bool = False):
         mon_dict = {}
         for pop_name in model.populations:
             mon_dict[f"pop;{pop_name}"] = ["r"]
-        mon = Monitors(mon_dict)
+        mon = CompNeuroMonitors(mon_dict)
 
         ### run simulation and get data from monitors
         recordings, recording_times = do_simulation(

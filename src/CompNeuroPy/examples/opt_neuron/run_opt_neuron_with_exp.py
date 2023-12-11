@@ -41,12 +41,19 @@ simple_neuron = Neuron(
 ### for the opt_neuron class we need to provide an experiment class containing the "run" function
 class my_exp(Experiment):
     """
-    parent class Experiment provides the variables:
-        self.mon = self.cnp.Monitors() --> a CompNeuroPy Monitors object to do recordings
-        self.data = {}                 --> a dictionary with any optional data
-    and the functions:
-        self.reset()   --> resets the model and monitors
-        self.results() --> returns a results object (with recordings and optional data from self.data)
+    parent class Experiment provides
+
+    Attributes:
+        mon (CompNeuroMonitors):
+            CompNeuroMonitors object for recordings
+        data (dict):
+            dict for storing optional data
+
+    Methods:
+        reset():
+            resets the model and monitors
+        results():
+            returns a results object (with recordings and optional data from self.data)
     """
 
     def run(self, population_name):

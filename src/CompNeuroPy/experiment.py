@@ -1,6 +1,6 @@
 from ANNarchy import reset
-from CompNeuroPy.Monitors import RecordingTimes
-from CompNeuroPy import Monitors
+from CompNeuroPy.monitors import RecordingTimes
+from CompNeuroPy import CompNeuroMonitors
 
 
 class CompNeuroExp:
@@ -13,8 +13,8 @@ class CompNeuroExp:
     function of the CompNeuroExp class.
 
     Attributes:
-        mon (Monitors):
-            Monitors object for recordings
+        mon (CompNeuroMonitors):
+            CompNeuroMonitors object for recordings
         data (dict):
             dict for storing optional data
 
@@ -35,13 +35,15 @@ class CompNeuroExp:
         >>>         return self.results()
     """
 
-    def __init__(self, monitors: Monitors, reset_function=None, reset_kwargs={}):
+    def __init__(
+        self, monitors: CompNeuroMonitors, reset_function=None, reset_kwargs={}
+    ):
         """
         Initialize the experiment.
 
         Args:
-            monitors (Monitors):
-                Monitors object for recordings
+            monitors (CompNeuroMonitors):
+                CompNeuroMonitors object for recordings
             reset_function (function, optional):
                 A function which resets the ANNarchy model.
                 Default: None, i.e., ANNarchys' reset function
@@ -62,7 +64,7 @@ class CompNeuroExp:
 
     def reset(self, populations=True, projections=False, synapses=False):
         """
-        Reset the ANNarchy model and monitors and the CompNeuroPy Monitors used for the
+        Reset the ANNarchy model and monitors and the CompNeuroMonitors used for the
         experiment. The reset function of the CompNeuroExp class is used which can be
         set during initialization and can have additional arguments besides the ones
         which are used by ANNarchys' reset function which are also set during

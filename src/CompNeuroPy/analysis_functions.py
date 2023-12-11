@@ -733,10 +733,10 @@ def plot_recordings(
             path + name of figure (e.g. "figures/my_figure.png")
         recordings (list):
             a recordings list from CompNeuroPy obtained with the function
-            get_recordings() from a Monitors object.
+            get_recordings() from a CompNeuroMonitors object.
         recording_times (object):
             recording_times object from CompNeuroPy obtained with the
-            function get_recording_times() from a Monitors object.
+            function get_recording_times() from a CompNeuroMonitors object.
         chunk (int):
             which chunk of recordings should be used (the index of chunk)
         shape (tuple):
@@ -778,10 +778,10 @@ def _plot_recordings(
             path + name of figure (e.g. "figures/my_figure.png")
         recordings (list):
             a recordings list from CompNeuroPy obtained with the function
-            get_recordings() from a Monitors object.
+            get_recordings() from a CompNeuroMonitors object.
         recording_times (object):
             recording_times object from CompNeuroPy obtained with the
-            function get_recording_times() from a Monitors object.
+            function get_recording_times() from a CompNeuroMonitors object.
         chunk (int):
             which chunk of recordings should be used (the index of chunk)
         shape (tuple):

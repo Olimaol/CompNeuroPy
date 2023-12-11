@@ -35,8 +35,8 @@ class CompNeuroSim:
             kwargs_warning (bool, optional):
                 If True, a warning is printed if the simulation_kwargs are changed
                 during the simulation. Default: True.
-            monitor_object (CompNeuroPy Monitors object, optional):
-                Monitors object to automatically track the recording chunk for each
+            monitor_object (CompNeuroMonitors object, optional):
+                CompNeuroMonitors object to automatically track the recording chunk for each
                 simulation run. Default: None.
         """
         # set simulaiton function
@@ -262,7 +262,7 @@ class SimInfo:
         kwargs (list):
             List of simulation kwargs of the simulation function of each simulation run.
         monitor_chunk (list):
-            List of recording chunks of the used Monitors object of each simulation run.
+            List of recording chunks of the used CompNeuroMonitors object of each simulation run.
     """
 
     def __init__(
@@ -296,7 +296,7 @@ class SimInfo:
                 List of simulation kwargs of the simulation function of each simulation
                 run.
             monitor_chunk (list):
-                List of recording chunks of the used Monitors object of each simulation
+                List of recording chunks of the used CompNeuroMonitors object of each simulation
                 run.
         """
         self.name = name

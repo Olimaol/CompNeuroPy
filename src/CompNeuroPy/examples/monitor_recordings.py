@@ -46,7 +46,7 @@ new recordings (1 chunk) should be obtained
 
 """
 from ANNarchy import Population, Izhikevich, setup, simulate, get_population
-from CompNeuroPy import generate_model, Monitors, create_dir
+from CompNeuroPy import generate_model, CompNeuroMonitors, create_dir
 import pylab as plt
 import numpy as np
 
@@ -97,9 +97,9 @@ def get_time_and_data_arr(
 
     Args:
         recordings: list
-            obtained with CompNeuroPy.Monitors().get_recordings()
+            obtained with CompNeuroMonitors.get_recordings()
         recording_times: obj
-            obtained with CompNeuroPy.Monitors().get_recording_times()
+            obtained with CompNeuroMonitors.get_recording_times()
         compartment: str
             name of the model compartment
         variable: str
@@ -149,11 +149,11 @@ def main():
     )
 
     ### after compilation we can define the monitors using the monitor_dictionary
-    ### and the Monitors class
+    ### and the CompNeuroMonitors class
     ### for my_pop1 we use a recording period of 2 ms
     ### for my_pop2 we do not give a recording preiod, therefore record every timestep
     monitor_dictionary = {"pop;my_pop1;2": ["v", "spike"], "pop;my_pop2": ["v"]}
-    mon = Monitors(monitor_dictionary)
+    mon = CompNeuroMonitors(monitor_dictionary)
 
     ### now lets do a simulation with some resets and pauses, creating recording chunks and periods
     for _ in ["lets do the simulation"]:

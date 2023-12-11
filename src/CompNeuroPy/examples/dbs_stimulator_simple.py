@@ -2,7 +2,7 @@ from ANNarchy import Population, Izhikevich, compile, simulate
 from CompNeuroPy import DBSstimulator
 
 from ANNarchy import setup
-from CompNeuroPy import Monitors, plot_recordings
+from CompNeuroPy import CompNeuroMonitors, plot_recordings
 
 setup(dt=0.1)
 
@@ -25,7 +25,7 @@ population1, population2 = dbs.update_pointers(pointer_list=[population1, popula
 compile()
 
 # create monitors
-monitors = Monitors({"pop;my_pop1": "v", "pop;my_pop2": "v"})
+monitors = CompNeuroMonitors({"pop;my_pop1": "v", "pop;my_pop2": "v"})
 monitors.start()
 
 # run simulation

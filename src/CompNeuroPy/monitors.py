@@ -44,7 +44,7 @@ class CompNeuroMonitors:
         """
         timings = {}
         for key, val in self.mon_dict.items():
-            _, compartment, _ = self.unpack_mon_dict_keys(key)
+            _, compartment, _ = self._unpack_mon_dict_keys(key)
             timings[compartment] = {"currently_paused": True, "start": [], "stop": []}
         self.timings = timings
 
@@ -66,7 +66,7 @@ class CompNeuroMonitors:
         if compartment_list == None:
             mon_dict_key_list = list(self.mon_dict.keys())
             compartment_list = [
-                self.unpack_mon_dict_keys(key)[1] for key in mon_dict_key_list
+                self._unpack_mon_dict_keys(key)[1] for key in mon_dict_key_list
             ]
 
         self.timings = self._start_monitors(compartment_list, self.mon, self.timings)
@@ -83,198 +83,10 @@ class CompNeuroMonitors:
         if compartment_list == None:
             mon_dict_key_list = list(self.mon_dict.keys())
             compartment_list = [
-                self.unpack_mon_dict_keys(key)[1] for key in mon_dict_key_list
+                self._unpack_mon_dict_keys(key)[1] for key in mon_dict_key_list
             ]
 
         self.timings = self._pause_monitors(compartment_list, self.mon, self.timings)
-
-    def get_recordings(self):
-        """
-        Get recordings of all recorded compartments.
-
-        Returns:
-            recordings (list):
-                List with recordings of all chunks.
-        """
-        ### only if recordings in current chunk and get_recodings was not already called add current chunk to recordings
-        if (
-            self._any_recordings_in_current_chunk()
-            and self.already_got_recordings is False
-        ):
-            ### update recordings
-            self.recordings.append(self._get_monitors(self.mon_dict, self.mon))
-            ### upade already_got_recordings --> it will not update recordings again
-            self.already_got_recordings = True
-
-            if not (self.get_recordings_reset_call):
-                if len(self.recordings) == 0:
-                    print(
-                        "WARNING get_recordings: no recordings available, empty list returned. Maybe forgot start()?"
-                    )
-            return self.recordings
-        else:
-            if not (self.get_recordings_reset_call):
-                if len(self.recordings) == 0:
-                    print(
-                        "WARNING get_recordings: no recordings available, empty list returned. Maybe forgot start()?"
-                    )
-            return self.recordings
-
-    def get_recordings_and_clear(self):
-        """
-        The default get_recordings method should be called at the end of the simulation.
-        The get_recordings_and_clear method allows to get several times recordings with
-        the same monitor object and to simulate between the calls. Sets the internal
-        variables back to their initial state. Usefull if you repeat a simulation +
-        recording several times and you do not want to always create new chunks.
-
-        !!! warning
-            If you want to continue recording after calling this method, you have to
-            call start() again.
-
-        Returns:
-            recordings (list):
-                List with recordings of all chunks.
-            recording_times (recording_times_cl):
-                Object with recording times of all chunks.
-        """
-        ret0 = self.get_recordings()
-        ret1 = self.get_recording_times()
-        self._init_internals()
-        ret = (ret0, ret1)
-        return ret
-
-    def _correct_start_stop(self, start_time_arr, stop_time_arr, period):
-        """
-        Corrects the start and stop times of recordings to the actual start and stop
-        times of recorded values.
-
-        Args:
-            start_time_arr (np.array):
-                Array with start times of recordings, obtained with get_time() function
-                of ANNarchy.
-            stop_time_arr (np.array):
-                Array with stop times of recordings, obtained with get_time() function
-                of ANNarchy.
-            period (float):
-                Time difference between recording values specified by the user.
-
-        Returns:
-            actual_start_time (np.array):
-                Array with actual start times of recorded values.
-            actual_stop_time (np.array):
-                Array with actual stop times of recorded values.
-            nr_rec_vals (np.array):
-                Array with number of recorded values between start and stop.
-        """
-        # actual_period = int(period / dt()) * dt()
-        actual_start_time = np.ceil(start_time_arr / period) * period
-
-        actual_stop_time = np.ceil(stop_time_arr / period - 1) * period
-
-        nr_rec_vals = 1 + (actual_stop_time - actual_start_time) / period
-
-        return (actual_start_time, actual_stop_time, nr_rec_vals)
-
-    def _get_temp_timings(self):
-        """
-        Generates a timings dictionary with time lims and idx lims for each compartment.
-        Calculates the idx lims of the recordings based on the time lims.
-
-        Returns:
-            temp_timings (dict):
-                Dict with time lims and idx lims for each compartment.
-        """
-        temp_timings = {}
-        for key in self.mon_dict.keys():
-            _, compartment, period = self.unpack_mon_dict_keys(key)
-            if len(self.timings[compartment]["start"]) > len(
-                self.timings[compartment]["stop"]
-            ):
-                ### was started/resumed but never stoped after --> use current time for stop time
-                self.timings[compartment]["stop"].append(get_time())
-            ### calculate the idx of the recorded arrays which correspond to the timings and remove 'currently_paused'
-            ### get for each start-stop pair the corrected start stop timings (when teh values were actually recorded, depends on period and timestep)
-            ### and also get the number of recorded values for start-stop pair
-            start_time_arr = np.array(self.timings[compartment]["start"])
-            stop_time_arr = np.array(self.timings[compartment]["stop"])
-            (
-                start_time_arr,
-                stop_time_arr,
-                nr_rec_vals_arr,
-            ) = self._correct_start_stop(start_time_arr, stop_time_arr, period)
-
-            ### with the number of recorded values -> get start and end idx for each start-stop pair
-            start_idx = [
-                np.sum(nr_rec_vals_arr[0:i]).astype(int)
-                for i in range(nr_rec_vals_arr.size)
-            ]
-            stop_idx = [
-                np.sum(nr_rec_vals_arr[0 : i + 1]).astype(int) - 1
-                for i in range(nr_rec_vals_arr.size)
-            ]
-
-            ### return start-stop pair info in timings format
-            temp_timings[compartment] = {
-                "start": {
-                    "ms": np.round(
-                        start_time_arr, af.get_number_of_decimals(dt())
-                    ).tolist(),
-                    "idx": start_idx,
-                },
-                "stop": {
-                    "ms": np.round(
-                        stop_time_arr, af.get_number_of_decimals(dt())
-                    ).tolist(),
-                    "idx": stop_idx,
-                },
-            }
-        return temp_timings
-
-    def get_recording_times(self):
-        """
-        Get recording times of all recorded compartments.
-
-        Returns:
-            recording_times (recording_times_cl):
-                Object with recording times of all chunks.
-        """
-
-        temp_timings = self._get_temp_timings()
-
-        ### only append temp_timings of current chunk if there are recordings in current chunk at all and if get_recordings was not already called (double call would add the same chunk again)
-        if (
-            self._any_recordings_in_current_chunk()
-            and self.already_got_recording_times is False
-        ):
-            self.recording_times.append(temp_timings)
-
-        ### upade already_got_recording_times --> it will not update recording_times again
-        self.already_got_recording_times = True
-
-        ### generate a object from recording_times and return this instead of the dict
-        recording_times_ob = RecordingTimes(self.recording_times)
-
-        if not (self.get_recordings_reset_call):
-            if len(self.recording_times) == 0:
-                print(
-                    "WARNING get_recording_times: no recordings available, empty list returned. Maybe forgot start()?"
-                )
-        return recording_times_ob
-
-    def _any_recordings_in_current_chunk(self):
-        """
-        Check if there are any recordings in the current chunk.
-
-        Returns:
-            any_recordings (bool):
-                True if there are any recordings in the current chunk, False otherwise.
-        """
-        temp_timings = self._get_temp_timings()
-
-        ### generate a temp object of temp timings to check if there were recordings at all
-        recording_times_ob_temp = RecordingTimes([temp_timings])
-        return recording_times_ob_temp._any_recordings(chunk=0)
 
     def reset(
         self,
@@ -344,7 +156,7 @@ class CompNeuroMonitors:
         ### check if there are currently active recordings
         active_recordings = False
         for key, val in self.mon_dict.items():
-            _, compartment, _ = self.unpack_mon_dict_keys(key)
+            _, compartment, _ = self._unpack_mon_dict_keys(key)
             if not (self.timings[compartment]["currently_paused"]):
                 ### tere are currently active recordings
                 active_recordings = True
@@ -355,6 +167,194 @@ class CompNeuroMonitors:
         else:
             ### if currently no recordings are active return None
             return None
+
+    def get_recordings(self):
+        """
+        Get recordings of all recorded compartments.
+
+        Returns:
+            recordings (list):
+                List with recordings of all chunks.
+        """
+        ### only if recordings in current chunk and get_recodings was not already called add current chunk to recordings
+        if (
+            self._any_recordings_in_current_chunk()
+            and self.already_got_recordings is False
+        ):
+            ### update recordings
+            self.recordings.append(self._get_monitors(self.mon_dict, self.mon))
+            ### upade already_got_recordings --> it will not update recordings again
+            self.already_got_recordings = True
+
+            if not (self.get_recordings_reset_call):
+                if len(self.recordings) == 0:
+                    print(
+                        "WARNING get_recordings: no recordings available, empty list returned. Maybe forgot start()?"
+                    )
+            return self.recordings
+        else:
+            if not (self.get_recordings_reset_call):
+                if len(self.recordings) == 0:
+                    print(
+                        "WARNING get_recordings: no recordings available, empty list returned. Maybe forgot start()?"
+                    )
+            return self.recordings
+
+    def get_recording_times(self):
+        """
+        Get recording times of all recorded compartments.
+
+        Returns:
+            recording_times (recording_times_cl):
+                Object with recording times of all chunks.
+        """
+
+        temp_timings = self._get_temp_timings()
+
+        ### only append temp_timings of current chunk if there are recordings in current chunk at all and if get_recordings was not already called (double call would add the same chunk again)
+        if (
+            self._any_recordings_in_current_chunk()
+            and self.already_got_recording_times is False
+        ):
+            self.recording_times.append(temp_timings)
+
+        ### upade already_got_recording_times --> it will not update recording_times again
+        self.already_got_recording_times = True
+
+        ### generate a object from recording_times and return this instead of the dict
+        recording_times_ob = RecordingTimes(self.recording_times)
+
+        if not (self.get_recordings_reset_call):
+            if len(self.recording_times) == 0:
+                print(
+                    "WARNING get_recording_times: no recordings available, empty list returned. Maybe forgot start()?"
+                )
+        return recording_times_ob
+
+    def get_recordings_and_clear(self):
+        """
+        The default get_recordings method should be called at the end of the simulation.
+        The get_recordings_and_clear method allows to get several times recordings with
+        the same monitor object and to simulate between the calls. Sets the internal
+        variables back to their initial state. Usefull if you repeat a simulation +
+        recording several times and you do not want to always create new chunks.
+
+        !!! warning
+            If you want to continue recording after calling this method, you have to
+            call start() again.
+
+        Returns:
+            recordings (list):
+                List with recordings of all chunks.
+            recording_times (recording_times_cl):
+                Object with recording times of all chunks.
+        """
+        ret0 = self.get_recordings()
+        ret1 = self.get_recording_times()
+        self._init_internals()
+        ret = (ret0, ret1)
+        return ret
+
+    def _correct_start_stop(self, start_time_arr, stop_time_arr, period):
+        """
+        Corrects the start and stop times of recordings to the actual start and stop
+        times of recorded values.
+
+        Args:
+            start_time_arr (np.array):
+                Array with start times of recordings, obtained with get_time() function
+                of ANNarchy.
+            stop_time_arr (np.array):
+                Array with stop times of recordings, obtained with get_time() function
+                of ANNarchy.
+            period (float):
+                Time difference between recording values specified by the user.
+
+        Returns:
+            actual_start_time (np.array):
+                Array with actual start times of recorded values.
+            actual_stop_time (np.array):
+                Array with actual stop times of recorded values.
+            nr_rec_vals (np.array):
+                Array with number of recorded values between start and stop.
+        """
+        # actual_period = int(period / dt()) * dt()
+        actual_start_time = np.ceil(start_time_arr / period) * period
+
+        actual_stop_time = np.ceil(stop_time_arr / period - 1) * period
+
+        nr_rec_vals = 1 + (actual_stop_time - actual_start_time) / period
+
+        return (actual_start_time, actual_stop_time, nr_rec_vals)
+
+    def _get_temp_timings(self):
+        """
+        Generates a timings dictionary with time lims and idx lims for each compartment.
+        Calculates the idx lims of the recordings based on the time lims.
+
+        Returns:
+            temp_timings (dict):
+                Dict with time lims and idx lims for each compartment.
+        """
+        temp_timings = {}
+        for key in self.mon_dict.keys():
+            _, compartment, period = self._unpack_mon_dict_keys(key)
+            if len(self.timings[compartment]["start"]) > len(
+                self.timings[compartment]["stop"]
+            ):
+                ### was started/resumed but never stoped after --> use current time for stop time
+                self.timings[compartment]["stop"].append(get_time())
+            ### calculate the idx of the recorded arrays which correspond to the timings and remove 'currently_paused'
+            ### get for each start-stop pair the corrected start stop timings (when teh values were actually recorded, depends on period and timestep)
+            ### and also get the number of recorded values for start-stop pair
+            start_time_arr = np.array(self.timings[compartment]["start"])
+            stop_time_arr = np.array(self.timings[compartment]["stop"])
+            (
+                start_time_arr,
+                stop_time_arr,
+                nr_rec_vals_arr,
+            ) = self._correct_start_stop(start_time_arr, stop_time_arr, period)
+
+            ### with the number of recorded values -> get start and end idx for each start-stop pair
+            start_idx = [
+                np.sum(nr_rec_vals_arr[0:i]).astype(int)
+                for i in range(nr_rec_vals_arr.size)
+            ]
+            stop_idx = [
+                np.sum(nr_rec_vals_arr[0 : i + 1]).astype(int) - 1
+                for i in range(nr_rec_vals_arr.size)
+            ]
+
+            ### return start-stop pair info in timings format
+            temp_timings[compartment] = {
+                "start": {
+                    "ms": np.round(
+                        start_time_arr, af.get_number_of_decimals(dt())
+                    ).tolist(),
+                    "idx": start_idx,
+                },
+                "stop": {
+                    "ms": np.round(
+                        stop_time_arr, af.get_number_of_decimals(dt())
+                    ).tolist(),
+                    "idx": stop_idx,
+                },
+            }
+        return temp_timings
+
+    def _any_recordings_in_current_chunk(self):
+        """
+        Check if there are any recordings in the current chunk.
+
+        Returns:
+            any_recordings (bool):
+                True if there are any recordings in the current chunk, False otherwise.
+        """
+        temp_timings = self._get_temp_timings()
+
+        ### generate a temp object of temp timings to check if there were recordings at all
+        recording_times_ob_temp = RecordingTimes([temp_timings])
+        return recording_times_ob_temp._any_recordings(chunk=0)
 
     def _add_monitors(self, mon_dict: dict):
         """
@@ -372,7 +372,7 @@ class CompNeuroMonitors:
         """
         mon = {}
         for key, val in mon_dict.items():
-            compartmentType, compartment, period = self.unpack_mon_dict_keys(key)
+            compartmentType, compartment, period = self._unpack_mon_dict_keys(key)
             ### check if compartment is pop
             if compartmentType == "pop":
                 mon[compartment] = Monitor(
@@ -500,7 +500,7 @@ class CompNeuroMonitors:
         """
         recordings = {}
         for key, val in mon_dict.items():
-            compartment_type, compartment, period = self.unpack_mon_dict_keys(key)
+            compartment_type, compartment, period = self._unpack_mon_dict_keys(key)
             recordings[f"{compartment};period"] = period
             if compartment_type == "pop":
                 pop = get_population(compartment)
@@ -522,7 +522,7 @@ class CompNeuroMonitors:
         recordings["dt"] = dt()
         return recordings
 
-    def unpack_mon_dict_keys(self, s: str):
+    def _unpack_mon_dict_keys(self, s: str):
         """
         Unpacks a string of the form "compartment_type;compartment_name;period" or
         "compartment_type;compartment_name" into its components. If period is not provided
@@ -597,7 +597,7 @@ class RecordingTimes:
         assert (
             len(self.recording_times_list) > 0
         ), "ERROR time_lims(): No recordings/recording_times available."
-        return self.__lims__("ms", chunk, compartment, period)
+        return self._lims("ms", chunk, compartment, period)
 
     def idx_lims(
         self,
@@ -624,7 +624,7 @@ class RecordingTimes:
         assert (
             len(self.recording_times_list) > 0
         ), "ERROR idx_lims(): No recordings/recording_times available."
-        return self.__lims__("idx", chunk, compartment, period)
+        return self._lims("idx", chunk, compartment, period)
 
     def all(self):
         """
@@ -755,7 +755,7 @@ class RecordingTimes:
 
         return time_arr, data_arr
 
-    def __lims__(self, string, chunk=None, compartment=None, period=None):
+    def _lims(self, string, chunk=None, compartment=None, period=None):
         """
         Get the limits of recordings of a specified chunk/model compartment.
 

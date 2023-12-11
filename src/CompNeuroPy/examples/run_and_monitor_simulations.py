@@ -1,5 +1,5 @@
 import numpy as np
-from CompNeuroPy import Monitors, save_data, generate_simulation, req_pop_attr
+from CompNeuroPy import CompNeuroMonitors, save_data, generate_simulation, req_pop_attr
 from ANNarchy import simulate, get_population
 
 ### we can import our model initialized in create_model.py
@@ -10,11 +10,10 @@ def main():
     ### create and compile the model
     my_model.create()
 
-    ### Next we define what should be recorded, i.e., create monitors with the Monitors object from CompNeuroPy
-    ### the Monitors object helps to create multiple monitors at once
-    ### Monitors takes a monitor_dictionary as argument
+    ### Next we define what should be recorded, i.e., create monitors with the CompNeuroMonitors class
+    ### the CompNeuroMonitors object helps to create multiple monitors at once
+    ### CompNeuroMonitors takes a monitor_dictionary as argument
     ### format: monitor_dictionary = {'what;name;period':['variables', 'to', 'record']}
-    ### the Monitors object currently only supports populations, thus, 'what;' has to be 'pop;'
     ### period can be a time larger than the simulation time step and defines how often values are recorded
     ### here we record from each population the variable p and spikes
     ### from first population get values every 10 ms, from second population every 15 ms
@@ -23,7 +22,7 @@ def main():
         f"pop;{my_model.populations[0]};10": ["p", "spike"],
         f"pop;{my_model.populations[1]};15": ["p", "spike"],
     }
-    mon = Monitors(monitor_dictionary)
+    mon = CompNeuroMonitors(monitor_dictionary)
 
     ### next we define some simulations with the generate_simulations object of CompNeuroPy
     ### similar to the generate_model object with the model_creation_function we also need a simulation_function here, in which the actual simulation is defined
@@ -105,13 +104,13 @@ def main():
     )
 
     ### Now let's use these simulations
-    ### in the following lines various different use cases for the simulations and Monitors object functions are demonstrated
-    ### the Monitors object automatically structures the recordings based on recording pauses and model resets
+    ### in the following lines various different use cases for the simulations and CompNeuroMonitors object functions are demonstrated
+    ### the CompNeuroMonitors object automatically structures the recordings based on recording pauses and model resets
     ### the recordings are split into chunks by resets
     ### in this script we will have two chunks (one reset)
     ### further, chunks are subdivided into periods which are separeted by pauses (a reset automatically closes a period)
     ### in this script the first chunk will only contain one period, the second chunk will contain two periods
-    ### first start the monitors with the Monitors object after a 500 ms resting-state simulation
+    ### first start the monitors with the CompNeuroMonitors object after a 500 ms resting-state simulation
     simulate(500)
     mon.start()
 
@@ -122,7 +121,7 @@ def main():
     increase_rates_all_pops.run()
 
     ### by resetting the model one can start again from scratch (time=0 again and model in its compile state)
-    ### if one uses the Monitors object one should reset the model with the Monitors object function reset (thus, the recordings are automatically structured)
+    ### if one uses the CompNeuroMonitors object one should reset the model with the CompNeuroMonitors object function reset (thus, the recordings are automatically structured)
     mon.reset()
 
     ### let's simulate again a resting-state simulation
@@ -146,7 +145,7 @@ def main():
     mon.pause()
     simulate(1000)
 
-    ### get recordings and recording times from the Monitors object
+    ### get recordings and recording times from the CompNeuroMonitors object
     recordings = mon.get_recordings()
     recording_times = mon.get_recording_times()
 
