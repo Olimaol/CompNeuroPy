@@ -1,3 +1,4 @@
+### TODO show that you can run experiment multiple times and always get the same recordings/recording_times structure
 from CompNeuroPy import (
     Experiment,
     plot_recordings,
@@ -65,12 +66,11 @@ class my_exp(Experiment):
         self.data["time_step"] = dt()
 
         ### return results, use the object's self.results() function which automatically
-        ### returns an object with "recordings", "recording_times", "monDict", and "data"
+        ### returns an object with "recordings", "recording_times", "mon_dict", and "data"
         return self.results()
 
 
 if __name__ == "__main__":
-
     ### create and compile a model
     setup(dt=0.01)
     model = H_and_H_model_Bischop()
@@ -84,7 +84,7 @@ if __name__ == "__main__":
 
     print("recordings:\n", results.recordings, "\n\n")
     print("data:\n", results.data, "\n\n")
-    print("monDict:\n", results.monDict, "\n\n")
+    print("mon_dict:\n", results.mon_dict, "\n\n")
 
     ### quick plot of the membrane potential from the first chunk
     chunk = 0

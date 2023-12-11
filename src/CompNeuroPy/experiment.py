@@ -1,5 +1,5 @@
 from ANNarchy import reset
-from CompNeuroPy.Monitors import recording_times_cl
+from CompNeuroPy.Monitors import RecordingTimes
 from CompNeuroPy import Monitors
 
 
@@ -99,14 +99,14 @@ class CompNeuroExp:
                         list of recordings
                     recording_times (recording_times_cl):
                         recording times object
-                    monDict (dict):
+                    mon_dict (dict):
                         dict of recorded variables of the monitors
                     data (dict):
                         dict with optional data stored during the experiment
         """
         obj = self._ResultsCl()
         obj.recordings, obj.recording_times = self.mon.get_recordings_and_clear()
-        obj.monDict = self.mon.monDict
+        obj.mon_dict = self.mon.mon_dict
         obj.data = self.data
 
         return obj
@@ -120,7 +120,7 @@ class CompNeuroExp:
                 list of recordings
             recording_times (recording_times_cl):
                 recording times object
-            monDict (dict):
+            mon_dict (dict):
                 dict of recorded variables of the monitors
             data (dict):
                 dict with optional data stored during the experiment
@@ -128,8 +128,8 @@ class CompNeuroExp:
 
         def __init__(self) -> None:
             self.recordings: list
-            self.recording_times: recording_times_cl
-            self.monDict: dict
+            self.recording_times: RecordingTimes
+            self.mon_dict: dict
             self.data: dict
 
 

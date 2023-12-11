@@ -108,7 +108,7 @@ class CompNeuroSim:
 
         ### and append the current chunk of the monitors object to the chunk variable
         if self.monitor_object is not None:
-            self.monitor_chunk.append(self.monitor_object.__current_chunk__())
+            self.monitor_chunk.append(self.monitor_object.current_chunk())
 
         ### run the simulation, store start and end simulation time
         self.start.append(get_time())

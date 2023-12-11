@@ -25,7 +25,7 @@ population1, population2 = dbs.update_pointers(pointer_list=[population1, popula
 compile()
 
 # create monitors
-monitors = Monitors(monDict={"pop;my_pop1": "v", "pop;my_pop2": "v"})
+monitors = Monitors({"pop;my_pop1": "v", "pop;my_pop2": "v"})
 monitors.start()
 
 # run simulation

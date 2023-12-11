@@ -22,7 +22,6 @@ from CompNeuroPy.extra_functions import (
     remove_key,
     suppress_stdout,
     sci,
-    unpack_monDict_keys,
     Cmap,
     create_cm,
     DecisionTree,

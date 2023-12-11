@@ -3,7 +3,6 @@ from contextlib import contextmanager
 import sys
 import os
 from CompNeuroPy import analysis_functions as af
-from ANNarchy import dt
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -121,42 +120,6 @@ def sci(nr):
         return str(round(nr, 1))
     else:
         return f"{nr*10**af.get_number_of_zero_decimals(nr):.1f}e-{af.get_number_of_zero_decimals(nr)}"
-
-
-def unpack_monDict_keys(s: str):
-    """
-    Unpacks a string of the form "compartment_type;compartment_name;period" or
-    "compartment_type;compartment_name" into its components. If period is not provided
-    it is set to dt() for compartment_type 'pop' and dt()*1000 for compartment_type
-    'proj'.
-
-    Args:
-        s (str):
-            String to be unpacked
-
-    Returns:
-        compartment_type (str):
-            Compartment type
-        compartment_name (str):
-            Compartment name
-        period (float):
-            Period of the compartment
-    """
-    splitted_s = s.split(";")
-    compartment_type = splitted_s[0]
-    if not (compartment_type in ["pop", "proj"]):
-        print(
-            f"wrong compartment type in {compartment_type}\nhas to be 'pop' or 'proj'"
-        )
-        quit()
-    compartment_name = splitted_s[1]
-    if len(splitted_s) == 3:
-        period = float(splitted_s[2])
-    else:
-        period = {"pop": dt(), "proj": dt() * 1000}[compartment_type]
-
-    period = int(period / dt()) * dt()
-    return compartment_type, compartment_name, period
 
 
 class Cmap:

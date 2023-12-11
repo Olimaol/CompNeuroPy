@@ -774,7 +774,7 @@ def main(plotting: bool = False):
         mon_dict = {}
         for pop_name in model.populations:
             mon_dict[f"pop;{pop_name}"] = ["v", "spike", "axon_spike"]
-        mon = Monitors(monDict=mon_dict)
+        mon = Monitors(mon_dict)
 
         ### run simulation and get data from monitors
         recordings, recording_times = do_simulation(
@@ -818,7 +818,7 @@ def main(plotting: bool = False):
         mon_dict = {}
         for pop_name in model.populations:
             mon_dict[f"pop;{pop_name}"] = ["r"]
-        mon = Monitors(monDict=mon_dict)
+        mon = Monitors(mon_dict)
 
         ### run simulation and get data from monitors
         recordings, recording_times = do_simulation(

@@ -1,3 +1,50 @@
+"""
+demonstrate use cases for CompNeuroMonitors
+
+init
+all paused
+
+### 1st chunk
+### demonstrate starting/pausing all
+>>> start all
+all started
+>>> pause all
+all paused
+>>> start all
+all started/resumed
+
+### demonstrate pausing single compartments
+>>> pause part
+part paused
+>>> start all
+all started/resumed
+
+### demonstrate starting single compartments
+>>> pause all
+all paused
+>>> start part
+part started/resumed
+>>> start all
+all started/resumed
+
+### demonstrate chunking recordings by reset
+>>> reset without model
+2nd chunk, model not resetted
+>>>reset with model
+3rd chunk, model resetted
+
+### demonstrate getting recordings during simulation
+>>> get_recordings_and_clear
+all recordings from aboth should be obtained
+>>> simulate again and reset model creating 2 chunks --> check if model or ANNarchy montirs or both need to be resetted
+>>> get_recordings_and_clear
+new recordings (2 chunks) should be obtianed
+>>> simulate again a single chunk
+>>> get_recordings and get_recording_times
+new recordings (1 chunk) should be obtained
+
+
+"""
 from ANNarchy import Population, Izhikevich, setup, simulate, get_population
 from CompNeuroPy import generate_model, Monitors, create_dir
 import pylab as plt
@@ -122,7 +169,7 @@ def main():
             100
         )  # 100 ms recorded (monitors were active before reset --> still active)
 
-        mon.pause(["pop;my_pop1"])  # pause recordings of my_pop1
+        mon.pause(["my_pop1"])  # pause recordings of my_pop1
         simulate(100)  # 100 ms not recorded
 
         mon.start()  # start all monitors --> resume recordings of my_pop1
