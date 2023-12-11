@@ -14,12 +14,11 @@ from collections.abc import Sized
 
 def print_df(df):
     """
-    prints the complete dataframe df
+    Prints the complete dataframe df
 
-    Parameters
-    ----------
-    df : pandas dataframe
-        dataframe to be printed
+    Args:
+        df (pandas dataframe):
+            Dataframe to be printed
     """
     with pd.option_context(
         "display.max_rows", None
@@ -29,17 +28,15 @@ def print_df(df):
 
 def flatten_list(lst):
     """
-    retuns flattened list
+    Retuns flattened list
 
-    Parameters
-    ----------
-    lst: list of lists or mixed: values and lists
-        list to be flattened
+    Args:
+        lst (list of lists or mixed: values and lists):
+            List to be flattened
 
-    Returns
-    -------
-    new_lst: list
-        flattened list
+    Returns:
+        new_list (list):
+            Flattened list
     """
 
     ### if lists in lst --> upack them and retunr flatten_list of new list
@@ -62,19 +59,17 @@ def flatten_list(lst):
 
 def remove_key(d, key):
     """
-    removes an element from a dict, returns the new dict
+    Removes an element from a dict, returns the new dict
 
-    Parameters
-    ----------
-    d: dict
-        dict to be modified
-    key: str
-        key to be removed
+    Args:
+        d (dict):
+            Dict to be modified
+        key (str):
+            Key to be removed
 
-    Returns
-    -------
-    r: dict
-        modified dict
+    Returns:
+        r (dict):
+            Modified dict
     """
     r = dict(d)
     del r[key]
@@ -84,11 +79,11 @@ def remove_key(d, key):
 @contextmanager
 def suppress_stdout():
     """
-    suppresses the print output of a function
+    Suppresses the print output of a function
 
-    usage:
-    with suppress_stdout():
-        print("this will not be printed")
+    Examples:
+        >>> with suppress_stdout():
+        >>>     print("this will not be printed")
     """
     with open(os.devnull, "w") as devnull:
         old_stdout = sys.stdout
@@ -104,26 +99,23 @@ def sci(nr):
     Rounds a number to a single decimal.
     If number is smaller than 0 it is converted to scientific notation with 1 decimal.
 
-    Parameters
-    ----------
-    nr: float or int
-        number to be converted
+    Args:
+        nr (float or int):
+            Number to be converted
 
-    Returns
-    -------
-    str: str
-        string of the number in scientific notation
+    Returns:
+        str (str):
+            String of the number in scientific notation
 
-    Example
-    -------
-    >>> sci(0.0001)
-    '1.0e-4'
-    >>> sci(1.77)
-    '1.8'
-    >>> sci(1.77e-5)
-    '1.8e-5'
-    >>> sci(177.22)
-    '177.2'
+    Examples:
+        >>> sci(0.0001)
+        '1.0e-4'
+        >>> sci(1.77)
+        '1.8'
+        >>> sci(1.77e-5)
+        '1.8e-5'
+        >>> sci(177.22)
+        '177.2'
     """
     if af.get_number_of_zero_decimals(nr) == 0:
         return str(round(nr, 1))
@@ -133,22 +125,22 @@ def sci(nr):
 
 def unpack_monDict_keys(s: str):
     """
-    Unpacks a string of the form "compartment_type;compartment_name;period" or "compartment_type;compartment_name" into its components
-    If period is not provided it is set to dt() for compartment_type 'pop' and dt()*1000 for compartment_type 'proj'
+    Unpacks a string of the form "compartment_type;compartment_name;period" or
+    "compartment_type;compartment_name" into its components. If period is not provided
+    it is set to dt() for compartment_type 'pop' and dt()*1000 for compartment_type
+    'proj'.
 
-    Parameters
-    ----------
-    s: str
-        string to be unpacked
+    Args:
+        s (str):
+            String to be unpacked
 
-    Returns
-    -------
-    compartment_type: str
-        compartment type
-    compartment_name: str
-        compartment name
-    period: float
-        period of the compartment
+    Returns:
+        compartment_type (str):
+            Compartment type
+        compartment_name (str):
+            Compartment name
+        period (float):
+            Period of the compartment
     """
     splitted_s = s.split(";")
     compartment_type = splitted_s[0]
@@ -169,57 +161,38 @@ def unpack_monDict_keys(s: str):
 
 class Cmap:
     """
-    Class to create a colormap with a given name and range.
-    The colormap can be called with a value between 0 and 1 to get the corresponding rgb value.
+    Class to create a colormap with a given name and range. The colormap can be called
+    with a value between 0 and 1 to get the corresponding rgb value.
     """
 
     def __init__(self, cmap_name, vmin, vmax):
         """
-        Parameters
-        ----------
-        cmap_name: str
-            name of the colormap
-        vmin: float
-            lower limit of the colormap
-        vmax: float
-            upper limit of the colormap
+        Args:
+            cmap_name (str):
+                Name of the colormap
+            vmin (float):
+                Lower limit of the colormap
+            vmax (float):
+                Upper limit of the colormap
         """
         self.cmap_name = cmap_name
         self.cmap = plt.get_cmap(cmap_name)
         self.norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
         self.scalarMap = cm.ScalarMappable(norm=self.norm, cmap=self.cmap)
 
-    def get_rgb(self, val):
-        """
-        Returns the rgb value of the colormap at the given value.
-
-        Parameters
-        ----------
-        val: float
-            value between 0 and 1
-
-        Returns
-        -------
-        rgb: tuple
-            rgb value of the colormap at the given value
-        """
-        return self.scalarMap.to_rgba(val)
-
     def __call__(self, x, alpha=1):
         """
         Returns the rgba value of the colormap at the given value.
 
-        Parameters
-        ----------
-        x: float
-            value between 0 and 1
-        alpha: float
-            alpha value of the rgba value
+        Args:
+            x (float):
+                Value between 0 and 1
+            alpha (float):
+                Alpha value of the rgba value
 
-        Returns
-        -------
-        rgba: tuple
-            rgba value of the colormap at the given value
+        Returns:
+            rgba (tuple):
+                RGBA value of the colormap at the given value
         """
         vals = self.get_rgb(x)
         if isinstance(vals, tuple):
@@ -228,8 +201,22 @@ class Cmap:
             vals[:, -1] = alpha
         return vals
 
+    def get_rgb(self, val):
+        """
+        Returns the rgb value of the colormap at the given value.
 
-class DataCl(object):
+        Args:
+            val (float):
+                Value between 0 and 1
+
+        Returns:
+            rgb (tuple):
+                RGB value of the colormap at the given value
+        """
+        return self.scalarMap.to_rgba(val)
+
+
+class _DataCl(object):
     def __init__(self) -> None:
         pass
 
@@ -240,41 +227,39 @@ class DataCl(object):
         try:
             return super().__getattribute__(__name)
         except:
-            self.__setattr__(__name, DataCl())
+            self.__setattr__(__name, _DataCl())
             return super().__getattribute__(__name)
 
 
 ### keep old name for compatibility
-data_obj = DataCl
+data_obj = _DataCl
 
 
 def create_cm(colors, name="my_cmap", N=256, gamma=1.0, vmin=0, vmax=1):
     """
     Create a `LinearSegmentedColormap` from a list of colors.
 
-    Parameters
-    ----------
-    colors : array-like of colors or array-like of (value, color)
-        If only colors are given, they are equidistantly mapped from the
-        range :math:`[0, 1]`; i.e. 0 maps to ``colors[0]`` and 1 maps to
-        ``colors[-1]``.
-        If (value, color) pairs are given, the mapping is from *value*
-        to *color*. This can be used to divide the range unevenly.
-    name : str, optional
-        The name of the colormap, by default 'my_cmap'.
-    N : int, optional
-        The number of rgb quantization levels, by default 256.
-    gamma : float, optional
-        Gamma correction value, by default 1.0.
-    vmin : float, optional
-        The minimum value of the colormap, by default 0.
-    vmax : float, optional
-        The maximum value of the colormap, by default 1.
+    Args:
+        colors (array-like of colors or array-like of (value, color)):
+            If only colors are given, they are equidistantly mapped from the
+            range :math:`[0, 1]`; i.e. 0 maps to ``colors[0]`` and 1 maps to
+            ``colors[-1]``.
+            If (value, color) pairs are given, the mapping is from *value*
+            to *color*. This can be used to divide the range unevenly.
+        name (str, optional):
+            The name of the colormap, by default 'my_cmap'.
+        N (int, optional):
+            The number of rgb quantization levels, by default 256.
+        gamma (float, optional):
+            Gamma correction value, by default 1.0.
+        vmin (float, optional):
+            The minimum value of the colormap, by default 0.
+        vmax (float, optional):
+            The maximum value of the colormap, by default 1.
 
-    Returns
-    -------
-    LinearColormap
-        The colormap object.
+    Returns:
+        LinearColormap:
+            The colormap object
     """
     if not np.iterable(colors):
         raise ValueError("colors must be iterable")
@@ -338,30 +323,29 @@ def create_cm(colors, name="my_cmap", N=256, gamma=1.0, vmin=0, vmax=1):
         "alpha": np.column_stack([vals, a, a]),
     }
 
-    return LinearColormapClass(name, cdict, N, gamma, vmin, vmax)
+    return _LinearColormapClass(name, cdict, N, gamma, vmin, vmax)
 
 
-class LinearColormapClass(LinearSegmentedColormap):
+class _LinearColormapClass(LinearSegmentedColormap):
     def __init__(self, name, segmentdata, N=..., gamma=..., vmin=0, vmax=1) -> None:
         """
-        Parameters
-        ----------
-        name : str
-            The name of the colormap.
-        segmentdata : dict
-            Mapping from scalar values to colors.
-            The scalar values are typically in the interval (0, 1),
-            but other intervals are allowed.
-            The colors may be specified in any way understandable by
-            `matplotlib.colors.ColorConverter.to_rgba`.
-        N : int, optional
-            The number of rgb quantization levels, by default ...
-        gamma : float, optional
-            Gamma correction value, by default ...
-        vmin : float, optional
-            The minimum value of the colormap, by default 0.
-        vmax : float, optional
-            The maximum value of the colormap, by default 1.
+        Args:
+            name (str):
+                The name of the colormap.
+            segmentdata (dict):
+                Mapping from scalar values to colors.
+                The scalar values are typically in the interval (0, 1),
+                but other intervals are allowed.
+                The colors may be specified in any way understandable by
+                `matplotlib.colors.ColorConverter.to_rgba`.
+            N (int, optional):
+                The number of rgb quantization levels, by default ...
+            gamma (float, optional):
+                Gamma correction value, by default ...
+            vmin (float, optional):
+                The minimum value of the colormap, by default 0.
+            vmax (float, optional):
+                The maximum value of the colormap, by default 1.
         """
         self.my_vmin = vmin
         self.my_vmax = vmax
@@ -369,26 +353,23 @@ class LinearColormapClass(LinearSegmentedColormap):
 
     def __call__(self, X, alpha=None, bytes=False):
         """
-        Parameters
-        ----------
-        X : scalar, ndarray
-            The data value(s) to convert to RGBA.
-            For floats, X should be in the interval ``[0.0, 1.0]`` to
-            return the RGBA values ``X*100`` percent along the Colormap line.
-            For integers, X should be in the interval ``[0, Colormap.N)`` to
-            return RGBA values *indexed* from the Colormap with index ``X``.
-        alpha : float, None
-            Alpha must be a scalar between 0 and 1, or None.
-        bytes : bool
-            If False (default), the returned RGBA values will be floats in the
-            interval ``[0, 1]`` otherwise they will be uint8s in the interval
-            ``[0, 255]``.
+        Args:
+            X (scalar, ndarray):
+                The data value(s) to convert to RGBA.
+                For floats, X should be in the interval ``[0.0, 1.0]`` to
+                return the RGBA values ``X*100`` percent along the Colormap line.
+                For integers, X should be in the interval ``[0, Colormap.N)`` to
+                return RGBA values *indexed* from the Colormap with index ``X``.
+            alpha (float, None):
+                Alpha must be a scalar between 0 and 1, or None.
+            bytes (bool):
+                If False (default), the returned RGBA values will be floats in the
+                interval ``[0, 1]`` otherwise they will be uint8s in the interval
+                ``[0, 255]``.
 
-        Returns
-        -------
-        Tuple of RGBA values if X is scalar, otherwise an array of
-        RGBA values with a shape of ``X.shape + (4, )``.
-
+        Returns:
+            Tuple of RGBA values if X is scalar, otherwise an array of
+            RGBA values with a shape of ``X.shape + (4, )``.
         """
         ### rescale X in the range [0,1]
         ### using vmin and vmax
@@ -398,7 +379,7 @@ class LinearColormapClass(LinearSegmentedColormap):
 
 
 ### keep old name for compatibility
-my_linear_cmap_obj = LinearColormapClass
+my_linear_cmap_obj = _LinearColormapClass
 
 
 class DecisionTree:
@@ -407,6 +388,9 @@ class DecisionTree:
     """
 
     def __init__(self):
+        """
+        Create a new empty decision tree.
+        """
         ### node list is a list of lists
         ### first idx = level of tree
         ### second idx = all nodes in the level
@@ -416,19 +400,17 @@ class DecisionTree:
         """
         Create a new node in the decision tree.
 
-        Parameters
-        ----------
-        parent: node object
-            parent node of the new node
-        prob: float
-            probability of the new node
-        name: str
-            name of the new node
+        Args:
+            parent (node object):
+                Parent node of the new node
+            prob (float):
+                Probability of the new node
+            name (str):
+                Name of the new node
 
-        Returns
-        -------
-        new_node: node object
-            the new node
+        Returns:
+            new_node (node object):
+                The new node
         """
 
         ### create new node
@@ -444,17 +426,15 @@ class DecisionTree:
         """
         Get the path and path product of a node with a given name.
 
-        Parameters
-        ----------
-        name: str
-            name of the node
+        Args:
+            name (str):
+                Name of the node
 
-        Returns
-        -------
-        path: str
-            path to the node
-        path_prod: float
-            path product of the node
+        Returns:
+            path (str):
+                Path to the node
+            path_prod (float):
+                Path product of the node
         """
 
         ### search for all nodes with name
@@ -468,7 +448,7 @@ class DecisionTree:
                     search_node_list.append(node)
         ### get the paths and path products for the found nodes
         for node in search_node_list:
-            path, path_prod = self.__get_path_prod_rec__(node)
+            path, path_prod = self._get_path_prod_rec(node)
             path_list.append(path)
             path_prod_list.append(path_prod)
         ### return the paths and path products
@@ -477,28 +457,26 @@ class DecisionTree:
             for idx in range(len(search_node_list))
         ]
 
-    def __get_path_prod_rec__(self, node):
+    def _get_path_prod_rec(self, node):
         """
         Recursive function to get the path and path product of a node.
 
-        Parameters
-        ----------
-        node: node object
-            node to get the path and path product of
+        Args:
+            node (node object):
+                Node to get the path and path product of
 
-        Returns
-        -------
-        path_str: str
-            path to the node
-        prob: float
-            path product of the node
+        Returns:
+            path_str (str):
+                Path to the node
+            prob (float):
+                Path product of the node
         """
         node: DecisionTreeNode = node
 
         if node.parent == None:
             return ["/" + node.name, node.prob]
         else:
-            path_str, prob = self.__get_path_prod_rec__(node.parent)
+            path_str, prob = self._get_path_prod_rec(node.parent)
             return [path_str + "/" + node.name, prob * node.prob]
 
 
@@ -515,16 +493,17 @@ class DecisionTreeNode:
 
     def __init__(self, tree: DecisionTree, parent=None, prob=0, name=""):
         """
-        Parameters
-        ----------
-        tree: DecisionTree object
-            decision tree the node belongs to
-        parent: node object
-            parent node of the new node
-        prob: float
-            probability of the new node
-        name: str
-            name of the new node
+        Create a new node in a decision tree.
+
+        Args:
+            tree (DecisionTree object):
+                Decision tree the node belongs to
+            parent (node object):
+                Parent node of the new node
+            prob (float):
+                Probability of the new node
+            name (str):
+                Name of the new node
         """
         self.tree = tree
         parent: DecisionTreeNode = parent
@@ -538,37 +517,34 @@ class DecisionTreeNode:
         else:
             self.level = int(0)
 
-    def get_path_prod(self):
-        """
-        Get the path and path product of the node.
-
-        Returns
-        -------
-        path: str
-            path to the node
-        path_prod: float
-            path product of the node
-        """
-        return self.tree.__get_path_prod_rec__(self)
-
     def add(self, name, prob):
         """
         Add a child node to the node.
 
-        Parameters
-        ----------
-        name: str
-            name of the new node
-        prob: float
-            probability of the new node
+        Args:
+            name (str):
+                Name of the new node
+            prob (float):
+                Probability of the new node
 
-        Returns
-        -------
-        new_node: node object
-            the new node
+        Returns:
+            new_node (node object):
+                The new node
         """
 
         return self.tree.node(parent=self, prob=prob, name=name)
+
+    def get_path_prod(self):
+        """
+        Get the path and path product of the node.
+
+        Returns:
+            path (str):
+                Path to the node
+            path_prod (float):
+                Path product of the node
+        """
+        return self.tree._get_path_prod_rec(self)
 
 
 ### keep old name for compatibility
@@ -584,26 +560,23 @@ def evaluate_expression_with_dict(expression, value_dict):
     It replaces the variable names in the expression with their corresponding
     values from the dictionary and evaluates the expression.
 
-    Parameters
-    ----------
-    expression: str
-        A mathematical expression to be evaluated. Variable
-        names in the expression should match the keys in the value_dict.
-    value_dict: dict
-        A dictionary containing variable names (strings) as
-        keys and corresponding numpy arrays or numbers as values.
+    Args:
+        expression (str):
+            A mathematical expression to be evaluated. Variable
+            names in the expression should match the keys in the value_dict.
+        value_dict (dict):
+            A dictionary containing variable names (strings) as
+            keys and corresponding numpy arrays or numbers as values.
 
-    Returns
-    -------
-        result: value or array
+    Returns:
+        result (value or array):
             The result of evaluating the expression using the provided values.
 
-    Example:
-    --------
-    >>> my_dict = {"a": np.ones(10), "b": np.arange(10)}
-    >>> my_string = "a*2-b+10"
-    >>> evaluate_expression_with_dict(my_string, my_dict)
-    array([12., 11., 10.,  9.,  8.,  7.,  6.,  5.,  4.,  3.])
+    Examples:
+        >>> my_dict = {"a": np.ones(10), "b": np.arange(10)}
+        >>> my_string = "a*2-b+10"
+        >>> evaluate_expression_with_dict(my_string, my_dict)
+        array([12., 11., 10.,  9.,  8.,  7.,  6.,  5.,  4.,  3.])
     """
     # Replace dictionary keys in the expression with their corresponding values
     ### replace names with dict entries
@@ -621,24 +594,21 @@ def evaluate_expression_with_dict(expression, value_dict):
 
 def replace_names_with_dict(expression, name_of_dict, dictionary):
     """
-    Parameters:
-    -----------
-    expression: str
-        string which contains an equation using keys from the dict
-    name_of_dict: str
-        name of the dictionary
-    dictionary: dict
-        the dictionary containing the keys used in the equation
+    Args:
+        expression (str):
+            String which contains an equation using keys from the dict
+        name_of_dict (str):
+            Name of the dictionary
+        dictionary (dict):
+            The dictionary containing the keys used in the equation
 
     Returns:
-    --------
-    new_expression: str
-        same as expression but the keys are replaced by name_of_dict['key']
+        new_expression (str):
+            Same as expression but the keys are replaced by name_of_dict['key']
 
-    Example:
-    --------
-    >>> replace_names_with_dict(expression="a+b", name_of_dict="my_dict", dictionary={"a":5,"b":7})
-    "my_dict['a']+my_dict['b']"
+    Examples:
+        >>> replace_names_with_dict(expression="a+b", name_of_dict="my_dict", dictionary={"a":5,"b":7})
+        "my_dict['a']+my_dict['b']"
     """
     new_expression = expression
 
@@ -668,26 +638,23 @@ def replace_substrings_except_within_braces(input_string, replacement_mapping):
     Replace substrings in a string with other substrings, but only if the
     substring is not within braces.
 
-    Parameters
-    ----------
-    input_string: str
-        The string in which substrings should be replaced.
-    replacement_mapping: dict
-        A dictionary mapping substrings to be replaced to their replacements.
+    Args:
+        input_string (str):
+            The string in which substrings should be replaced.
+        replacement_mapping (dict):
+            A dictionary mapping substrings to be replaced to their replacements.
 
-    Returns
-    -------
-    result: str
-        The input string with substrings replaced.
+    Returns:
+        result (str):
+            The input string with substrings replaced.
 
-    Example
-    -------
-    >>> replace_substrings_except_within_braces("a+b", {"a":"c"})
-    "c+b"
-    >>> replace_substrings_except_within_braces("a+b", {"a":"c", "b":"d"})
-    "c+d"
-    >>> replace_substrings_except_within_braces("a+{b}", {"a":"c", "b":"d"})
-    "c+{b}"
+    Examples:
+        >>> replace_substrings_except_within_braces("a+b", {"a":"c"})
+        "c+b"
+        >>> replace_substrings_except_within_braces("a+b", {"a":"c", "b":"d"})
+        "c+d"
+        >>> replace_substrings_except_within_braces("a+{b}", {"a":"c", "b":"d"})
+        "c+{b}"
     """
 
     result = []
