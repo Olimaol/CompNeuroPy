@@ -1,1 +1,1 @@
-::: src.CompNeuroPy.experiment.Experiment
+::: src.CompNeuroPy.experiment.CompNeuroExp

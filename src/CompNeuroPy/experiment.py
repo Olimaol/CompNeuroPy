@@ -3,14 +3,14 @@ from CompNeuroPy.Monitors import recording_times_cl
 from CompNeuroPy import Monitors
 
 
-class Experiment:
+class CompNeuroExp:
     """
     Experiment combining simulations and recordings.
 
     Use this class as a parent class for your experiment. You have to additionally
     implement a run function which runs the simulations and controlls the recordings.
     The run function should return the results of the experiment by calling the results
-    function of the Experiment class.
+    function of the CompNeuroExp class.
 
     Attributes:
         mon (Monitors):
@@ -19,10 +19,10 @@ class Experiment:
             dict for storing optional data
 
     Examples:
-        >>> from CompNeuroPy import Experiment
+        >>> from CompNeuroPy import CompNeuroExp
         >>> from ANNarchy import simulate
         >>>
-        >>> class MyExperiment(Experiment):
+        >>> class MyExperiment(CompNeuroExp):
         >>>     def run(self):
         >>>         # run simulations and control recordings
         >>>         self.mon.start()
@@ -37,7 +37,7 @@ class Experiment:
 
     def __init__(self, monitors: Monitors, reset_function=None, reset_kwargs={}):
         """
-        Initialize the Experiment.
+        Initialize the experiment.
 
         Args:
             monitors (Monitors):
@@ -63,9 +63,10 @@ class Experiment:
     def reset(self, populations=True, projections=False, synapses=False):
         """
         Reset the ANNarchy model and monitors and the CompNeuroPy Monitors used for the
-        Experiment. The reset function of the Experiment is used which can be set during
-        initialization and can have additional arguments besides the ones which are used
-        by ANNarchys' reset function which are also set during initialization.
+        experiment. The reset function of the CompNeuroExp class is used which can be
+        set during initialization and can have additional arguments besides the ones
+        which are used by ANNarchys' reset function which are also set during
+        initialization.
 
         Args:
             populations (bool, optional):
@@ -89,10 +90,10 @@ class Experiment:
     def results(self):
         """
         !!! warning
-            Call this function at the end of the run function of the experiment!
+            Call this function at the end of the run function of the CompNeuroExp class!
 
         Returns:
-            results_obj (Experiment._ResultsCl):
+            results_obj (CompNeuroExp._ResultsCl):
                 Object with with attributes:
                     recordings (list):
                         list of recordings
@@ -130,3 +131,7 @@ class Experiment:
             self.recording_times: recording_times_cl
             self.monDict: dict
             self.data: dict
+
+
+### old name for backward compatibility, TODO remove
+Experiment = CompNeuroExp
