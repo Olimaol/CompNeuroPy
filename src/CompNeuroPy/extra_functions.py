@@ -580,7 +580,7 @@ def evaluate_expression_with_dict(expression, value_dict):
     """
     # Replace dictionary keys in the expression with their corresponding values
     ### replace names with dict entries
-    expression = replace_names_with_dict(
+    expression = _replace_names_with_dict(
         expression=expression, name_of_dict="value_dict", dictionary=value_dict
     )
 
@@ -592,7 +592,7 @@ def evaluate_expression_with_dict(expression, value_dict):
         raise ValueError(f"Error while evaluating expression: {str(e)}")
 
 
-def replace_names_with_dict(expression, name_of_dict, dictionary):
+def _replace_names_with_dict(expression, name_of_dict, dictionary):
     """
     Args:
         expression (str):
@@ -607,7 +607,7 @@ def replace_names_with_dict(expression, name_of_dict, dictionary):
             Same as expression but the keys are replaced by name_of_dict['key']
 
     Examples:
-        >>> replace_names_with_dict(expression="a+b", name_of_dict="my_dict", dictionary={"a":5,"b":7})
+        >>> _replace_names_with_dict(expression="a+b", name_of_dict="my_dict", dictionary={"a":5,"b":7})
         "my_dict['a']+my_dict['b']"
     """
     new_expression = expression
@@ -624,7 +624,7 @@ def replace_names_with_dict(expression, name_of_dict, dictionary):
         if name in new_expression:
             ### replace the name in the new_equation_str
             ### only replace things which are not between {}
-            new_expression = replace_substrings_except_within_braces(
+            new_expression = _replace_substrings_except_within_braces(
                 new_expression, {name: f"{{{name_of_dict}['{name}']}}"}
             )
     ### remove curly braces again
@@ -633,7 +633,7 @@ def replace_names_with_dict(expression, name_of_dict, dictionary):
     return new_expression
 
 
-def replace_substrings_except_within_braces(input_string, replacement_mapping):
+def _replace_substrings_except_within_braces(input_string, replacement_mapping):
     """
     Replace substrings in a string with other substrings, but only if the
     substring is not within braces.
@@ -649,11 +649,11 @@ def replace_substrings_except_within_braces(input_string, replacement_mapping):
             The input string with substrings replaced.
 
     Examples:
-        >>> replace_substrings_except_within_braces("a+b", {"a":"c"})
+        >>> _replace_substrings_except_within_braces("a+b", {"a":"c"})
         "c+b"
-        >>> replace_substrings_except_within_braces("a+b", {"a":"c", "b":"d"})
+        >>> _replace_substrings_except_within_braces("a+b", {"a":"c", "b":"d"})
         "c+d"
-        >>> replace_substrings_except_within_braces("a+{b}", {"a":"c", "b":"d"})
+        >>> _replace_substrings_except_within_braces("a+{b}", {"a":"c", "b":"d"})
         "c+{b}"
     """
 

@@ -16,7 +16,23 @@ from CompNeuroPy.analysis_functions import (
     get_minimum,
     get_maximum,
 )
-from CompNeuroPy.extra_functions import *
+from CompNeuroPy.extra_functions import (
+    print_df,
+    flatten_list,
+    remove_key,
+    suppress_stdout,
+    sci,
+    unpack_monDict_keys,
+    Cmap,
+    create_cm,
+    DecisionTree,
+    DecisionTreeNode,
+    evaluate_expression_with_dict,
+    data_obj,  # TODO remove
+    my_linear_cmap_obj,  # TODO remove
+    decision_tree,  # TODO remove
+    node_cl,  # TODO remove
+)
 from CompNeuroPy.model_functions import *
 from CompNeuroPy.synapse_models import *
 from CompNeuroPy.simulation_functions import *
