@@ -1,13 +1,12 @@
-from CompNeuroPy import model_functions as mf
 from CompNeuroPy import extra_functions as ef
 from CompNeuroPy import analysis_functions as af
-from ANNarchy import get_time, reset, dt
+from ANNarchy import get_time, reset, dt, Monitor, get_population, get_projection
 import numpy as np
 
 
 class Monitors:
     def __init__(self, monDict={}):
-        self.mon = mf.addMonitors(monDict)
+        self.mon = self._add_monitors(monDict)
         self.monDict = monDict
 
         self._init_internals()
@@ -28,13 +27,13 @@ class Monitors:
         if compartment_list == None:
             compartment_list = list(self.monDict.keys())
 
-        self.timings = mf.startMonitors(compartment_list, self.mon, self.timings)
+        self.timings = self._start_monitors(compartment_list, self.mon, self.timings)
 
     def pause(self, compartment_list=None):
         if compartment_list == None:
             compartment_list = list(self.monDict.keys())
 
-        self.timings = mf.pauseMonitors(compartment_list, self.mon, self.timings)
+        self.timings = self._pause_monitors(compartment_list, self.mon, self.timings)
 
     def get_recordings(self, monDict=[], reset_call=False):
         ### only if recordings in current chunk and get_recodings was not already called add current chunk to recordings
@@ -45,7 +44,7 @@ class Monitors:
             if isinstance(monDict, list):
                 monDict = self.monDict
             ### update recordings
-            self.recordings.append(mf.getMonitors(monDict, self.mon))
+            self.recordings.append(self._get_monitors(monDict, self.mon))
             ### upade already_got_recordings --> it will not update recordings again
             self.already_got_recordings = True
 
@@ -230,6 +229,151 @@ class Monitors:
         else:
             ### if currently no recordings are active return None
             return None
+
+    def _add_monitors(self, mon_dict: dict):
+        """
+        Generate monitors defined by mon_dict.
+
+        Args:
+            mon_dict (dict):
+                dict with key="pop;pop_name" for populations and key="proj;proj_name"
+                for projections and val=list with variables to record.
+
+        Returns:
+            mon (dict):
+                dict with key="pop_name" for populations and key="proj_name" for
+                projections and val=ANNarchy monitor object.
+        """
+        mon = {}
+        for key, val in mon_dict.items():
+            compartmentType, compartment, period = ef.unpack_monDict_keys(key)
+            ### check if compartment is pop
+            if compartmentType == "pop":
+                mon[compartment] = Monitor(
+                    get_population(compartment), val, start=False, period=period
+                )
+            ### check if compartment is proj
+            if compartmentType == "proj":
+                mon[compartment] = Monitor(
+                    get_projection(compartment), val, start=False, period=period
+                )
+        return mon
+
+    def _start_monitors(self, compartment_list, mon, timings=None):
+        """
+        starts or resumes monitores defined by monDict
+        compartment_list: list with model compartments
+        mon: dict with the corresponding monitors
+        currently_paused: dict with key=compartment+variable name and val=if currently paused
+        """
+        ### for each compartment generate started variable (because compartments can ocure multiple times if multiple variables of them are recorded --> do not start same monitor multiple times)
+        started = {}
+        for key in compartment_list:
+            compartmentType, compartment, _ = ef.unpack_monDict_keys(key)
+            if compartmentType == "pop" or compartmentType == "proj":
+                started[compartment] = False
+
+        if timings == None:
+            ### information about pauses not available, just start
+            for key in compartment_list:
+                compartmentType, compartment, _ = ef.unpack_monDict_keys(key)
+                if (compartmentType == "pop" or compartmentType == "proj") and started[
+                    compartment
+                ] == False:
+                    mon[compartment].start()
+                    print("start", compartment)
+                    started[compartment] = True
+            return None
+        else:
+            ### information about pauses available, start if not paused, resume if paused
+            for key in compartment_list:
+                compartmentType, compartment, _ = ef.unpack_monDict_keys(key)
+                if (compartmentType == "pop" or compartmentType == "proj") and started[
+                    compartment
+                ] == False:
+                    if timings[compartment]["currently_paused"]:
+                        if len(timings[compartment]["start"]) > 0:
+                            ### resume
+                            mon[compartment].resume()
+                        else:
+                            ### initial start
+                            mon[compartment].start()
+                    started[compartment] = True
+                    ### update currently_paused
+                    timings[compartment]["currently_paused"] = False
+                    ### never make start longer than stop+1!... this can be caused if start is called multiple times without pause in between
+                    if len(timings[compartment]["start"]) <= len(
+                        timings[compartment]["stop"]
+                    ):
+                        timings[compartment]["start"].append(get_time())
+            return timings
+
+    def _pause_monitors(self, compartment_list, mon, timings=None):
+        """
+        pause monitores defined by compartment_list
+        """
+        ### for each compartment generate paused variable (because compartments can ocure multiple times if multiple variables of them are recorded --> do not pause same monitor multiple times)
+        paused = {}
+        for key in compartment_list:
+            compartmentType, compartment, _ = ef.unpack_monDict_keys(key)
+            if compartmentType == "pop" or compartmentType == "proj":
+                paused[compartment] = False
+
+        for key in compartment_list:
+            compartmentType, compartment, _ = ef.unpack_monDict_keys(key)
+            if (compartmentType == "pop" or compartmentType == "proj") and paused[
+                compartment
+            ] == False:
+                mon[compartment].pause()
+                paused[compartment] = True
+
+        if timings != None:
+            ### information about pauses is available, update it
+            for key, val in paused.items():
+                timings[key]["currently_paused"] = True
+                ### never make pause longer than start, this can be caused if pause is called multiple times without start in between
+                if len(timings[key]["stop"]) < len(timings[key]["start"]):
+                    timings[key]["stop"].append(get_time())
+                ### if pause is directly called after start --> start == stop --> remove these entries, this is no actual period
+                if (
+                    len(timings[key]["stop"]) == len(timings[key]["start"])
+                    and timings[key]["stop"][-1] == timings[key]["start"][-1]
+                ):
+                    timings[key]["stop"] = timings[key]["stop"][:-1]
+                    timings[key]["start"] = timings[key]["start"][:-1]
+            return timings
+        else:
+            return None
+
+    def _get_monitors(self, monDict, mon):
+        """
+        get recorded values from monitors
+
+        monitors and recorded values defined by monDict
+        """
+        recordings = {}
+        for key, val in monDict.items():
+            compartment_type, compartment, period = ef.unpack_monDict_keys(key)
+            recordings[f"{compartment};period"] = period
+            if compartment_type == "pop":
+                pop = get_population(compartment)
+                parameter_dict = {
+                    param_name: getattr(pop, param_name)
+                    for param_name in pop.parameters
+                }
+                recordings[f"{compartment};parameter_dict"] = parameter_dict
+            if compartment_type == "proj":
+                proj = get_projection(compartment)
+                parameter_dict = {
+                    param_name: getattr(proj, param_name)
+                    for param_name in proj.parameters
+                }
+                recordings[f"{compartment};parameters"] = parameter_dict
+            for val_val in val:
+                temp = mon[compartment].get(val_val)
+                recordings[f"{compartment};{val_val}"] = temp
+        recordings["dt"] = dt()
+        return recordings
 
 
 class recording_times_cl:

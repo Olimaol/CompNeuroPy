@@ -56,6 +56,7 @@ nav:
     - Synapse Models: 'built_in/synapse_models.md'
   - 'Additional Features':
     - Analysis Functions: 'additional/analysis_functions.md'
+    - Model Functions: 'additional/model_functions.md'
     - System Functions: 'additional/system_functions.md'
     - Extra Functions: 'additional/extra_functions.md'
   - 'Examples':
