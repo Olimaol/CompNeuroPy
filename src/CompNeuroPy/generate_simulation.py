@@ -3,7 +3,11 @@ from CompNeuroPy import extra_functions as ef
 import numpy as np
 
 
-class generate_simulation:
+class CompNeuroSim:
+    """
+    Class for generating a CompNeuroPy simulation.
+    """
+
     initialized_simulations = []
 
     def __init__(
@@ -16,11 +20,29 @@ class generate_simulation:
         kwargs_warning=True,
         monitor_object=None,
     ):
-
+        """
+        Args:
+            simulation_function (function):
+                Function which runs the simulation.
+            simulation_kwargs (dict, optional):
+                Dictionary of arguments for the simulation_function. Default: None.
+            name (str, optional):
+                Name of the simulation. Default: "simulation".
+            description (str, optional):
+                Description of the simulation. Default: "".
+            requirements (list, optional):
+                List of requirements for the simulation. Default: None.
+            kwargs_warning (bool, optional):
+                If True, a warning is printed if the simulation_kwargs are changed
+                during the simulation. Default: True.
+            monitor_object (CompNeuroPy Monitors object, optional):
+                Monitors object to automatically track the recording chunk for each
+                simulation run. Default: None.
+        """
         # set simulaiton function
         self.name = name
         if name == "simulation":
-            self.name = name + str(self.__nr_simulations__())
+            self.name = name + str(self._nr_simulations())
         self.initialized_simulations.append(self.name)
         self.description = description
         self.simulation_function = simulation_function
@@ -44,13 +66,18 @@ class generate_simulation:
             self.monitor_chunk = None
 
         ### test initial requirements
-        self.__test_req__(simulation_kwargs=simulation_kwargs)
+        self._test_req(simulation_kwargs=simulation_kwargs)
 
     def run(self, simulation_kwargs=None):
         """
-        runs simulation function
-        with each run extend start, end and info list
-        simulaiton_kwargs: optionally define new temporary simulation kwargs which override the initialized simulation kwargs
+        Runs the simulation function. With each run extend start, end list containing
+        start and end time of the corresponding run and the info list containing the
+        return value of the simulation function.
+
+        Args:
+            simulaiton_kwargs (dict, optional):
+                Temporary simulation kwargs which override the initialized simulation
+                kwargs. Default: None, i.e., use values from initialization.
         """
 
         ### define the current simulation kwargs
@@ -74,7 +101,7 @@ class generate_simulation:
             tmp_kwargs = self.simulation_kwargs
 
         ### before each run, test requirements
-        self.__test_req__(simulation_kwargs=tmp_kwargs)
+        self._test_req(simulation_kwargs=tmp_kwargs)
 
         ### and append current simulation kwargs to the kwargs variable
         self.kwargs.append(tmp_kwargs)
@@ -91,15 +118,15 @@ class generate_simulation:
             self.info.append(self.simulation_function())
         self.end.append(get_time())
 
-    def __nr_simulations__(self):
+    def _nr_simulations(self):
         """
-        returns the current number of initialized CompNeuroPy simulations
+        Returns the current number of initialized CompNeuroPy simulations.
         """
         return len(self.initialized_simulations)
 
-    def __test_req__(self, simulation_kwargs=None):
+    def _test_req(self, simulation_kwargs=None):
         """
-        tests the initialized requirements with the current simulation_kwargs
+        Tests the initialized requirements with the current simulation_kwargs.
         """
 
         if simulation_kwargs is None:  # --> use the initial simulation_kwargs
@@ -135,16 +162,32 @@ class generate_simulation:
 
     def get_current_arr(self, dt, flat=False):
         """
-        function for current_step simulations
-        gets the current array (value for each time step) of all runs
-        it returns a list of arrays (len of list = nr of runs)
-        if flat --> it returns a flattened array --> assumes that all runs are run consecutively without brakes
+        Method exclusively for current_step simulation functions. Gets the current array
+        (input current value for each time step) of all runs.
+
+        !!! warning
+            This method will be removed soon. Use the get_current_arr method of the
+            SimInfo class instead.
+
+        Args:
+            dt (float):
+                Time step size of the simulation.
+            flat (bool, optional):
+                If True, returns a flattened array. Assumes that all runs are run
+                consecutively without brakes. Default: False, i.e., returns a list of
+                arrays.
+
+        Returns:
+            current_arr (list of arrays):
+                List of arrays containing the current values for each time step of each
+                run. If flat=True, returns a flattened array.
         """
         assert (
             self.simulation_function.__name__ == "current_step"
         ), 'ERROR get_current_arr: Simulation has to be "current_step"!'
+        ### TODO: remove because deprecated
         print(
-            "WARNING get_current_arr function will only be available in simulation_info_cl soon."
+            "WARNING get_current_arr function will only be available in SimInfo soon."
         )
         current_arr = []
         for run in range(len(self.kwargs)):
@@ -173,8 +216,15 @@ class generate_simulation:
             return current_arr
 
     def simulation_info(self):
+        """
+        Returns a SimInfo object containing the simulation information.
 
-        simulation_info_obj = simulation_info_cl(
+        Returns:
+            simulation_info_obj (SimInfo):
+                Simulation information object.
+        """
+
+        simulation_info_obj = SimInfo(
             self.name,
             self.description,
             self.simulation_function.__name__,
@@ -188,7 +238,33 @@ class generate_simulation:
         return simulation_info_obj
 
 
-class simulation_info_cl:
+### old name for backward compatibility, TODO: remove
+generate_simulation = CompNeuroSim
+
+
+class SimInfo:
+    """
+    Class for storing the simulation information.
+
+    Attributes:
+        name (str):
+            Name of the simulation.
+        description (str):
+            Description of the simulation.
+        simulation_function (str):
+            Name of the simulation function.
+        start (list):
+            List of start times of the simulation runs.
+        end (list):
+            List of end times of the simulation runs.
+        info (list):
+            List of return values of the simulation function of each simulation run.
+        kwargs (list):
+            List of simulation kwargs of the simulation function of each simulation run.
+        monitor_chunk (list):
+            List of recording chunks of the used Monitors object of each simulation run.
+    """
+
     def __init__(
         self,
         name,
@@ -200,6 +276,29 @@ class simulation_info_cl:
         kwargs,
         monitor_chunk,
     ):
+        """
+        Initialization of the simulation information object.
+
+        Args:
+            name (str):
+                Name of the simulation.
+            description (str):
+                Description of the simulation.
+            simulation_function (str):
+                Name of the simulation function.
+            start (list):
+                List of start times of the simulation runs.
+            end (list):
+                List of end times of the simulation runs.
+            info (list):
+                List of return values of the simulation function of each simulation run.
+            kwargs (list):
+                List of simulation kwargs of the simulation function of each simulation
+                run.
+            monitor_chunk (list):
+                List of recording chunks of the used Monitors object of each simulation
+                run.
+        """
         self.name = name
         self.description = description
         self.simulation_function = simulation_function
@@ -211,10 +310,25 @@ class simulation_info_cl:
 
     def get_current_arr(self, dt, flat=False):
         """
-        function for current_step simulations
-        gets the current array (value for each time step) of all runs
-        it returns a list of arrays (len of list = nr of runs)
-        if flat --> it returns a flattened array --> assumes that all runs are run consecutively without brakes
+        Method exclusively for the following simulation functions (built-in
+        CompNeuroPy):
+            - current_step
+            - current_stim
+            - current_ramp
+        Gets the current array (input current value for each time step) of all runs.
+
+        Args:
+            dt (float):
+                Time step size of the simulation.
+            flat (bool, optional):
+                If True, returns a flattened array. Assumes that all runs are run
+                consecutively without brakes. Default: False, i.e., returns a list of
+                arrays.
+
+        Returns:
+            current_arr (list of arrays):
+                List of arrays containing the current values for each time step of each
+                run. If flat=True, returns a flattened array.
         """
         assert (
             self.simulation_function == "current_step"
@@ -266,7 +380,6 @@ class simulation_info_cl:
         elif self.simulation_function == "current_ramp":
             current_arr = []
             for run in range(len(self.kwargs)):
-
                 amp = self.kwargs[run]["a0"]
                 current_arr_ramp = []
                 for stim_idx in range(self.kwargs[run]["n"]):
@@ -280,3 +393,7 @@ class simulation_info_cl:
                 return np.concatenate(current_arr)
             else:
                 return current_arr
+
+
+### old name for backward compatibility, TODO: remove
+simulation_info_cl = SimInfo

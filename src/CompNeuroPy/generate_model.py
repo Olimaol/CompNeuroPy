@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 
-class generate_model:
+class CompNeuroModel:
     """
     Class for creating and compiling a model.
 
@@ -40,7 +40,7 @@ class generate_model:
         compile_folder_name="annarchy",
     ):
         """
-        Initializes the generate_model class.
+        Initializes the CompNeuroModel class.
 
         Args:
             model_creation_function (function):
@@ -291,3 +291,7 @@ class generate_model:
 
         ### return dataframe
         return pd.DataFrame(attribute_dict)
+
+
+### old name for compatibility, TODO: remove
+generate_model = CompNeuroModel

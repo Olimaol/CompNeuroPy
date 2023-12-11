@@ -26,8 +26,8 @@ from CompNeuroPy.simulation_requirements import *
 ### classes
 from CompNeuroPy.Monitors import Monitors
 from CompNeuroPy.experiment import Experiment
-from CompNeuroPy.generate_model import generate_model
-from CompNeuroPy.generate_simulation import generate_simulation
+from CompNeuroPy.generate_model import generate_model, CompNeuroModel
+from CompNeuroPy.generate_simulation import generate_simulation, CompNeuroSim
 from CompNeuroPy.dbs import DBSstimulator
 
 ### modules
