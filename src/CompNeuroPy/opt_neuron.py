@@ -4,9 +4,11 @@ import traceback
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy import extra_functions as ef
 from CompNeuroPy.monitors import CompNeuroMonitors
-from CompNeuroPy.generate_model import generate_model
+from CompNeuroPy.generate_model import CompNeuroModel
+from CompNeuroPy.experiment import CompNeuroExp
 import matplotlib.pyplot as plt
 import sys
+from typing import Callable, Any
 
 # multiprocessing
 from multiprocessing import Process
@@ -31,71 +33,92 @@ except:
 
 
 class opt_neuron:
+    """
+    This class is used to optimize neuron models with ANNarchy.
+    """
+
     opt_created = []
 
     def __init__(
         self,
-        experiment,
-        get_loss_function,
-        variables_bounds,
-        neuron_model,
-        results_soll=None,
-        target_neuron_model=None,
-        time_step=1,
-        compile_folder_name="annarchy_opt_neuron",
-        num_rep_loss=1,
-        method="hyperopt",
+        experiment: CompNeuroExp,
+        get_loss_function: Callable[[Any, Any], float | list[float]],
+        variables_bounds: dict[str, float | list[float]],
+        neuron_model: Neuron,
+        results_soll: Any | None = None,
+        target_neuron_model: Neuron | None = None,
+        time_step: float | None = 1.0,
+        compile_folder_name: str = "annarchy_opt_neuron",
+        num_rep_loss: int = 1,
+        method: str = "hyperopt",
         prior=None,
-        fv_space=None,
-        record=[],
+        fv_space: list = None,
+        record: list[str] = [],
     ):
         """
-        This class prepares the optimization. To run the optimization call opt_neuron.run().
+        This prepares the optimization. To run the optimization call the run function.
 
         Args:
-            experiment: CompNeuroPy Experiment class
-                the experiment class has to contain the 'run' function which defines the simulations and recordings
+            experiment (CompNeuroExp):
+                CompNeuroExp object containing a 'run' function which defines the
+                simulations and recordings
 
-            get_loss_function: function
-                function which takes results_ist and results_soll as arguments and calculates the loss
+            get_loss_function (function):
+                function which takes results_ist and results_soll as arguments and
+                calculates/returns the loss
 
-            variables_bounds: dict
-                keys = parameter names, values = either list with len=2 (lower and upper bound) or a single value (constant parameter)
+            variables_bounds (dict):
+                Dictionary with parameter names (keys) and their bounds (values). If
+                single values are given as values, the parameter is constant, i.e., not
+                optimized. If a list is given as value, the parameter is optimized and
+                the list contains the lower and upper bound of the parameter (order is
+                not important).
 
-            neuron_model: ANNarchy Neuron object
-                the neuron model used during optimization
+            neuron_model (ANNarchy Neuron):
+                The neuron model whose parameters should be optimized.
 
-            results_soll: dict, optional, default=None
-                some variable which contains the target data and can be used by the get_loss_function (second argument of get_loss_function)
-                either provide results_soll or a target_neuron_model not both!
+            results_soll (Any, optional):
+                Some variable which contains the target data and can be used by the
+                get_loss_function (second argument of get_loss_function)
+                !!! warning
+                    Either provide results_soll or a target_neuron_model not both!
+                Default: None.
 
-            target_neuron_model: ANNarchy Neuron object, optional, default=None
-                the neuron model which produces the target data by running the experiment
-                either provide results_soll or a target_neuron_model not both!
+            target_neuron_model (ANNarchy Neuron, optional):
+                The neuron model which produces the target data by running the
+                experiment.
+                !!! warning
+                    Either provide results_soll or a target_neuron_model not both!
+                Default: None.
 
-            time_step: float, optional, default=1
-                the time step for the simulation in ms
+            time_step (float, optional):
+                The time step for the simulation in ms. Default: 1.
 
-            compile_folder_name: string, default = 'annarchy_opt_neuron'
-                the name of the annarchy compilation folder
+            compile_folder_name (string, optional):
+                The name of the annarchy compilation folder within annarchy_folders/.
+                Default: 'annarchy_opt_neuron'.
 
-            num_rep_loss: int, default = 1
-                only interesting for noisy simulations/models
-                how often should the model be run to calculate the loss (the defined number of losses is obtained and averaged)
+            num_rep_loss (int, optional):
+                Only interesting for noisy simulations/models. How often should the
+                simulaiton be run to calculate the loss (the defined number of losses
+                is obtained and averaged). Default: 1.
 
-            method: str, default = 'hyperopt'
-                either 'sbi' or 'hyperopt'
+            method (str, optional):
+                Either 'sbi' or 'hyperopt'. If 'sbi' is used, the optimization is
+                performed with sbi. If 'hyperopt' is used, the optimization is
+                performed with hyperopt. Default: 'hyperopt'.
 
-            prior: distribution, default = None
-                the prior distribution used by sbi
-                if none is given, uniform distributions between the variable bounds are assumed
+            prior (distribution, optional):  default = None
+                The prior distribution used by sbi. Default: None, i.e., uniform
+                distributions between the variable bounds are assumed.
 
-            fv_space: list, default = None
-                the search space for hyperopt
-                if none is given, uniform distributions between the variable bounds are assumed
+            fv_space (list, optional):
+                The search space for hyperopt. Default: None, i.e., uniform
+                distributions between the variable bounds are assumed.
 
-            record: list, default = []
-                list of strings which define what variables of the simulated neuron should be recorded
+            record (list, optional):
+                List of strings which define what variables of the tuned neuron should
+                be recorded. Default: [].
         """
 
         if len(self.opt_created) > 0:
@@ -178,7 +201,7 @@ class opt_neuron:
             monitors = None
             if self.results_soll is None:
                 ### create two models
-                model = generate_model(
+                model = CompNeuroModel(
                     model_creation_function=self.__raw_neuron__,
                     model_kwargs={"neuron": self.neuron_model, "name": "model_neuron"},
                     name="standard_model",
@@ -187,7 +210,7 @@ class opt_neuron:
                     compile_folder_name=self.compile_folder_name,
                 )
 
-                target_model = generate_model(
+                target_model = CompNeuroModel(
                     model_creation_function=self.__raw_neuron__,
                     model_kwargs={
                         "neuron": self.target_neuron,
@@ -213,7 +236,7 @@ class opt_neuron:
 
             else:
                 ### create one model
-                model = generate_model(
+                model = CompNeuroModel(
                     model_creation_function=self.__raw_neuron__,
                     model_kwargs={"neuron": self.neuron_model, "name": "model_neuron"},
                     name="single_model",
