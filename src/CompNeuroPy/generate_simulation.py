@@ -75,7 +75,7 @@ class CompNeuroSim:
         return value of the simulation function.
 
         Args:
-            simulaiton_kwargs (dict, optional):
+            simulation_kwargs (dict, optional):
                 Temporary simulation kwargs which override the initialized simulation
                 kwargs. Default: None, i.e., use values from initialization.
         """
