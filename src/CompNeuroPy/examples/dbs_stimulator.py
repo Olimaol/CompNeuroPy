@@ -35,6 +35,7 @@ from ANNarchy import (
     DefaultRateCodedSynapse,
     DefaultSpikingSynapse,
     dt,
+    Constant,
 )
 from CompNeuroPy import (
     CompNeuroMonitors,
@@ -91,6 +92,7 @@ class dbs_test_model_class:
         model: CompNeuroPy Model
             dbs test model
         """
+        Constant("my_important_const", 0.0)
         if mode == "spiking":
             self.model = generate_model(
                 model_creation_function=self.create_model,
@@ -249,7 +251,7 @@ class dbs_test_model_class:
             equations="""
                 ### noisy base input
                 offset_base = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rate_base_noise, offset_base, Normal(0., 1.) * base_noise)
-                I_base      = base_mean + offset_base
+                I_base      = base_mean + offset_base + my_important_const
                 ### input conductances
                 dg_ampa/dt = -g_ampa/tau_ampa
                 dg_gaba/dt = -g_gaba/tau_gaba
@@ -296,7 +298,7 @@ class dbs_test_model_class:
             equations="""
                 ### noisy base input
                 offset_base = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rate_base_noise, offset_base, Normal(0., 1.) * base_noise)
-                I_base      = base_mean + offset_base
+                I_base      = base_mean + offset_base + my_important_const
                 ### input currents
                 I = sum(ampa) - sum(gaba) + I_base + I_app
                 ### membrane potential

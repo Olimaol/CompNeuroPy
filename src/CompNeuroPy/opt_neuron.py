@@ -108,7 +108,7 @@ class opt_neuron:
                 performed with sbi. If 'hyperopt' is used, the optimization is
                 performed with hyperopt. Default: 'hyperopt'.
 
-            prior (distribution, optional):  default = None
+            prior (distribution, optional):
                 The prior distribution used by sbi. Default: None, i.e., uniform
                 distributions between the variable bounds are assumed.
 
@@ -137,35 +137,34 @@ class opt_neuron:
             self.results_soll = results_soll
             self.experiment = experiment
             self.variables_bounds = variables_bounds
-            self.fitting_variables_name_list = (
-                self.__get_fitting_variables_name_list__()
-            )
+            self.fitting_variables_name_list = self._get_fitting_variables_name_list()
             self.method = method
             if method == "hyperopt":
                 if fv_space is None:
-                    self.fv_space = self.__get_hyperopt_space__()
+                    self.fv_space = self._get_hyperopt_space()
                 else:
                     self.fv_space = fv_space
-            self.const_params = self.__get_const_params__()
+            self.const_params = self._get_const_params()
             self.num_rep_loss = num_rep_loss
             self.neuron_model = neuron_model
             if method == "sbi":
-                self.prior = self.__get_prior__(prior)
+                self.prior = self._get_prior(prior)
             self.target_neuron = target_neuron_model
             self.compile_folder_name = compile_folder_name
             self.__get_loss__ = get_loss_function
 
             ### check target_neuron/results_soll
-            self.__check_target__()
+            self._check_target()
             ### check neuron models
-            self.__check_neuron_models__()
+            self._check_neuron_models()
 
             ### setup ANNarchy
             setup(dt=time_step)
 
             ### create and compile model
-            ### if neuron models and target neuron model --> create both models then test, then clear and create only model for neuron model
-            model, target_model, monitors = self.__generate_models__()
+            ### if neuron models and target neuron model --> create both models then test,
+            ### then clear and create only model for neuron model
+            model, target_model, monitors = self._generate_models()
 
             self.pop = model.populations[0]
             if target_model is not None:
@@ -175,25 +174,33 @@ class opt_neuron:
             self.monitors = monitors
 
             ### check variables of model
-            self.__test_variables__()
+            self._test_variables()
 
             ### check neuron models, experiment, get_loss
             ### if results_soll is None -_> generate results_soll
-            self.__check_get_loss_function__()
+            self._check_get_loss_function()
 
             ### after checking neuron models, experiment, get_loss
             ### if two models exist --> clear ANNarchy and create/compile again only standard model
             clear()
-            model, _, monitors = self.__generate_models__()
+            model, _, monitors = self._generate_models()
             self.monitors = monitors
 
-    def __generate_models__(self):
+    def _generate_models(self):
         """
-        generates the model and target_model (only if results_soll is None --> they have to be generated)
+        Generates the tuned model and the target_model (only if results_soll is None).
 
-        returns model and target_model
+        Returns:
+            model (CompNeuroModel):
+                The model which is used for the optimization.
 
-        if there are already results_soll --> target_model=None
+            target_model (CompNeuroModel):
+                The model which is used to generate the target data. If results_soll is
+                provided, target_model is None.
+
+            monitors (CompNeuroMonitors):
+                The monitors which are used to record the data. If no variables are
+                recorded, monitors is None.
         """
         with ef.suppress_stdout():
             model = None
@@ -202,7 +209,7 @@ class opt_neuron:
             if self.results_soll is None:
                 ### create two models
                 model = CompNeuroModel(
-                    model_creation_function=self.__raw_neuron__,
+                    model_creation_function=self._raw_neuron,
                     model_kwargs={"neuron": self.neuron_model, "name": "model_neuron"},
                     name="standard_model",
                     do_create=True,
@@ -211,7 +218,7 @@ class opt_neuron:
                 )
 
                 target_model = CompNeuroModel(
-                    model_creation_function=self.__raw_neuron__,
+                    model_creation_function=self._raw_neuron,
                     model_kwargs={
                         "neuron": self.target_neuron,
                         "name": "target_model_neuron",
@@ -237,7 +244,7 @@ class opt_neuron:
             else:
                 ### create one model
                 model = CompNeuroModel(
-                    model_creation_function=self.__raw_neuron__,
+                    model_creation_function=self._raw_neuron,
                     model_kwargs={"neuron": self.neuron_model, "name": "model_neuron"},
                     name="single_model",
                     do_create=True,
@@ -250,9 +257,12 @@ class opt_neuron:
                         {f"pop;{model.populations[0]}": self.record}
                     )
 
-        return [model, target_model, monitors]
+        return model, target_model, monitors
 
-    def __check_neuron_models__(self):
+    def _check_neuron_models(self):
+        """
+        Checks if the neuron models are ANNarchy neuron models.
+        """
         if not (isinstance(self.neuron_model, type(Neuron()))) or (
             self.target_neuron is not None
             and not (isinstance(self.target_neuron, type(Neuron())))
@@ -262,9 +272,9 @@ class opt_neuron:
             )
             quit()
 
-    def __check_target__(self):
+    def _check_target(self):
         """
-        check if either results_soll or target_neuron are provided
+        Check if either results_soll or target_neuron are provided and not both.
         """
         if self.target_neuron is None and self.results_soll is None:
             print(
@@ -277,11 +287,20 @@ class opt_neuron:
             )
             quit()
 
-    def __get_prior__(self, prior):
+    def _get_prior(self, prior):
         """
-        returns the prior for sbi optimization
-        if prior == None --> uniform distributions between variable bounds
-        else use given prior
+        Get the prior distribution used by sbi. If no prior is given, uniform
+        distributions between the variable bounds are assumed. If a prior is given,
+        this prior is used.
+
+        Args:
+            prior (distribution, optional):
+                The prior distribution used by sbi. Default: None, i.e., uniform
+                distributions between the variable bounds are assumed.
+
+        Returns:
+            prior (distribution):
+                The prior distribution used by sbi.
         """
         if prior is None:
             prior_min = []
@@ -297,9 +316,13 @@ class opt_neuron:
         else:
             return prior
 
-    def __get_fitting_variables_name_list__(self):
+    def _get_fitting_variables_name_list(self):
         """
-        returns list with fitting variable names
+        Returns a list with the names of the fitting variables.
+
+        Returns:
+            fitting_variables_name_list (list):
+                list with names of fitting variables
         """
         name_list = []
         for param_name, param_bounds in self.variables_bounds.items():
@@ -307,10 +330,14 @@ class opt_neuron:
                 name_list.append(param_name)
         return name_list
 
-    def __get_hyperopt_space__(self):
+    def _get_hyperopt_space(self):
         """
-        generates the hyperopt variable space from the fitting variable bounds
-        the variable space is a uniform distribution between the bounds
+        Generates the hyperopt variable space from the fitting variable bounds. The
+        variable space is a uniform distribution between the bounds.
+
+        Returns:
+            fitting_variables_space (list):
+                list with hyperopt variables
         """
         fitting_variables_space = []
         for param_name, param_bounds in self.variables_bounds.items():
@@ -320,9 +347,12 @@ class opt_neuron:
                 )
         return fitting_variables_space
 
-    def __get_const_params__(self):
+    def _get_const_params(self):
         """
-        returns a dict with cosntant parameter names (keys) and their values
+        Returns:
+            const_params (dict):
+                Dictionary with constant variables. The keys are the parameter names
+                and the values are the parameter values.
         """
         const_params = {}
         for param_name, param_bounds in self.variables_bounds.items():
@@ -330,18 +360,14 @@ class opt_neuron:
                 const_params[param_name] = param_bounds
         return const_params
 
-    def __check_get_loss_function__(self):
+    def _check_get_loss_function(self):
         """
-        function: function whith arguments (results_ist, results_soll) which computes and returns a loss value
-
-        Checks if function is compatible to the experiment.
-        To test, function is run with results_soll (also for results_ist argument).
+        Checks if the get_loss_function is compatible to the experiment and the neuron
+        model(s). To test, the experiment is run once with the tuned neuron model
+        (generating results_ist) and once with the target neuron model (if provided,
+        generating results_soll). Then, the get_loss_function is called with the
+        results_ist and results_soll.
         """
-
-        ### TODO: self.pop and self.pop_target
-        ### if self.pop_target is None --> only self.pop and results soll --> simulate with self.pop --> create results_ist
-        ### if not --> no results_soll --> simulate with self.pop/create results_ist and simulate with self.pop_target and create results_soll
-
         print("checking neuron_models, experiment, get_loss...", end="")
 
         fitparams = []
@@ -351,11 +377,12 @@ class opt_neuron:
 
         if self.results_soll is not None:
             ### only generate results_ist with standard neuron model
-            results_ist = self.__run_simulator_with_results__(fitparams)["results"]
+            results_ist = self._run_simulator_with_results(fitparams)["results"]
         else:
-            ### run simulator with both populations (standard neuron model and target neuron model) and generatate results_ist and results_soll
-            results_ist = self.__run_simulator_with_results__(fitparams)["results"]
-            self.results_soll = self.__run_simulator_with_results__(
+            ### run simulator with both populations (standard neuron model and target
+            ### neuron model) and generatate results_ist and results_soll
+            results_ist = self._run_simulator_with_results(fitparams)["results"]
+            self.results_soll = self._run_simulator_with_results(
                 fitparams, pop=self.pop_target
             )["results"]
 
@@ -369,19 +396,23 @@ class opt_neuron:
             quit()
         print("Done\n")
 
-    def __raw_neuron__(self, neuron, name):
+    def _raw_neuron(self, neuron, name):
         """
-        generates a population with one neuron
+        Generates a population with one neuron of the given neuron model.
+
+        Args:
+            neuron (ANNarchy Neuron):
+                The neuron model.
+
+            name (str):
+                The name of the population.
         """
         Population(1, neuron=neuron, name=name)
 
-    def __test_variables__(self):
+    def _test_variables(self):
         """
-        self.pop: name of created neuron population
-        self.fv_space: hyperopt variable space list
-        self.const_params: dictionary with constant variables
-
-        Checks if self.pop contains all variables of self.fv_space and self.const_params and if self.pop has more variables.
+        Check if the tuned neuron model contains all parameters which are defined in
+        variables_bounds or even more.
         """
         ### collect all names
         all_vars_names = np.concatenate(
@@ -409,12 +440,21 @@ class opt_neuron:
                 "!",
             )
 
-    def __run_simulator__(self, fitparams):
+    def _run_simulator(self, fitparams):
         """
-        runs the function simulator with the multiprocessing manager (if function is called multiple times this saves memory, otherwise same as calling simulator directly)
+        Runs the function simulator with the multiprocessing manager (if function is
+        called multiple times this saves memory, otherwise same as calling simulator
+        directly).
 
-        fitparams: list, for description see function simulator
-        return: returns dictionary needed for optimization with hyperopt
+        Args:
+            fitparams (list):
+                list with values for fitting parameters
+
+        Returns:
+            return_dict (dict):
+                dictionary needed for optimization with hyperopt, containing the loss,
+                the loss variance (in case of noisy models with multiple runs per loss
+                calculation), and the status (STATUS_OK for hyperopt).
         """
 
         ### initialize manager and generate m_list = dictionary to save data
@@ -430,7 +470,7 @@ class opt_neuron:
             rng = np.random.default_rng()
             ### run simulator with multiprocessign manager
             proc = Process(
-                target=self.__simulator__, args=(fitparams, rng, m_list, return_results)
+                target=self._simulator, args=(fitparams, rng, m_list, return_results)
             )
             proc.start()
             proc.join()
@@ -451,32 +491,54 @@ class opt_neuron:
         else:
             return {"status": STATUS_OK, "loss": loss}
 
-    def __sbi_simulation_wrapper__(self, fitparams):
+    def _sbi_simulation_wrapper(self, fitparams):
         """
-        this function is called by sbi infer
-        fitparams: tensor
-            either a batch of parameters (tenor with two dimensions) or a single parameter set
-        returns: loss as tensor for sbi inference
+        This function is called by sbi. It calls the simulator function and
+        returns the loss and adjusts the format of the input parameters.
+
+        Args:
+            fitparams (tensor):
+                either a batch of parameters (tensor with two dimensions) or a single
+                parameter set
+
+        Returns:
+            loss (tensor):
+                loss as tensor for sbi inference
         """
         fitparams = np.asarray(fitparams)
         if len(fitparams.shape) == 2:
             ### batch parameters!
             data = []
             for idx in range(fitparams.shape[0]):
-                data.append(self.__run_simulator__(fitparams[idx])["loss"])
+                data.append(self._run_simulator(fitparams[idx])["loss"])
         else:
             ### single parameter set!
-            data = [self.__run_simulator__(fitparams)["loss"]]
+            data = [self._run_simulator(fitparams)["loss"]]
 
         return torch.as_tensor(data)
 
-    def __run_simulator_with_results__(self, fitparams, pop=None):
+    def _run_simulator_with_results(self, fitparams, pop=None):
         """
-        runs the function simulator with the multiprocessing manager (if function is called multiple times this saves memory, otherwise same as calling simulator directly)
+        Runs the function simulator with the multiprocessing manager (if function is
+        called multiple times this saves memory, otherwise same as calling simulator
+        directly) and also returns the results.
 
-        fitparams: list, for description see function simulator
-        return: returns dictionary needed for optimization with hyperopt
+        Args:
+            fitparams (list):
+                list with values for fitting parameters
+
+            pop (str, optional):
+                ANNarchy population name. Default: None, i.e., the tuned population
+                is used.
+
+        Returns:
+            return_dict (dict):
+                dictionary needed for optimization with hyperopt, containing the loss,
+                the loss variance (in case of noisy models with multiple runs per loss
+                calculation), and the status (STATUS_OK for hyperopt) and the results
+                generated by the experiment.
         """
+        ### check if pop is given
         if pop is None:
             pop = self.pop
         ### initialize manager and generate m_list = dictionary to save data
@@ -492,7 +554,7 @@ class opt_neuron:
             rng = np.random.default_rng()
             ### run simulator with multiprocessign manager
             proc = Process(
-                target=self.__simulator__,
+                target=self._simulator,
                 args=(fitparams, rng, m_list, return_results, pop),
             )
             proc.start()
@@ -513,7 +575,7 @@ class opt_neuron:
             std = None
             all_loss = all_loss_arr[0]
 
-        ### return loss and other things for optimization
+        ### return loss and other things for optimization and results
         if self.num_rep_loss > 1:
             return {
                 "status": STATUS_OK,
@@ -532,7 +594,7 @@ class opt_neuron:
                 "results": results_ist,
             }
 
-    def __simulator__(
+    def _simulator(
         self, fitparams, rng, m_list=[0, 0, 0], return_results=False, pop=None
     ):
         """
@@ -699,7 +761,7 @@ class opt_neuron:
 
         Returns the loss computed in simulator function.
         """
-        return self.__run_simulator_with_results__(
+        return self._run_simulator_with_results(
             [fitparamsDict[name] for name in self.fitting_variables_name_list]
         )
 
@@ -717,7 +779,7 @@ class opt_neuron:
 
         ### obtain posterior
         """posterior = infer(
-            self.__sbi_simulation_wrapper__,
+            self._sbi_simulation_wrapper,
             self.prior,
             method="SNPE",
             num_simulations=max_evals,
@@ -731,7 +793,7 @@ class opt_neuron:
         posterior = posterior.set_default_x(x_o)"""
 
         simulator, prior = prepare_for_sbi(
-            self.__sbi_simulation_wrapper__,
+            self._sbi_simulation_wrapper,
             self.prior,
             {
                 "lower_bound": torch.as_tensor(prior_min),
@@ -807,7 +869,7 @@ class opt_neuron:
         if self.method == "hyperopt":
             ### run optimization with hyperopt and return best dict
             best = fmin(
-                fn=self.__run_simulator__,
+                fn=self._run_simulator,
                 space=self.fv_space,
                 algo=tpe.suggest,
                 max_evals=max_evals,

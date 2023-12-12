@@ -823,7 +823,7 @@ def _plot_recordings(
         time_arr_part = []
 
         ### loop over periods
-        nr_periods = recording_times.__get_nr_periods__(
+        nr_periods = recording_times._get_nr_periods(
             chunk=chunk, compartment=compartment
         )
         for period in range(nr_periods):

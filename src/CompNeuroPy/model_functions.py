@@ -49,11 +49,21 @@ def get_full_model():
     }
 
 
-def cnp_clear():
+def cnp_clear(functions=True, neurons=True, synapses=True, constants=True):
     """
     Like clear with ANNarchy, but CompNeuroModel objects are also cleared.
+
+    Args:
+        functions (bool, optional):
+            If True, all functions are cleared. Default: True.
+        neurons (bool, optional):
+            If True, all neurons are cleared. Default: True.
+        synapses (bool, optional):
+            If True, all synapses are cleared. Default: True.
+        constants (bool, optional):
+            If True, all constants are cleared. Default: True.
     """
-    clear()
+    clear(functions=functions, neurons=neurons, synapses=synapses, constants=constants)
     for model_name in CompNeuroModel.initialized_models.keys():
         CompNeuroModel.initialized_models[model_name] = False
     for model_name in CompNeuroModel.compiled_models.keys():

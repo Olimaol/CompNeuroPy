@@ -83,7 +83,7 @@ class _CreateDBSmodel:
         )
 
         ### clear model
-        mf.cnp_clear()
+        mf.cnp_clear(functions=False, neurons=True, synapses=True, constants=False)
 
         ### recreate model with DBS mechanisms
         self.recreate_model()
