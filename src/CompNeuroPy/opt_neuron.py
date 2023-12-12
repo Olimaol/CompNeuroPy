@@ -8,7 +8,8 @@ from CompNeuroPy.generate_model import CompNeuroModel
 from CompNeuroPy.experiment import CompNeuroExp
 import matplotlib.pyplot as plt
 import sys
-from typing import Callable, Any
+from typing import Callable, Any, Type
+from typingchecker import check_types
 
 # multiprocessing
 from multiprocessing import Process
@@ -27,12 +28,12 @@ try:
     from sbi.inference import SNPE, prepare_for_sbi, simulate_for_sbi
 except:
     print(
-        "opt_neuron: Error: You need to install hyperopt, torch, and sbi to use opt_neuron (e.g. use pip install hyperopt torch sbi))"
+        "OptNeuron: Error: You need to install hyperopt, torch, and sbi to use OptNeuron (e.g. use pip install hyperopt torch sbi))"
     )
     sys.exit()
 
 
-class opt_neuron:
+class OptNeuron:
     """
     This class is used to optimize neuron models with ANNarchy.
     """
@@ -41,14 +42,14 @@ class opt_neuron:
 
     def __init__(
         self,
-        experiment: CompNeuroExp,
+        experiment: Type[CompNeuroExp],
         get_loss_function: Callable[[Any, Any], float | list[float]],
         variables_bounds: dict[str, float | list[float]],
         neuron_model: Neuron,
         results_soll: Any | None = None,
         target_neuron_model: Neuron | None = None,
         time_step: float | None = 1.0,
-        compile_folder_name: str = "annarchy_opt_neuron",
+        compile_folder_name: str = "annarchy_OptNeuron",
         num_rep_loss: int = 1,
         method: str = "hyperopt",
         prior=None,
@@ -59,8 +60,8 @@ class opt_neuron:
         This prepares the optimization. To run the optimization call the run function.
 
         Args:
-            experiment (CompNeuroExp):
-                CompNeuroExp object containing a 'run' function which defines the
+            experiment (CompNeuroExp class):
+                CompNeuroExp class containing a 'run' function which defines the
                 simulations and recordings
 
             get_loss_function (function):
@@ -96,7 +97,7 @@ class opt_neuron:
 
             compile_folder_name (string, optional):
                 The name of the annarchy compilation folder within annarchy_folders/.
-                Default: 'annarchy_opt_neuron'.
+                Default: 'annarchy_OptNeuron'.
 
             num_rep_loss (int, optional):
                 Only interesting for noisy simulations/models. How often should the
@@ -123,12 +124,12 @@ class opt_neuron:
 
         if len(self.opt_created) > 0:
             print(
-                "opt_neuron: Error: Already another opt_neuron created. Only create one per python session!"
+                "OptNeuron: Error: Already another OptNeuron created. Only create one per python session!"
             )
             quit()
         else:
             print(
-                "opt_neuron: Initialize opt_neuron... do not create anything with ANNarchy before!"
+                "OptNeuron: Initialize OptNeuron... do not create anything with ANNarchy before!"
             )
 
             ### set object variables
@@ -268,7 +269,7 @@ class opt_neuron:
             and not (isinstance(self.target_neuron, type(Neuron())))
         ):
             print(
-                "opt_neuron: Error: neuron_model and/or target_neuron_model have to be ANNarchy neuron models"
+                "OptNeuron: Error: neuron_model and/or target_neuron_model have to be ANNarchy neuron models"
             )
             quit()
 
@@ -278,12 +279,12 @@ class opt_neuron:
         """
         if self.target_neuron is None and self.results_soll is None:
             print(
-                "opt_neuron: Error: Either provide results_soll or target_neuron_model"
+                "OptNeuron: Error: Either provide results_soll or target_neuron_model"
             )
             quit()
         elif self.target_neuron is not None and self.results_soll is not None:
             print(
-                "opt_neuron: Error: Either provide results_soll or target_neuron_model, not both"
+                "OptNeuron: Error: Either provide results_soll or target_neuron_model, not both"
             )
             quit()
 
@@ -429,13 +430,13 @@ class opt_neuron:
                 pop_parameter_names.remove(name)
         if len(pop_parameter_names) > 0:
             print(
-                "opt_neuron: WARNING: attributes",
+                "OptNeuron: WARNING: attributes",
                 pop_parameter_names,
                 "are not used/initialized.",
             )
         if len(all_vars_names) > 0:
             print(
-                "opt_neuron: WARNING: The neuron_model does not contain parameters",
+                "OptNeuron: WARNING: The neuron_model does not contain parameters",
                 all_vars_names,
                 "!",
             )
@@ -598,18 +599,37 @@ class opt_neuron:
         self, fitparams, rng, m_list=[0, 0, 0], return_results=False, pop=None
     ):
         """
-        fitparams: from hyperopt
+        Runs the experiment with the given parameters and 'returns' the loss and
+        optionally the results and all individual losses of the get_loss_function. The
+        'returned' values are saved in m_list.
 
-        m_list: variable to store results, from multiprocessing
+        Args:
+            fitparams (list):
+                list with values for fitting parameters
+
+            rng (numpy random generator):
+                random generator for the simulation
+
+            m_list (list, optional):
+                list with the loss, the results, and the all_loss. Default: [0, 0, 0].
+
+            return_results (bool, optional):
+                If True, the results are returned. Default: False.
+
+            pop (str, optional):
+                ANNarchy population name. Default: None, i.e., the tuned population
+                is used.
         """
+        ### TODO use rng here and add it to CompNeuroExp
+        ### check if pop is given
         if pop is None:
             pop = self.pop
 
         ### reset model and set parameters which should not be optimized and parameters which should be optimized
-        self.__set_fitting_parameters__(fitparams, pop=pop)
+        self._set_fitting_parameters(fitparams, pop=pop)
 
         ### conduct loaded experiment
-        reset_function = self.__set_fitting_parameters__
+        reset_function = self._set_fitting_parameters
         reset_kwargs = {"fitparams": fitparams, "pop": pop}
 
         exp_obj = self.experiment(
@@ -635,69 +655,7 @@ class opt_neuron:
             m_list[1] = results
             m_list[2] = all_loss
 
-    def __replace_substrings_except_within_braces__(
-        self, input_string, replacement_mapping
-    ):
-        result = []
-        inside_braces = False
-        i = 0
-
-        while i < len(input_string):
-            if input_string[i] == "{":
-                inside_braces = True
-                result.append(input_string[i])
-                i += 1
-            elif input_string[i] == "}":
-                inside_braces = False
-                result.append(input_string[i])
-                i += 1
-            else:
-                if not inside_braces:
-                    found_match = False
-                    for old_substr, new_substr in replacement_mapping.items():
-                        if input_string[i : i + len(old_substr)] == old_substr:
-                            result.append(new_substr)
-                            i += len(old_substr)
-                            found_match = True
-                            break
-                    if not found_match:
-                        result.append(input_string[i])
-                        i += 1
-                else:
-                    result.append(input_string[i])
-                    i += 1
-
-        return "".join(result)
-
-    def __replace_keys_with_values__(self, dictionary, value_key, value):
-        try:
-            new_value = value
-            sorted_keys = sorted(list(dictionary.keys()), key=len, reverse=True)
-            ### first replace largest keys --> if smaller keys are within larger keys this should not cause a problem
-            for key in sorted_keys:
-                if key in new_value:
-                    ### replace the key in the value
-                    ### only replace things which are not between {}
-                    new_value = self.__replace_substrings_except_within_braces__(
-                        new_value, {key: "{" + key + "}"}
-                    )
-            ### evaluate the value with the values of the dictionary
-            new_value = eval(new_value.format(**dictionary))
-        except:
-            exc_type, exc_value, _ = sys.exc_info()
-            error_message = traceback.format_exception_only(exc_type, exc_value)
-            raise ValueError(
-                " ".join(
-                    [
-                        f"ERROR opt_neuron: evaluate the value {value} of parameter {value_key}"
-                    ]
-                    + error_message
-                )
-            )
-
-        return new_value
-
-    def __set_fitting_parameters__(
+    def _set_fitting_parameters(
         self,
         fitparams,
         pop=None,
@@ -707,12 +665,25 @@ class opt_neuron:
         monitors=True,
     ):
         """
-        self.pop: ANNarchy population name
-        fitparams: list with values for fitting parameters
-        self.fv_space: hyperopt variable space list
-        self.const_params: dictionary with constant variables
+        Resets the model to compilation state and sets all given parameters for the
+        population pop.
 
-        Sets all given parameters for the population self.pop.
+        Args:
+            pop (str, optional):
+                ANNarchy population name. Default: None, i.e., the tuned population
+                is used.
+
+            populations (bool, optional):
+                reset populations. Defaults to True.
+
+            projections (bool, optional):
+                reset projections. Defaults to False.
+
+            synapses (bool, optional):
+                reset synapses. Defaults to False.
+
+            monitors (bool, optional):
+                reset monitors. Defaults to True.
         """
         if pop is None:
             pop = self.pop
@@ -736,8 +707,8 @@ class opt_neuron:
         ### evaluate variables defined by a str
         for key, val in all_variables_dict.items():
             if isinstance(val, str):
-                all_variables_dict[key] = self.__replace_keys_with_values__(
-                    all_variables_dict, key, val
+                all_variables_dict[key] = ef.evaluate_expression_with_dict(
+                    val, all_variables_dict
                 )
 
         ### only set parameters of the fitted neuron model (in case target neuron model is given)
@@ -753,21 +724,41 @@ class opt_neuron:
                         param_val,
                     )
 
-    def __test_fit__(self, fitparamsDict):
+    def _test_fit(self, fitparams_dict):
         """
-        fitparamsDict: dictionary with parameters, format = as hyperopt returns fit results
+        Runs the experiment with the optimized parameters obtained with hyperopt and
+        returns the loss, the results and all individual losses of the
+        get_loss_function.
 
-        Thus, this function can be used to run the simulator function directly with fitted parameters obtained with hyperopt
+        Args:
+            fitparams_dict (dict):
+                dictionary with parameter names (keys) and their values (values)
 
-        Returns the loss computed in simulator function.
+        Returns:
+            fit (dict):
+                dictionary containing the loss, the loss variance (in case of noisy
+                models with multiple runs per loss calculation), and the status
+                (STATUS_OK for hyperopt) and the results generated by the experiment.
         """
         return self._run_simulator_with_results(
-            [fitparamsDict[name] for name in self.fitting_variables_name_list]
+            [fitparams_dict[name] for name in self.fitting_variables_name_list]
         )
 
-    def __run_with_sbi__(self, max_evals, sbi_plot_file):
+    def _run_with_sbi(self, max_evals, sbi_plot_file):
         """
-        runs the optimization with sbi
+        Runs the optimization with sbi.
+
+        Args:
+            max_evals (int):
+                number of runs the optimization method performs
+
+            sbi_plot_file (str):
+                If you use "sbi": the name of the figure which will be saved and shows
+                the posterior.
+
+        Returns:
+            best (dict):
+                dictionary containing the optimized parameters and the posterior.
         """
         ### get prior bounds
         prior_min = []
@@ -777,21 +768,7 @@ class opt_neuron:
                 prior_min.append(param_bounds[0])
                 prior_max.append(param_bounds[1])
 
-        ### obtain posterior
-        """posterior = infer(
-            self._sbi_simulation_wrapper,
-            self.prior,
-            method="SNPE",
-            num_simulations=max_evals,
-            num_workers=1,
-            custom_prior_wrapper_kwargs={
-                "lower_bound": torch.as_tensor(prior_min),
-                "upper_bound": torch.as_tensor(prior_max),
-            },
-        )
-        x_o = torch.as_tensor([0])  # data which should be obtained: loss==0
-        posterior = posterior.set_default_x(x_o)"""
-
+        ### run sbi
         simulator, prior = prepare_for_sbi(
             self._sbi_simulation_wrapper,
             self.prior,
@@ -846,25 +823,39 @@ class opt_neuron:
 
         return best
 
+    @check_types()
     def run(
-        self, max_evals, results_file_name="best.npy", sbi_plot_file="posterior.svg"
+        self,
+        max_evals: int,
+        results_file_name="best.npy",
+        sbi_plot_file="posterior.svg",
     ):
         """
-        run the optimization
+        Runs the optimization.
 
         Args:
-            max_evals: int
-                number of runs (sample: paramter -> loss) the optimization method performs
+            max_evals (int):
+                number of runs the optimization method performs
 
-            results_file_name: str, optional, default="best.npy"
+            results_file_name (str, optional):
                 name of the file which is saved. The file contains the optimized and
                 target results, the obtained parameters, the loss, and the SD of the
                 loss (in case of noisy models with multiple runs per loss calculation)
+                Default: "best.npy".
 
-            sbi_plot_file: str, optional, default="posterior.svg"
+            sbi_plot_file (str, optional):
                 If you use "sbi": the name of the figure which will be saved and shows
-                the posterior.
+                the posterior. Default: "posterior.svg".
 
+        Returns:
+            best (dict):
+                dictionary containing:
+
+                - "loss": the loss
+                - "std": the SD of the loss (in case of noisy models with multiple
+                    runs per loss calculation)
+                - "results": the results generated by the experiment
+                - "results_soll": the target results
         """
         if self.method == "hyperopt":
             ### run optimization with hyperopt and return best dict
@@ -876,11 +867,11 @@ class opt_neuron:
             )
         elif self.method == "sbi":
             ### run optimization with sbi and return best dict
-            best = self.__run_with_sbi__(max_evals, sbi_plot_file)
+            best = self._run_with_sbi(max_evals, sbi_plot_file)
         else:
             print("ERROR run; method should be 'hyperopt' or 'sbi'")
             quit()
-        fit = self.__test_fit__(best)
+        fit = self._test_fit(best)
         best["loss"] = fit["loss"]
         if self.method == "sbi":
             print("\tbest loss:", best["loss"])
@@ -892,3 +883,7 @@ class opt_neuron:
 
         ### SAVE OPTIMIZED PARAMS AND LOSS
         sf.save_data([best], ["parameter_fit/" + results_file_name])
+
+
+### old name for backward compatibility, TODO remove
+opt_neuron = OptNeuron

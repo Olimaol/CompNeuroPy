@@ -134,6 +134,15 @@ class CompNeuroExp:
             self.mon_dict: dict
             self.data: dict
 
+    def run(self) -> _ResultsCl:
+        """
+        !!! warning
+            This function has to be implemented by the user!
+        """
+        raise NotImplementedError(
+            "You have to implement a run function which runs the simulations and controlls the recordings. The run function should return the results of the experiment by calling the results function of the CompNeuroExp class."
+        )
+
 
 ### old name for backward compatibility, TODO remove
 Experiment = CompNeuroExp
