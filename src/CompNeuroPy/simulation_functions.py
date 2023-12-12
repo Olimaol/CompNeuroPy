@@ -3,12 +3,26 @@ from ANNarchy import simulate, get_population, dt
 
 def current_step(pop, t1=500, t2=500, a1=0, a2=100):
     """
-    stimulates a given population in two periods with two input currents
+    Stimulates a given population in two periods with two input currents.
 
-    pop: population name of population, which should be stimulated with input current
-         neuron model of population has to contain "I_app" as input current
-    t1/t2: times in ms before/after current step
-    a1/a2: current amplitudes before/after current step
+    Args:
+        pop (str):
+            population name of population, which should be stimulated with input current
+            neuron model of population has to contain "I_app" as input current
+        t1 (int):
+            time in ms before current step
+        t2 (int):
+            time in ms after current step
+        a1 (int):
+            current amplitude before current step
+        a2 (int):
+            current amplitude after current step
+
+    Returns:
+        return_dict (dict):
+            dictionary containing:
+
+            - duration (int): duration of the simulation
     """
 
     ### save prev input current
@@ -31,12 +45,18 @@ def current_step(pop, t1=500, t2=500, a1=0, a2=100):
 
 def current_stim(pop, t=500, a=100):
     """
-    stimulates a given population during specified period 't' with input current with amplitude 'a', after this stimulation the current is reset to initial value (before stimulation)
+    Stimulates a given population during specified period 't' with input current with
+    amplitude 'a', after this stimulation the current is reset to initial value
+    (before stimulation).
 
-    pop: population name of population, which should be stimulated with input current
-         neuron model of population has to contain "I_app" as input current
-    t: duration in ms
-    a: current amplitude
+    Args:
+        pop (str):
+            population name of population, which should be stimulated with input current
+            neuron model of population has to contain "I_app" as input current
+        t (int):
+            duration in ms
+        a (int):
+            current amplitude
     """
 
     return current_step(pop, t1=t, t2=0, a1=a, a2=0)
@@ -45,14 +65,36 @@ def current_stim(pop, t=500, a=100):
 def current_ramp(pop, a0, a1, dur, n):
     """
     Conducts multiple current stimulations with constantly changing current inputs.
-    After this current_ramp stimulation the current amplitude is reset to the initial value (before current ramp).
+    After this current_ramp stimulation the current amplitude is reset to the initial
+    value (before current ramp).
 
-    a0: initial current amplitude (of first stimulation)
-    a1: final current amplitude (of last stimulation)
-    dur: duration of the complete current ramp (all stimulaiton)
-    n:  number of stimulations
 
-    resulting duration of one stimulation = dur/n, should be divisible by the simulation time step without remainder
+    Args:
+        pop (str):
+            population name of population, which should be stimulated with input current
+            neuron model of population has to contain "I_app" as input current
+        a0 (int):
+            initial current amplitude (of first stimulation)
+        a1 (int):
+            final current amplitude (of last stimulation)
+        dur (int):
+            duration of the complete current ramp (all stimulations)
+        n (int):
+            number of stimulations
+
+    !!! warning
+        dur/n should be divisible by the simulation time step without remainder
+
+    Returns:
+        return_dict (dict):
+            dictionary containing:
+
+            - da (int): current step size
+            - dur_stim (int): duration of one stimulation
+
+    Raises:
+        AssertionError: if resulting duration of one stimulation is not divisible by the
+            simulation time step without remainder
     """
 
     assert (dur / n) / dt() % 1 == 0, (
@@ -66,25 +108,43 @@ def current_ramp(pop, a0, a1, dur, n):
     da = (a1 - a0) / (n - 1)  # for n stimulations only n-1 steps occur
     dur_stim = dur / n
     amp = a0
-    for stim_idx in range(n):
+    for _ in range(n):
         current_stim(pop, t=dur_stim, a=amp)
         amp = amp + da
 
     return {"da": da, "dur_stim": dur_stim}
 
 
-def increasing_current(pop, I1, step, nr_steps, durationI2):
+def increasing_current(pop, a0, da, nr_steps, dur_step):
     """
-    step : step size with which the external current is increased
-    I1,I2 : current amplitudes before/after the step increase
-    durationI : duration in which the external current is inserted
+    Conducts multiple current stimulations with constantly increasing current inputs.
+    After this increasing_current stimulation the current amplitude is reset to the
+    initial value (before increasing_current).
+
+    Args:
+        pop (str):
+            population name of population, which should be stimulated with input current
+            neuron model of population has to contain "I_app" as input current
+        a0 (int):
+            initial current amplitude (of first stimulation)
+        da (int):
+            current step size
+        nr_steps (int):
+            number of stimulations
+        dur_step (int):
+            duration of one stimulation
+
+    Returns:
+        return_dict (dict):
+            dictionary containing:
+
+            - current_list (list): list of current amplitudes for each stimulation
     """
     current_list = []
-    I2=I1
-    for i in range(nr_steps):
+    a = a0
+    for _ in range(nr_steps):
+        current_list.append(a)
+        current_stim(pop, t=dur_step, a=a)
+        a += da
 
-        current_list.append(I2)
-        current_stim(pop, t=durationI2, a=I2)
-        I2 = I2 + step
-        
-    return {"duration": durationI2, "current_list": current_list}
+    return {"current_list": current_list}

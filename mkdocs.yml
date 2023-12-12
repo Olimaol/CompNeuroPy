@@ -51,10 +51,10 @@ nav:
     - Model Configurator: 'main/model_configurator.md'
   - 'Built-in Objects':
     - Models: 'built_in/models.md'
-    - Simulations: 'built_in/simulations.md'
     - Neuron Models: 'built_in/neuron_models.md'
     - Synapse Models: 'built_in/synapse_models.md'
   - 'Additional Features':
+    - Simulation Functions: 'additional/simulation_functions.md'
     - Analysis Functions: 'additional/analysis_functions.md'
     - Model Functions: 'additional/model_functions.md'
     - System Functions: 'additional/system_functions.md'
