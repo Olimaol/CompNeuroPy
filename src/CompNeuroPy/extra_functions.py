@@ -81,8 +81,10 @@ def suppress_stdout():
     Suppresses the print output of a function
 
     Examples:
-        >>> with suppress_stdout():
-        >>>     print("this will not be printed")
+        ```python
+        with suppress_stdout():
+            print("this will not be printed")
+        ```
     """
     with open(os.devnull, "w") as devnull:
         old_stdout = sys.stdout
@@ -221,7 +223,7 @@ def create_cm(colors, name="my_cmap", N=256, gamma=1.0, vmin=0, vmax=1):
             The maximum value of the colormap, by default 1.
 
     Returns:
-        LinearColormap:
+        linear_colormap (_LinearColormapClass):
             The colormap object
     """
     if not np.iterable(colors):

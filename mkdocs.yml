@@ -49,12 +49,13 @@ nav:
     - Define an Experiment: 'main/define_experiment.md'
     - DBS Stimulator: 'main/dbs_stimulator.md'
     - Model Configurator: 'main/model_configurator.md'
-  - 'Built-in Objects':
-    - Models: 'built_in/models.md'
+  - 'Built-in Models':
+    - Full Models: 'built_in/models.md'
     - Neuron Models: 'built_in/neuron_models.md'
     - Synapse Models: 'built_in/synapse_models.md'
   - 'Additional Features':
     - Simulation Functions: 'additional/simulation_functions.md'
+    - Simulation Requirements: 'additional/simulation_requirements.md'
     - Analysis Functions: 'additional/analysis_functions.md'
     - Model Functions: 'additional/model_functions.md'
     - System Functions: 'additional/system_functions.md'

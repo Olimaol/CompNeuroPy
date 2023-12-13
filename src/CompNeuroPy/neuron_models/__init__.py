@@ -1,31 +1,3 @@
-from .experimental_models.fit_Corbit_nm import (
-    _Izhikevich2007_Corbit,
-    _Izhikevich2007_Corbit2,
-    _Izhikevich2007_Corbit3,
-    _Izhikevich2007_Corbit4,
-    _Izhikevich2007_Corbit5,
-    _Izhikevich2007_Corbit6,
-    _Izhikevich2007_Corbit7,
-    _Izhikevich2007_Corbit8,
-    _Izhikevich2007_Corbit9,
-    _Izhikevich2007_Corbit10,
-)
-from .experimental_models.fit_Hjorth_nm import (
-    _Izhikevich2007_Hjorth_2020_ChIN1,
-    _Izhikevich2007_Hjorth_2020_ChIN2,
-    _Izhikevich2007_Hjorth_2020_ChIN3,
-    _Izhikevich2007_Hjorth_2020_ChIN4,
-    _Izhikevich2007_Hjorth_2020_ChIN5,
-    _Izhikevich2007_Hjorth_2020_ChIN6,
-    _Izhikevich2007_Hjorth_2020_ChIN7,
-    _Izhikevich2007_Hjorth_2020_ChIN8,
-    _Izhikevich2007_Hjorth_2020_ChIN9,
-    _Izhikevich2007_Hjorth_2020_ChIN10,
-)
-from .experimental_models.fit_Bogacz_nm import (
-    _fit_Bogacz,
-    _fit_Bogacz_2,
-)
 from .final_models.H_and_H_like_nm import (
     H_and_H_Bischop,
     H_and_H_Bischop_syn,

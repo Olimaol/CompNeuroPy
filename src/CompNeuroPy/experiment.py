@@ -19,20 +19,22 @@ class CompNeuroExp:
             dict for storing optional data
 
     Examples:
-        >>> from CompNeuroPy import CompNeuroExp
-        >>> from ANNarchy import simulate
-        >>>
-        >>> class MyExperiment(CompNeuroExp):
-        >>>     def run(self):
-        >>>         # run simulations and control recordings
-        >>>         self.mon.start()
-        >>>         simulate(1000)
-        >>>         self.reset()
-        >>>         simulate(1000)
-        >>>         # store optional data
-        >>>         self.data["duration"] = 2000
-        >>>         # return results
-        >>>         return self.results()
+        ```python
+        from CompNeuroPy import CompNeuroExp
+        from ANNarchy import simulate
+
+        class MyExperiment(CompNeuroExp):
+            def run(self):
+                # run simulations and control recordings
+                self.mon.start()
+                simulate(1000)
+                self.reset()
+                simulate(1000)
+                # store optional data
+                self.data["duration"] = 2000
+                # return results
+                return self.results()
+        ```
     """
 
     def __init__(
@@ -77,8 +79,6 @@ class CompNeuroExp:
                 reset projections. Defaults to False.
             synapses (bool, optional):
                 reset synapses. Defaults to False.
-            monitors (bool, optional):
-                reset monitors. Defaults to True.
         """
         self.reset_kwargs["populations"] = populations
         self.reset_kwargs["projections"] = projections

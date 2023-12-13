@@ -2,6 +2,8 @@ from CompNeuroPy.model_functions import get_full_model
 from ANNarchy import Population, Neuron
 from CompNeuroPy import generate_model
 
+from CompNeuroPy.
+
 ### Create a neuron model (there are also predefined neuron models provided in ANNarchy and CompNeuroPy)
 poisson_neuron = Neuron(
     parameters="""

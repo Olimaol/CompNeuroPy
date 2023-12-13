@@ -83,7 +83,12 @@ class CompNeuroModel:
 
     def compile(self, compile_folder_name=None):
         """
-        compiles a created model
+        Compiles a created model.
+
+        Args:
+            compile_folder_name (str, optional):
+                Name of the folder in which the model is compiled. Default: value from
+                initialization.
         """
         ### check if this model is created
         if self.initialized_models[self.name]:
@@ -112,7 +117,14 @@ class CompNeuroModel:
 
     def create(self, do_compile=True, compile_folder_name=None):
         """
-        creates a model and optionally compiles it directly
+        Creates a model and optionally compiles it directly.
+
+        Args:
+            do_compile (bool, optional):
+                If True the model is compiled directly. Default: True.
+            compile_folder_name (str, optional):
+                Name of the folder in which the model is compiled. Default: value from
+                initialization.
         """
         if self.initialized_models[self.name]:
             print("model", self.name, "already created!")
@@ -148,8 +160,12 @@ class CompNeuroModel:
 
     def _check_if_models_created(self):
         """
-        checks which CompNeuroPy models are created
-        returns a list with all initialized CompNeuroPy models which are not created yet
+        Checks which CompNeuroPy models are created
+
+        Returns:
+            not_created_model_list (list):
+                list of names of all initialized CompNeuroPy models which are not
+                created yet
         """
         not_created_model_list = []
         for key in self.initialized_models.keys():
@@ -160,23 +176,31 @@ class CompNeuroModel:
 
     def _nr_models(self):
         """
-        returns the current number of initialized (not considering "created") CompNeuroPy models
+        Returns:
+            nr_models (int):
+                The current number of initialized (not considering "created")
+                CompNeuroPy models
         """
         return len(list(self.initialized_models.keys()))
 
     def set_param(self, compartment, parameter_name, parameter_value):
         """
-        sets the specified parameter of the specified compartment
+        Sets the specified parameter of the specified compartment.
 
-        args:
-            compartment: str
+        Args:
+            compartment (str):
                 name of model compartment
-            parameter_name: str
+            parameter_name (str):
                 name of parameter of the compartment
-            parameter_value: number or array-like with shape of compartment geometry
+            parameter_value (number or array-like with shape of compartment geometry):
                 the value or values of the parameter
+
+        Raises:
+            AssertionError: if model is not created
+            AssertionError: if compartment is neither a population nor a projection of
+                the model
         """
-        ### cach if model is not created, only if created populations and projections are available
+        ### catch if model is not created
         assert (
             self.initialized_models[self.name] == True
         ), f"ERROR set_param: model {self.name} has to be created before setting parameters!"
@@ -201,7 +225,17 @@ class CompNeuroModel:
         self._update_attribute_df(compartment, parameter_name, parameter_value)
 
     def _update_attribute_df(self, compartment, parameter_name, parameter_value):
-        """updates the attribute df for a specific paramter"""
+        """
+        updates the attribute df for a specific paramter
+
+        Args:
+            compartment (str):
+                name of model compartment
+            parameter_name (str):
+                name of parameter of the compartment
+            parameter_value (number or array-like with shape of compartment geometry):
+                the value or values of the parameter
+        """
         paramter_mask = (
             (self.attribute_df["compartment_name"] == compartment).astype(int)
             * (self.attribute_df["attribute_name"] == parameter_name).astype(int)
@@ -217,7 +251,12 @@ class CompNeuroModel:
 
     def _check_double_compartments(self):
         """
-        goes over all compartments of the model and checks if compartment is only a population or a projection
+        Goes over all compartments of the model and checks if compartment is only a
+        population or a projection and not both.
+
+        Raises:
+            AssertionError: if model is not created
+            AssertionError: if compartment is both a population and a projection
         """
         ### cach if model is not created, only if created populations and projections are available
         assert (
@@ -237,7 +276,14 @@ class CompNeuroModel:
 
     def _get_attribute_df(self):
         """
-        creates a dataframe containing the attributes of all model compartments
+        Creates a dataframe containing the attributes of all model compartments.
+
+        Returns:
+            attribute_df (pandas dataframe):
+                dataframe containing all attributes of the model compartments
+
+        Raises:
+            AssertionError: if model is not created
         """
         ### cach if model is not created, only if created populations and projections are available
         assert (

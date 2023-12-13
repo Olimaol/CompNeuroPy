@@ -32,9 +32,17 @@ from CompNeuroPy.extra_functions import (
     decision_tree,  # TODO remove
     node_cl,  # TODO remove
 )
-from CompNeuroPy.model_functions import *
-from CompNeuroPy.synapse_models import *
-from CompNeuroPy.simulation_functions import *
+from CompNeuroPy.model_functions import (
+    compile_in_folder,
+    get_full_model,
+    cnp_clear,
+)
+from CompNeuroPy.simulation_functions import (
+    current_step,
+    current_stim,
+    current_ramp,
+    increasing_current,
+)
 from CompNeuroPy.system_functions import *
 from CompNeuroPy.simulation_requirements import *
 

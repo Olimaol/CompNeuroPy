@@ -952,39 +952,43 @@ class DBSstimulator:
         projections anyway (recommended) or use the update_pointers method.
 
     Examples:
-        >>> from ANNarchy import Population, Izhikevich, compile, simulate, setup
-        >>> from CompNeuroPy import DBSstimulator
+        ```python
+        from ANNarchy import Population, Izhikevich, compile, simulate, setup
+        from CompNeuroPy import DBSstimulator
+
+        # setup ANNarchy
+        setup(dt=0.1)
+
+        # create populations
+        population1 = Population(10, neuron=Izhikevich, name="my_pop1")
+        population2 = Population(10, neuron=Izhikevich, name="my_pop2")
         >>>
-        >>> # setup ANNarchy
-        >>> setup(dt=0.1)
-        >>>
-        >>> # create populations
-        >>> population1 = Population(10, neuron=Izhikevich, name="my_pop1")
-        >>> population2 = Population(10, neuron=Izhikevich, name="my_pop2")
-        >>>
-        >>> # create DBS stimulator
-        >>> dbs = DBSstimulator(
-        >>>     stimulated_population=population1,
-        >>>     population_proportion=0.5,
-        >>>     dbs_depolarization=30,
-        >>>     auto_implement=True,
-        >>> )
-        >>>
-        >>> # update pointers to correct populations
-        >>> population1, population2 = dbs.update_pointers(pointer_list=[population1, population2])
-        >>>
-        >>> # compile network
-        >>> compile()
-        >>>
-        >>> # run simulation
-        >>> # 1000 ms without dbs
-        >>> simulate(1000)
-        >>> # 1000 ms with dbs
-        >>> dbs.on()
-        >>> simulate(1000)
-        >>> # 1000 ms without dbs
-        >>> dbs.off()
-        >>> simulate(1000)
+        # create DBS stimulator
+        dbs = DBSstimulator(
+            stimulated_population=population1,
+            population_proportion=0.5,
+            dbs_depolarization=30,
+            auto_implement=True,
+        )
+
+        # update pointers to correct populations
+        population1, population2 = dbs.update_pointers(
+            pointer_list=[population1, population2]
+        )
+
+        # compile network
+        compile()
+
+        # run simulation
+        # 1000 ms without dbs
+        simulate(1000)
+        # 1000 ms with dbs
+        dbs.on()
+        simulate(1000)
+        # 1000 ms without dbs
+        dbs.off()
+        simulate(1000)
+        ```
     """
 
     @check_types()
