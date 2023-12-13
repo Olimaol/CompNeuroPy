@@ -27,6 +27,8 @@ plugins:
               show_root_heading: true
               members_order: source
               docstring_style: google
+            selection:
+                new_path_syntax: true
 
 markdown_extensions:
   - admonition

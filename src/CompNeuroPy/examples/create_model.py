@@ -1,8 +1,7 @@
 from CompNeuroPy.model_functions import get_full_model
 from ANNarchy import Population, Neuron
-from CompNeuroPy import generate_model
-
-from CompNeuroPy.
+from CompNeuroPy import CompNeuroModel
+from CompNeuroPy.neuron_models import poisson_neuron
 
 ### Create a neuron model (there are also predefined neuron models provided in ANNarchy and CompNeuroPy)
 poisson_neuron = Neuron(
@@ -45,9 +44,9 @@ def two_poisson(params=None, a=0, b=0, c=0):
 ### Let's initialize a first model
 ### define the parameters argument of the model creation function
 params = {"s1": 1, "s2": 1, "n1": "first_poisson", "n2": "second_poisson"}
-### use generate_model to initialize the model
+### use CompNeuroModel to initialize the model
 ### this is outside of __name__=='__main__' to demonstrate that already initialized models can be imported and created in other scripts (see example/run_and_monitor_simulations.py)
-my_model = generate_model(
+my_model = CompNeuroModel(
     model_creation_function=two_poisson,  # the most important part, this function creates the model (populations, projections)
     model_kwargs={
         "params": params,
@@ -72,7 +71,7 @@ def main():
     ### again define parameters, do use unique names for populations/projections!
     params_2nd = {"s1": 1, "s2": 1, "n1": "pop1", "n2": "pop2"}
     ### this time the model is directly created but not compiled
-    my_2nd_model = generate_model(
+    my_2nd_model = CompNeuroModel(
         model_creation_function=two_poisson,
         model_kwargs={"params": params_2nd},
         do_compile=False,

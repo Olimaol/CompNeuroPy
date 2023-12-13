@@ -1,2 +1,2 @@
-::: src.CompNeuroPy.generate_simulation.CompNeuroSim
-::: src.CompNeuroPy.generate_simulation.SimInfo
+::: CompNeuroPy.generate_simulation.CompNeuroSim
+::: CompNeuroPy.generate_simulation.SimInfo

@@ -27,4 +27,4 @@ Here, two populations are created (both use built-in Izhikevich neuron model of 
 
 A more detailed example is available in the [Examples](../../examples/generate_models).
 
-::: src.CompNeuroPy.generate_model.CompNeuroModel
+::: CompNeuroPy.generate_model.CompNeuroModel

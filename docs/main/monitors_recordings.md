@@ -1,2 +1,2 @@
-::: src.CompNeuroPy.monitors.CompNeuroMonitors
-::: src.CompNeuroPy.monitors.RecordingTimes
+::: CompNeuroPy.monitors.CompNeuroMonitors
+::: CompNeuroPy.monitors.RecordingTimes

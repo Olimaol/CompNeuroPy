@@ -1,1 +1,1 @@
-::: src.CompNeuroPy.opt_neuron.OptNeuron
+::: CompNeuroPy.opt_neuron.OptNeuron

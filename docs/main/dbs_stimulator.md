@@ -1,1 +1,1 @@
-::: src.CompNeuroPy.dbs.DBSstimulator
+::: CompNeuroPy.dbs.DBSstimulator

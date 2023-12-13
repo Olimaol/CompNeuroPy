@@ -1,3 +1,3 @@
-::: src.CompNeuroPy.model_functions
+::: CompNeuroPy.model_functions
     options:
         show_root_heading: false
