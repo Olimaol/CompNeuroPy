@@ -87,7 +87,7 @@ class _BischopStrings:
             gg_Ca    = 30 : population # nS
             E_Ca     = 80 : population # mV
             
-            vt       = 30 : population # mV
+            v_t       = 30 : population # mV
             
             I_app    = 0 # pA
         """

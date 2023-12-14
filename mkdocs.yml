@@ -64,4 +64,5 @@ nav:
     - Extra Functions: 'additional/extra_functions.md'
   - 'Examples':
     - Generate Models: 'examples/generate_models.md'
+    - DBS Simulator: 'examples/dbs.md'
   - License: 'license.md'

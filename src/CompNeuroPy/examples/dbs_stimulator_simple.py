@@ -17,9 +17,9 @@ dbs = DBSstimulator(
     dbs_depolarization=30,
     auto_implement=True,
 )
+
 # update pointers to correct populations
 population1, population2 = dbs.update_pointers(pointer_list=[population1, population2])
-
 
 # compile network
 compile()

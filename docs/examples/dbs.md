@@ -1,29 +1,96 @@
-"""
+## Simple example
+### Code
+```python
+from ANNarchy import Population, Izhikevich, compile, simulate
+from CompNeuroPy import DBSstimulator
+
+from ANNarchy import setup
+from CompNeuroPy import CompNeuroMonitors, plot_recordings
+
+setup(dt=0.1)
+
+# create populations
+population1 = Population(10, neuron=Izhikevich, name="my_pop1")
+population2 = Population(10, neuron=Izhikevich, name="my_pop2")
+
+# create DBS stimulator
+dbs = DBSstimulator(
+    stimulated_population=population1,
+    population_proportion=0.5,
+    dbs_depolarization=30,
+    auto_implement=True,
+)
+
+# update pointers to correct populations
+population1, population2 = dbs.update_pointers(pointer_list=[population1, population2])
+
+# compile network
+compile()
+
+# create monitors
+monitors = CompNeuroMonitors({"pop;my_pop1": "v", "pop;my_pop2": "v"})
+monitors.start()
+
+# run simulation
+# 1000 ms without dbs
+simulate(1000)
+# 1000 ms with dbs
+dbs.on()
+simulate(1000)
+# 1000 ms without dbs
+dbs.off()
+simulate(1000)
+
+# plot recordings
+plot_recordings(
+    figname="dbs_stimulator_simple.png",
+    recordings=monitors.get_recordings(),
+    recording_times=monitors.get_recording_times(),
+    chunk=0,
+    shape=(2, 1),
+    plan=["1;my_pop1;v;matrix", "2;my_pop2;v;matrix"],
+)
+```
+
+### Console Output
+```console
+$ python dbs_stimulator_simple.py 
+ANNarchy 4.7 (4.7.3b) on linux (posix).
+Compiling ...  OK 
+generate fig dbs_stimulator_simple.png... Done
+```
+
+## Complex Example
+### Introduction
 In this example, the DBS stimulator is tested with a simple spiking and rate-coded model.
-The spiking model is based on the Izhikevich model (Izhikevich, 2007) with conductance-based synapses.
+The spiking model is based on the [Izhikevich model](https://isbnsearch.org/isbn/9780262090438) with conductance-based synapses.
 The rate-coded model is based on neurons including membrane potential and a resulting firing rate.
 The DBS stimulator is tested with different stimulation parameters.
 The resulting activity of the populations is compared to the expected activity (not part of example, included for testing purposes only).
 The resulting activity of the populations is plotted.
 The figures are saved in the DBS_spiking_figure and DBS_rate_figure folders.
 The different DBS conditions are:
-    - no stimulation
-    - orthodromic stimulation of efferents
-    - orthodromic stimulation of afferents
-    - orthodromic stimulation of efferents and afferents
-    - orthodromic stimulation of passing fibres
-    - depolarization of the stimulated population
-    - antidromic stimulation of efferents
-    - antidromic stimulation of afferents
-    - antidromic stimulation of efferents and afferents
-    - antidromic stimulation of passing fibres
-    - antidromic stimulation of passing fibres with lower strength
-    - full dbs stimulation
-    - full dbs stimulation without axon spikes (only effective for spiking model)
-    - full dbs stimulation without axon_rate_amp (only effective for rate-coded model)
 
-For rate-coded models, antidromic stimulation of projections is not available.
-"""
+- no stimulation
+- orthodromic stimulation of efferents
+- orthodromic stimulation of afferents
+- orthodromic stimulation of efferents and afferents
+- orthodromic stimulation of passing fibres
+- depolarization of the stimulated population
+- antidromic stimulation of efferents
+- antidromic stimulation of afferents
+- antidromic stimulation of efferents and afferents
+- antidromic stimulation of passing fibres
+- antidromic stimulation of passing fibres with lower strength
+- full dbs stimulation
+- full dbs stimulation without axon spikes (only effective for spiking model)
+- full dbs stimulation without axon_rate_amp (only effective for rate-coded model)
+
+!!! warning
+    For rate-coded models, antidromic stimulation of projections is not available.
+
+### Code
+```python
 from ANNarchy import (
     Neuron,
     Population,
@@ -402,7 +469,7 @@ def check_dbs_effects_spiking(
     recording_times: RecordingTimes,
 ):
     """
-    Check if the dbs effects are as expecteds.
+    Check if the dbs effects are as expected.
 
     Args:
         dbs_val_list (list[list]):
@@ -862,3 +929,264 @@ def main(plotting: bool = False):
 
 if __name__ == "__main__":
     main(plotting=True)
+```
+
+### Console Output
+```console
+$ python dbs_stimulator.py 
+ANNarchy 4.7 (4.7.3b) on linux (posix).
+
+WARNING during compile of model dbs_test_spiking_dbs: There are initialized models which are not created, thus not compiled! models:
+dbs_test_spiking
+
+generate fig DBS_spiking_figure/membrane_trial_0.png... Done
+generate fig DBS_spiking_figure/axon_spikes_0.png... 
+WARNING plot_recordings: data pop1_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop2_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop3_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop4_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop5_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop6_spiking;axon_spike does not contain any spikes in the given time interval.
+
+Done
+generate fig DBS_spiking_figure/membrane_trial_1.png... Done
+generate fig DBS_spiking_figure/axon_spikes_1.png... 
+WARNING plot_recordings: data pop1_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop2_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop4_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop5_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop6_spiking;axon_spike does not contain any spikes in the given time interval.
+
+Done
+generate fig DBS_spiking_figure/membrane_trial_2.png... Done
+generate fig DBS_spiking_figure/axon_spikes_2.png... 
+WARNING plot_recordings: data pop2_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop3_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop4_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop5_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop6_spiking;axon_spike does not contain any spikes in the given time interval.
+
+Done
+generate fig DBS_spiking_figure/membrane_trial_3.png... Done
+generate fig DBS_spiking_figure/axon_spikes_3.png... 
+WARNING plot_recordings: data pop2_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop4_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop5_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop6_spiking;axon_spike does not contain any spikes in the given time interval.
+
+Done
+generate fig DBS_spiking_figure/membrane_trial_4.png... Done
+generate fig DBS_spiking_figure/axon_spikes_4.png... 
+WARNING plot_recordings: data pop1_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop2_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop3_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop4_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop6_spiking;axon_spike does not contain any spikes in the given time interval.
+
+Done
+generate fig DBS_spiking_figure/membrane_trial_5.png... Done
+generate fig DBS_spiking_figure/axon_spikes_5.png... 
+WARNING plot_recordings: data pop1_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop2_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop3_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop4_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop5_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop6_spiking;axon_spike does not contain any spikes in the given time interval.
+
+Done
+generate fig DBS_spiking_figure/membrane_trial_6.png... Done
+generate fig DBS_spiking_figure/axon_spikes_6.png... 
+WARNING plot_recordings: data pop1_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop2_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop4_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop5_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop6_spiking;axon_spike does not contain any spikes in the given time interval.
+
+Done
+generate fig DBS_spiking_figure/membrane_trial_7.png... Done
+generate fig DBS_spiking_figure/axon_spikes_7.png... 
+WARNING plot_recordings: data pop2_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop3_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop4_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop5_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop6_spiking;axon_spike does not contain any spikes in the given time interval.
+
+Done
+generate fig DBS_spiking_figure/membrane_trial_8.png... Done
+generate fig DBS_spiking_figure/axon_spikes_8.png... 
+WARNING plot_recordings: data pop2_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop4_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop5_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop6_spiking;axon_spike does not contain any spikes in the given time interval.
+
+Done
+generate fig DBS_spiking_figure/membrane_trial_9.png... Done
+generate fig DBS_spiking_figure/axon_spikes_9.png... 
+WARNING plot_recordings: data pop1_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop2_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop3_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop4_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop6_spiking;axon_spike does not contain any spikes in the given time interval.
+
+Done
+generate fig DBS_spiking_figure/membrane_trial_10.png... Done
+generate fig DBS_spiking_figure/axon_spikes_10.png... 
+WARNING plot_recordings: data pop1_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop2_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop3_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop4_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop6_spiking;axon_spike does not contain any spikes in the given time interval.
+
+Done
+generate fig DBS_spiking_figure/membrane_trial_11.png... Done
+generate fig DBS_spiking_figure/axon_spikes_11.png... 
+WARNING plot_recordings: data pop2_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop4_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop6_spiking;axon_spike does not contain any spikes in the given time interval.
+
+Done
+generate fig DBS_spiking_figure/membrane_trial_12.png... Done
+generate fig DBS_spiking_figure/axon_spikes_12.png... 
+WARNING plot_recordings: data pop1_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop2_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop3_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop4_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop5_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop6_spiking;axon_spike does not contain any spikes in the given time interval.
+
+Done
+generate fig DBS_spiking_figure/membrane_trial_13.png... Done
+generate fig DBS_spiking_figure/axon_spikes_13.png... 
+WARNING plot_recordings: data pop2_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop4_spiking;axon_spike does not contain any spikes in the given time interval.
+
+
+WARNING plot_recordings: data pop6_spiking;axon_spike does not contain any spikes in the given time interval.
+
+Done
+
+WARNING during compile of model dbs_test_rate-coded_dbs: There are initialized models which are not created, thus not compiled! models:
+dbs_test_spiking
+dbs_test_spiking_dbs
+dbs_test_rate-coded
+
+Compiling ...  OK 
+generate fig DBS_rate_figure/activity_trial_0.png... Done
+generate fig DBS_rate_figure/activity_trial_1.png... Done
+generate fig DBS_rate_figure/activity_trial_2.png... Done
+generate fig DBS_rate_figure/activity_trial_3.png... Done
+generate fig DBS_rate_figure/activity_trial_4.png... Done
+generate fig DBS_rate_figure/activity_trial_5.png... Done
+generate fig DBS_rate_figure/activity_trial_6.png... Done
+generate fig DBS_rate_figure/activity_trial_7.png... Done
+generate fig DBS_rate_figure/activity_trial_8.png... Done
+generate fig DBS_rate_figure/activity_trial_9.png... Done
+generate fig DBS_rate_figure/activity_trial_10.png... Done
+generate fig DBS_rate_figure/activity_trial_11.png... Done
+generate fig DBS_rate_figure/activity_trial_12.png... Done
+generate fig DBS_rate_figure/activity_trial_13.png... Done
+```
