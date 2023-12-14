@@ -22,10 +22,10 @@ class IntegratorNeuron(Neuron):
         population.
 
     Parameters:
-        tau (float, parameter):
-            Time constant in ms of the neuron.
-        threshold (float, parameter):
-            Threshold for the decision g_ampa has to reach.
+        tau (float, optional):
+            Time constant in ms of the neuron. Default: 1.
+        threshold (float, optional):
+            Threshold for the decision g_ampa has to reach. Default: 1.
 
     Examples:
         ```python
@@ -65,7 +65,7 @@ class IntegratorNeuron(Neuron):
     # For reporting
     _instantiated = []
 
-    def __init__(self, tau: float, threshold: float):
+    def __init__(self, tau: float = 1, threshold: float = 1):
         # Create the arguments
         parameters = f"""
             tau = {tau} : population
@@ -113,8 +113,8 @@ class IntegratorNeuronSimple(Neuron):
         population.
 
     Parameters:
-        tau (float):
-            Time constant in ms of the neuron.
+        tau (float, optional):
+            Time constant in ms of the neuron. Default: 1.
 
     Examples:
         ```python
@@ -153,7 +153,7 @@ class IntegratorNeuronSimple(Neuron):
     # For reporting
     _instantiated = []
 
-    def __init__(self, tau: float):
+    def __init__(self, tau: float = 1):
         # Create the arguments
         parameters = f"""
             tau = {tau} : population
@@ -186,8 +186,8 @@ class PoissonNeuron(Neuron):
     is given by the parameter rates.
 
     Parameters:
-        rates (float):
-            The average firing rate of the neuron in Hz.
+        rates (float, optional):
+            The average firing rate of the neuron in Hz. Default: 0.
 
     Variables to record:
         - p
@@ -197,10 +197,10 @@ class PoissonNeuron(Neuron):
     # For reporting
     _instantiated = []
 
-    def __init__(self, rates: float):
+    def __init__(self, rates: float = 0):
         # Create the arguments
         parameters = f"""
-            tau = {rates}
+            rates = {rates}
         """
 
         super().__init__(
@@ -232,18 +232,18 @@ class PoissonNeuronUpDown(Neuron):
     given by the parameter rates and is reached with time constants tau_up and tau_down.
 
     Attributes:
-        rates (float, parameter):
-            The average firing rate of the neuron in Hz.
-        tau_up (float, parameter):
-            Time constant in ms for increasing the firing rate.
-        tau_down (float, parameter):
-            Time constant in ms for decreasing the firing rate.
+        rates (float, optional):
+            The average firing rate of the neuron in Hz. Default: 0.
+        tau_up (float, optional):
+            Time constant in ms for increasing the firing rate. Default: 1.
+        tau_down (float, optional):
+            Time constant in ms for decreasing the firing rate. Default: 1.
     """
 
     # For reporting
     _instantiated = []
 
-    def __init__(self, rates: float, tau_up: float, tau_down: float):
+    def __init__(self, rates: float = 0, tau_up: float = 1, tau_down: float = 1):
         # Create the arguments
         parameters = f"""
             rates = {rates}
@@ -284,14 +284,14 @@ class PoissonNeuronSin(Neuron):
     is given by a sinus function.
 
     Parameters:
-        amplitude (float):
-            Amplitude of the sinus function.
-        base (float):
-            Base (offset) of the sinus function.
-        frequency (float):
-            Frequency of the sinus function.
-        phase (float):
-            Phase of the sinus function.
+        amplitude (float, optional):
+            Amplitude of the sinus function. Default: 0.
+        base (float, optional):
+            Base (offset) of the sinus function. Default: 0.
+        frequency (float, optional):
+            Frequency of the sinus function. Default: 0.
+        phase (float, optional):
+            Phase of the sinus function. Default: 0.
 
     Variables to record:
         - rates
@@ -302,7 +302,13 @@ class PoissonNeuronSin(Neuron):
     # For reporting
     _instantiated = []
 
-    def __init__(self, amplitude: float, base: float, frequency: float, phase: float):
+    def __init__(
+        self,
+        amplitude: float = 0,
+        base: float = 0,
+        frequency: float = 0,
+        phase: float = 0,
+    ):
         # Create the arguments
         parameters = f"""
             amplitude = {amplitude}
@@ -332,8 +338,8 @@ class PoissonNeuronSin(Neuron):
 
 
 ### create neurons models with old names for backwards compatibility
-integrator_neuron = IntegratorNeuron(tau=1, threshold=1)
-integrator_neuron_simple = IntegratorNeuronSimple(tau=1)
-poisson_neuron = PoissonNeuron(rates=0)
-poisson_neuron_up_down = PoissonNeuronUpDown(rates=0, tau_up=1, tau_down=1)
-poisson_neuron_sin = PoissonNeuronSin(amplitude=0, base=0, frequency=0, phase=0)
+integrator_neuron = IntegratorNeuron()
+integrator_neuron_simple = IntegratorNeuronSimple()
+poisson_neuron = PoissonNeuron()
+poisson_neuron_up_down = PoissonNeuronUpDown()
+poisson_neuron_sin = PoissonNeuronSin()

@@ -25,6 +25,7 @@ dependencies = [
     "numpy",
     "typingchecker",
     "pandas",
+    "tabulate",
 ]
 
 [project.urls]
