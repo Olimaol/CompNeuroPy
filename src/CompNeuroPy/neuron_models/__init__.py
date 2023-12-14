@@ -4,6 +4,11 @@ from .final_models.H_and_H_like_nm import (
     H_and_H_Corbit,
     H_and_H_Corbit_syn,
     H_and_H_Corbit_voltage_clamp,
+    HHneuronBischop,
+    HHneuronBischopSyn,
+    HHneuronCorbit,
+    HHneuronCorbitVoltageClamp,
+    HHneuronCorbitSyn,
 )
 from .final_models.izhikevich_2003_like_nm import (
     Izhikevich2003_flexible_noisy_AMPA,
@@ -12,6 +17,12 @@ from .final_models.izhikevich_2003_like_nm import (
     Izhikevich2003_flexible_noisy_AMPA_nonlin,
     Izhikevich2003_flexible_noisy_I_nonlin,
     Izhikevich2003_flexible_noisy_I,
+    Izhikevich2003FixedNoisyAmpa,
+    Izhikevich2003NoisyAmpa,
+    Izhikevich2003NoisyAmpaNonlin,
+    Izhikevich2003NoisyAmpaOscillating,
+    Izhikevich2003NoisyBase,
+    Izhikevich2003NoisyBaseNonlin,
 )
 from .final_models.izhikevich_2007_like_nm import (
     Izhikevich2007,
@@ -24,6 +35,15 @@ from .final_models.izhikevich_2007_like_nm import (
     Izhikevich2007_record_currents,
     Izhikevich2007_syn,
     Izhikevich2007_voltage_clamp,
+    Izhikevich2007RecCur,
+    Izhikevich2007VoltageClamp,
+    Izhikevich2007Syn,
+    Izhikevich2007NoisyAmpa,
+    Izhikevich2007NoisyBase,
+    Izhikevich2007FsiNoisyAmpa,
+    Izhikevich2007CorbitFsiNoisyAmpa,
+    Izhikevich2007CorbitFsiNoisyBase,
+    Izhikevich2007NoisyAmpaOscillating,
 )
 from .final_models.artificial_nm import (
     integrator_neuron,
@@ -31,4 +51,9 @@ from .final_models.artificial_nm import (
     poisson_neuron,
     poisson_neuron_up_down,
     poisson_neuron_sin,
+    IntegratorNeuron,
+    IntegratorNeuronSimple,
+    PoissonNeuron,
+    PoissonNeuronUpDown,
+    PoissonNeuronSin,
 )
