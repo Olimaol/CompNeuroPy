@@ -4,7 +4,7 @@ from ANNarchy import Neuron
 ### based on: Izhikevich, E. M. (2003). Simple model of spiking neurons. IEEE Transactions on Neural Networks, 14(6), 1569–1572. https://doi.org/10.1109/TNN.2003.820440
 
 
-class Izhikevich2003FixedNoisyAMPA(Neuron):
+class Izhikevich2003FixedNoisyAmpa(Neuron):
     """
     TEMPLATE
 
@@ -104,7 +104,7 @@ class Izhikevich2003FixedNoisyAMPA(Neuron):
         self._instantiated.append(True)
 
 
-class Izhikevich2003NoisyAMPA(Neuron):
+class Izhikevich2003NoisyAmpa(Neuron):
     """
     TEMPLATE
 
@@ -215,7 +215,7 @@ class Izhikevich2003NoisyAMPA(Neuron):
         self._instantiated.append(True)
 
 
-class Izhikevich2003NoisyAMPAnonlin(Neuron):
+class Izhikevich2003NoisyAmpaNonlin(Neuron):
     """
     TEMPLATE
 
@@ -336,7 +336,7 @@ class Izhikevich2003NoisyAMPAnonlin(Neuron):
         self._instantiated.append(True)
 
 
-class Izhikevich2003NoisyAMPAoscillating(Neuron):
+class Izhikevich2003NoisyAmpaOscillating(Neuron):
     """
     TEMPLATE
 
@@ -709,9 +709,9 @@ class Izhikevich2003NoisyBaseNonlin(Neuron):
 
 
 ### create objects for backward compatibility
-Izhikevich2003_noisy_AMPA = Izhikevich2003FixedNoisyAMPA()
-Izhikevich2003_flexible_noisy_AMPA = Izhikevich2003NoisyAMPA()
-Izhikevich2003_flexible_noisy_AMPA_nonlin = Izhikevich2003NoisyAMPAnonlin()
-Izhikevich2003_flexible_noisy_AMPA_oscillating = Izhikevich2003NoisyAMPAoscillating()
+Izhikevich2003_noisy_AMPA = Izhikevich2003FixedNoisyAmpa()
+Izhikevich2003_flexible_noisy_AMPA = Izhikevich2003NoisyAmpa()
+Izhikevich2003_flexible_noisy_AMPA_nonlin = Izhikevich2003NoisyAmpaNonlin()
+Izhikevich2003_flexible_noisy_AMPA_oscillating = Izhikevich2003NoisyAmpaOscillating()
 Izhikevich2003_flexible_noisy_I = Izhikevich2003NoisyBase()
 Izhikevich2003_flexible_noisy_I_nonlin = Izhikevich2003NoisyBaseNonlin()

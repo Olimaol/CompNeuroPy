@@ -115,8 +115,6 @@ class IntegratorNeuronSimple(Neuron):
     Parameters:
         tau (float):
             Time constant in ms of the neuron.
-        neuron_id (int):
-            ID of the neuron.
 
     Examples:
         ```python

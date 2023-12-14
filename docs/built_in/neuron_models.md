@@ -43,19 +43,19 @@
         show_root_full_path: false
 
 ## Izhikevich (2003)-like Neurons
-::: CompNeuroPy.neuron_models.final_models.izhikevich_2003_like_nm.Izhikevich2003FixedNoisyAMPA
+::: CompNeuroPy.neuron_models.final_models.izhikevich_2003_like_nm.Izhikevich2003FixedNoisyAmpa
     options:
         heading_level: 3
         show_root_full_path: false
-::: CompNeuroPy.neuron_models.final_models.izhikevich_2003_like_nm.Izhikevich2003NoisyAMPA
+::: CompNeuroPy.neuron_models.final_models.izhikevich_2003_like_nm.Izhikevich2003NoisyAmpa
     options:
         heading_level: 3
         show_root_full_path: false
-::: CompNeuroPy.neuron_models.final_models.izhikevich_2003_like_nm.Izhikevich2003NoisyAMPAnonlin
+::: CompNeuroPy.neuron_models.final_models.izhikevich_2003_like_nm.Izhikevich2003NoisyAmpaNonlin
     options:
         heading_level: 3
         show_root_full_path: false
-::: CompNeuroPy.neuron_models.final_models.izhikevich_2003_like_nm.Izhikevich2003NoisyAMPAoscillating
+::: CompNeuroPy.neuron_models.final_models.izhikevich_2003_like_nm.Izhikevich2003NoisyAmpaOscillating
     options:
         heading_level: 3
         show_root_full_path: false
@@ -64,6 +64,48 @@
         heading_level: 3
         show_root_full_path: false
 ::: CompNeuroPy.neuron_models.final_models.izhikevich_2003_like_nm.Izhikevich2003NoisyBaseNonlin
+    options:
+        heading_level: 3
+        show_root_full_path: false
+
+## Izhikevich (2007)-like Neurons
+::: CompNeuroPy.neuron_models.final_models.izhikevich_2007_like_nm.Izhikevich2007
+    options:
+        heading_level: 3
+        show_root_full_path: false
+::: CompNeuroPy.neuron_models.final_models.izhikevich_2007_like_nm.Izhikevich2007RecCur
+    options:
+        heading_level: 3
+        show_root_full_path: false
+::: CompNeuroPy.neuron_models.final_models.izhikevich_2007_like_nm.Izhikevich2007VoltageClamp
+    options:
+        heading_level: 3
+        show_root_full_path: false
+::: CompNeuroPy.neuron_models.final_models.izhikevich_2007_like_nm.Izhikevich2007Syn
+    options:
+        heading_level: 3
+        show_root_full_path: false
+::: CompNeuroPy.neuron_models.final_models.izhikevich_2007_like_nm.Izhikevich2007NoisyAmpa
+    options:
+        heading_level: 3
+        show_root_full_path: false
+::: CompNeuroPy.neuron_models.final_models.izhikevich_2007_like_nm.Izhikevich2007NoisyBase
+    options:
+        heading_level: 3
+        show_root_full_path: false
+::: CompNeuroPy.neuron_models.final_models.izhikevich_2007_like_nm.Izhikevich2007FsiNoisyAmpa
+    options:
+        heading_level: 3
+        show_root_full_path: false
+::: CompNeuroPy.neuron_models.final_models.izhikevich_2007_like_nm.Izhikevich2007CorbitFsiNoisyAmpa
+    options:
+        heading_level: 3
+        show_root_full_path: false
+::: CompNeuroPy.neuron_models.final_models.izhikevich_2007_like_nm.Izhikevich2007CorbitFsiNoisyBase
+    options:
+        heading_level: 3
+        show_root_full_path: false
+::: CompNeuroPy.neuron_models.final_models.izhikevich_2007_like_nm.Izhikevich2007NoisyAmpaOscillating
     options:
         heading_level: 3
         show_root_full_path: false
