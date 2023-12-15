@@ -789,7 +789,7 @@ def main(plotting: bool = False):
         ### create monitors
         mon_dict = {}
         for pop_name in model.populations:
-            mon_dict[f"pop;{pop_name}"] = ["v", "spike", "axon_spike"]
+            mon_dict[pop_name] = ["v", "spike", "axon_spike"]
         mon = CompNeuroMonitors(mon_dict)
 
         ### run simulation and get data from monitors
@@ -833,7 +833,7 @@ def main(plotting: bool = False):
         ### create monitors
         mon_dict = {}
         for pop_name in model.populations:
-            mon_dict[f"pop;{pop_name}"] = ["r"]
+            mon_dict[pop_name] = ["r"]
         mon = CompNeuroMonitors(mon_dict)
 
         ### run simulation and get data from monitors

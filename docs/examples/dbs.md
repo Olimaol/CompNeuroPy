@@ -28,7 +28,7 @@ population1, population2 = dbs.update_pointers(pointer_list=[population1, popula
 compile()
 
 # create monitors
-monitors = CompNeuroMonitors({"pop;my_pop1": "v", "pop;my_pop2": "v"})
+monitors = CompNeuroMonitors({"my_pop1": "v", "my_pop2": "v"})
 monitors.start()
 
 # run simulation
@@ -856,7 +856,7 @@ def main(plotting: bool = False):
         ### create monitors
         mon_dict = {}
         for pop_name in model.populations:
-            mon_dict[f"pop;{pop_name}"] = ["v", "spike", "axon_spike"]
+            mon_dict[pop_name] = ["v", "spike", "axon_spike"]
         mon = CompNeuroMonitors(mon_dict)
 
         ### run simulation and get data from monitors
@@ -900,7 +900,7 @@ def main(plotting: bool = False):
         ### create monitors
         mon_dict = {}
         for pop_name in model.populations:
-            mon_dict[f"pop;{pop_name}"] = ["r"]
+            mon_dict[pop_name] = ["r"]
         mon = CompNeuroMonitors(mon_dict)
 
         ### run simulation and get data from monitors

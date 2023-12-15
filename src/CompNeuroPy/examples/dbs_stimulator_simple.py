@@ -25,7 +25,7 @@ population1, population2 = dbs.update_pointers(pointer_list=[population1, popula
 compile()
 
 # create monitors
-monitors = CompNeuroMonitors({"pop;my_pop1": "v", "pop;my_pop2": "v"})
+monitors = CompNeuroMonitors({"my_pop1": "v", "my_pop2": "v"})
 monitors.start()
 
 # run simulation

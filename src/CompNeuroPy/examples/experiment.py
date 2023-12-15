@@ -118,7 +118,7 @@ if __name__ == "__main__":
     model = HHmodelBischop()
 
     ### define recordings before experiment
-    monitors = CompNeuroMonitors({f"pop;{model.populations[0]}": ["v"]})
+    monitors = CompNeuroMonitors({model.populations[0]: ["v"]})
 
     ### define some simulations e.g. using CompNeuroSim
     sim_step = CompNeuroSim(

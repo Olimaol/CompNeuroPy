@@ -1,7 +1,17 @@
 from CompNeuroPy import analysis_functions as af
 from CompNeuroPy import model_functions as mf
-from ANNarchy import get_time, reset, dt, Monitor, get_population, get_projection
+from ANNarchy import (
+    get_time,
+    reset,
+    dt,
+    Monitor,
+    get_population,
+    get_projection,
+    populations,
+    projections,
+)
 import numpy as np
+from typingchecker import check_types
 
 
 class CompNeuroMonitors:
@@ -15,14 +25,14 @@ class CompNeuroMonitors:
 
         Args:
             mon_dict (dict):
-                dict with key="pop;pop_name" for populations and key="proj;proj_name"
-                for projections and val=list with variables to record.
+                dict with key="compartment_name;period" where period is optional and
+                val=list with variables to record.
         """
         self.mon = self._add_monitors(mon_dict)
         self.mon_dict = mon_dict
-        self._init_internals()
+        self._init_internals(init_call=True)
 
-    def _init_internals(self):
+    def _init_internals(self, init_call=False):
         """
         Initialize the following internal variables:
             - timings (dict):
@@ -42,20 +52,31 @@ class CompNeuroMonitors:
             - get_recordings_reset_call (bool):
                 True if get_recordings() and get_recording_times() are called within
                 reset(), False otherwise. Set to False.
+
+        Args:
+            init_call (bool, optional):
+                True if called from __init__(), False otherwise. Default: False.
         """
+        if init_call is False:
+            #### pause all ANNarchy monitors because currently paused will be set to False
+            self.pause()
+
+        ### initialize timings
         timings = {}
         for key, val in self.mon_dict.items():
             _, compartment, _ = self._unpack_mon_dict_keys(key)
             timings[compartment] = {"currently_paused": True, "start": [], "stop": []}
         self.timings = timings
 
+        ### initialize recordings and recording_times etc.
         self.recordings = []
         self.recording_times = []
         self.already_got_recordings = False
         self.already_got_recording_times = False
         self.get_recordings_reset_call = False
 
-    def start(self, compartment_list=None):
+    @check_types()
+    def start(self, compartment_list: list | None = None):
         """
         Start or resume recording of all recorded compartments in compartment_list.
 
@@ -72,7 +93,8 @@ class CompNeuroMonitors:
 
         self.timings = self._start_monitors(compartment_list, self.mon, self.timings)
 
-    def pause(self, compartment_list=None):
+    @check_types()
+    def pause(self, compartment_list: list | None = None):
         """
         Pause recording of all recorded compartments in compartment_list.
 
@@ -378,8 +400,8 @@ class CompNeuroMonitors:
 
         Args:
             mon_dict (dict):
-                dict with key="pop;pop_name" for populations and key="proj;proj_name"
-                for projections and val=list with variables to record.
+                dict with key="compartment_name;period" where period is optional and
+                val=list with variables to record.
 
         Returns:
             mon (dict):
@@ -503,8 +525,8 @@ class CompNeuroMonitors:
 
         Args:
             mon_dict (dict):
-                dict with key="pop;pop_name" for populations and key="proj;proj_name"
-                for projections and val=list with variables to record.
+                dict with key="compartment_name;period" where period is optional and
+                val=list with variables to record.
             mon (dict):
                 Dict with key="pop_name" for populations and key="proj_name" for
                 projections and val=ANNarchy monitor object.
@@ -540,10 +562,9 @@ class CompNeuroMonitors:
 
     def _unpack_mon_dict_keys(self, s: str):
         """
-        Unpacks a string of the form "compartment_type;compartment_name;period" or
-        "compartment_type;compartment_name" into its components. If period is not provided
-        it is set to dt() for compartment_type 'pop' and dt()*1000 for compartment_type
-        'proj'.
+        Unpacks a string of the form "compartment_name;period" or
+        "compartment_name" into its components. If period is not provided
+        it is set to dt() for populations and dt()*1000 for projections.
 
         Args:
             s (str):
@@ -557,20 +578,33 @@ class CompNeuroMonitors:
             period (float):
                 Period of the compartment
         """
+        ### split string
         splitted_s = s.split(";")
-        compartment_type = splitted_s[0]
-        if not (compartment_type in ["pop", "proj"]):
+
+        ### get name
+        compartment_name = splitted_s[0]
+
+        ### get type
+        pop_list = [pop.name for pop in populations()]
+        proj_list = [proj.name for proj in projections()]
+        if compartment_name in pop_list and compartment_name in proj_list:
+            ### raise error because name is in both lists
             print(
-                f"wrong compartment type in {compartment_type}\nhas to be 'pop' or 'proj'"
+                "ERROR CompNeuroMonitors._unpack_mon_dict_keys(): compartment_name is both populaiton and projection"
             )
             quit()
-        compartment_name = splitted_s[1]
-        if len(splitted_s) == 3:
-            period = float(splitted_s[2])
+        elif compartment_name in pop_list:
+            compartment_type = "pop"
+        elif compartment_name in proj_list:
+            compartment_type = "proj"
+
+        ### get period
+        if len(splitted_s) == 2:
+            period = float(splitted_s[1])
         else:
             period = {"pop": dt(), "proj": dt() * 1000}[compartment_type]
+        period = round(period / dt()) * dt()
 
-        period = int(period / dt()) * dt()
         return compartment_type, compartment_name, period
 
 

@@ -1009,9 +1009,14 @@ def _plot_recordings(
             elif len(data.shape) == 2 and isinstance(data[0, 0], list) is not True:
                 ### population: data[time,neurons]
                 for neuron in range(data.shape[1]):
+                    # in case of gaps file time gaps and add nan to data TODO also for other plots
+                    plot_x, plot_y = time_data_add_nan(
+                        time_arr_dict[part], data[:, neuron]
+                    )
+
                     plt.plot(
-                        time_arr_dict[part],
-                        data[:, neuron],
+                        plot_x,
+                        plot_y,
                         color="k",
                     )
                 plt.title(f"Variable {variable} of {part} ({data.shape[1]})")

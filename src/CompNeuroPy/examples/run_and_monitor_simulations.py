@@ -19,8 +19,8 @@ def main():
     ### from first population get values every 10 ms, from second population every 15 ms
     ### spike recordings are not affected by the period (each spike is recorded)
     monitor_dictionary = {
-        f"pop;{my_model.populations[0]};10": ["p", "spike"],
-        f"pop;{my_model.populations[1]};15": ["p", "spike"],
+        f"{my_model.populations[0]};10": ["p", "spike"],
+        f"{my_model.populations[1]};15": ["p", "spike"],
     }
     mon = CompNeuroMonitors(monitor_dictionary)
 

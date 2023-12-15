@@ -236,7 +236,7 @@ class OptNeuron:
                 if len(self.record) > 0:
                     monitors = CompNeuroMonitors(
                         {
-                            f"pop;{pop_name}": self.record
+                            pop_name: self.record
                             for pop_name in [
                                 model.populations[0],
                                 target_model.populations[0],
@@ -256,9 +256,7 @@ class OptNeuron:
                 )
                 ### create monitors
                 if len(self.record) > 0:
-                    monitors = CompNeuroMonitors(
-                        {f"pop;{model.populations[0]}": self.record}
-                    )
+                    monitors = CompNeuroMonitors({model.populations[0]: self.record})
 
         return model, target_model, monitors
 
