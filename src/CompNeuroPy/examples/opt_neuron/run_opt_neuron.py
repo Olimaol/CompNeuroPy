@@ -1,15 +1,12 @@
-from CompNeuroPy import (
-    Experiment,
-    generate_simulation,
-    current_step,
-)
-from CompNeuroPy.opt_neuron import opt_neuron
+from CompNeuroPy import CompNeuroExp, CompNeuroSim, current_step, rmse
+from CompNeuroPy.opt_neuron import OptNeuron
 import numpy as np
 from ANNarchy import Neuron, dt
 
 
-### in this example we want to fit a ANNarchy neuron model to some data (which ca be somehow obtained by simulating the neuron and recording variables)
-### for this example, we have the following extremely easy neuron model
+### in this example we want to fit an ANNarchy neuron model to some data (which ca be
+### somehow obtained by simulating the neuron and recording variables) for this example,
+### we have the following simple neuron model
 my_neuron = Neuron(
     parameters="""
         I_app = 0
@@ -22,55 +19,99 @@ my_neuron = Neuron(
 )
 
 
-### now we need some "experimetnal data" which will be provided to the opt_neuron class with the argument results_soll
-### assume we have two recordings of the rate of a single neuron from two different current step experiments
-### both have length = 1000 ms and after 500 ms the current is changed, thus also the rate
-def get_results_target():
-    target_r = np.empty((2, 1000))
-    ### first recording
-    target_r[0, :500] = 2
-    target_r[0, 500:] = 6
-    ### second recording
-    target_r[1, :500] = 2
-    target_r[1, 500:] = 10
-    time_step = 1  # ms
-    return target_r, time_step
-
-
-### define the experiment for the simulated neuron
-### we know how our experimental data was obtained, this is what we define here as an ANNarchy simulation with a single neuron
-### for the opt_neuron class we need to provide an experiment class containing the "run" function
-class my_exp(Experiment):
+### Now we need some "experimental data" which will be provided to the opt_neuron class
+### with the argument results_soll.
+def get_experimental_data():
     """
-    parent class Experiment provides
+    Return experimental data.
 
-    Attributes:
-        mon (CompNeuroMonitors):
-            CompNeuroMonitors object for recordings
+    Assume we have two recordings of the rate r of a single neuron from two different
+    current step experiments. Both have length = 1000 ms and after 500 ms the current is
+    changed, thus also the rate.
+
+    Returns:
+        return_dict (dict):
+            Dictionary with keys "results_soll" and "time_step" and values the
+            experimental data and the time step in ms with which the date was obtained,
+            respectively.
+    """
+    r_arr = np.empty((2, 1000))
+    ### first recording
+    r_arr[0, :500] = 2
+    r_arr[0, 500:] = 6
+    ### second recording
+    r_arr[1, :500] = 2
+    r_arr[1, 500:] = 10
+    ### time step in ms
+    time_step = 1
+
+    return_dict = {"results_soll": r_arr, "time_step": time_step}
+    return return_dict
+
+
+### We know how our experimental data was obtained. This is what we have to define as an
+### CompNeuroExp for the OptNeuron class.
+class my_exp(CompNeuroExp):
+    """
+    Define an experiment by inheriting from CompNeuroExp.
+
+    CompNeuroExp provides the attributes:
+
+        monitors (CompNeuroMonitors):
+            a CompNeuroMonitors object to do recordings, define during init otherwise
+            None
         data (dict):
-            dict for storing optional data
+            a dictionary for storing any optional data
 
-    Methods:
+    and the functions:
         reset():
             resets the model and monitors
         results():
-            returns a results object (with recordings and optional data from self.data)
+            returns a results object
     """
 
     def run(self, population_name):
         """
-        the function which defines the experiment
+        Do the simulations and recordings.
 
-        here recordings have to be defined and simulations have to be run
+        To use the CompNeuroExp class, you need to define a run function which
+        does the simulations and recordings. The run function should return the
+        results object which can be obtained by calling self.results().
 
-        to use the experiment for the opt_neuron class, the arguments have to be:
-            self - the experiment object
-            population_name - the name of the population which contains a single neuron. this will be automatically provided by opt_neuron
+        For using the CompNeuroExp for OptNeuron, the run function should have
+        one argument which is the name of the population which is automatically created
+        by OptNeuron, containing a single neuron of the model which should be optimized.
+
+        Args:
+            population_name (str):
+                name of the population which contains a single neuron, this will be
+                automatically provided by opt_neuron
+
+        Returns:
+            results (CompNeuroExp._ResultsCl):
+                results object with attributes:
+                    recordings (list):
+                        list of recordings
+                    recording_times (recording_times_cl):
+                        recording times object
+                    mon_dict (dict):
+                        dict of recorded variables of the monitors
+                    data (dict):
+                        dict with optional data stored during the experiment
         """
+        ### For OptNeuron you have to reset the model and monitors at the beginning of
+        ### the run function! Do not reset the parameters, otherwise the optimization
+        ### will not work!
+        self.reset(parameters=False)
 
-        ### define simulation
-        ### you don't have to use the CompNeuroPy generate_simulation object
-        sim_step = generate_simulation(
+        ### you have to start monitors within the run function, otherwise nothing will
+        ### be recorded
+        self.monitors.start()
+
+        ### do simulations and recordings using the provided CompNeuroMonitors object
+        ### (recording the varables specified during the initialization of OptNeuron
+        ### class) and e.g. the CompNeuroSim class
+        sim_step = CompNeuroSim(
             simulation_function=current_step,
             simulation_kwargs={
                 "pop": population_name,
@@ -81,72 +122,79 @@ class my_exp(Experiment):
             },
             kwargs_warning=False,
             name="test",
-            monitor_object=self.mon,
+            monitor_object=self.monitors,
         )
 
-        ### run simulation/recordings
-        self.mon.start()
+        ### run the simulation, remember setting parameters=False in the reset function!
         sim_step.run()
-        self.reset()  # if you want to reset the model, use the object's self.reset() function, monitors are automatically resetted too
+        self.reset(parameters=False)
         sim_step.run({"a2": 10})
-        ### SIMULATION END
 
-        ### optional: store anything you want in the data dict, for example infomration about the simulations
+        ### optional: store anything you want in the data dict. For example infomration
+        ### about the simulations. This is not used for the optimization but can be
+        ### retrieved after the optimization is finished
         self.data["sim"] = sim_step.simulation_info()
         self.data["population_name"] = population_name
         self.data["time_step"] = dt()
 
-        ### return results, use the object's self.results() function which automatically returns an object with "recordings", "recording_times", "monDict", and "data"
+        ### return results, use the object's self.results()
         return self.results()
 
 
-### next, the opt_neuron class needs a funciton to calculate the loss
-### this function has to contain two arguments
-### the first argument = results returned by the simulated experiment (just defined above)
-### the second argument = some experimental data/results provided directly to the opt_neuron class
-def get_loss(results_ist, results_soll):
+### Next, the opt_neuron class needs a function to calculate the loss.
+def get_loss(results_ist: CompNeuroExp._ResultsCl, results_soll):
     """
-    results_soll: any
-        contains the target data
-        provided during initialization of opt_neuron
-    results_ist: object
-        the results object generated by the experiment
+    Function which has to have the arguments results_ist and results_soll and should
+    calculates and return the loss. This structure is needed for the OptNeuron class.
+
+    Args:
+        results_ist (object):
+            the results object returned by the run function of experiment (see above)
+        results_soll (any):
+            the target data directly provided to OptNeuron during initialization
+
+    Returns:
+        loss (float or list of floats):
+            the loss
     """
-    ### get the recordings and other important things from the results_ist (results generated during the optimization using the defrined experiment from above)
+    ### get the recordings and other important things for calculating the loss from
+    ### results_ist, we do not use all available information here, but you could
     rec_ist = results_ist.recordings
-    pop_ist = results_ist.data[
-        "population_name"
-    ]  # we could also access "sim" or "time_step" but not needed for analyses
+    pop_ist = results_ist.data["population_name"]
     neuron = 0
 
-    ### get the important data for calculating the loss from the results_soll (target data directly provided to opt_neuron)
-    v_target_0 = results_soll[0]
-    v_target_1 = results_soll[1]
+    ### get the data for calculating the loss from the results_soll
+    r_target_0 = results_soll[0]
+    r_target_1 = results_soll[1]
 
-    ### get the important data for calculating the loss from the recordings
-    v_ist_0 = rec_ist[0][pop_ist + ";r"][:, neuron]
-    v_ist_1 = rec_ist[1][pop_ist + ";r"][:, neuron]
+    ### get the data for calculating the loss from the recordings
+    r_ist_0 = rec_ist[0][f"{pop_ist};r"][:, neuron]
+    r_ist_1 = rec_ist[1][f"{pop_ist};r"][:, neuron]
 
-    ### calculate the loss
-    rmse1 = np.sqrt(np.mean((v_target_0 - v_ist_0) ** 2))
-    rmse2 = np.sqrt(np.mean((v_target_1 - v_ist_1) ** 2))
+    ### calculate the loss, e.g. the root mean squared error
+    rmse1 = rmse(r_target_0, r_ist_0)
+    rmse2 = rmse(r_target_1, r_ist_1)
 
-    ### return the loss, one can return a singel value or a list of values (which will be summed)
+    ### return the loss, one can return a singel value or a list of values which will
+    ### be summed during the optimization
     return [rmse1, rmse2]
 
 
-### now we need to define which variables should be optimized and between which bounds (min and max values)
+### now we need to define which variables should be optimized and between which bounds
 variables_bounds = {"a": [-10, 10], "b": [-10, 10]}
 
 
 def main():
-    ### run optimization
-    opt = opt_neuron(
+    ### get experimental data
+    experimental_data = get_experimental_data()
+
+    ### intitialize optimization
+    opt = OptNeuron(
         experiment=my_exp,
         get_loss_function=get_loss,
         variables_bounds=variables_bounds,
-        results_soll=get_results_target()[0],
-        time_step=get_results_target()[1],
+        results_soll=experimental_data["results_soll"],
+        time_step=experimental_data["time_step"],
         compile_folder_name="annarchy_opt_neuron_example",
         neuron_model=my_neuron,
         method="hyperopt",
@@ -154,15 +202,11 @@ def main():
     )
 
     ### run the optimization, define how often the experiment should be repeated
-    opt.run(max_evals=1000, results_file_name="best.npy")
+    fit = opt.run(max_evals=1000, results_file_name="best.npy")
 
-    ### we should get around a=0.8 and b=2
-    print("\nresults:\n")
-    for key, val in opt.results.items():
-        if key in ["std", "results", "results_soll"]:
-            print(key, "\n")
-        else:
-            print(key, val, "\n")
+    ### print optimized parameters, we should get around a=0.8 and b=2
+    print("a", fit["a"])
+    print("b", fit["b"])
 
 
 if __name__ == "__main__":

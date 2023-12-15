@@ -1,4 +1,5 @@
 from CompNeuroPy import analysis_functions as af
+from CompNeuroPy import model_functions as mf
 from ANNarchy import get_time, reset, dt, Monitor, get_population, get_projection
 import numpy as np
 
@@ -95,6 +96,7 @@ class CompNeuroMonitors:
         synapses=False,
         monitors=True,
         model=True,
+        parameters=True,
         net_id=0,
     ):
         """
@@ -113,10 +115,14 @@ class CompNeuroMonitors:
                 If True, reset ANNarchy monitors. Default: True.
             model (bool, optional):
                 If True, reset model. Default: True.
+            parameters (bool, optional):
+                If True, reset the parameters of popilations and projections. Default:
+                True.
             net_id (int, optional):
                 Id of the network to reset. Default: 0.
         """
-        ### TODO rename this function to new_chunk() or something like that and let recordings and recording times be returned
+        ### TODO rename this function to new_chunk() or something like that and let
+        ### recordings and recording times be returned
         self.get_recordings_reset_call = True
         self.get_recordings()
         self.get_recording_times()
@@ -127,7 +133,9 @@ class CompNeuroMonitors:
         self.already_got_recording_times = (
             False  # after reset one can still update recording_times
         )
-        ### reset timings, after reset, add a zero to start if the monitor is still running (this is not resetted by reset())
+
+        ### reset timings, after reset, add a zero to start if the monitor is still
+        ### running (this is not resetted by reset())
         ### if the model was not resetted --> do add current time instead of zero
         for key in self.timings.keys():
             self.timings[key]["start"] = []
@@ -140,8 +148,16 @@ class CompNeuroMonitors:
                         np.round(get_time(), af.get_number_of_decimals(dt()))
                     )
 
+        ### reset model
         if model:
+            if parameters is False:
+                ### if parameters=False, get parameters before reset and set them after
+                ### reset
+                parameters_dict = mf._get_all_parameters()
             reset(populations, projections, synapses, monitors, net_id=net_id)
+            if parameters is False:
+                ### if parameters=False, set parameters after reset
+                mf._set_all_parameters(parameters_dict)
 
     def current_chunk(self):
         """

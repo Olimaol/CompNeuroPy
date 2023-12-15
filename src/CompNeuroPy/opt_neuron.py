@@ -1,4 +1,4 @@
-from ANNarchy import setup, Population, get_population, reset, Neuron, clear
+from ANNarchy import setup, Population, get_population, Neuron, clear
 import numpy as np
 import traceback
 from CompNeuroPy import system_functions as sf
@@ -136,7 +136,6 @@ class OptNeuron:
             self.opt_created.append(1)
             self.record = record
             self.results_soll = results_soll
-            self.experiment = experiment
             self.variables_bounds = variables_bounds
             self.fitting_variables_name_list = self._get_fitting_variables_name_list()
             self.method = method
@@ -163,8 +162,8 @@ class OptNeuron:
             setup(dt=time_step)
 
             ### create and compile model
-            ### if neuron models and target neuron model --> create both models then test,
-            ### then clear and create only model for neuron model
+            ### if neuron models and target neuron model --> create both models then
+            ### test, then clear and create only model for neuron model
             model, target_model, monitors = self._generate_models()
 
             self.pop = model.populations[0]
@@ -172,7 +171,8 @@ class OptNeuron:
                 self.pop_target = target_model.populations[0]
             else:
                 self.pop_target = None
-            self.monitors = monitors
+            ### create experiment with current monitors
+            self.experiment = experiment(monitors=monitors)
 
             ### check variables of model
             self._test_variables()
@@ -182,10 +182,12 @@ class OptNeuron:
             self._check_get_loss_function()
 
             ### after checking neuron models, experiment, get_loss
-            ### if two models exist --> clear ANNarchy and create/compile again only standard model
+            ### if two models exist --> clear ANNarchy and create/compile again only
+            ### standard model, thus recreate also monitors and experiment
             clear()
             model, _, monitors = self._generate_models()
             self.monitors = monitors
+            self.experiment = experiment(monitors=monitors)
 
     def _generate_models(self):
         """
@@ -625,19 +627,13 @@ class OptNeuron:
         if pop is None:
             pop = self.pop
 
-        ### reset model and set parameters which should not be optimized and parameters which should be optimized
+        ### set parameters which should not be optimized and parameters which should be
+        ### optimized before the experiment, they should not be resetted by the
+        ### experiment!
         self._set_fitting_parameters(fitparams, pop=pop)
 
         ### conduct loaded experiment
-        reset_function = self._set_fitting_parameters
-        reset_kwargs = {"fitparams": fitparams, "pop": pop}
-
-        exp_obj = self.experiment(
-            monitors=self.monitors,
-            reset_function=reset_function,
-            reset_kwargs=reset_kwargs,
-        )
-        results = exp_obj.run(pop)
+        results = self.experiment.run(pop)
 
         if self.results_soll is not None:
             ### compute loss
@@ -659,42 +655,17 @@ class OptNeuron:
         self,
         fitparams,
         pop=None,
-        populations=True,
-        projections=False,
-        synapses=False,
-        monitors=True,
     ):
         """
-        Resets the model to compilation state and sets all given parameters for the
-        population pop.
+        Sets all given parameters for the population pop.
 
         Args:
             pop (str, optional):
                 ANNarchy population name. Default: None, i.e., the tuned population
                 is used.
-
-            populations (bool, optional):
-                reset populations. Defaults to True.
-
-            projections (bool, optional):
-                reset projections. Defaults to False.
-
-            synapses (bool, optional):
-                reset synapses. Defaults to False.
-
-            monitors (bool, optional):
-                reset monitors. Defaults to True.
         """
         if pop is None:
             pop = self.pop
-
-        ### reset model to compilation state
-        reset(
-            populations=populations,
-            projections=projections,
-            synapses=synapses,
-            monitors=monitors,
-        )
 
         ### get all variables dict (combine fitting variables and const variables)
         all_variables_dict = self.const_params.copy()
@@ -849,9 +820,10 @@ class OptNeuron:
 
         Returns:
             best (dict):
-                dictionary containing:
+                dictionary containing the optimized parameters (as keys) and:
 
                 - "loss": the loss
+                - "all_loss": the individual losses of the get_loss_function
                 - "std": the SD of the loss (in case of noisy models with multiple
                     runs per loss calculation)
                 - "results": the results generated by the experiment
@@ -882,7 +854,9 @@ class OptNeuron:
         self.results = best
 
         ### SAVE OPTIMIZED PARAMS AND LOSS
-        sf.save_data([best], ["parameter_fit/" + results_file_name])
+        sf.save_variables([best], [results_file_name], "parameter_fit")
+
+        return best
 
 
 ### old name for backward compatibility, TODO remove

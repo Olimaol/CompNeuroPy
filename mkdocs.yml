@@ -16,7 +16,9 @@ theme:
 copyright: Copyright &copy; Oliver Maith
 repo_url: https://github.com/Olimaol/CompNeuroPy
 
-
+extra_css:
+  - stylesheets/extra.css
+  
 plugins:
   - search
   - mkdocstrings:
@@ -48,7 +50,7 @@ nav:
     - Generate Simulations: 'main/generate_simulations.md'
     - Monitors / Recordings: 'main/monitors_recordings.md'
     - Optimize a neuron model: 'main/optimize_neuron.md'
-    - Define an Experiment: 'main/define_experiment.md'
+    - Define Experiments: 'main/define_experiment.md'
     - DBS Stimulator: 'main/dbs_stimulator.md'
     - Model Configurator: 'main/model_configurator.md'
   - 'Built-in Models':
@@ -64,5 +66,6 @@ nav:
     - Extra Functions: 'additional/extra_functions.md'
   - 'Examples':
     - Generate Models: 'examples/generate_models.md'
+    - Define Experiments: 'examples/experiment.md'
     - DBS Simulator: 'examples/dbs.md'
   - License: 'license.md'

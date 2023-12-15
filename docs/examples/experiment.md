@@ -1,3 +1,5 @@
+## Code
+```python
 from CompNeuroPy import (
     CompNeuroExp,
     CompNeuroSim,
@@ -201,3 +203,30 @@ if __name__ == "__main__":
     print("    mon_dict:")
     for key, value in results_run2.mon_dict.items():
         print(f"        {key}:", value)
+```
+
+## Console Output
+```console
+$ python experiment.py 
+ANNarchy 4.7 (4.7.3b) on linux (posix).
+generate fig example_experiment_sim_step.png... Done
+generate fig example_experiment_sim_ramp.png... Done
+generate fig example_experiment2_sim_step.png... Done
+generate fig example_experiment2_sim_ramp.png... Done
+
+run1:
+    data:
+        sim: [<CompNeuroPy.generate_simulation.SimInfo object at 0x7f0b57652fb0>, <CompNeuroPy.generate_simulation.SimInfo object at 0x7f0b57652f80>]
+        population_name: HH_Bischop
+        time_step: 0.01
+    mon_dict:
+        pop;HH_Bischop: ['v']
+
+run2:
+    data:
+        sim: [<CompNeuroPy.generate_simulation.SimInfo object at 0x7f0b57652fb0>, <CompNeuroPy.generate_simulation.SimInfo object at 0x7f0b57652f80>]
+        population_name: HH_Bischop
+        time_step: 0.01
+    mon_dict:
+        pop;HH_Bischop: ['v']
+```

@@ -68,3 +68,44 @@ def cnp_clear(functions=True, neurons=True, synapses=True, constants=True):
         CompNeuroModel.initialized_models[model_name] = False
     for model_name in CompNeuroModel.compiled_models.keys():
         CompNeuroModel.compiled_models[model_name] = False
+
+
+def _get_all_parameters():
+    """
+    Get the parameters of all populations and projections.
+
+    Returns:
+        parameters (dict of dicts):
+            Dictionary with keys "populations" and "projections" and values dicts of
+            parameters of populations and projections, respectively.
+    """
+    parameters = {
+        "populations": {},
+        "projections": {},
+    }
+    for pop in populations():
+        parameters["populations"][pop.name] = {
+            param_name: getattr(pop, param_name) for param_name in pop.parameters
+        }
+    for proj in projections():
+        parameters["projections"][proj.name] = {
+            param_name: getattr(proj, param_name) for param_name in proj.parameters
+        }
+    return parameters
+
+
+def _set_all_parameters(parameters):
+    """
+    Set the parameters of all populations and projections.
+
+    Args:
+        parameters (dict of dicts):
+            Dictionary with keys "populations" and "projections" and values dicts of
+            parameters of populations and projections, respectively.
+    """
+    for pop in populations():
+        for param_name, param_value in parameters["populations"][pop.name].items():
+            setattr(pop, param_name, param_value)
+    for proj in projections():
+        for param_name, param_value in parameters["projections"][proj.name].items():
+            setattr(proj, param_name, param_value)
