@@ -206,7 +206,7 @@ class CompNeuroMonitors:
             ### if currently no recordings are active return None
             return None
 
-    def get_recordings(self):
+    def get_recordings(self) -> list[dict]:
         """
         Get recordings of all recorded compartments.
 

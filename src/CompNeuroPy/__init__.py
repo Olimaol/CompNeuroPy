@@ -15,6 +15,7 @@ from CompNeuroPy.analysis_functions import (
     rsse,
     get_minimum,
     get_maximum,
+    PlotRecordings,
 )
 from CompNeuroPy.extra_functions import (
     print_df,

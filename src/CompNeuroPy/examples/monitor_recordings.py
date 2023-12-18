@@ -46,11 +46,16 @@ new recordings (1 chunk) should be obtained
 
 """
 from ANNarchy import Population, Izhikevich, setup, simulate, get_population, compile
-from CompNeuroPy import generate_model, CompNeuroMonitors, create_dir, plot_recordings
+from CompNeuroPy import (
+    generate_model,
+    CompNeuroMonitors,
+    create_dir,
+    plot_recordings,
+    PlotRecordings,
+)
 from CompNeuroPy.neuron_models import Izhikevich2007
 import pylab as plt
 import numpy as np
-from tabulate import tabulate
 
 
 def main():
@@ -206,6 +211,16 @@ def main():
                             print(
                                 f"\t\t\t\t\tperiod {period}: {all_times[chunk][pop_name][time_point][unit][period]}"
                             )
+
+    ### test new plot recoprdings
+    PlotRecordings(
+        figname=f"monitor_recordings_1_chunk{chunk}.png",
+        recordings=recordings1,
+        recording_times=recording_times1,
+        chunk=chunk,
+        shape=(2, 2),
+        plan=["1;my_pop1;v;line", "3;my_pop1;spike;raster", "2;my_pop2;v;line"],
+    )
 
     ### plot recordings 1 consisting of 3 chunks
     for chunk in range(len(recordings1)):

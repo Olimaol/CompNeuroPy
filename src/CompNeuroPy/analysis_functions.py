@@ -6,8 +6,10 @@ from ANNarchy import raster_plot, dt
 import warnings
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy import extra_functions as ef
+from CompNeuroPy.monitors import CompNeuroMonitors, RecordingTimes
 from scipy.interpolate import interp1d
 from multiprocessing import Process
+from typingchecker import check_types
 
 
 def my_raster_plot(spikes: dict):
@@ -721,8 +723,16 @@ def get_pop_rate(
     return (np.arange(t_start, t_start + duration, dt), ret)
 
 
+@check_types()
 def plot_recordings(
-    figname, recordings, recording_times, chunk, shape, plan, time_lim=[], dpi=300
+    figname: str,
+    recordings: list,
+    recording_times: RecordingTimes,
+    chunk: int,
+    shape: tuple,
+    plan: list[str],
+    time_lim: None | tuple = None,
+    dpi: int = 300,
 ):
     """
     Plots the recordings of a single chunk from recordings. Plotted variables are
@@ -750,10 +760,10 @@ def plot_recordings(
                     - for spike data: raster, mean, hybrid
                     - for other data: line, mean, matrix
                     - only for projection data: matrix_mean
-        time_lim (list, optional):
+        time_lim (tuple, optional):
             Defines the x-axis for all subplots. The list contains two
             numbers: start and end time in ms. The times have to be
-            within the chunk. Default: time lims of chunk
+            within the chunk. Default: None, i.e., time lims of chunk
         dpi (int, optional):
             The dpi of the saved figure. Default: 300
     """
@@ -768,7 +778,14 @@ def plot_recordings(
 
 
 def _plot_recordings(
-    figname, recordings, recording_times, chunk, shape, plan, time_lim=[], dpi=300
+    figname: str,
+    recordings: list,
+    recording_times: RecordingTimes,
+    chunk: int,
+    shape: tuple,
+    plan: list[str],
+    time_lim: None | tuple,
+    dpi: int,
 ):
     """
     Plots the recordings for the given recording_times specified in plan.
@@ -795,12 +812,12 @@ def _plot_recordings(
                     - for spike data: raster, mean, hybrid
                     - for other data: line, mean, matrix
                     - only for projection data: matrix_mean
-        time_lim (list, optional):
+        time_lim (tuple):
             Defines the x-axis for all subplots. The list contains two
             numbers: start and end time in ms. The times have to be
-            within the chunk. Default: time lims of chunk
-        dpi (int, optional):
-            The dpi of the saved figure. Default: 300
+            within the chunk.
+        dpi (int):
+            The dpi of the saved figure.
     """
     print(f"generate fig {figname}", end="... ", flush=True)
     recordings = recordings[chunk]
@@ -1756,3 +1773,166 @@ def get_maximum(input_data):
     else:
         # If the input is a single value, return it as the maximum
         return input_data
+
+
+# plan = {
+#     "position": [1, 2, 3],
+#     "compartment": ["pop1", "pop2", "pop3"],
+#     "variable": ["v", "v", "v"],
+#     "format": ["line", "line", "line"],
+#     "color": ["k", "k", "k"],
+# }
+
+
+class PlotRecordings:
+    """
+    Plot recordings from CompNeuroMontors.
+    """
+
+    @check_types()
+    def __init__(
+        self,
+        figname: str,
+        recordings: list[dict],
+        recording_times: RecordingTimes,
+        shape: tuple,
+        plan: dict,
+        chunk: int = 0,
+        time_lim: None | tuple = None,
+        dpi: int = 300,
+    ) -> None:
+        """
+        Args:
+            figname (str):
+                The name of the figure to be saved.
+            recordings (list):
+                A recordings list obtained from CompNeuroMonitors.
+            recording_times (RecordingTimes):
+                The RecordingTimes object containing the recording times obtained from
+                CompNeuroMonitors.
+            shape (tuple):
+                The shape of the figure.
+            plan (dict):
+                Defines which recordings are plotted in which subplot and how. The plan
+                has to contain the following keys: "position", "compartment",
+                "variable", "format". The values of the keys have to be lists of the
+                same length. The values of the key "position" have to be integers
+                between 1 and the number of subplots (defined by shape). The values of
+                the key "compartment" have to be the names of the model compartments as
+                strings. The values of the key "variable" have to be strings containing
+                the names of the recorded variables or equations using the recorded
+                variables. The values of the key "format" have to be strings defining
+                how the recordings are plotted. The following formats are available for
+                spike recordings: "raster", "mean", "hybrid". The following formats are
+                available for other recordings: "line", "mean", "matrix", "matrix_mean".
+            chunk (int, optional):
+                The chunk of the recordings to be plotted. Default: 0.
+            time_lim (tuple, optional):
+                Defines the x-axis for all subplots. The list contains two
+                numbers: start and end time in ms. The times have to be
+                within the chunk. Default: None, i.e., the whole chunk is plotted.
+            dpi (int, optional):
+                The dpi of the saved figure. Default: 300.
+        """
+        ### set attributes
+        self.figname = figname
+        self.recordings = recordings
+        self.recording_times = recording_times
+        self.shape = shape
+        self.plan = plan
+        self.chunk = chunk
+        self.time_lim = time_lim
+        self.dpi = dpi
+
+        ### get available compartments (from recordings)
+        self.compartment_list = self.get_compartments()
+
+        ### check plan keys and values
+        self.check_plan(plan=plan, shape=shape)
+
+    def get_compartments(self, monitors: CompNeuroMonitors):
+        """
+        Get available compartments from recordings.
+        """
+        for recordings_key in self.recordings.keys():
+            print(recordings_key)
+        quit()
+
+
+    def check_plan(self, plan: dict, shape: tuple):
+        """
+        Check if plan is valid.
+        
+        Args:
+            plan (dict):
+                Defines which recordings are plotted in which subplot and how. The plan
+                has to contain the following keys: "position", "compartment",
+                "variable", "format". The values of the keys have to be lists of the
+                same length. The values of the key "position" have to be integers
+                between 1 and the number of subplots (defined by shape). The values of
+                the key "compartment" have to be the names of the model compartments as
+                strings. The values of the key "variable" have to be strings containing
+                the names of the recorded variables or equations using the recorded
+                variables. The values of the key "format" have to be strings defining
+                how the recordings are plotted. The following formats are available for
+                spike recordings: "raster", "mean", "hybrid". The following formats are
+                available for other recordings: "line", "mean", "matrix", "matrix_mean".
+            shape (tuple):
+                The shape of the figure.
+        """
+            
+            ### check if plan keys are valid
+            valid_keys = ["position", "compartment", "variable", "format"]
+            for key in plan.keys():
+                if key not in valid_keys:
+                    print(
+                        f"\nERROR PlotRecordings: plan key {key} is not valid.\n"
+                        f"Valid keys are {valid_keys}.\n"
+                    )
+                    quit()
+    
+            ### check if plan values are valid (have same length)
+            for key in plan.keys():
+                if len(plan[key]) != len(plan["position"]):
+                    print(
+                        f"\nERROR PlotRecordings: plan value of key '{key}' has not the same length as plan value of key 'position'.\n"
+                    )
+                    quit()
+    
+            ### check if plan positions are valid
+            ### check if min and max are valid
+            if get_minimum(plan["position"]) < 1:
+                print(
+                    f"\nERROR PlotRecordings: plan position has to be >= 1.\n"
+                    f"plan position: {plan['position']}\n"
+                )
+                quit()
+            if get_maximum(plan["position"]) > shape[0] * shape[1]:
+                print(
+                    f"\nERROR PlotRecordings: plan position has to be <= shape[0] * shape[1].\n"
+                    f"plan position: {plan['position']}\n"
+                    f"shape: {shape}\n"
+                )
+                quit()
+            ### check if plan positions are unique
+            if len(np.unique(plan["position"])) != len(plan["position"]):
+                print(
+                    f"\nERROR PlotRecordings: plan position has to be unique.\n"
+                    f"plan position: {plan['position']}\n"
+                )
+                quit()
+    
+            ### check if plan compartments are valid
+            for compartment in plan["compartment"]:
+                if compartment not in self.monitors.recordings.keys():
+                    print(
+                        f"\nERROR PlotRecordings: plan compartment {compartment} is not valid.\n"
+                        f"Valid compartments are {self.monitors.recordings.keys()}.\n"
+                    )
+                    quit()
+    
+            ### check if plan variables are valid
+            for variable in plan["variable"]:
+                if variable not in self.monitors.recordings.keys():
+                    print(
+                        f"\nERROR PlotRecordings:
