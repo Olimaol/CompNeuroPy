@@ -1720,7 +1720,7 @@ def rsse(a, b):
     return np.sqrt(np.sum((a - b) ** 2))
 
 
-def get_minimum(input_data):
+def get_minimum(input_data: list | np.ndarray | tuple | float):
     """
     Returns the minimum of the input data.
 
@@ -1741,13 +1741,13 @@ def get_minimum(input_data):
                 sublist if isinstance(sublist, (list, np.ndarray, tuple)) else [sublist]
             )
         ]
-        return min(flattened_list)
+        return float(min(flattened_list))
     else:
         # If the input is a single value, return it as the minimum
-        return input_data
+        return float(input_data)
 
 
-def get_maximum(input_data):
+def get_maximum(input_data: list | np.ndarray | tuple | float):
     """
     Returns the maximum of the input data.
 
@@ -1769,10 +1769,10 @@ def get_maximum(input_data):
                 sublist if isinstance(sublist, (list, np.ndarray, tuple)) else [sublist]
             )
         ]
-        return max(flattened_list)
+        return float(max(flattened_list))
     else:
         # If the input is a single value, return it as the maximum
-        return input_data
+        return float(input_data)
 
 
 # plan = {
@@ -1786,7 +1786,7 @@ def get_maximum(input_data):
 
 class PlotRecordings:
     """
-    Plot recordings from CompNeuroMontors.
+    Plot recordings from CompNeuroMonitors.
     """
 
     @check_types()
@@ -1795,10 +1795,10 @@ class PlotRecordings:
         figname: str,
         recordings: list[dict],
         recording_times: RecordingTimes,
-        shape: tuple,
+        shape: tuple[int, int],
         plan: dict,
         chunk: int = 0,
-        time_lim: None | tuple = None,
+        time_lim: None | tuple[int] = None,
         dpi: int = 300,
     ) -> None:
         """
@@ -1811,7 +1811,7 @@ class PlotRecordings:
                 The RecordingTimes object containing the recording times obtained from
                 CompNeuroMonitors.
             shape (tuple):
-                The shape of the figure.
+                The shape of the figure. (number of rows, number of columns)
             plan (dict):
                 Defines which recordings are plotted in which subplot and how. The plan
                 has to contain the following keys: "position", "compartment",
@@ -1844,95 +1844,163 @@ class PlotRecordings:
         self.time_lim = time_lim
         self.dpi = dpi
 
-        ### get available compartments (from recordings)
-        self.compartment_list = self.get_compartments()
+        ### get available compartments (from recordings) and recordings for each
+        ### compartment
+        (
+            self.compartment_list,
+            self.compartment_recordings_dict,
+        ) = self._get_compartment_recordings()
 
         ### check plan keys and values
-        self.check_plan(plan=plan, shape=shape)
+        self._check_plan()
 
-    def get_compartments(self, monitors: CompNeuroMonitors):
+    def _get_compartment_recordings(self) -> list[str]:
         """
-        Get available compartments from recordings.
+        Get available compartment names from recordings.
+        Get recordings for each compartment.
+
+        Returns:
+            compartment_list (list):
+                List of compartment names.
+            compartment_recordings_dict (dict):
+                Dictionary with compartment names as keys and lists of recordings as
+                values.
         """
-        for recordings_key in self.recordings.keys():
-            print(recordings_key)
-        quit()
+        compartment_list = []
+        compartment_recordings_dict = {}
+        for recordings_key in self.recordings[self.chunk].keys():
+            if ";" not in recordings_key:
+                continue
 
+            ### get compartment
+            compartment, recorded_variable = recordings_key.split(";")
+            if compartment not in compartment_list:
+                compartment_list.append(compartment)
+                compartment_recordings_dict[compartment] = []
 
-    def check_plan(self, plan: dict, shape: tuple):
+            ### get recordings for compartment
+            if recorded_variable != "period" and recorded_variable != "parameter_dict":
+                compartment_recordings_dict[compartment].append(recorded_variable)
+
+        return compartment_list, compartment_recordings_dict
+
+    def _check_plan(self):
         """
         Check if plan is valid.
-        
-        Args:
-            plan (dict):
-                Defines which recordings are plotted in which subplot and how. The plan
-                has to contain the following keys: "position", "compartment",
-                "variable", "format". The values of the keys have to be lists of the
-                same length. The values of the key "position" have to be integers
-                between 1 and the number of subplots (defined by shape). The values of
-                the key "compartment" have to be the names of the model compartments as
-                strings. The values of the key "variable" have to be strings containing
-                the names of the recorded variables or equations using the recorded
-                variables. The values of the key "format" have to be strings defining
-                how the recordings are plotted. The following formats are available for
-                spike recordings: "raster", "mean", "hybrid". The following formats are
-                available for other recordings: "line", "mean", "matrix", "matrix_mean".
-            shape (tuple):
-                The shape of the figure.
         """
-            
-            ### check if plan keys are valid
-            valid_keys = ["position", "compartment", "variable", "format"]
-            for key in plan.keys():
-                if key not in valid_keys:
-                    print(
-                        f"\nERROR PlotRecordings: plan key {key} is not valid.\n"
-                        f"Valid keys are {valid_keys}.\n"
-                    )
-                    quit()
-    
-            ### check if plan values are valid (have same length)
-            for key in plan.keys():
-                if len(plan[key]) != len(plan["position"]):
-                    print(
-                        f"\nERROR PlotRecordings: plan value of key '{key}' has not the same length as plan value of key 'position'.\n"
-                    )
-                    quit()
-    
-            ### check if plan positions are valid
-            ### check if min and max are valid
-            if get_minimum(plan["position"]) < 1:
+
+        ### check if plan keys are valid
+        valid_keys = ["position", "compartment", "variable", "format"]
+        for key in self.plan.keys():
+            if key not in valid_keys:
                 print(
-                    f"\nERROR PlotRecordings: plan position has to be >= 1.\n"
-                    f"plan position: {plan['position']}\n"
+                    f"\nERROR PlotRecordings: plan key {key} is not valid.\n"
+                    f"Valid keys are {valid_keys}.\n"
                 )
                 quit()
-            if get_maximum(plan["position"]) > shape[0] * shape[1]:
+
+        ### check if plan values are valid (have same length)
+        for key in self.plan.keys():
+            if len(self.plan[key]) != len(self.plan["position"]):
                 print(
-                    f"\nERROR PlotRecordings: plan position has to be <= shape[0] * shape[1].\n"
-                    f"plan position: {plan['position']}\n"
-                    f"shape: {shape}\n"
+                    f"\nERROR PlotRecordings: plan value of key '{key}' has not the same length as plan value of key 'position'.\n"
                 )
                 quit()
-            ### check if plan positions are unique
-            if len(np.unique(plan["position"])) != len(plan["position"]):
+
+        ### check if plan positions are valid
+        ### check if min and max are valid
+        if get_minimum(self.plan["position"]) < 1:
+            print(
+                f"\nERROR PlotRecordings: plan position has to be >= 1.\n"
+                f"plan position: {self.plan['position']}\n"
+            )
+            quit()
+        if get_maximum(self.plan["position"]) > self.shape[0] * self.shape[1]:
+            print(
+                f"\nERROR PlotRecordings: plan position has to be <= shape[0] * shape[1].\n"
+                f"plan position: {self.plan['position']}\n"
+                f"shape: {self.shape}\n"
+            )
+            quit()
+        ### check if plan positions are unique
+        if len(np.unique(self.plan["position"])) != len(self.plan["position"]):
+            print(
+                f"\nERROR PlotRecordings: plan position has to be unique.\n"
+                f"plan position: {self.plan['position']}\n"
+            )
+            quit()
+
+        ### check if plan compartments are valid
+        for compartment in self.plan["compartment"]:
+            if compartment not in self.compartment_list:
                 print(
-                    f"\nERROR PlotRecordings: plan position has to be unique.\n"
-                    f"plan position: {plan['position']}\n"
+                    f"\nERROR PlotRecordings: plan compartment {compartment} is not valid.\n"
+                    f"Valid compartments are {self.compartment_list}.\n"
                 )
                 quit()
-    
-            ### check if plan compartments are valid
-            for compartment in plan["compartment"]:
-                if compartment not in self.monitors.recordings.keys():
+
+        ### check if plan variables are valid
+        for plot_idx in range(len(self.plan["variable"])):
+            compartment = self.plan["compartment"][plot_idx]
+            variable: str = self.plan["variable"][plot_idx]
+            ### check if variable contains a mathematical expression
+            if "+" in variable or "-" in variable or "*" in variable or "/" in variable:
+                ### separate variables
+                variable = variable.replace(" ", "")
+                variable = variable.replace("+", " ")
+                variable = variable.replace("-", " ")
+                variable = variable.replace("*", " ")
+                variable = variable.replace("/", " ")
+                variables_list = variable.split(" ")
+                ### remove numbers
+                variables_list = [var for var in variables_list if not var.isdigit()]
+            else:
+                variables_list = [variable]
+            ### check if variables are valid
+            for var in variables_list:
+                if var not in self.compartment_recordings_dict[compartment]:
                     print(
-                        f"\nERROR PlotRecordings: plan compartment {compartment} is not valid.\n"
-                        f"Valid compartments are {self.monitors.recordings.keys()}.\n"
+                        f"\nERROR PlotRecordings: plan variable {var} is not valid for compartment {compartment}.\n"
+                        f"Valid variables are {self.compartment_recordings_dict[compartment]}.\n"
                     )
                     quit()
-    
-            ### check if plan variables are valid
-            for variable in plan["variable"]:
-                if variable not in self.monitors.recordings.keys():
+
+        ### check if plan formats are valid
+        valid_formats_spike = ["raster", "mean", "hybrid"]
+        valid_formats_other = ["line", "mean", "matrix", "matrix_mean"]
+        for plot_idx in range(len(self.plan["format"])):
+            variable = self.plan["variable"][plot_idx]
+            format = self.plan["format"][plot_idx]
+            ### check if format is valid
+            if variable == "spike" or variable == "axon_spike":
+                if format not in valid_formats_spike:
                     print(
-                        f"\nERROR PlotRecordings:
+                        f"\nERROR PlotRecordings: plan format {format} is not valid for variable {variable}.\n"
+                        f"Valid formats are {valid_formats_spike}.\n"
+                    )
+                    quit()
+            else:
+                if format not in valid_formats_other:
+                    print(
+                        f"\nERROR PlotRecordings: plan format {format} is not valid for variable {variable}.\n"
+                        f"Valid formats are {valid_formats_other}.\n"
+                    )
+                    quit()
+
+    def _get_data(self, compartment: str, variable: str) -> np.ndarray:
+        """
+        Get data for compartment and variable.
+
+        Args:
+            compartment (str):
+                The compartment for which the data is obtained.
+            variable (str):
+                The variable for which the data is obtained.
+
+        Returns:
+            data (np.ndarray):
+                The data for the compartment and variable.
+        """
+        data = self.recordings[self.chunk][f"{compartment};{variable}"]
+
+        return data

@@ -212,15 +212,21 @@ def main():
                                 f"\t\t\t\t\tperiod {period}: {all_times[chunk][pop_name][time_point][unit][period]}"
                             )
 
-    ### test new plot recoprdings
+    ### test new plot recordings
     PlotRecordings(
         figname=f"monitor_recordings_1_chunk{chunk}.png",
         recordings=recordings1,
         recording_times=recording_times1,
-        chunk=chunk,
+        chunk=0,
         shape=(2, 2),
-        plan=["1;my_pop1;v;line", "3;my_pop1;spike;raster", "2;my_pop2;v;line"],
+        plan={
+            "position": [1, 2, 3],
+            "compartment": ["my_pop1", "my_pop2", "my_pop1"],
+            "variable": ["v", "v", "spike"],
+            "format": ["line", "line", "raster"],
+        },
     )
+    quit()
 
     ### plot recordings 1 consisting of 3 chunks
     for chunk in range(len(recordings1)):
