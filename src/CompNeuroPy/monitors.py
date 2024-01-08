@@ -410,7 +410,9 @@ class CompNeuroMonitors:
         """
         mon = {}
         for key, val in mon_dict.items():
-            compartmentType, compartment, period = self._unpack_mon_dict_keys(key)
+            compartmentType, compartment, period = self._unpack_mon_dict_keys(
+                key, warning=True
+            )
             ### check if compartment is pop
             if compartmentType == "pop":
                 mon[compartment] = Monitor(
@@ -560,7 +562,7 @@ class CompNeuroMonitors:
         recordings["dt"] = dt()
         return recordings
 
-    def _unpack_mon_dict_keys(self, s: str):
+    def _unpack_mon_dict_keys(self, s: str, warning: bool = False):
         """
         Unpacks a string of the form "compartment_name;period" or
         "compartment_name" into its components. If period is not provided
@@ -569,6 +571,8 @@ class CompNeuroMonitors:
         Args:
             s (str):
                 String to be unpacked
+            warning (bool, optional):
+                If True, print warning if period is not provided for projections.
 
         Returns:
             compartment_type (str):
@@ -603,6 +607,11 @@ class CompNeuroMonitors:
             period = float(splitted_s[1])
         else:
             period = {"pop": dt(), "proj": dt() * 1000}[compartment_type]
+            ### print warning for compartment_type proj
+            if compartment_type == "proj" and warning:
+                print(
+                    f"WARNING CompNeuroMonitors: no period provided for projection {compartment_name}, period set to {period} ms"
+                )
         period = round(period / dt()) * dt()
 
         return compartment_type, compartment_name, period
