@@ -6,7 +6,7 @@ from ANNarchy import raster_plot, dt, inter_spike_interval
 import warnings
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy import extra_functions as ef
-from CompNeuroPy.monitors import CompNeuroMonitors, RecordingTimes
+from CompNeuroPy.monitors import RecordingTimes
 from scipy.interpolate import interp1d
 from multiprocessing import Process
 from typingchecker import check_types
@@ -1839,6 +1839,9 @@ class PlotRecordings:
             dpi (int, optional):
                 The dpi of the saved figure. Default: 300.
         """
+        ### print start message
+        print(f"Generate fig {figname}", end="... ", flush=True)
+
         ### set attributes
         self.figname = figname
         self.recordings = recordings
@@ -1870,6 +1873,9 @@ class PlotRecordings:
 
         ### create plot
         self._plot()
+
+        ### print end message
+        print("Done\n")
 
     def _get_compartment_recordings(self):
         """
@@ -2158,7 +2164,6 @@ class PlotRecordings:
             sf.create_dir(save_dir)
         plt.savefig(self.figname, dpi=self.dpi)
         plt.close()
-        print("Done")
 
     def _fill_subplot(self, plot_idx):
         """
@@ -2210,7 +2215,7 @@ class PlotRecordings:
             plt.title(f"Spikes {compartment}")
             ### print warning
             print(
-                f"\nWARNING PlotRecordings: {compartment} does not contain any spikes in the given time interval.\n"
+                f"\n  WARNING PlotRecordings: {compartment} does not contain any spikes in the given time interval."
             )
             ### plot text
             plt.text(
@@ -2220,6 +2225,10 @@ class PlotRecordings:
                 va="center",
                 ha="center",
             )
+            plt.xticks([])
+            plt.yticks([])
+            plt.xlim(0, 1)
+            plt.xlabel("")
             return
 
         ### plot raster plot
@@ -2268,6 +2277,11 @@ class PlotRecordings:
         plt.ylim(-0.5, spike_ranks.max() + 0.5)
         ### set ylabel
         plt.ylabel("# neurons")
+        ### set yticks
+        if spike_ranks.max() == 0:
+            plt.yticks([0])
+        else:
+            plt.gca().yaxis.set_major_locator(MaxNLocator(integer=True))
 
     def _mean_firing_rate_plot(self, compartment, data, format):
         """

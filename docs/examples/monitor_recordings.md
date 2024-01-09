@@ -1,3 +1,5 @@
+## Code
+```python
 from ANNarchy import Population, setup, simulate, compile
 from CompNeuroPy import (
     CompNeuroMonitors,
@@ -198,3 +200,197 @@ def main():
 
 if __name__ == "__main__":
     main()
+```
+
+## Conosole Output
+```console
+$ python monitor_recordings.py 
+ANNarchy 4.7 (4.7.3b) on linux (posix).
+#################### ALL RECORDINGS INFO ####################
+recordings1
+	chunk: 0
+		pop_name: my_pop1
+		recording_array_size: (200, 1)
+			time_point: start
+				unit: ms
+					period 0: 100.0
+					period 1: 300.0
+					period 2: 600.0
+				unit: idx
+					period 0: 0
+					period 1: 50
+					period 2: 150
+			time_point: stop
+				unit: ms
+					period 0: 198.0
+					period 1: 498.0
+					period 2: 698.0
+				unit: idx
+					period 0: 49
+					period 1: 149
+					period 2: 199
+		pop_name: my_pop2
+		recording_array_size: (4000, 1)
+			time_point: start
+				unit: ms
+					period 0: 100.0
+					period 1: 400.0
+				unit: idx
+					period 0: 0
+					period 1: 1000
+			time_point: stop
+				unit: ms
+					period 0: 199.9
+					period 1: 699.9
+				unit: idx
+					period 0: 999
+					period 1: 3999
+	chunk: 1
+		pop_name: my_pop1
+		recording_array_size: (350, 1)
+			time_point: start
+				unit: ms
+					period 0: 800.0
+				unit: idx
+					period 0: 0
+			time_point: stop
+				unit: ms
+					period 0: 1498.0
+				unit: idx
+					period 0: 349
+		pop_name: my_pop2
+		recording_array_size: (7000, 1)
+			time_point: start
+				unit: ms
+					period 0: 800.0
+				unit: idx
+					period 0: 0
+			time_point: stop
+				unit: ms
+					period 0: 1499.9
+				unit: idx
+					period 0: 6999
+	chunk: 2
+		pop_name: my_pop1
+		recording_array_size: (350, 1)
+			time_point: start
+				unit: ms
+					period 0: 100.0
+				unit: idx
+					period 0: 0
+			time_point: stop
+				unit: ms
+					period 0: 798.0
+				unit: idx
+					period 0: 349
+		pop_name: my_pop2
+		recording_array_size: (7000, 1)
+			time_point: start
+				unit: ms
+					period 0: 100.0
+				unit: idx
+					period 0: 0
+			time_point: stop
+				unit: ms
+					period 0: 799.9
+				unit: idx
+					period 0: 6999
+recordings2
+	chunk: 0
+		pop_name: my_pop1
+		recording_array_size: (50, 1)
+			time_point: start
+				unit: ms
+					period 0: 900.0
+				unit: idx
+					period 0: 0
+			time_point: stop
+				unit: ms
+					period 0: 998.0
+				unit: idx
+					period 0: 49
+		pop_name: my_pop2
+		recording_array_size: (1000, 1)
+			time_point: start
+				unit: ms
+					period 0: 900.0
+				unit: idx
+					period 0: 0
+			time_point: stop
+				unit: ms
+					period 0: 999.9
+				unit: idx
+					period 0: 999
+	chunk: 1
+		pop_name: my_pop1
+		recording_array_size: (50, 1)
+			time_point: start
+				unit: ms
+					period 0: 0.0
+				unit: idx
+					period 0: 0
+			time_point: stop
+				unit: ms
+					period 0: 98.0
+				unit: idx
+					period 0: 49
+		pop_name: my_pop2
+		recording_array_size: (1000, 1)
+			time_point: start
+				unit: ms
+					period 0: 0.0
+				unit: idx
+					period 0: 0
+			time_point: stop
+				unit: ms
+					period 0: 99.9
+				unit: idx
+					period 0: 999
+recordings3
+	chunk: 0
+		pop_name: my_pop1
+		recording_array_size: (50, 1)
+			time_point: start
+				unit: ms
+					period 0: 0.0
+				unit: idx
+					period 0: 0
+			time_point: stop
+				unit: ms
+					period 0: 98.0
+				unit: idx
+					period 0: 49
+		pop_name: my_pop2
+		recording_array_size: (1000, 1)
+			time_point: start
+				unit: ms
+					period 0: 0.0
+				unit: idx
+					period 0: 0
+			time_point: stop
+				unit: ms
+					period 0: 99.9
+				unit: idx
+					period 0: 999
+#############################################################
+Generate fig monitor_recordings_1_chunk0.png... 
+  WARNING PlotRecordings: my_pop1 does not contain any spikes in the given time interval.
+Done
+
+Generate fig monitor_recordings_1_chunk1.png... 
+  WARNING PlotRecordings: my_pop1 does not contain any spikes in the given time interval.
+Done
+
+Generate fig monitor_recordings_1_chunk2.png... 
+  WARNING PlotRecordings: my_pop1 does not contain any spikes in the given time interval.
+Done
+
+Generate fig monitor_recordings_2_chunk0.png... 
+  WARNING PlotRecordings: my_pop1 does not contain any spikes in the given time interval.
+Done
+
+Generate fig monitor_recordings_2_chunk1.png... Done
+
+Generate fig monitor_recordings_3_chunk0.png... Done
+
+```

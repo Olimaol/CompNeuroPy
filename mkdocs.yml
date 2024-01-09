@@ -68,4 +68,5 @@ nav:
     - Generate Models: 'examples/generate_models.md'
     - Define Experiments: 'examples/experiment.md'
     - DBS Simulator: 'examples/dbs.md'
+    - Monitor Recordings: 'examples/monitor_recordings.md'
   - License: 'license.md'
