@@ -27,18 +27,19 @@ class ReqPopHasAttr:
         Checks if population(s) contains the attribute(s) (parameters or variables)
 
         Raises:
-            AssertionError: if population(s) does not contain the attribute(s)
+            ValueError: if population(s) does not contain the attribute(s)
         """
         for attr_name in self.attr_name_list:
             for pop_name in self.pop_name_list:
                 pop: Population = get_population(pop_name)
-                assert attr_name in pop.attributes, (
-                    "Error: Population "
-                    + pop
-                    + " does not contain attribute "
-                    + attr_name
-                    + "!\n"
-                )
+                if not (attr_name in pop.attributes):
+                    raise ValueError(
+                        "Population "
+                        + pop_name
+                        + " does not contain attribute "
+                        + attr_name
+                        + "!\n"
+                    )
 
 
 ### old name for backwards compatibility, TODO: remove

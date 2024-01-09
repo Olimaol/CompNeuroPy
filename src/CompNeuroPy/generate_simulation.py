@@ -1,6 +1,8 @@
 from ANNarchy import get_time
 from CompNeuroPy import extra_functions as ef
+from CompNeuroPy import CompNeuroMonitors
 import numpy as np
+from typing import Callable
 
 
 class CompNeuroSim:
@@ -8,17 +10,17 @@ class CompNeuroSim:
     Class for generating a CompNeuroPy simulation.
     """
 
-    initialized_simulations = []
+    _initialized_simulations = []
 
     def __init__(
         self,
-        simulation_function,
-        simulation_kwargs=None,
-        name="simulation",
-        description="",
-        requirements=None,
-        kwargs_warning=True,
-        monitor_object=None,
+        simulation_function: Callable,
+        simulation_kwargs: dict | None = None,
+        name: str = "simulation",
+        description: str = "",
+        requirements: list | None = None,
+        kwargs_warning: bool = False,
+        monitor_object: CompNeuroMonitors | None = None,
     ):
         """
         Args:
@@ -31,19 +33,23 @@ class CompNeuroSim:
             description (str, optional):
                 Description of the simulation. Default: "".
             requirements (list, optional):
-                List of requirements for the simulation. Default: None.
+                List of requirements for the simulation. It's a list of dictionaries
+                which contain the requirement class itself (key: "req") and the
+                corresponding arguments (keys are the names of the arguments). The
+                arguments can be inherited from the simulation kwargs by using the
+                syntax 'simulation_kwargs.<kwarg_name>'. Default: None.
             kwargs_warning (bool, optional):
                 If True, a warning is printed if the simulation_kwargs are changed
-                during the simulation. Default: True.
+                during the simulation. Default: False.
             monitor_object (CompNeuroMonitors object, optional):
                 CompNeuroMonitors object to automatically track the recording chunk for each
                 simulation run. Default: None.
         """
-        # set simulaiton function
+        # set simulation function
         self.name = name
         if name == "simulation":
             self.name = name + str(self._nr_simulations())
-        self.initialized_simulations.append(self.name)
+        self._initialized_simulations.append(self.name)
         self.description = description
         self.simulation_function = simulation_function
         self.simulation_kwargs = simulation_kwargs
@@ -56,9 +62,9 @@ class CompNeuroSim:
         self.info = []
         self.kwargs = []
         if kwargs_warning:
-            self.warned = False
+            self._warned = False
         else:
-            self.warned = True
+            self._warned = True
         self.monitor_object = monitor_object
         if monitor_object is not None:
             self.monitor_chunk = []
@@ -68,7 +74,7 @@ class CompNeuroSim:
         ### test initial requirements
         self._test_req(simulation_kwargs=simulation_kwargs)
 
-    def run(self, simulation_kwargs=None):
+    def run(self, simulation_kwargs: dict | None = None):
         """
         Runs the simulation function. With each run extend start, end list containing
         start and end time of the corresponding run and the info list containing the
@@ -90,13 +96,13 @@ class CompNeuroSim:
             else:
                 ### there are no initial kwargs --> only use the kwargs which are given
                 tmp_kwargs = simulation_kwargs
-            if not (self.warned) and len(self.requirements) > 0:
+            if not (self._warned) and len(self.requirements) > 0:
                 print(
                     "\nWARNING! run",
                     self.name,
                     "changed simulation kwargs, initial requirements may no longer be fulfilled!\n",
                 )
-                self.warned = True
+                self._warned = True
         else:
             tmp_kwargs = self.simulation_kwargs
 
@@ -122,7 +128,7 @@ class CompNeuroSim:
         """
         Returns the current number of initialized CompNeuroPy simulations.
         """
-        return len(self.initialized_simulations)
+        return len(self._initialized_simulations)
 
     def _test_req(self, simulation_kwargs=None):
         """
@@ -133,12 +139,16 @@ class CompNeuroSim:
             simulation_kwargs = self.simulation_kwargs
 
         for req in self.requirements:
-            if len(list(req.keys())) > 1:  # --> requirement and arguments
+            ### check if requirement_kwargs are given besides the requirement itself
+            if len(list(req.keys())) > 1:
+                ### remove the requirement itself from the kwargs
                 req_kwargs = ef.remove_key(req, "req")
-                ### check if req_kwargs reference to sim_kwargs, if yes, use the corresponding current sim_kwarg as req_kwarg, if not do not update the initialized requirements kwargs
+                ### check if req_kwargs reference to simulation_kwargs, if yes, use the
+                ### current simulation kwargs instead of the intial ones
                 for key, val in req_kwargs.items():
                     if isinstance(val, str):
                         val_split = val.split(".")
+                        ### check if val is a reference to simulation_kwargs
                         if val_split[0] == "simulation_kwargs":
                             if len(val_split) == 1:
                                 ### val is only simulation_kwargs
@@ -154,10 +164,11 @@ class CompNeuroSim:
                                     + '"].'
                                     + ".".join(val_split[2:])
                                 )
-
+                ### run the requirement using the current req_kwargs
                 req["req"](**req_kwargs).run()
 
-            else:  # --> only requirement
+            else:
+                ### a requirement is given without kwargs --> just run it
                 req["req"]().run()
 
     def get_current_arr(self, dt, flat=False):

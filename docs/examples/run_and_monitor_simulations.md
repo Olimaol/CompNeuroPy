@@ -1,3 +1,5 @@
+## Code
+```python
 import numpy as np
 from CompNeuroPy import CompNeuroMonitors, CompNeuroSim, ReqPopHasAttr, save_variables
 from ANNarchy import simulate, get_population, Population, Neuron
@@ -171,3 +173,41 @@ def main():
 
 if __name__ == "__main__":
     main()
+```
+
+## Console Output
+```console
+$ python run_and_monitor_simulations.py 
+ANNarchy 4.7 (4.7.3b) on linux (posix).
+created model, other parameters: 1
+
+###############################################
+Running simulation with population not containing attribute 'rates' causes the following error:
+Population simple_pop does not contain attribute rates!
+
+###############################################
+
+
+A simulation object contains:
+name
+ increase_rates_pop
+
+description
+ increase rates variable of pop
+
+start (for each run)
+ [500.0, 700.0]
+
+end (for each run)
+ [2000.0, 2200.0]
+
+info (for each run)
+ [{'duration': 1500, 'd_rates': 150}, {'duration': 1500, 'd_rates': 150}]
+
+kwargs (for each run)
+ [{'pop_name': 'first_poisson', 'rate_step': 10, 'time_step': 100, 'nr_steps': 15}, {'pop_name': ['first_poisson', 'second_poisson'], 'rate_step': 10, 'time_step': 100, 'nr_steps': 15}]
+
+monitor chunk (for each run)
+ [0, 1]
+
+```

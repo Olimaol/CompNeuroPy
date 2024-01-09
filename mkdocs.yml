@@ -66,7 +66,8 @@ nav:
     - Extra Functions: 'additional/extra_functions.md'
   - 'Examples':
     - Generate Models: 'examples/generate_models.md'
+    - Generate Simulations: 'examples/run_and_monitor_simulations.md'
+    - Monitor Recordings: 'examples/monitor_recordings.md'
     - Define Experiments: 'examples/experiment.md'
     - DBS Simulator: 'examples/dbs.md'
-    - Monitor Recordings: 'examples/monitor_recordings.md'
   - License: 'license.md'
