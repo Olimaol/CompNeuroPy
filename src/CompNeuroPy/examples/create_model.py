@@ -26,7 +26,7 @@ def two_poisson(params, a):
 
 ### Let's initialize a first model
 ### define the parameters argument of the model creation function
-params = {"s1": 1, "s2": 1, "n1": "first_poisson", "n2": "second_poisson"}
+params = {"s1": 3, "s2": 3, "n1": "first_poisson", "n2": "second_poisson"}
 
 ### use CompNeuroModel to initialize the model, not create or compile it yet
 my_model = CompNeuroModel(

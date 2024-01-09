@@ -1,6 +1,21 @@
 import numpy as np
-from CompNeuroPy import CompNeuroMonitors, CompNeuroSim, ReqPopHasAttr, save_variables
-from ANNarchy import simulate, get_population, Population, Neuron
+from CompNeuroPy import (
+    CompNeuroMonitors,
+    CompNeuroSim,
+    ReqPopHasAttr,
+    save_variables,
+    CompNeuroModel,
+)
+from ANNarchy import (
+    simulate,
+    get_population,
+    Population,
+    Neuron,
+    Projection,
+    Synapse,
+    Uniform,
+    get_projection,
+)
 from CompNeuroPy.examples.create_model import my_model
 
 ### define a simple population for later use
@@ -75,15 +90,39 @@ def increase_rates(
     return {"duration": time_step * nr_steps, "d_rates": rate_step * nr_steps}
 
 
+def add_projection(my_model: CompNeuroModel):
+    """
+    Add a projection with decaying weights
+
+    Args:
+        my_model (CompNeuroModel):
+            model to which the projection should be added
+    """
+    proj = Projection(
+        pre=my_model.populations[0],
+        post=my_model.populations[1],
+        target="ampa",
+        synapse=Synapse(parameters="tau=500", equations="dw/dt=-w/tau"),
+        name="ampa_proj",
+    )
+    proj.connect_all_to_all(weights=Uniform(1.0, 2.0))
+
+
 def main():
     ### create and compile the model from other example "create_model.py"
-    my_model.create()
+    my_model.create(do_compile=False)
+
+    ### add a projection (just for other example "plot_recordings.py") and compile
+    add_projection(my_model)
+    my_model.compile()
+    print(get_projection("ampa_proj").w)
 
     ### Define Monitors, recording p and spike from both populations with periods of 10
-    ### ms and 15 ms
+    ### ms and 15 ms and the weights of the ampa projection with period of 10 ms
     monitor_dictionary = {
         f"{my_model.populations[0]};10": ["p", "spike"],
         f"{my_model.populations[1]};15": ["p", "spike"],
+        "ampa_proj;10": ["w"],
     }
     mon = CompNeuroMonitors(monitor_dictionary)
 

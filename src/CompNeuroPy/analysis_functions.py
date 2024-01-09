@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import matplotlib
-from ANNarchy import raster_plot, dt, inter_spike_interval
+from ANNarchy import raster_plot, dt, inter_spike_interval, coefficient_of_variation
 import warnings
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy import extra_functions as ef
@@ -2005,7 +2005,7 @@ class PlotRecordings:
                     quit()
 
         ### check if plan formats are valid
-        valid_formats_spike = ["raster", "mean", "hybrid", "interspike"]
+        valid_formats_spike = ["raster", "mean", "hybrid", "interspike", "cv"]
         valid_formats_other = ["line", "line_mean", "matrix", "matrix_mean"]
         for plot_idx in range(len(self.plan["format"])):
             variable = self.plan["variable"][plot_idx]
@@ -2243,6 +2243,10 @@ class PlotRecordings:
         if format == "interspike":
             self._interspike_interval_plot(compartment, data)
 
+        ### plot coefficient of variation histogram
+        if format == "cv":
+            self._coefficient_of_variation_plot(compartment, data)
+
     def _raster_plot(self, compartment, spike_ranks, spike_times, mask):
         """
         Plot raster plot.
@@ -2258,7 +2262,7 @@ class PlotRecordings:
                 The mask for the spike times.
         """
         ### set title
-        plt.title(f"Spikes {compartment}")
+        plt.title(f"Spikes {compartment} ({spike_ranks.max() + 1})")
         ### check if there is only one neuron
         if spike_ranks.max() == 0:
             marker, size = ["|", 3000]
@@ -2296,7 +2300,7 @@ class PlotRecordings:
                 The format of the plot.
         """
         ### set title
-        plt.title(f"Activity {compartment}")
+        plt.title(f"Activity {compartment} ({len(data)})")
         ### set axis
         ax = plt.gca()
         color = "k"
@@ -2330,7 +2334,7 @@ class PlotRecordings:
                 The spike data.
         """
         ### set title
-        plt.title(f"Interspike interval histogram {compartment}")
+        plt.title(f"Interspike interval histogram {compartment} ({len(data)})")
         ### get interspike intervals
         interspike_intervals_list = inter_spike_interval(spikes=data)
         ### plot histogram
@@ -2346,6 +2350,38 @@ class PlotRecordings:
         ### set ylabel
         plt.ylabel("Probability")
         plt.xlabel("Interspike interval [ms]")
+
+    def _coefficient_of_variation_plot(self, compartment, data):
+        """
+        Plot coefficient of variation histogram.
+
+        Args:
+            compartment (str):
+                The name of the compartment.
+            data (dict):
+                The spike data.
+        """
+        ### set title
+        plt.title(f"Coefficient of variation histogram {compartment} ({len(data)})")
+        ### get coefficient of variation
+        coefficient_of_variation_dict = coefficient_of_variation(
+            spikes=data,
+            per_neuron=True,
+        )
+        coefficient_of_variation_list = list(coefficient_of_variation_dict.values())
+        ### plot histogram
+        plt.hist(
+            coefficient_of_variation_list,
+            bins=100,
+            range=(0, 2),
+            density=True,
+            color="k",
+        )
+        ### set limits
+        plt.xlim(0, 2)
+        ### set ylabel
+        plt.ylabel("Probability")
+        plt.xlabel("Coefficient of variation")
 
     def _fill_subplot_other(self, plot_idx):
         """
@@ -2494,27 +2530,6 @@ class PlotRecordings:
             ### mean -> average over neurons
             if mean:
                 data_arr = np.mean(data_arr, 1, keepdims=True)
-            ### plot matrix row for each neuron
-            plt.imshow(
-                data_arr.T,
-                aspect="auto",
-                vmin=np.nanmin(data_arr),
-                vmax=np.nanmax(data_arr),
-                extent=[
-                    time_arr.min()
-                    - self.recordings[self.chunk][f"{compartment};period"] / 2,
-                    time_arr.max()
-                    + self.recordings[self.chunk][f"{compartment};period"] / 2,
-                    data_arr.shape[1] - 0.5,
-                    -0.5,
-                ],
-                cmap="viridis",
-                interpolation="none",
-            )
-            if data_arr.shape[1] == 1:
-                plt.yticks([0])
-            else:
-                plt.gca().yaxis.set_major_locator(MaxNLocator(integer=True))
 
         ### 2D array where elements are lists
         ### = projection data [time, postneurons][preneurons]
@@ -2543,32 +2558,78 @@ class PlotRecordings:
             ### convert array_2D_list to 2D array, not use last None array
             data_arr = np.array(array_2D_list[:-1]).T
 
-            ### plot matrix row for each preneuron postneuron pair
-            plt.imshow(
-                data_arr.T,
-                aspect="auto",
-                vmin=np.nanmin(data_arr),
-                vmax=np.nanmax(data_arr),
-                extent=[
-                    time_arr.min()
-                    - self.recordings[self.chunk][f"{compartment};period"] / 2,
-                    time_arr.max()
-                    + self.recordings[self.chunk][f"{compartment};period"] / 2,
-                    data_arr.shape[1] - 0.5,
-                    -0.5,
-                ],
-                cmap="viridis",
-                interpolation="none",
-            )
-            if data_arr.shape[1] == 1:
-                plt.yticks([0])
-            else:
-                plt.gca().yaxis.set_major_locator(MaxNLocator(integer=True))
-
+        ### some other shape not supported
         else:
             print(
                 f"\nERROR PlotRecordings: shape of data not supported, {compartment}, {variable} in plot {plot_idx}.\n"
             )
+
+        ### plot matrix row for each neuron or preneuron postneuron pair
+        plt.imshow(
+            data_arr.T,
+            aspect="auto",
+            vmin=np.nanmin(data_arr),
+            vmax=np.nanmax(data_arr),
+            extent=[
+                time_arr.min()
+                - self.recordings[self.chunk][f"{compartment};period"] / 2,
+                time_arr.max()
+                + self.recordings[self.chunk][f"{compartment};period"] / 2,
+                data_arr.shape[1] - 0.5,
+                -0.5,
+            ],
+            cmap="viridis",
+            interpolation="none",
+        )
+        if data_arr.shape[1] == 1:
+            plt.yticks([0])
+        else:
+            ### all y ticks
+            y_tick_positions_all_arr = np.arange(data_arr.shape[1])
+            print(y_tick_positions_all_arr)
+            ### boolean array of valid y ticks
+            valid_y_ticks = np.logical_not(np.isnan(data_arr).any(axis=0))
+            print(valid_y_ticks)
+            ### get y tick labels
+            if False in valid_y_ticks:
+                ### there are nan entries
+                ### split at nan entries
+                print(f"array to split: {y_tick_positions_all_arr}")
+                print(f"split at: {np.where(np.logical_not(valid_y_ticks))}")
+                y_tick_positions_split_list = np.array_split(
+                    y_tick_positions_all_arr, np.where(np.logical_not(valid_y_ticks))[0]
+                )
+                ### decrease by 1 after each nan entry
+                y_tick_positions_split_list = [
+                    y_tick_positions_split - idx_split
+                    for idx_split, y_tick_positions_split in enumerate(
+                        y_tick_positions_split_list
+                    )
+                ]
+                ### join split arrays
+                y_tick_labels_all_arr = np.concatenate(y_tick_positions_split_list)
+            else:
+                y_tick_labels_all_arr = y_tick_positions_all_arr
+            print(y_tick_labels_all_arr)
+
+            valid_y_ticks_selected_idx_arr = np.linspace(
+                0,
+                np.sum(valid_y_ticks),
+                num=min([10, np.sum(valid_y_ticks)]),
+                dtype=int,
+                endpoint=False,
+            )
+            print(valid_y_ticks_selected_idx_arr)
+            valid_y_ticks_selected_arr = y_tick_positions_all_arr[valid_y_ticks][
+                valid_y_ticks_selected_idx_arr
+            ]
+            valid_y_ticks_labels_selected_arr = y_tick_labels_all_arr[valid_y_ticks][
+                valid_y_ticks_selected_idx_arr
+            ]
+            print(valid_y_ticks_selected_arr)
+            print("\n\n")
+
+            plt.yticks(valid_y_ticks_selected_arr, valid_y_ticks_labels_selected_arr)
 
         ### set title
         plt.title(
