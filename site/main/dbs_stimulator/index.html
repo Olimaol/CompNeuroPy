@@ -16,7 +16,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.4.14">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.0">
     
     
       
@@ -24,10 +24,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.fad675c6.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.45e1311d.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.356b1318.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -48,6 +48,8 @@
     
       <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
     <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
@@ -66,14 +68,13 @@
     <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="indigo">
   
     
-    
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
         
-        <a href="#src.CompNeuroPy.dbs.DBSstimulator" class="md-skip">
+        <a href="#CompNeuroPy.dbs.DBSstimulator" class="md-skip">
           Skip to content
         </a>
       
@@ -120,6 +121,7 @@
     
     
     
+    
       <label class="md-header__button md-icon" for="__search">
         
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
@@ -162,7 +164,7 @@
         <a href="https://github.com/Olimaol/CompNeuroPy" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
   </div>
   <div class="md-source__repository">
     GitHub
@@ -208,7 +210,7 @@
       <a href="https://github.com/Olimaol/CompNeuroPy" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
   </div>
   <div class="md-source__repository">
     GitHub
@@ -392,7 +394,7 @@
         
   
   <span class="md-ellipsis">
-    Define an Experiment
+    Define Experiments
   </span>
   
 
@@ -451,7 +453,7 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.dbs.DBSstimulator" class="md-nav__link">
+  <a href="#CompNeuroPy.dbs.DBSstimulator" class="md-nav__link">
     <span class="md-ellipsis">
       DBSstimulator
     </span>
@@ -461,7 +463,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.dbs.DBSstimulator.__init__" class="md-nav__link">
+  <a href="#CompNeuroPy.dbs.DBSstimulator.__init__" class="md-nav__link">
     <span class="md-ellipsis">
       __init__()
     </span>
@@ -470,7 +472,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.dbs.DBSstimulator.on" class="md-nav__link">
+  <a href="#CompNeuroPy.dbs.DBSstimulator.on" class="md-nav__link">
     <span class="md-ellipsis">
       on()
     </span>
@@ -479,7 +481,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.dbs.DBSstimulator.off" class="md-nav__link">
+  <a href="#CompNeuroPy.dbs.DBSstimulator.off" class="md-nav__link">
     <span class="md-ellipsis">
       off()
     </span>
@@ -488,7 +490,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.dbs.DBSstimulator.update_pointers" class="md-nav__link">
+  <a href="#CompNeuroPy.dbs.DBSstimulator.update_pointers" class="md-nav__link">
     <span class="md-ellipsis">
       update_pointers()
     </span>
@@ -561,7 +563,7 @@
             
   
   <span class="md-ellipsis">
-    Built-in Objects
+    Built-in Models
   </span>
   
 
@@ -571,7 +573,7 @@
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
-            Built-in Objects
+            Built-in Models
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -586,7 +588,7 @@
         
   
   <span class="md-ellipsis">
-    Models
+    Full Models
   </span>
   
 
@@ -694,6 +696,27 @@
   
   <span class="md-ellipsis">
     Simulation Functions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../additional/simulation_requirements/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Simulation Requirements
   </span>
   
 
@@ -852,6 +875,111 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/run_and_monitor_simulations/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Generate Simulations
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/monitor_recordings/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Monitor Recordings
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/plot_recordings/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Plot Recordings
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/experiment/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Define Experiments
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/dbs/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DBS Simulator
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -904,7 +1032,7 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.dbs.DBSstimulator" class="md-nav__link">
+  <a href="#CompNeuroPy.dbs.DBSstimulator" class="md-nav__link">
     <span class="md-ellipsis">
       DBSstimulator
     </span>
@@ -914,7 +1042,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.dbs.DBSstimulator.__init__" class="md-nav__link">
+  <a href="#CompNeuroPy.dbs.DBSstimulator.__init__" class="md-nav__link">
     <span class="md-ellipsis">
       __init__()
     </span>
@@ -923,7 +1051,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.dbs.DBSstimulator.on" class="md-nav__link">
+  <a href="#CompNeuroPy.dbs.DBSstimulator.on" class="md-nav__link">
     <span class="md-ellipsis">
       on()
     </span>
@@ -932,7 +1060,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.dbs.DBSstimulator.off" class="md-nav__link">
+  <a href="#CompNeuroPy.dbs.DBSstimulator.off" class="md-nav__link">
     <span class="md-ellipsis">
       off()
     </span>
@@ -941,7 +1069,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.dbs.DBSstimulator.update_pointers" class="md-nav__link">
+  <a href="#CompNeuroPy.dbs.DBSstimulator.update_pointers" class="md-nav__link">
     <span class="md-ellipsis">
       update_pointers()
     </span>
@@ -979,11 +1107,11 @@
 
 
 
-<h2 id="src.CompNeuroPy.dbs.DBSstimulator" class="doc doc-heading">
-          <code>src.CompNeuroPy.dbs.DBSstimulator</code>
+<h2 id="CompNeuroPy.dbs.DBSstimulator" class="doc doc-heading">
+          <code>CompNeuroPy.dbs.DBSstimulator</code>
 
 
-<a href="#src.CompNeuroPy.dbs.DBSstimulator" class="headerlink" title="Permanent link">#</a></h2>
+<a href="#CompNeuroPy.dbs.DBSstimulator" class="headerlink" title="Permanent link">#</a></h2>
 
 
   <div class="doc doc-contents first">
@@ -1001,39 +1129,41 @@ projections anyway (recommended) or use the update_pointers method.</p>
 
 
 <p><strong>Examples:</strong></p>
-    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ANNarchy</span> <span class="kn">import</span> <span class="n">Population</span><span class="p">,</span> <span class="n">Izhikevich</span><span class="p">,</span> <span class="nb">compile</span><span class="p">,</span> <span class="n">simulate</span><span class="p">,</span> <span class="n">setup</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">CompNeuroPy</span> <span class="kn">import</span> <span class="n">DBSstimulator</span>
-<span class="gp">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># setup ANNarchy</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">setup</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># create populations</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">population1</span> <span class="o">=</span> <span class="n">Population</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">neuron</span><span class="o">=</span><span class="n">Izhikevich</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;my_pop1&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">population2</span> <span class="o">=</span> <span class="n">Population</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">neuron</span><span class="o">=</span><span class="n">Izhikevich</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;my_pop2&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># create DBS stimulator</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">dbs</span> <span class="o">=</span> <span class="n">DBSstimulator</span><span class="p">(</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">stimulated_population</span><span class="o">=</span><span class="n">population1</span><span class="p">,</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">population_proportion</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">dbs_depolarization</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">auto_implement</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># update pointers to correct populations</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">population1</span><span class="p">,</span> <span class="n">population2</span> <span class="o">=</span> <span class="n">dbs</span><span class="o">.</span><span class="n">update_pointers</span><span class="p">(</span><span class="n">pointer_list</span><span class="o">=</span><span class="p">[</span><span class="n">population1</span><span class="p">,</span> <span class="n">population2</span><span class="p">])</span>
-<span class="gp">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># compile network</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">compile</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># run simulation</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># 1000 ms without dbs</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">simulate</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># 1000 ms with dbs</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">dbs</span><span class="o">.</span><span class="n">on</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">simulate</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># 1000 ms without dbs</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">dbs</span><span class="o">.</span><span class="n">off</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">simulate</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
+    <div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">ANNarchy</span> <span class="kn">import</span> <span class="n">Population</span><span class="p">,</span> <span class="n">Izhikevich</span><span class="p">,</span> <span class="nb">compile</span><span class="p">,</span> <span class="n">simulate</span><span class="p">,</span> <span class="n">setup</span>
+<span class="kn">from</span> <span class="nn">CompNeuroPy</span> <span class="kn">import</span> <span class="n">DBSstimulator</span>
+
+<span class="c1"># setup ANNarchy</span>
+<span class="n">setup</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+
+<span class="c1"># create populations</span>
+<span class="n">population1</span> <span class="o">=</span> <span class="n">Population</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">neuron</span><span class="o">=</span><span class="n">Izhikevich</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;my_pop1&quot;</span><span class="p">)</span>
+<span class="n">population2</span> <span class="o">=</span> <span class="n">Population</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">neuron</span><span class="o">=</span><span class="n">Izhikevich</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;my_pop2&quot;</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span>
+<span class="c1"># create DBS stimulator</span>
+<span class="n">dbs</span> <span class="o">=</span> <span class="n">DBSstimulator</span><span class="p">(</span>
+    <span class="n">stimulated_population</span><span class="o">=</span><span class="n">population1</span><span class="p">,</span>
+    <span class="n">population_proportion</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">dbs_depolarization</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+    <span class="n">auto_implement</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># update pointers to correct populations</span>
+<span class="n">population1</span><span class="p">,</span> <span class="n">population2</span> <span class="o">=</span> <span class="n">dbs</span><span class="o">.</span><span class="n">update_pointers</span><span class="p">(</span>
+    <span class="n">pointer_list</span><span class="o">=</span><span class="p">[</span><span class="n">population1</span><span class="p">,</span> <span class="n">population2</span><span class="p">]</span>
+<span class="p">)</span>
+
+<span class="c1"># compile network</span>
+<span class="nb">compile</span><span class="p">()</span>
+
+<span class="c1"># run simulation</span>
+<span class="c1"># 1000 ms without dbs</span>
+<span class="n">simulate</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
+<span class="c1"># 1000 ms with dbs</span>
+<span class="n">dbs</span><span class="o">.</span><span class="n">on</span><span class="p">()</span>
+<span class="n">simulate</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
+<span class="c1"># 1000 ms without dbs</span>
+<span class="n">dbs</span><span class="o">.</span><span class="n">off</span><span class="p">()</span>
+<span class="n">simulate</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
 </code></pre></div>
 
             <details class="quote">
@@ -1877,7 +2007,11 @@ projections anyway (recommended) or use the update_pointers method.</p>
 <span class="normal">1780</span>
 <span class="normal">1781</span>
 <span class="normal">1782</span>
-<span class="normal">1783</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">DBSstimulator</span><span class="p">:</span>
+<span class="normal">1783</span>
+<span class="normal">1784</span>
+<span class="normal">1785</span>
+<span class="normal">1786</span>
+<span class="normal">1787</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">DBSstimulator</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for stimulating a population with DBS.</span>
 
@@ -1888,39 +2022,43 @@ projections anyway (recommended) or use the update_pointers method.</p>
 <span class="sd">        projections anyway (recommended) or use the update_pointers method.</span>
 
 <span class="sd">    Examples:</span>
-<span class="sd">        &gt;&gt;&gt; from ANNarchy import Population, Izhikevich, compile, simulate, setup</span>
-<span class="sd">        &gt;&gt;&gt; from CompNeuroPy import DBSstimulator</span>
+<span class="sd">        ```python</span>
+<span class="sd">        from ANNarchy import Population, Izhikevich, compile, simulate, setup</span>
+<span class="sd">        from CompNeuroPy import DBSstimulator</span>
+
+<span class="sd">        # setup ANNarchy</span>
+<span class="sd">        setup(dt=0.1)</span>
+
+<span class="sd">        # create populations</span>
+<span class="sd">        population1 = Population(10, neuron=Izhikevich, name=&quot;my_pop1&quot;)</span>
+<span class="sd">        population2 = Population(10, neuron=Izhikevich, name=&quot;my_pop2&quot;)</span>
 <span class="sd">        &gt;&gt;&gt;</span>
-<span class="sd">        &gt;&gt;&gt; # setup ANNarchy</span>
-<span class="sd">        &gt;&gt;&gt; setup(dt=0.1)</span>
-<span class="sd">        &gt;&gt;&gt;</span>
-<span class="sd">        &gt;&gt;&gt; # create populations</span>
-<span class="sd">        &gt;&gt;&gt; population1 = Population(10, neuron=Izhikevich, name=&quot;my_pop1&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; population2 = Population(10, neuron=Izhikevich, name=&quot;my_pop2&quot;)</span>
-<span class="sd">        &gt;&gt;&gt;</span>
-<span class="sd">        &gt;&gt;&gt; # create DBS stimulator</span>
-<span class="sd">        &gt;&gt;&gt; dbs = DBSstimulator(</span>
-<span class="sd">        &gt;&gt;&gt;     stimulated_population=population1,</span>
-<span class="sd">        &gt;&gt;&gt;     population_proportion=0.5,</span>
-<span class="sd">        &gt;&gt;&gt;     dbs_depolarization=30,</span>
-<span class="sd">        &gt;&gt;&gt;     auto_implement=True,</span>
-<span class="sd">        &gt;&gt;&gt; )</span>
-<span class="sd">        &gt;&gt;&gt;</span>
-<span class="sd">        &gt;&gt;&gt; # update pointers to correct populations</span>
-<span class="sd">        &gt;&gt;&gt; population1, population2 = dbs.update_pointers(pointer_list=[population1, population2])</span>
-<span class="sd">        &gt;&gt;&gt;</span>
-<span class="sd">        &gt;&gt;&gt; # compile network</span>
-<span class="sd">        &gt;&gt;&gt; compile()</span>
-<span class="sd">        &gt;&gt;&gt;</span>
-<span class="sd">        &gt;&gt;&gt; # run simulation</span>
-<span class="sd">        &gt;&gt;&gt; # 1000 ms without dbs</span>
-<span class="sd">        &gt;&gt;&gt; simulate(1000)</span>
-<span class="sd">        &gt;&gt;&gt; # 1000 ms with dbs</span>
-<span class="sd">        &gt;&gt;&gt; dbs.on()</span>
-<span class="sd">        &gt;&gt;&gt; simulate(1000)</span>
-<span class="sd">        &gt;&gt;&gt; # 1000 ms without dbs</span>
-<span class="sd">        &gt;&gt;&gt; dbs.off()</span>
-<span class="sd">        &gt;&gt;&gt; simulate(1000)</span>
+<span class="sd">        # create DBS stimulator</span>
+<span class="sd">        dbs = DBSstimulator(</span>
+<span class="sd">            stimulated_population=population1,</span>
+<span class="sd">            population_proportion=0.5,</span>
+<span class="sd">            dbs_depolarization=30,</span>
+<span class="sd">            auto_implement=True,</span>
+<span class="sd">        )</span>
+
+<span class="sd">        # update pointers to correct populations</span>
+<span class="sd">        population1, population2 = dbs.update_pointers(</span>
+<span class="sd">            pointer_list=[population1, population2]</span>
+<span class="sd">        )</span>
+
+<span class="sd">        # compile network</span>
+<span class="sd">        compile()</span>
+
+<span class="sd">        # run simulation</span>
+<span class="sd">        # 1000 ms without dbs</span>
+<span class="sd">        simulate(1000)</span>
+<span class="sd">        # 1000 ms with dbs</span>
+<span class="sd">        dbs.on()</span>
+<span class="sd">        simulate(1000)</span>
+<span class="sd">        # 1000 ms without dbs</span>
+<span class="sd">        dbs.off()</span>
+<span class="sd">        simulate(1000)</span>
+<span class="sd">        ```</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="nd">@check_types</span><span class="p">()</span>
@@ -2738,10 +2876,10 @@ projections anyway (recommended) or use the update_pointers method.</p>
 
 
 
-<h3 id="src.CompNeuroPy.dbs.DBSstimulator.__init__" class="doc doc-heading">
+<h3 id="CompNeuroPy.dbs.DBSstimulator.__init__" class="doc doc-heading">
           <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">stimulated_population</span><span class="p">,</span> <span class="n">population_proportion</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">excluded_populations_list</span><span class="o">=</span><span class="p">[],</span> <span class="n">dbs_depolarization</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">orthodromic</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">antidromic</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">efferents</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">afferents</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">passing_fibres</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">passing_fibres_list</span><span class="o">=</span><span class="p">[],</span> <span class="n">passing_fibres_strength</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">sum_branches</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">dbs_pulse_frequency_Hz</span><span class="o">=</span><span class="mf">130.0</span><span class="p">,</span> <span class="n">dbs_pulse_width_us</span><span class="o">=</span><span class="mf">300.0</span><span class="p">,</span> <span class="n">axon_spikes_per_pulse</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">axon_rate_amp</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">auto_implement</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
-<a href="#src.CompNeuroPy.dbs.DBSstimulator.__init__" class="headerlink" title="Permanent link">#</a></h3>
+<a href="#CompNeuroPy.dbs.DBSstimulator.__init__" class="headerlink" title="Permanent link">#</a></h3>
 
 
   <div class="doc doc-contents ">
@@ -3065,11 +3203,7 @@ populations and projections of the current magic model</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/dbs.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 990</span>
-<span class="normal"> 991</span>
-<span class="normal"> 992</span>
-<span class="normal"> 993</span>
-<span class="normal"> 994</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 994</span>
 <span class="normal"> 995</span>
 <span class="normal"> 996</span>
 <span class="normal"> 997</span>
@@ -3223,7 +3357,11 @@ populations and projections of the current magic model</p>
 <span class="normal">1145</span>
 <span class="normal">1146</span>
 <span class="normal">1147</span>
-<span class="normal">1148</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@check_types</span><span class="p">()</span>
+<span class="normal">1148</span>
+<span class="normal">1149</span>
+<span class="normal">1150</span>
+<span class="normal">1151</span>
+<span class="normal">1152</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@check_types</span><span class="p">()</span>
 <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">stimulated_population</span><span class="p">:</span> <span class="n">Population</span><span class="p">,</span>
@@ -3394,10 +3532,10 @@ populations and projections of the current magic model</p>
 
 
 
-<h3 id="src.CompNeuroPy.dbs.DBSstimulator.on" class="doc doc-heading">
+<h3 id="CompNeuroPy.dbs.DBSstimulator.on" class="doc doc-heading">
           <code class="highlight language-python"><span class="n">on</span><span class="p">(</span><span class="n">population_proportion</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dbs_depolarization</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">orthodromic</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">antidromic</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">efferents</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">afferents</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">passing_fibres</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">passing_fibres_strength</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sum_branches</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">axon_spikes_per_pulse</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">axon_rate_amp</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
-<a href="#src.CompNeuroPy.dbs.DBSstimulator.on" class="headerlink" title="Permanent link">#</a></h3>
+<a href="#CompNeuroPy.dbs.DBSstimulator.on" class="headerlink" title="Permanent link">#</a></h3>
 
 
   <div class="doc doc-contents ">
@@ -3618,11 +3756,7 @@ from initialization</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/dbs.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1614</span>
-<span class="normal">1615</span>
-<span class="normal">1616</span>
-<span class="normal">1617</span>
-<span class="normal">1618</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1618</span>
 <span class="normal">1619</span>
 <span class="normal">1620</span>
 <span class="normal">1621</span>
@@ -3710,7 +3844,11 @@ from initialization</p>
 <span class="normal">1703</span>
 <span class="normal">1704</span>
 <span class="normal">1705</span>
-<span class="normal">1706</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@check_types</span><span class="p">()</span>
+<span class="normal">1706</span>
+<span class="normal">1707</span>
+<span class="normal">1708</span>
+<span class="normal">1709</span>
+<span class="normal">1710</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@check_types</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">on</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">population_proportion</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -3815,10 +3953,10 @@ from initialization</p>
 
 
 
-<h3 id="src.CompNeuroPy.dbs.DBSstimulator.off" class="doc doc-heading">
+<h3 id="CompNeuroPy.dbs.DBSstimulator.off" class="doc doc-heading">
           <code class="highlight language-python"><span class="n">off</span><span class="p">()</span></code>
 
-<a href="#src.CompNeuroPy.dbs.DBSstimulator.off" class="headerlink" title="Permanent link">#</a></h3>
+<a href="#CompNeuroPy.dbs.DBSstimulator.off" class="headerlink" title="Permanent link">#</a></h3>
 
 
   <div class="doc doc-contents ">
@@ -3827,18 +3965,18 @@ from initialization</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/dbs.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1746</span>
-<span class="normal">1747</span>
-<span class="normal">1748</span>
-<span class="normal">1749</span>
-<span class="normal">1750</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1750</span>
 <span class="normal">1751</span>
 <span class="normal">1752</span>
 <span class="normal">1753</span>
 <span class="normal">1754</span>
 <span class="normal">1755</span>
 <span class="normal">1756</span>
-<span class="normal">1757</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">off</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="normal">1757</span>
+<span class="normal">1758</span>
+<span class="normal">1759</span>
+<span class="normal">1760</span>
+<span class="normal">1761</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">off</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Deactivate DBS.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -3862,10 +4000,10 @@ from initialization</p>
 
 
 
-<h3 id="src.CompNeuroPy.dbs.DBSstimulator.update_pointers" class="doc doc-heading">
+<h3 id="CompNeuroPy.dbs.DBSstimulator.update_pointers" class="doc doc-heading">
           <code class="highlight language-python"><span class="n">update_pointers</span><span class="p">(</span><span class="n">pointer_list</span><span class="p">)</span></code>
 
-<a href="#src.CompNeuroPy.dbs.DBSstimulator.update_pointers" class="headerlink" title="Permanent link">#</a></h3>
+<a href="#CompNeuroPy.dbs.DBSstimulator.update_pointers" class="headerlink" title="Permanent link">#</a></h3>
 
 
   <div class="doc doc-contents ">
@@ -3928,11 +4066,7 @@ from initialization</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/dbs.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1759</span>
-<span class="normal">1760</span>
-<span class="normal">1761</span>
-<span class="normal">1762</span>
-<span class="normal">1763</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1763</span>
 <span class="normal">1764</span>
 <span class="normal">1765</span>
 <span class="normal">1766</span>
@@ -3952,7 +4086,11 @@ from initialization</p>
 <span class="normal">1780</span>
 <span class="normal">1781</span>
 <span class="normal">1782</span>
-<span class="normal">1783</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">update_pointers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pointer_list</span><span class="p">):</span>
+<span class="normal">1783</span>
+<span class="normal">1784</span>
+<span class="normal">1785</span>
+<span class="normal">1786</span>
+<span class="normal">1787</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">update_pointers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pointer_list</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Update pointers to populations and projections after recreating the model.</span>
 
@@ -3995,11 +4133,19 @@ from initialization</p>
 
 
 
+
+
+
+
+
+
+
                 
               </article>
             </div>
           
           
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
         </div>
         
       </main>
@@ -4035,7 +4181,7 @@ from initialization</p>
     <script id="__config" type="application/json">{"base": "../..", "features": ["header.autohide"], "search": "../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.cd18aaf1.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7c377c4.min.js"></script>
       
     
   </body>

@@ -16,7 +16,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.4.14">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.0">
     
     
       
@@ -24,10 +24,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.fad675c6.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.45e1311d.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.356b1318.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -48,6 +48,8 @@
     
       <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
     <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
@@ -66,14 +68,13 @@
     <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="indigo">
   
     
-    
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
         
-        <a href="#src.CompNeuroPy.generate_simulation.CompNeuroSim" class="md-skip">
+        <a href="#CompNeuroPy.generate_simulation.CompNeuroSim" class="md-skip">
           Skip to content
         </a>
       
@@ -120,6 +121,7 @@
     
     
     
+    
       <label class="md-header__button md-icon" for="__search">
         
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
@@ -162,7 +164,7 @@
         <a href="https://github.com/Olimaol/CompNeuroPy" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
   </div>
   <div class="md-source__repository">
     GitHub
@@ -208,7 +210,7 @@
       <a href="https://github.com/Olimaol/CompNeuroPy" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
   </div>
   <div class="md-source__repository">
     GitHub
@@ -367,7 +369,7 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.generate_simulation.CompNeuroSim" class="md-nav__link">
+  <a href="#CompNeuroPy.generate_simulation.CompNeuroSim" class="md-nav__link">
     <span class="md-ellipsis">
       CompNeuroSim
     </span>
@@ -377,7 +379,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.generate_simulation.CompNeuroSim.__init__" class="md-nav__link">
+  <a href="#CompNeuroPy.generate_simulation.CompNeuroSim.__init__" class="md-nav__link">
     <span class="md-ellipsis">
       __init__()
     </span>
@@ -386,7 +388,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.generate_simulation.CompNeuroSim.run" class="md-nav__link">
+  <a href="#CompNeuroPy.generate_simulation.CompNeuroSim.run" class="md-nav__link">
     <span class="md-ellipsis">
       run()
     </span>
@@ -395,7 +397,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.generate_simulation.CompNeuroSim.get_current_arr" class="md-nav__link">
+  <a href="#CompNeuroPy.generate_simulation.CompNeuroSim.get_current_arr" class="md-nav__link">
     <span class="md-ellipsis">
       get_current_arr()
     </span>
@@ -404,7 +406,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.generate_simulation.CompNeuroSim.simulation_info" class="md-nav__link">
+  <a href="#CompNeuroPy.generate_simulation.CompNeuroSim.simulation_info" class="md-nav__link">
     <span class="md-ellipsis">
       simulation_info()
     </span>
@@ -418,7 +420,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.generate_simulation.SimInfo" class="md-nav__link">
+  <a href="#CompNeuroPy.generate_simulation.SimInfo" class="md-nav__link">
     <span class="md-ellipsis">
       SimInfo
     </span>
@@ -428,7 +430,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.generate_simulation.SimInfo.__init__" class="md-nav__link">
+  <a href="#CompNeuroPy.generate_simulation.SimInfo.__init__" class="md-nav__link">
     <span class="md-ellipsis">
       __init__()
     </span>
@@ -437,7 +439,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.generate_simulation.SimInfo.get_current_arr" class="md-nav__link">
+  <a href="#CompNeuroPy.generate_simulation.SimInfo.get_current_arr" class="md-nav__link">
     <span class="md-ellipsis">
       get_current_arr()
     </span>
@@ -512,7 +514,7 @@
         
   
   <span class="md-ellipsis">
-    Define an Experiment
+    Define Experiments
   </span>
   
 
@@ -594,7 +596,7 @@
             
   
   <span class="md-ellipsis">
-    Built-in Objects
+    Built-in Models
   </span>
   
 
@@ -604,7 +606,7 @@
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
-            Built-in Objects
+            Built-in Models
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -619,7 +621,7 @@
         
   
   <span class="md-ellipsis">
-    Models
+    Full Models
   </span>
   
 
@@ -727,6 +729,27 @@
   
   <span class="md-ellipsis">
     Simulation Functions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../additional/simulation_requirements/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Simulation Requirements
   </span>
   
 
@@ -885,6 +908,111 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/run_and_monitor_simulations/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Generate Simulations
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/monitor_recordings/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Monitor Recordings
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/plot_recordings/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Plot Recordings
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/experiment/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Define Experiments
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/dbs/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DBS Simulator
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -937,7 +1065,7 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.generate_simulation.CompNeuroSim" class="md-nav__link">
+  <a href="#CompNeuroPy.generate_simulation.CompNeuroSim" class="md-nav__link">
     <span class="md-ellipsis">
       CompNeuroSim
     </span>
@@ -947,7 +1075,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.generate_simulation.CompNeuroSim.__init__" class="md-nav__link">
+  <a href="#CompNeuroPy.generate_simulation.CompNeuroSim.__init__" class="md-nav__link">
     <span class="md-ellipsis">
       __init__()
     </span>
@@ -956,7 +1084,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.generate_simulation.CompNeuroSim.run" class="md-nav__link">
+  <a href="#CompNeuroPy.generate_simulation.CompNeuroSim.run" class="md-nav__link">
     <span class="md-ellipsis">
       run()
     </span>
@@ -965,7 +1093,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.generate_simulation.CompNeuroSim.get_current_arr" class="md-nav__link">
+  <a href="#CompNeuroPy.generate_simulation.CompNeuroSim.get_current_arr" class="md-nav__link">
     <span class="md-ellipsis">
       get_current_arr()
     </span>
@@ -974,7 +1102,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.generate_simulation.CompNeuroSim.simulation_info" class="md-nav__link">
+  <a href="#CompNeuroPy.generate_simulation.CompNeuroSim.simulation_info" class="md-nav__link">
     <span class="md-ellipsis">
       simulation_info()
     </span>
@@ -988,7 +1116,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.generate_simulation.SimInfo" class="md-nav__link">
+  <a href="#CompNeuroPy.generate_simulation.SimInfo" class="md-nav__link">
     <span class="md-ellipsis">
       SimInfo
     </span>
@@ -998,7 +1126,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.generate_simulation.SimInfo.__init__" class="md-nav__link">
+  <a href="#CompNeuroPy.generate_simulation.SimInfo.__init__" class="md-nav__link">
     <span class="md-ellipsis">
       __init__()
     </span>
@@ -1007,7 +1135,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#src.CompNeuroPy.generate_simulation.SimInfo.get_current_arr" class="md-nav__link">
+  <a href="#CompNeuroPy.generate_simulation.SimInfo.get_current_arr" class="md-nav__link">
     <span class="md-ellipsis">
       get_current_arr()
     </span>
@@ -1045,11 +1173,11 @@
 
 
 
-<h2 id="src.CompNeuroPy.generate_simulation.CompNeuroSim" class="doc doc-heading">
-          <code>src.CompNeuroPy.generate_simulation.CompNeuroSim</code>
+<h2 id="CompNeuroPy.generate_simulation.CompNeuroSim" class="doc doc-heading">
+          <code>CompNeuroPy.generate_simulation.CompNeuroSim</code>
 
 
-<a href="#src.CompNeuroPy.generate_simulation.CompNeuroSim" class="headerlink" title="Permanent link">#</a></h2>
+<a href="#CompNeuroPy.generate_simulation.CompNeuroSim" class="headerlink" title="Permanent link">#</a></h2>
 
 
   <div class="doc doc-contents first">
@@ -1059,9 +1187,7 @@
 
             <details class="quote">
               <summary>Source code in <code>src/CompNeuroPy/generate_simulation.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">  6</span>
-<span class="normal">  7</span>
-<span class="normal">  8</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">  8</span>
 <span class="normal">  9</span>
 <span class="normal"> 10</span>
 <span class="normal"> 11</span>
@@ -1291,22 +1417,33 @@
 <span class="normal">235</span>
 <span class="normal">236</span>
 <span class="normal">237</span>
-<span class="normal">238</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">CompNeuroSim</span><span class="p">:</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">CompNeuroSim</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for generating a CompNeuroPy simulation.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">initialized_simulations</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">_initialized_simulations</span> <span class="o">=</span> <span class="p">[]</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">simulation_function</span><span class="p">,</span>
-        <span class="n">simulation_kwargs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;simulation&quot;</span><span class="p">,</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
-        <span class="n">requirements</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">kwargs_warning</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-        <span class="n">monitor_object</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">simulation_function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+        <span class="n">simulation_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;simulation&quot;</span><span class="p">,</span>
+        <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="n">requirements</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">kwargs_warning</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">monitor_object</span><span class="p">:</span> <span class="n">CompNeuroMonitors</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Args:</span>
@@ -1319,19 +1456,23 @@
 <span class="sd">            description (str, optional):</span>
 <span class="sd">                Description of the simulation. Default: &quot;&quot;.</span>
 <span class="sd">            requirements (list, optional):</span>
-<span class="sd">                List of requirements for the simulation. Default: None.</span>
+<span class="sd">                List of requirements for the simulation. It&#39;s a list of dictionaries</span>
+<span class="sd">                which contain the requirement class itself (key: &quot;req&quot;) and the</span>
+<span class="sd">                corresponding arguments (keys are the names of the arguments). The</span>
+<span class="sd">                arguments can be inherited from the simulation kwargs by using the</span>
+<span class="sd">                syntax &#39;simulation_kwargs.&lt;kwarg_name&gt;&#39;. Default: None.</span>
 <span class="sd">            kwargs_warning (bool, optional):</span>
 <span class="sd">                If True, a warning is printed if the simulation_kwargs are changed</span>
-<span class="sd">                during the simulation. Default: True.</span>
+<span class="sd">                during the simulation. Default: False.</span>
 <span class="sd">            monitor_object (CompNeuroMonitors object, optional):</span>
 <span class="sd">                CompNeuroMonitors object to automatically track the recording chunk for each</span>
 <span class="sd">                simulation run. Default: None.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># set simulaiton function</span>
+        <span class="c1"># set simulation function</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
         <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;simulation&quot;</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_nr_simulations</span><span class="p">())</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">initialized_simulations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_initialized_simulations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">description</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">simulation_function</span> <span class="o">=</span> <span class="n">simulation_function</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">simulation_kwargs</span> <span class="o">=</span> <span class="n">simulation_kwargs</span>
@@ -1344,9 +1485,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="n">kwargs_warning</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">warned</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_warned</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">warned</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_warned</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">monitor_object</span> <span class="o">=</span> <span class="n">monitor_object</span>
         <span class="k">if</span> <span class="n">monitor_object</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">monitor_chunk</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1356,7 +1497,7 @@
         <span class="c1">### test initial requirements</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_test_req</span><span class="p">(</span><span class="n">simulation_kwargs</span><span class="o">=</span><span class="n">simulation_kwargs</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation_kwargs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Runs the simulation function. With each run extend start, end list containing</span>
 <span class="sd">        start and end time of the corresponding run and the info list containing the</span>
@@ -1378,13 +1519,13 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="c1">### there are no initial kwargs --&gt; only use the kwargs which are given</span>
                 <span class="n">tmp_kwargs</span> <span class="o">=</span> <span class="n">simulation_kwargs</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">warned</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">requirements</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_warned</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">requirements</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="nb">print</span><span class="p">(</span>
                     <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">WARNING! run&quot;</span><span class="p">,</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
                     <span class="s2">&quot;changed simulation kwargs, initial requirements may no longer be fulfilled!</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span>
                 <span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">warned</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_warned</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">tmp_kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation_kwargs</span>
 
@@ -1410,7 +1551,7 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns the current number of initialized CompNeuroPy simulations.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">initialized_simulations</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_initialized_simulations</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_test_req</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation_kwargs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1421,12 +1562,16 @@
             <span class="n">simulation_kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation_kwargs</span>
 
         <span class="k">for</span> <span class="n">req</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">requirements</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">req</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># --&gt; requirement and arguments</span>
+            <span class="c1">### check if requirement_kwargs are given besides the requirement itself</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">req</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="c1">### remove the requirement itself from the kwargs</span>
                 <span class="n">req_kwargs</span> <span class="o">=</span> <span class="n">ef</span><span class="o">.</span><span class="n">remove_key</span><span class="p">(</span><span class="n">req</span><span class="p">,</span> <span class="s2">&quot;req&quot;</span><span class="p">)</span>
-                <span class="c1">### check if req_kwargs reference to sim_kwargs, if yes, use the corresponding current sim_kwarg as req_kwarg, if not do not update the initialized requirements kwargs</span>
+                <span class="c1">### check if req_kwargs reference to simulation_kwargs, if yes, use the</span>
+                <span class="c1">### current simulation kwargs instead of the intial ones</span>
                 <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">req_kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
                         <span class="n">val_split</span> <span class="o">=</span> <span class="n">val</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
+                        <span class="c1">### check if val is a reference to simulation_kwargs</span>
                         <span class="k">if</span> <span class="n">val_split</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;simulation_kwargs&quot;</span><span class="p">:</span>
                             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">val_split</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
                                 <span class="c1">### val is only simulation_kwargs</span>
@@ -1442,10 +1587,11 @@
                                     <span class="o">+</span> <span class="s1">&#39;&quot;].&#39;</span>
                                     <span class="o">+</span> <span class="s2">&quot;.&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">val_split</span><span class="p">[</span><span class="mi">2</span><span class="p">:])</span>
                                 <span class="p">)</span>
-
+                <span class="c1">### run the requirement using the current req_kwargs</span>
                 <span class="n">req</span><span class="p">[</span><span class="s2">&quot;req&quot;</span><span class="p">](</span><span class="o">**</span><span class="n">req_kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 
-            <span class="k">else</span><span class="p">:</span>  <span class="c1"># --&gt; only requirement</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1">### a requirement is given without kwargs --&gt; just run it</span>
                 <span class="n">req</span><span class="p">[</span><span class="s2">&quot;req&quot;</span><span class="p">]()</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">get_current_arr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
@@ -1545,10 +1691,10 @@
 
 
 
-<h3 id="src.CompNeuroPy.generate_simulation.CompNeuroSim.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">simulation_function</span><span class="p">,</span> <span class="n">simulation_kwargs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;simulation&#39;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">requirements</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">kwargs_warning</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">monitor_object</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+<h3 id="CompNeuroPy.generate_simulation.CompNeuroSim.__init__" class="doc doc-heading">
+          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">simulation_function</span><span class="p">,</span> <span class="n">simulation_kwargs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;simulation&#39;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">requirements</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">kwargs_warning</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">monitor_object</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
-<a href="#src.CompNeuroPy.generate_simulation.CompNeuroSim.__init__" class="headerlink" title="Permanent link">#</a></h3>
+<a href="#CompNeuroPy.generate_simulation.CompNeuroSim.__init__" class="headerlink" title="Permanent link">#</a></h3>
 
 
   <div class="doc doc-contents ">
@@ -1630,7 +1776,11 @@
           </td>
           <td>
             <div class="doc-md-description">
-              <p>List of requirements for the simulation. Default: None.</p>
+              <p>List of requirements for the simulation. It's a list of dictionaries
+which contain the requirement class itself (key: "req") and the
+corresponding arguments (keys are the names of the arguments). The
+arguments can be inherited from the simulation kwargs by using the
+syntax 'simulation_kwargs.<kwarg_name>'. Default: None.</p>
             </div>
           </td>
           <td>
@@ -1645,11 +1795,11 @@
           <td>
             <div class="doc-md-description">
               <p>If True, a warning is printed if the simulation_kwargs are changed
-during the simulation. Default: True.</p>
+during the simulation. Default: False.</p>
             </div>
           </td>
           <td>
-                <code>True</code>
+                <code>False</code>
           </td>
         </tr>
         <tr>
@@ -1672,9 +1822,7 @@ simulation run. Default: None.</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/generate_simulation.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">15</span>
 <span class="normal">16</span>
 <span class="normal">17</span>
 <span class="normal">18</span>
@@ -1728,15 +1876,21 @@ simulation run. Default: None.</p>
 <span class="normal">66</span>
 <span class="normal">67</span>
 <span class="normal">68</span>
-<span class="normal">69</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+<span class="normal">69</span>
+<span class="normal">70</span>
+<span class="normal">71</span>
+<span class="normal">72</span>
+<span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
-    <span class="n">simulation_function</span><span class="p">,</span>
-    <span class="n">simulation_kwargs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;simulation&quot;</span><span class="p">,</span>
-    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
-    <span class="n">requirements</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">kwargs_warning</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">monitor_object</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">simulation_function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+    <span class="n">simulation_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;simulation&quot;</span><span class="p">,</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">requirements</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">kwargs_warning</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">monitor_object</span><span class="p">:</span> <span class="n">CompNeuroMonitors</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Args:</span>
@@ -1749,19 +1903,23 @@ simulation run. Default: None.</p>
 <span class="sd">        description (str, optional):</span>
 <span class="sd">            Description of the simulation. Default: &quot;&quot;.</span>
 <span class="sd">        requirements (list, optional):</span>
-<span class="sd">            List of requirements for the simulation. Default: None.</span>
+<span class="sd">            List of requirements for the simulation. It&#39;s a list of dictionaries</span>
+<span class="sd">            which contain the requirement class itself (key: &quot;req&quot;) and the</span>
+<span class="sd">            corresponding arguments (keys are the names of the arguments). The</span>
+<span class="sd">            arguments can be inherited from the simulation kwargs by using the</span>
+<span class="sd">            syntax &#39;simulation_kwargs.&lt;kwarg_name&gt;&#39;. Default: None.</span>
 <span class="sd">        kwargs_warning (bool, optional):</span>
 <span class="sd">            If True, a warning is printed if the simulation_kwargs are changed</span>
-<span class="sd">            during the simulation. Default: True.</span>
+<span class="sd">            during the simulation. Default: False.</span>
 <span class="sd">        monitor_object (CompNeuroMonitors object, optional):</span>
 <span class="sd">            CompNeuroMonitors object to automatically track the recording chunk for each</span>
 <span class="sd">            simulation run. Default: None.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># set simulaiton function</span>
+    <span class="c1"># set simulation function</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
     <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;simulation&quot;</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_nr_simulations</span><span class="p">())</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">initialized_simulations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_initialized_simulations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">description</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">simulation_function</span> <span class="o">=</span> <span class="n">simulation_function</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">simulation_kwargs</span> <span class="o">=</span> <span class="n">simulation_kwargs</span>
@@ -1774,9 +1932,9 @@ simulation run. Default: None.</p>
     <span class="bp">self</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">if</span> <span class="n">kwargs_warning</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">warned</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_warned</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">warned</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_warned</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">monitor_object</span> <span class="o">=</span> <span class="n">monitor_object</span>
     <span class="k">if</span> <span class="n">monitor_object</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">monitor_chunk</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1797,10 +1955,10 @@ simulation run. Default: None.</p>
 
 
 
-<h3 id="src.CompNeuroPy.generate_simulation.CompNeuroSim.run" class="doc doc-heading">
+<h3 id="CompNeuroPy.generate_simulation.CompNeuroSim.run" class="doc doc-heading">
           <code class="highlight language-python"><span class="n">run</span><span class="p">(</span><span class="n">simulation_kwargs</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
-<a href="#src.CompNeuroPy.generate_simulation.CompNeuroSim.run" class="headerlink" title="Permanent link">#</a></h3>
+<a href="#CompNeuroPy.generate_simulation.CompNeuroSim.run" class="headerlink" title="Permanent link">#</a></h3>
 
 
   <div class="doc doc-contents ">
@@ -1842,13 +2000,7 @@ kwargs. Default: None, i.e., use values from initialization.</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/generate_simulation.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 71</span>
-<span class="normal"> 72</span>
-<span class="normal"> 73</span>
-<span class="normal"> 74</span>
-<span class="normal"> 75</span>
-<span class="normal"> 76</span>
-<span class="normal"> 77</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 77</span>
 <span class="normal"> 78</span>
 <span class="normal"> 79</span>
 <span class="normal"> 80</span>
@@ -1890,7 +2042,13 @@ kwargs. Default: None, i.e., use values from initialization.</p>
 <span class="normal">116</span>
 <span class="normal">117</span>
 <span class="normal">118</span>
-<span class="normal">119</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation_kwargs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Runs the simulation function. With each run extend start, end list containing</span>
 <span class="sd">    start and end time of the corresponding run and the info list containing the</span>
@@ -1912,13 +2070,13 @@ kwargs. Default: None, i.e., use values from initialization.</p>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1">### there are no initial kwargs --&gt; only use the kwargs which are given</span>
             <span class="n">tmp_kwargs</span> <span class="o">=</span> <span class="n">simulation_kwargs</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">warned</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">requirements</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_warned</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">requirements</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span>
                 <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">WARNING! run&quot;</span><span class="p">,</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
                 <span class="s2">&quot;changed simulation kwargs, initial requirements may no longer be fulfilled!</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span>
             <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">warned</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_warned</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">tmp_kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation_kwargs</span>
 
@@ -1951,10 +2109,10 @@ kwargs. Default: None, i.e., use values from initialization.</p>
 
 
 
-<h3 id="src.CompNeuroPy.generate_simulation.CompNeuroSim.get_current_arr" class="doc doc-heading">
+<h3 id="CompNeuroPy.generate_simulation.CompNeuroSim.get_current_arr" class="doc doc-heading">
           <code class="highlight language-python"><span class="n">get_current_arr</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
 
-<a href="#src.CompNeuroPy.generate_simulation.CompNeuroSim.get_current_arr" class="headerlink" title="Permanent link">#</a></h3>
+<a href="#CompNeuroPy.generate_simulation.CompNeuroSim.get_current_arr" class="headerlink" title="Permanent link">#</a></h3>
 
 
   <div class="doc doc-contents ">
@@ -2040,18 +2198,7 @@ run. If flat=True, returns a flattened array.</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/generate_simulation.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">163</span>
-<span class="normal">164</span>
-<span class="normal">165</span>
-<span class="normal">166</span>
-<span class="normal">167</span>
-<span class="normal">168</span>
-<span class="normal">169</span>
-<span class="normal">170</span>
-<span class="normal">171</span>
-<span class="normal">172</span>
-<span class="normal">173</span>
-<span class="normal">174</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">174</span>
 <span class="normal">175</span>
 <span class="normal">176</span>
 <span class="normal">177</span>
@@ -2093,7 +2240,18 @@ run. If flat=True, returns a flattened array.</p>
 <span class="normal">213</span>
 <span class="normal">214</span>
 <span class="normal">215</span>
-<span class="normal">216</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_current_arr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="normal">216</span>
+<span class="normal">217</span>
+<span class="normal">218</span>
+<span class="normal">219</span>
+<span class="normal">220</span>
+<span class="normal">221</span>
+<span class="normal">222</span>
+<span class="normal">223</span>
+<span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_current_arr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Method exclusively for current_step simulation functions. Gets the current array</span>
 <span class="sd">    (input current value for each time step) of all runs.</span>
@@ -2159,10 +2317,10 @@ run. If flat=True, returns a flattened array.</p>
 
 
 
-<h3 id="src.CompNeuroPy.generate_simulation.CompNeuroSim.simulation_info" class="doc doc-heading">
+<h3 id="CompNeuroPy.generate_simulation.CompNeuroSim.simulation_info" class="doc doc-heading">
           <code class="highlight language-python"><span class="n">simulation_info</span><span class="p">()</span></code>
 
-<a href="#src.CompNeuroPy.generate_simulation.CompNeuroSim.simulation_info" class="headerlink" title="Permanent link">#</a></h3>
+<a href="#CompNeuroPy.generate_simulation.CompNeuroSim.simulation_info" class="headerlink" title="Permanent link">#</a></h3>
 
 
   <div class="doc doc-contents ">
@@ -2182,7 +2340,7 @@ run. If flat=True, returns a flattened array.</p>
     <tbody>
         <tr>
 <td><code>simulation_info_obj</code></td>          <td>
-                <code><a class="autorefs autorefs-internal" title="src.CompNeuroPy.generate_simulation.SimInfo" href="#src.CompNeuroPy.generate_simulation.SimInfo">SimInfo</a></code>
+                <code><a class="autorefs autorefs-internal" title="CompNeuroPy.generate_simulation.SimInfo" href="#CompNeuroPy.generate_simulation.SimInfo">SimInfo</a></code>
           </td>
           <td>
             <div class="doc-md-description">
@@ -2195,18 +2353,7 @@ run. If flat=True, returns a flattened array.</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/generate_simulation.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">218</span>
-<span class="normal">219</span>
-<span class="normal">220</span>
-<span class="normal">221</span>
-<span class="normal">222</span>
-<span class="normal">223</span>
-<span class="normal">224</span>
-<span class="normal">225</span>
-<span class="normal">226</span>
-<span class="normal">227</span>
-<span class="normal">228</span>
-<span class="normal">229</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">229</span>
 <span class="normal">230</span>
 <span class="normal">231</span>
 <span class="normal">232</span>
@@ -2215,7 +2362,18 @@ run. If flat=True, returns a flattened array.</p>
 <span class="normal">235</span>
 <span class="normal">236</span>
 <span class="normal">237</span>
-<span class="normal">238</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">simulation_info</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">simulation_info</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Returns a SimInfo object containing the simulation information.</span>
 
@@ -2255,11 +2413,11 @@ run. If flat=True, returns a flattened array.</p>
 
 
 
-<h2 id="src.CompNeuroPy.generate_simulation.SimInfo" class="doc doc-heading">
-          <code>src.CompNeuroPy.generate_simulation.SimInfo</code>
+<h2 id="CompNeuroPy.generate_simulation.SimInfo" class="doc doc-heading">
+          <code>CompNeuroPy.generate_simulation.SimInfo</code>
 
 
-<a href="#src.CompNeuroPy.generate_simulation.SimInfo" class="headerlink" title="Permanent link">#</a></h2>
+<a href="#CompNeuroPy.generate_simulation.SimInfo" class="headerlink" title="Permanent link">#</a></h2>
 
 
   <div class="doc doc-contents first">
@@ -2372,18 +2530,7 @@ run. If flat=True, returns a flattened array.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/CompNeuroPy/generate_simulation.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">245</span>
-<span class="normal">246</span>
-<span class="normal">247</span>
-<span class="normal">248</span>
-<span class="normal">249</span>
-<span class="normal">250</span>
-<span class="normal">251</span>
-<span class="normal">252</span>
-<span class="normal">253</span>
-<span class="normal">254</span>
-<span class="normal">255</span>
-<span class="normal">256</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">256</span>
 <span class="normal">257</span>
 <span class="normal">258</span>
 <span class="normal">259</span>
@@ -2522,7 +2669,18 @@ run. If flat=True, returns a flattened array.</p>
 <span class="normal">392</span>
 <span class="normal">393</span>
 <span class="normal">394</span>
-<span class="normal">395</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">SimInfo</span><span class="p">:</span>
+<span class="normal">395</span>
+<span class="normal">396</span>
+<span class="normal">397</span>
+<span class="normal">398</span>
+<span class="normal">399</span>
+<span class="normal">400</span>
+<span class="normal">401</span>
+<span class="normal">402</span>
+<span class="normal">403</span>
+<span class="normal">404</span>
+<span class="normal">405</span>
+<span class="normal">406</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">SimInfo</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for storing the simulation information.</span>
 
@@ -2694,10 +2852,10 @@ run. If flat=True, returns a flattened array.</p>
 
 
 
-<h3 id="src.CompNeuroPy.generate_simulation.SimInfo.__init__" class="doc doc-heading">
+<h3 id="CompNeuroPy.generate_simulation.SimInfo.__init__" class="doc doc-heading">
           <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">simulation_function</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">,</span> <span class="n">monitor_chunk</span><span class="p">)</span></code>
 
-<a href="#src.CompNeuroPy.generate_simulation.SimInfo.__init__" class="headerlink" title="Permanent link">#</a></h3>
+<a href="#CompNeuroPy.generate_simulation.SimInfo.__init__" class="headerlink" title="Permanent link">#</a></h3>
 
 
   <div class="doc doc-contents ">
@@ -2836,18 +2994,7 @@ run.</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/generate_simulation.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">268</span>
-<span class="normal">269</span>
-<span class="normal">270</span>
-<span class="normal">271</span>
-<span class="normal">272</span>
-<span class="normal">273</span>
-<span class="normal">274</span>
-<span class="normal">275</span>
-<span class="normal">276</span>
-<span class="normal">277</span>
-<span class="normal">278</span>
-<span class="normal">279</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">279</span>
 <span class="normal">280</span>
 <span class="normal">281</span>
 <span class="normal">282</span>
@@ -2877,7 +3024,18 @@ run.</p>
 <span class="normal">306</span>
 <span class="normal">307</span>
 <span class="normal">308</span>
-<span class="normal">309</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+<span class="normal">309</span>
+<span class="normal">310</span>
+<span class="normal">311</span>
+<span class="normal">312</span>
+<span class="normal">313</span>
+<span class="normal">314</span>
+<span class="normal">315</span>
+<span class="normal">316</span>
+<span class="normal">317</span>
+<span class="normal">318</span>
+<span class="normal">319</span>
+<span class="normal">320</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">name</span><span class="p">,</span>
     <span class="n">description</span><span class="p">,</span>
@@ -2931,10 +3089,10 @@ run.</p>
 
 
 
-<h3 id="src.CompNeuroPy.generate_simulation.SimInfo.get_current_arr" class="doc doc-heading">
+<h3 id="CompNeuroPy.generate_simulation.SimInfo.get_current_arr" class="doc doc-heading">
           <code class="highlight language-python"><span class="n">get_current_arr</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
 
-<a href="#src.CompNeuroPy.generate_simulation.SimInfo.get_current_arr" class="headerlink" title="Permanent link">#</a></h3>
+<a href="#CompNeuroPy.generate_simulation.SimInfo.get_current_arr" class="headerlink" title="Permanent link">#</a></h3>
 
 
   <div class="doc doc-contents ">
@@ -3019,18 +3177,7 @@ run. If flat=True, returns a flattened array.</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/generate_simulation.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">311</span>
-<span class="normal">312</span>
-<span class="normal">313</span>
-<span class="normal">314</span>
-<span class="normal">315</span>
-<span class="normal">316</span>
-<span class="normal">317</span>
-<span class="normal">318</span>
-<span class="normal">319</span>
-<span class="normal">320</span>
-<span class="normal">321</span>
-<span class="normal">322</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">322</span>
 <span class="normal">323</span>
 <span class="normal">324</span>
 <span class="normal">325</span>
@@ -3103,7 +3250,18 @@ run. If flat=True, returns a flattened array.</p>
 <span class="normal">392</span>
 <span class="normal">393</span>
 <span class="normal">394</span>
-<span class="normal">395</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_current_arr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="normal">395</span>
+<span class="normal">396</span>
+<span class="normal">397</span>
+<span class="normal">398</span>
+<span class="normal">399</span>
+<span class="normal">400</span>
+<span class="normal">401</span>
+<span class="normal">402</span>
+<span class="normal">403</span>
+<span class="normal">404</span>
+<span class="normal">405</span>
+<span class="normal">406</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_current_arr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Method exclusively for the following simulation functions (built-in</span>
 <span class="sd">    CompNeuroPy):</span>
@@ -3206,11 +3364,19 @@ run. If flat=True, returns a flattened array.</p>
 
 
 
+
+
+
+
+
+
+
                 
               </article>
             </div>
           
           
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
         </div>
         
       </main>
@@ -3246,7 +3412,7 @@ run. If flat=True, returns a flattened array.</p>
     <script id="__config" type="application/json">{"base": "../..", "features": ["header.autohide"], "search": "../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.cd18aaf1.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7c377c4.min.js"></script>
       
     
   </body>
