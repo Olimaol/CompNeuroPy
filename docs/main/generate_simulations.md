@@ -1,5 +1,5 @@
 ## Introduction
-A CompNeuroPy-simulation can be created using the [`CompNeuroSim`](#CompNeuroPy.generate_simulation.CompNeuroSim) class. Similar to the [`CompNeuroModel`](/main/generate_models/#CompNeuroPy.generate_model.CompNeuroModel) class, a function must be defined that contains the actual simulation (the _simulation_function_) and the [`CompNeuroSim`](#CompNeuroPy.generate_simulation.CompNeuroSim) object adds a clear framework. A [`CompNeuroSim`](#CompNeuroPy.generate_simulation.CompNeuroSim) is first initialized and can then be run multiple times.
+A CompNeuroPy-simulation can be created using the [`CompNeuroSim`](#CompNeuroPy.generate_simulation.CompNeuroSim) class. Similar to the [`CompNeuroModel`](generate_models.md#CompNeuroPy.generate_model.CompNeuroModel) class, a function must be defined that contains the actual simulation (the _simulation_function_) and the [`CompNeuroSim`](#CompNeuroPy.generate_simulation.CompNeuroSim) object adds a clear framework. A [`CompNeuroSim`](#CompNeuroPy.generate_simulation.CompNeuroSim) is first initialized and can then be run multiple times.
 
 ## Example:
 ```python
@@ -30,7 +30,7 @@ And a corresponding requirement could be:
 from CompNeuroPy import ReqPopHasAttr
 req = {'req':ReqPopHasAttr, 'pop':pop1, 'attr':['a', 'b']}
 ```
-Here, one checks if the population _pop1_ contains the attributes _a_ and _b_. The [`ReqPopHasAttr`](/additional/simulation_requirements/#CompNeuroPy.simulation_requirements.ReqPopHasAttr) is a built-in requirements-class of CompNeuroPy (see below).
+Here, one checks if the population _pop1_ contains the attributes _a_ and _b_. The [`ReqPopHasAttr`](../additional/simulation_requirements.md#CompNeuroPy.simulation_requirements.ReqPopHasAttr) is a built-in requirements-class of CompNeuroPy (see below).
 
 A more detailed example is available in the [Examples](../examples/run_and_monitor_simulations.md).
 
@@ -38,7 +38,7 @@ A more detailed example is available in the [Examples](../examples/run_and_monit
 The function _simulation_info()_ returns a [`SimInfo`](#CompNeuroPy.generate_simulation.SimInfo) object which contains usefull information about the simulation runs (see below). The [`SimInfo`](#CompNeuroPy.generate_simulation.SimInfo) object also provides usefull analysis functions associated with specific simulation functions. Currently it provides the _get_current_arr()_ which returns arrays containing the input current for each time step of the built-in simulation functions _current_step()_, _current_stim()_, and _current_ramp()_.
 
 ## Simulation functions
-Just define a classic ANNarchy simulation in a function. Within the functions, the ANNarchy functions _get_population()_ and _get_projection()_ can be used to access the populations and projections using the population and projection names provided by a [`CompNeuroModel`](/main/generate_models/#CompNeuroPy.generate_model.CompNeuroModel). The return value of the simulation function can later be retrieved from the [`SimInfo`](#CompNeuroPy.generate_simulation.SimInfo) object (the _info_ attribute) in a list containing the return value for each run of the simulation.
+Just define a classic ANNarchy simulation in a function. Within the functions, the ANNarchy functions _get_population()_ and _get_projection()_ can be used to access the populations and projections using the population and projection names provided by a [`CompNeuroModel`](generate_models.md#CompNeuroPy.generate_model.CompNeuroModel). The return value of the simulation function can later be retrieved from the [`SimInfo`](#CompNeuroPy.generate_simulation.SimInfo) object (the _info_ attribute) in a list containing the return value for each run of the simulation.
 
 ### Example:
 ```python
@@ -73,9 +73,9 @@ def current_step(pop, t1=500, t2=500, a1=0, a2=100):
 ```
 
 ## Requirements
-In order to perform simulations with models, the models must almost always fulfill certain requirements. For example, if the input current of a population is to be set, this population (or the neuron model) must of course have the corresponding variable. Such preconditions can be tested in advance with the `simulation_requirements` classes. They only need to contain a function _run()_ to test the requirements (if requirements are not met, cause an error). In CompNeuroPy predefined [`simulation_requirements`](/additional/simulation_requirements/) classes are available (CompNeuroPy.simulation_requirements; currently only [`ReqPopHasAttr`](/additional/simulation_requirements/#CompNeuroPy.simulation_requirements.ReqPopHasAttr)). In the [`CompNeuroSim`](#CompNeuroPy.generate_simulation.CompNeuroSim) class, the requirements are passed as arguments in a list (see above). Each requirement (list entry) must be defined as a dictionary with keys _req_ (the requirement class) and the arguments of the requirement class (e.g., _pop_ and _attr_ for the [`ReqPopHasAttr`](/additional/simulation_requirements/#CompNeuroPy.simulation_requirements.ReqPopHasAttr)).
+In order to perform simulations with models, the models must almost always fulfill certain requirements. For example, if the input current of a population is to be set, this population (or the neuron model) must of course have the corresponding variable. Such preconditions can be tested in advance with the `simulation_requirements` classes. They only need to contain a function _run()_ to test the requirements (if requirements are not met, cause an error). In CompNeuroPy predefined [`simulation_requirements`](../additional/simulation_requirements.md) classes are available (CompNeuroPy.simulation_requirements; currently only [`ReqPopHasAttr`](../additional/simulation_requirements.md#CompNeuroPy.simulation_requirements.ReqPopHasAttr)). In the [`CompNeuroSim`](#CompNeuroPy.generate_simulation.CompNeuroSim) class, the requirements are passed as arguments in a list (see above). Each requirement (list entry) must be defined as a dictionary with keys _req_ (the requirement class) and the arguments of the requirement class (e.g., _pop_ and _attr_ for the [`ReqPopHasAttr`](../additional/simulation_requirements.md#CompNeuroPy.simulation_requirements.ReqPopHasAttr)).
 
-Here two requirements are defined (both [`ReqPopHasAttr`](/additional/simulation_requirements/#CompNeuroPy.simulation_requirements.ReqPopHasAttr)). All populations of _my_model_ should contain the attribute (variable or parameter) _'I'_ and all populations of _my_other_model_ should contain the attribute _'v'_:
+Here two requirements are defined (both [`ReqPopHasAttr`](../additional/simulation_requirements.md#CompNeuroPy.simulation_requirements.ReqPopHasAttr)). All populations of _my_model_ should contain the attribute (variable or parameter) _'I'_ and all populations of _my_other_model_ should contain the attribute _'v'_:
 
 ```python
 req1 = {'req':ReqPopHasAttr, 'pop':my_model.populations, 'attr':'I'}

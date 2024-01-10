@@ -16,16 +16,16 @@ opt = OptNeuron(
 )
 ```
 
-A full example is available in the [Examples](/examples/opt_neuron).
+A full example is available in the [Examples](../examples/opt_neuron.md).
 
 ## Run the optimization
 To run the optimization simply call the _run()_ function of the [`OptNeuron`](#CompNeuroPy.opt_neuron.OptNeuron) object.
 
 ## Define the experiment
-You have to define a [`CompNeuroExp`](/main/define_experiment/#CompNeuroPy.experiment.CompNeuroExp) object containing a _run()_ function. In the _run()_ function simulations and recordings are performed.
+You have to define a [`CompNeuroExp`](define_experiment.md#CompNeuroPy.experiment.CompNeuroExp) object containing a _run()_ function. In the _run()_ function simulations and recordings are performed.
 
 !!! warning
-    While defining the [`CompNeuroExp`](/main/define_experiment/#CompNeuroPy.experiment.CompNeuroExp) _run()_ function for the optimization with [`OptNeuron`](#CompNeuroPy.opt_neuron.OptNeuron) you must observe the following rules:
+    While defining the [`CompNeuroExp`](define_experiment.md#CompNeuroPy.experiment.CompNeuroExp) _run()_ function for the optimization with [`OptNeuron`](#CompNeuroPy.opt_neuron.OptNeuron) you must observe the following rules:
 
 - the _run()_ function has to take a single argument (besides self) which contains the name of the population consiting of a single neuron of the optimized neuron model (you can use this to access the population)
 - call _self.reset(parameters=False)_ at the beginning of the run function, thus the neuron will be in its compile state (except the paramters) at the beginning of each simulation run
@@ -110,7 +110,7 @@ class my_exp(CompNeuroExp):
 ```
 
 ## The get_loss_function
-The _get_loss_function_ must have two arguments. When this function is called during optimization, the first argument is always the _results_ object returned by the _experiment_, i.e. the results of the neuron you want to optimize. The second argument depends on whether you have specified _results_soll_, i.e. data to be reproduced by the _neuron_model_, or whether you have specified a _target_neuron_model_ whose results are to be reproduced by the _neuron_model_. Thus, the second argument is either _results_soll_ provided to the [`OptNeuron`](#CompNeuroPy.opt_neuron.OptNeuron) class during initialization or another _results_ object (returned by the [`CompNeuroExp`](/main/define_experiment/#CompNeuroPy.experiment.CompNeuroExp) _run_ function), generated with the _target_neuron_model_.
+The _get_loss_function_ must have two arguments. When this function is called during optimization, the first argument is always the _results_ object returned by the _experiment_, i.e. the results of the neuron you want to optimize. The second argument depends on whether you have specified _results_soll_, i.e. data to be reproduced by the _neuron_model_, or whether you have specified a _target_neuron_model_ whose results are to be reproduced by the _neuron_model_. Thus, the second argument is either _results_soll_ provided to the [`OptNeuron`](#CompNeuroPy.opt_neuron.OptNeuron) class during initialization or another _results_ object (returned by the [`CompNeuroExp`](define_experiment.md#CompNeuroPy.experiment.CompNeuroExp) _run_ function), generated with the _target_neuron_model_.
 
 ### Example:
 In this example we assume, that _results_soll_ was provided during initialization of the [`OptNeuron`](#CompNeuroPy.opt_neuron.OptNeuron) class (no _target_neuron_model_ used).
