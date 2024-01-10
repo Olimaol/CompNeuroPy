@@ -5,6 +5,7 @@ theme:
 
   features:
      - header.autohide
+     - content.code.copy
   
   palette:
     primary: black
@@ -71,4 +72,5 @@ nav:
     - Plot Recordings: 'examples/plot_recordings.md'
     - Define Experiments: 'examples/experiment.md'
     - DBS Simulator: 'examples/dbs.md'
+    - Optimize a neuron model: 'examples/opt_neuron.md'
   - License: 'license.md'

@@ -40,6 +40,7 @@ class OptNeuron:
 
     opt_created = []
 
+    # @check_types() TODO check types does probably not work with type hint Any
     def __init__(
         self,
         experiment: Type[CompNeuroExp],
@@ -48,7 +49,7 @@ class OptNeuron:
         neuron_model: Neuron,
         results_soll: Any | None = None,
         target_neuron_model: Neuron | None = None,
-        time_step: float | None = 1.0,
+        time_step: float = 1.0,
         compile_folder_name: str = "annarchy_OptNeuron",
         num_rep_loss: int = 1,
         method: str = "hyperopt",

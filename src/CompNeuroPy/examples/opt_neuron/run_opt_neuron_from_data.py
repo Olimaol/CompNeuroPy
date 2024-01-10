@@ -1,3 +1,7 @@
+"""
+This example demonstrates how to use the OptNeuron class to fit an ANNarchy neuron
+model to some experimental data.
+"""
 from CompNeuroPy import CompNeuroExp, CompNeuroSim, current_step, rmse
 from CompNeuroPy.opt_neuron import OptNeuron
 import numpy as np
@@ -19,7 +23,7 @@ my_neuron = Neuron(
 )
 
 
-### Now we need some "experimental data" which will be provided to the opt_neuron class
+### Now we need some "experimental data" which will be provided to the OptNeuron class
 ### with the argument results_soll.
 def get_experimental_data():
     """
@@ -85,7 +89,7 @@ class my_exp(CompNeuroExp):
         Args:
             population_name (str):
                 name of the population which contains a single neuron, this will be
-                automatically provided by opt_neuron
+                automatically provided by OptNeuron
 
         Returns:
             results (CompNeuroExp._ResultsCl):
@@ -141,11 +145,11 @@ class my_exp(CompNeuroExp):
         return self.results()
 
 
-### Next, the opt_neuron class needs a function to calculate the loss.
+### Next, the OptNeuron class needs a function to calculate the loss.
 def get_loss(results_ist: CompNeuroExp._ResultsCl, results_soll):
     """
     Function which has to have the arguments results_ist and results_soll and should
-    calculates and return the loss. This structure is needed for the OptNeuron class.
+    calculate and return the loss. This structure is needed for the OptNeuron class.
 
     Args:
         results_ist (object):
@@ -167,7 +171,8 @@ def get_loss(results_ist: CompNeuroExp._ResultsCl, results_soll):
     r_target_0 = results_soll[0]
     r_target_1 = results_soll[1]
 
-    ### get the data for calculating the loss from the recordings
+    ### get the data for calculating the loss from the recordings of the
+    ### optimized neuron model
     r_ist_0 = rec_ist[0][f"{pop_ist};r"][:, neuron]
     r_ist_1 = rec_ist[1][f"{pop_ist};r"][:, neuron]
 
@@ -193,20 +198,21 @@ def main():
         experiment=my_exp,
         get_loss_function=get_loss,
         variables_bounds=variables_bounds,
+        neuron_model=my_neuron,
         results_soll=experimental_data["results_soll"],
         time_step=experimental_data["time_step"],
-        compile_folder_name="annarchy_opt_neuron_example",
-        neuron_model=my_neuron,
+        compile_folder_name="annarchy_opt_neuron_example_from_data",
         method="hyperopt",
         record=["r"],
     )
 
     ### run the optimization, define how often the experiment should be repeated
-    fit = opt.run(max_evals=1000, results_file_name="best.npy")
+    fit = opt.run(max_evals=1000, results_file_name="best_from_data.npy")
 
     ### print optimized parameters, we should get around a=0.8 and b=2
     print("a", fit["a"])
     print("b", fit["b"])
+    print(list(fit.keys()))
 
 
 if __name__ == "__main__":
