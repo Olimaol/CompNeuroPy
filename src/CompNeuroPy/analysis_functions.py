@@ -2586,16 +2586,12 @@ class PlotRecordings:
         else:
             ### all y ticks
             y_tick_positions_all_arr = np.arange(data_arr.shape[1])
-            print(y_tick_positions_all_arr)
             ### boolean array of valid y ticks
             valid_y_ticks = np.logical_not(np.isnan(data_arr).any(axis=0))
-            print(valid_y_ticks)
             ### get y tick labels
             if False in valid_y_ticks:
                 ### there are nan entries
                 ### split at nan entries
-                print(f"array to split: {y_tick_positions_all_arr}")
-                print(f"split at: {np.where(np.logical_not(valid_y_ticks))}")
                 y_tick_positions_split_list = np.array_split(
                     y_tick_positions_all_arr, np.where(np.logical_not(valid_y_ticks))[0]
                 )
@@ -2610,7 +2606,6 @@ class PlotRecordings:
                 y_tick_labels_all_arr = np.concatenate(y_tick_positions_split_list)
             else:
                 y_tick_labels_all_arr = y_tick_positions_all_arr
-            print(y_tick_labels_all_arr)
 
             valid_y_ticks_selected_idx_arr = np.linspace(
                 0,
@@ -2619,15 +2614,12 @@ class PlotRecordings:
                 dtype=int,
                 endpoint=False,
             )
-            print(valid_y_ticks_selected_idx_arr)
             valid_y_ticks_selected_arr = y_tick_positions_all_arr[valid_y_ticks][
                 valid_y_ticks_selected_idx_arr
             ]
             valid_y_ticks_labels_selected_arr = y_tick_labels_all_arr[valid_y_ticks][
                 valid_y_ticks_selected_idx_arr
             ]
-            print(valid_y_ticks_selected_arr)
-            print("\n\n")
 
             plt.yticks(valid_y_ticks_selected_arr, valid_y_ticks_labels_selected_arr)
 

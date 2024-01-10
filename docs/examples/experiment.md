@@ -1,3 +1,8 @@
+## Introduction
+This example demonstrates how to use the CompNeuroExp class to combine simulations,
+model and recordings in an experiment. It is shown how to define an experiment, how to
+run it and how to get the results.
+
 ## Code
 ```python
 from CompNeuroPy import (
@@ -7,7 +12,7 @@ from CompNeuroPy import (
     CompNeuroModel,
     current_step,
     current_ramp,
-    plot_recordings,
+    PlotRecordings,
 )
 from CompNeuroPy.full_models import HHmodelBischop
 from ANNarchy import dt, setup, get_population
@@ -154,38 +159,58 @@ if __name__ == "__main__":
 
     ### plot of the membrane potential from the first and second chunk using results
     ### experiment run 1
-    plot_recordings(
+    PlotRecordings(
         figname="example_experiment_sim_step.png",
         recordings=results_run1.recordings,
         recording_times=results_run1.recording_times,
         chunk=0,
         shape=(1, 1),
-        plan=[f"1;{results_run1.data['population_name']};v;line"],
+        plan={
+            "position": [1],
+            "compartment": [results_run1.data["population_name"]],
+            "variable": ["v"],
+            "format": ["line"],
+        },
     )
-    plot_recordings(
+    PlotRecordings(
         figname="example_experiment_sim_ramp.png",
         recordings=results_run1.recordings,
         recording_times=results_run1.recording_times,
         chunk=1,
         shape=(1, 1),
-        plan=[f"1;{results_run1.data['population_name']};v;line"],
+        plan={
+            "position": [1],
+            "compartment": [results_run1.data["population_name"]],
+            "variable": ["v"],
+            "format": ["line"],
+        },
     )
     ### experiment run 2
-    plot_recordings(
+    PlotRecordings(
         figname="example_experiment2_sim_step.png",
         recordings=results_run2.recordings,
         recording_times=results_run2.recording_times,
         chunk=0,
         shape=(1, 1),
-        plan=[f"1;{results_run2.data['population_name']};v;line"],
+        plan={
+            "position": [1],
+            "compartment": [results_run2.data["population_name"]],
+            "variable": ["v"],
+            "format": ["line"],
+        },
     )
-    plot_recordings(
+    PlotRecordings(
         figname="example_experiment2_sim_ramp.png",
         recordings=results_run2.recordings,
         recording_times=results_run2.recording_times,
         chunk=1,
         shape=(1, 1),
-        plan=[f"1;{results_run2.data['population_name']};v;line"],
+        plan={
+            "position": [1],
+            "compartment": [results_run2.data["population_name"]],
+            "variable": ["v"],
+            "format": ["line"],
+        },
     )
 
     ### print data and mon_dict from results
@@ -209,24 +234,29 @@ if __name__ == "__main__":
 ```console
 $ python experiment.py 
 ANNarchy 4.7 (4.7.3b) on linux (posix).
-generate fig example_experiment_sim_step.png... Done
-generate fig example_experiment_sim_ramp.png... Done
-generate fig example_experiment2_sim_step.png... Done
-generate fig example_experiment2_sim_ramp.png... Done
+Compiling ...  OK 
+Generate fig example_experiment_sim_step.png... Done
+
+Generate fig example_experiment_sim_ramp.png... Done
+
+Generate fig example_experiment2_sim_step.png... Done
+
+Generate fig example_experiment2_sim_ramp.png... Done
+
 
 run1:
     data:
-        sim: [<CompNeuroPy.generate_simulation.SimInfo object at 0x7f0b57652fb0>, <CompNeuroPy.generate_simulation.SimInfo object at 0x7f0b57652f80>]
+        sim: [<CompNeuroPy.generate_simulation.SimInfo object at 0x7f4798dfb700>, <CompNeuroPy.generate_simulation.SimInfo object at 0x7f4798dfad40>]
         population_name: HH_Bischop
         time_step: 0.01
     mon_dict:
-        pop;HH_Bischop: ['v']
+        HH_Bischop: ['v']
 
 run2:
     data:
-        sim: [<CompNeuroPy.generate_simulation.SimInfo object at 0x7f0b57652fb0>, <CompNeuroPy.generate_simulation.SimInfo object at 0x7f0b57652f80>]
+        sim: [<CompNeuroPy.generate_simulation.SimInfo object at 0x7f4798dfb700>, <CompNeuroPy.generate_simulation.SimInfo object at 0x7f4798dfad40>]
         population_name: HH_Bischop
         time_step: 0.01
     mon_dict:
-        pop;HH_Bischop: ['v']
+        HH_Bischop: ['v']
 ```

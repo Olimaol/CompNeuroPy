@@ -1,3 +1,10 @@
+## Introduction
+This example demonstrates how to use the CompNeuroModel class to create and compile
+models. It is shown how to define a model creation function, how to initialize, create,
+compile a model and how to get information about the model.
+
+The model "my_model" is imported in other examples [run_and_monitor_simulations.py](./run_and_monitor_simulations.md).
+
 ## Code
 ```python
 from ANNarchy import Population
@@ -28,7 +35,7 @@ def two_poisson(params, a):
 
 ### Let's initialize a first model
 ### define the parameters argument of the model creation function
-params = {"s1": 1, "s2": 1, "n1": "first_poisson", "n2": "second_poisson"}
+params = {"s1": 3, "s2": 3, "n1": "first_poisson", "n2": "second_poisson"}
 
 ### use CompNeuroModel to initialize the model, not create or compile it yet
 my_model = CompNeuroModel(
@@ -88,6 +95,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 ```
 
 ## Console Output
@@ -104,5 +112,4 @@ Compiling ...  OK
 +----------+--------------------------------+-------------------------------------+---------------+
 | model1   |                                | ['pop1', 'pop2']                    | []            |
 +----------+--------------------------------+-------------------------------------+---------------+
-
 ```

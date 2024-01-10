@@ -1,3 +1,10 @@
+"""
+This example demonstrates how to use the CompNeuroModel class to create and compile
+models. It is shown how to define a model creation function, how to initialize, create,
+compile a model and how to get information about the model.
+
+The model "my_model" is imported in other examples "run_and_monitor_simulations.py".
+"""
 from ANNarchy import Population
 from CompNeuroPy import CompNeuroModel
 from CompNeuroPy.neuron_models import PoissonNeuron

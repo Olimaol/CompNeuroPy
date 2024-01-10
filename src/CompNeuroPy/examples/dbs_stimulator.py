@@ -1,12 +1,12 @@
 """
-In this example, the DBS stimulator is tested with a simple spiking and rate-coded model.
-The spiking model is based on the Izhikevich model (Izhikevich, 2007) with conductance-based synapses.
-The rate-coded model is based on neurons including membrane potential and a resulting firing rate.
-The DBS stimulator is tested with different stimulation parameters.
-The resulting activity of the populations is compared to the expected activity (not part of example, included for testing purposes only).
-The resulting activity of the populations is plotted.
-The figures are saved in the DBS_spiking_figure and DBS_rate_figure folders.
-The different DBS conditions are:
+In this example, the DBS stimulator is tested with a simple spiking and rate-coded
+model. The spiking model is based on the Izhikevich model (Izhikevich, 2007) with
+conductance-based synapses. The rate-coded model is based on neurons including membrane
+potential and a resulting firing rate. The DBS stimulator is tested with different
+stimulation parameters. The resulting activity of the populations is compared to the
+expected activity (not part of example, included for testing purposes only). The
+resulting activity of the populations is plotted. The figures are saved in the
+DBS_spiking_figure and DBS_rate_figure folders. The different DBS conditions are:
     - no stimulation
     - orthodromic stimulation of efferents
     - orthodromic stimulation of afferents
@@ -39,7 +39,7 @@ from ANNarchy import (
 )
 from CompNeuroPy import (
     CompNeuroMonitors,
-    plot_recordings,
+    PlotRecordings,
     CompNeuroModel,
     cnp_clear,
     DBSstimulator,
@@ -97,7 +97,11 @@ class dbs_test_model_class:
             mode (str):
                 Mode of the dbs test model, either "spiking" or "rate-coded"
         """
+        ### constants should still be available after DBSstimulator recreates the model
+        ### test this by creating this constant
         Constant("my_important_const", 0.0)
+
+        ### check if model to create is spiking or rate-coded
         if mode == "spiking":
             self.model = CompNeuroModel(
                 model_creation_function=self.create_model,
@@ -637,31 +641,35 @@ def plot_spiking(
 
     ### plot data
     for trial in range(len(dbs_val_list)):
-        plot_recordings(
+        PlotRecordings(
             figname=f"DBS_spiking_figure/membrane_trial_{trial}.png",
             recordings=recordings,
             recording_times=recording_times,
             chunk=trial,
             shape=(3, 2),
-            plan=[
-                f"{pop_idx+1};{pop_name};v;matrix"
-                for pop_idx, pop_name in enumerate(model.populations)
-            ],
+            plan={
+                "position": np.arange(len(model.populations), dtype=int) + 1,
+                "compartment": model.populations,
+                "variable": ["v"] * len(model.populations),
+                "format": ["matrix"] * len(model.populations),
+            },
             time_lim=(
                 recording_times.time_lims(chunk=trial)[0] + 500,
                 recording_times.time_lims(chunk=trial)[1] - 500,
             ),
         )
-        plot_recordings(
+        PlotRecordings(
             figname=f"DBS_spiking_figure/axon_spikes_{trial}.png",
             recordings=recordings,
             recording_times=recording_times,
             chunk=trial,
             shape=(3, 2),
-            plan=[
-                f"{pop_idx+1};{pop_name};axon_spike;raster"
-                for pop_idx, pop_name in enumerate(model.populations)
-            ],
+            plan={
+                "position": np.arange(len(model.populations), dtype=int) + 1,
+                "compartment": model.populations,
+                "variable": ["axon_spike"] * len(model.populations),
+                "format": ["raster"] * len(model.populations),
+            },
             time_lim=(
                 recording_times.time_lims(chunk=trial)[0] + 1000,
                 recording_times.time_lims(chunk=trial)[0] + 1030,
@@ -696,16 +704,18 @@ def plot_rate_coded(
 
     ### plot data
     for trial in range(len(dbs_val_list)):
-        plot_recordings(
+        PlotRecordings(
             figname=f"DBS_rate_figure/activity_trial_{trial}.png",
             recordings=recordings,
             recording_times=recording_times,
             chunk=trial,
             shape=(3, 2),
-            plan=[
-                f"{pop_idx+1};{pop_name};r;matrix"
-                for pop_idx, pop_name in enumerate(model.populations)
-            ],
+            plan={
+                "position": np.arange(len(model.populations), dtype=int) + 1,
+                "compartment": model.populations,
+                "variable": ["r"] * len(model.populations),
+                "format": ["matrix"] * len(model.populations),
+            },
             time_lim=(
                 recording_times.time_lims(chunk=trial)[0] + 500,
                 recording_times.time_lims(chunk=trial)[1] - 500,

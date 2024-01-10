@@ -1,3 +1,11 @@
+"""
+This example demonstrates how to use the CompNeuroSim class to define simulations.
+It is shown how to define the simulation functions, requirements and how to use the
+simulation information object.
+
+This example imports the "my_model" from other example "create_model.py" and saves
+recorded data used in other example "plot_recordings.py".
+"""
 import numpy as np
 from CompNeuroPy import (
     CompNeuroMonitors,
@@ -14,12 +22,8 @@ from ANNarchy import (
     Projection,
     Synapse,
     Uniform,
-    get_projection,
 )
 from CompNeuroPy.examples.create_model import my_model
-
-### define a simple population for later use
-Population(1, neuron=Neuron(equations="r=0"), name="simple_pop")
 
 
 ### CompNeuroSim is a class to define simulations
@@ -90,14 +94,20 @@ def increase_rates(
     return {"duration": time_step * nr_steps, "d_rates": rate_step * nr_steps}
 
 
-def add_projection(my_model: CompNeuroModel):
+### see below why we need this function
+def extend_model(my_model: CompNeuroModel):
     """
-    Add a projection with decaying weights
+    Create a simple projections and a projection with decaying weights.
 
     Args:
         my_model (CompNeuroModel):
             model to which the projection should be added
     """
+
+    ### create a simple population for later use
+    Population(1, neuron=Neuron(equations="r=0"), name="simple_pop")
+
+    ### create a projection with decaying weights to demonstrate recording of projection
     proj = Projection(
         pre=my_model.populations[0],
         post=my_model.populations[1],
@@ -112,13 +122,14 @@ def main():
     ### create and compile the model from other example "create_model.py"
     my_model.create(do_compile=False)
 
-    ### add a projection (just for other example "plot_recordings.py") and compile
-    add_projection(my_model)
+    ### extend the model to demonstrate the functionality of CompNeuroSim requirements
+    ### (see below) and the recording of projections (recorded data will be used in
+    ### other example "plot_recordings.py")
+    extend_model(my_model)
     my_model.compile()
-    print(get_projection("ampa_proj").w)
 
-    ### Define Monitors, recording p and spike from both populations with periods of 10
-    ### ms and 15 ms and the weights of the ampa projection with period of 10 ms
+    ### Define Monitors, recording p and spike from both model populations with periods
+    ### of 10 ms and 15 ms and the weights of the ampa projection with period of 10 ms
     monitor_dictionary = {
         f"{my_model.populations[0]};10": ["p", "spike"],
         f"{my_model.populations[1]};15": ["p", "spike"],
@@ -151,7 +162,7 @@ def main():
         monitor_object=mon,
     )
 
-    ### Now let's use these simulation
+    ### Now let's use this simulation
     ### Simulate 500 ms without recordings and then run the simulation
     simulate(500)
     mon.start()

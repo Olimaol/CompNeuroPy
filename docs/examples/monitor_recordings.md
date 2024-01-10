@@ -1,3 +1,8 @@
+## Introduction
+This example demonstrates how to use the CompNeuroMonitors class to record variables.
+It is shown how to start/pause monitors, how to split recordings into chunks and
+optionally reset the model and how to get recordings during and after simulation.
+
 ## Code
 ```python
 from ANNarchy import Population, setup, simulate, compile
@@ -9,7 +14,7 @@ from CompNeuroPy.neuron_models import Izhikevich2007
 
 
 def main():
-    ### setup ANNarchy timestep adn create results folder
+    ### setup ANNarchy timestep and create results folder
     setup(dt=0.1)
 
     ### first we create two populations, each consist of 1 neuron
@@ -206,6 +211,7 @@ if __name__ == "__main__":
 ```console
 $ python monitor_recordings.py 
 ANNarchy 4.7 (4.7.3b) on linux (posix).
+Compiling ...  OK 
 #################### ALL RECORDINGS INFO ####################
 recordings1
 	chunk: 0
@@ -392,5 +398,4 @@ Done
 Generate fig monitor_recordings_2_chunk1.png... Done
 
 Generate fig monitor_recordings_3_chunk0.png... Done
-
 ```

@@ -1,12 +1,31 @@
+## Introduction
+This example demonstrates how to use the CompNeuroSim class to define simulations.
+It is shown how to define the simulation functions, requirements and how to use the
+simulation information object.
+
+This example imports the "my_model" from other example [create_model.py](./generate_models.md) and saves
+recorded data used in other example [plot_recordings.py](./plot_recordings.md).
+
 ## Code
 ```python
 import numpy as np
-from CompNeuroPy import CompNeuroMonitors, CompNeuroSim, ReqPopHasAttr, save_variables
-from ANNarchy import simulate, get_population, Population, Neuron
+from CompNeuroPy import (
+    CompNeuroMonitors,
+    CompNeuroSim,
+    ReqPopHasAttr,
+    save_variables,
+    CompNeuroModel,
+)
+from ANNarchy import (
+    simulate,
+    get_population,
+    Population,
+    Neuron,
+    Projection,
+    Synapse,
+    Uniform,
+)
 from CompNeuroPy.examples.create_model import my_model
-
-### define a simple population for later use
-Population(1, neuron=Neuron(equations="r=0"), name="simple_pop")
 
 
 ### CompNeuroSim is a class to define simulations
@@ -77,15 +96,46 @@ def increase_rates(
     return {"duration": time_step * nr_steps, "d_rates": rate_step * nr_steps}
 
 
+### see below why we need this function
+def extend_model(my_model: CompNeuroModel):
+    """
+    Create a simple projections and a projection with decaying weights.
+
+    Args:
+        my_model (CompNeuroModel):
+            model to which the projection should be added
+    """
+
+    ### create a simple population for later use
+    Population(1, neuron=Neuron(equations="r=0"), name="simple_pop")
+
+    ### create a projection with decaying weights to demonstrate recording of projection
+    proj = Projection(
+        pre=my_model.populations[0],
+        post=my_model.populations[1],
+        target="ampa",
+        synapse=Synapse(parameters="tau=500", equations="dw/dt=-w/tau"),
+        name="ampa_proj",
+    )
+    proj.connect_all_to_all(weights=Uniform(1.0, 2.0))
+
+
 def main():
     ### create and compile the model from other example "create_model.py"
-    my_model.create()
+    my_model.create(do_compile=False)
 
-    ### Define Monitors, recording p and spike from both populations with periods of 10
-    ### ms and 15 ms
+    ### extend the model to demonstrate the functionality of CompNeuroSim requirements
+    ### (see below) and the recording of projections (recorded data will be used in
+    ### other example "plot_recordings.py")
+    extend_model(my_model)
+    my_model.compile()
+
+    ### Define Monitors, recording p and spike from both model populations with periods
+    ### of 10 ms and 15 ms and the weights of the ampa projection with period of 10 ms
     monitor_dictionary = {
         f"{my_model.populations[0]};10": ["p", "spike"],
         f"{my_model.populations[1]};15": ["p", "spike"],
+        "ampa_proj;10": ["w"],
     }
     mon = CompNeuroMonitors(monitor_dictionary)
 
@@ -114,7 +164,7 @@ def main():
         monitor_object=mon,
     )
 
-    ### Now let's use these simulation
+    ### Now let's use this simulation
     ### Simulate 500 ms without recordings and then run the simulation
     simulate(500)
     mon.start()
@@ -180,6 +230,7 @@ if __name__ == "__main__":
 $ python run_and_monitor_simulations.py 
 ANNarchy 4.7 (4.7.3b) on linux (posix).
 created model, other parameters: 1
+Compiling ...  OK 
 
 ###############################################
 Running simulation with population not containing attribute 'rates' causes the following error:
@@ -209,5 +260,4 @@ kwargs (for each run)
 
 monitor chunk (for each run)
  [0, 1]
-
 ```

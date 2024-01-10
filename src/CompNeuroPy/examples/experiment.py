@@ -1,3 +1,8 @@
+"""
+This example demonstrates how to use the CompNeuroExp class to combine simulations,
+model and recordings in an experiment. It is shown how to define an experiment, how to
+run it and how to get the results.
+"""
 from CompNeuroPy import (
     CompNeuroExp,
     CompNeuroSim,
@@ -5,7 +10,7 @@ from CompNeuroPy import (
     CompNeuroModel,
     current_step,
     current_ramp,
-    plot_recordings,
+    PlotRecordings,
 )
 from CompNeuroPy.full_models import HHmodelBischop
 from ANNarchy import dt, setup, get_population
@@ -152,38 +157,58 @@ if __name__ == "__main__":
 
     ### plot of the membrane potential from the first and second chunk using results
     ### experiment run 1
-    plot_recordings(
+    PlotRecordings(
         figname="example_experiment_sim_step.png",
         recordings=results_run1.recordings,
         recording_times=results_run1.recording_times,
         chunk=0,
         shape=(1, 1),
-        plan=[f"1;{results_run1.data['population_name']};v;line"],
+        plan={
+            "position": [1],
+            "compartment": [results_run1.data["population_name"]],
+            "variable": ["v"],
+            "format": ["line"],
+        },
     )
-    plot_recordings(
+    PlotRecordings(
         figname="example_experiment_sim_ramp.png",
         recordings=results_run1.recordings,
         recording_times=results_run1.recording_times,
         chunk=1,
         shape=(1, 1),
-        plan=[f"1;{results_run1.data['population_name']};v;line"],
+        plan={
+            "position": [1],
+            "compartment": [results_run1.data["population_name"]],
+            "variable": ["v"],
+            "format": ["line"],
+        },
     )
     ### experiment run 2
-    plot_recordings(
+    PlotRecordings(
         figname="example_experiment2_sim_step.png",
         recordings=results_run2.recordings,
         recording_times=results_run2.recording_times,
         chunk=0,
         shape=(1, 1),
-        plan=[f"1;{results_run2.data['population_name']};v;line"],
+        plan={
+            "position": [1],
+            "compartment": [results_run2.data["population_name"]],
+            "variable": ["v"],
+            "format": ["line"],
+        },
     )
-    plot_recordings(
+    PlotRecordings(
         figname="example_experiment2_sim_ramp.png",
         recordings=results_run2.recordings,
         recording_times=results_run2.recording_times,
         chunk=1,
         shape=(1, 1),
-        plan=[f"1;{results_run2.data['population_name']};v;line"],
+        plan={
+            "position": [1],
+            "compartment": [results_run2.data["population_name"]],
+            "variable": ["v"],
+            "format": ["line"],
+        },
     )
 
     ### print data and mon_dict from results

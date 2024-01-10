@@ -1,10 +1,12 @@
-"""
+## Introduction
 This example demonstrates how to plot recordings (from CompNeuroMonitors) using the
 PlotRecordings class. The different plotting formats for spiking and non-spiking data
 (populations and projections) are demonstrated.
 
-This example loads data generated with other example "run_and_monitor_simulations.py".
-"""
+This example loads data generated with other example [run_and_monitor_simulations.py](./run_and_monitor_simulations.md).
+
+## Code
+```python
 from CompNeuroPy import load_variables, PlotRecordings
 
 
@@ -89,3 +91,13 @@ def main():
 
 if __name__ == "__main__":
     main()
+```
+
+## Console Output
+```console
+$ python plot_recordings.py 
+ANNarchy 4.7 (4.7.3b) on linux (posix).
+Generate fig run_and_monitor_simulations/my_two_poissons_chunk_0.png... Done
+
+Generate fig run_and_monitor_simulations/my_two_poissons_chunk_1.png... Done
+```

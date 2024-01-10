@@ -25,6 +25,6 @@ def create_model(a, b):
 </code></pre>
 Here, two populations are created (both use built-in Izhikevich neuron model of ANNarchy). The function does not require a return value. It is important that all populations and projections have unique names.
 
-A more detailed example is available in the [Examples](../../examples/generate_models).
+A more detailed example is available in the [Examples](../examples/generate_models.md).
 
 ::: CompNeuroPy.generate_model.CompNeuroModel
