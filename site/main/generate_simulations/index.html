@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#CompNeuroPy.generate_simulation.CompNeuroSim" class="md-skip">
+        <a href="#introduction" class="md-skip">
           Skip to content
         </a>
       
@@ -367,6 +367,66 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduction
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example:
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#simulation-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      Simulation information
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#simulation-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Simulation functions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Simulation functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example:
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Requirements
+    </span>
+  </a>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#CompNeuroPy.generate_simulation.CompNeuroSim" class="md-nav__link">
@@ -1013,6 +1073,27 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/opt_neuron/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Optimize a neuron model
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1063,6 +1144,66 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduction
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example:
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#simulation-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      Simulation information
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#simulation-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Simulation functions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Simulation functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example:
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Requirements
+    </span>
+  </a>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#CompNeuroPy.generate_simulation.CompNeuroSim" class="md-nav__link">
@@ -1167,6 +1308,87 @@
 
 
   <h1>Generate Simulations</h1>
+
+<h2 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">#</a></h2>
+<p>A CompNeuroPy-simulation can be created using the <a href="#CompNeuroPy.generate_simulation.CompNeuroSim"><code>CompNeuroSim</code></a> class. Similar to the <a href="../generate_models/#CompNeuroPy.generate_model.CompNeuroModel"><code>CompNeuroModel</code></a> class, a function must be defined that contains the actual simulation (the <em>simulation_function</em>) and the <a href="#CompNeuroPy.generate_simulation.CompNeuroSim"><code>CompNeuroSim</code></a> object adds a clear framework. A <a href="#CompNeuroPy.generate_simulation.CompNeuroSim"><code>CompNeuroSim</code></a> is first initialized and can then be run multiple times.</p>
+<h2 id="example">Example:<a class="headerlink" href="#example" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">CompNeuroPy</span> <span class="kn">import</span> <span class="n">CompNeuroSim</span>
+<span class="n">my_simulation</span> <span class="o">=</span> <span class="n">CompNeuroSim</span><span class="p">(</span><span class="n">simulation_function</span><span class="o">=</span><span class="n">some_simulation</span><span class="p">,</span>           <span class="c1">### the most important part, this function defines the simulation</span>
+                            <span class="n">simulation_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;pop&#39;</span><span class="p">:</span><span class="n">pop1</span><span class="p">,</span> <span class="s1">&#39;duration&#39;</span><span class="p">:</span><span class="mi">100</span><span class="p">},</span> <span class="c1">### define the two arguments pop and duration of simulation_function</span>
+                            <span class="n">name</span><span class="o">=</span><span class="s1">&#39;my_simulation&#39;</span><span class="p">,</span>                           <span class="c1">### you can give the simulation a name</span>
+                            <span class="n">description</span><span class="o">=</span><span class="s1">&#39;my simple example simulation&#39;</span><span class="p">,</span>     <span class="c1">### you can give the simulation a description</span>
+                            <span class="n">requirements</span><span class="o">=</span><span class="p">[</span><span class="n">req</span><span class="p">],</span>                             <span class="c1">### a list of requirements for the simulation (here only a single requirement)</span>
+                            <span class="n">kwargs_warning</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>                            <span class="c1">### should a warning be printed if simulation kwargs change in future runs</span>
+                            <span class="n">monitor_object</span> <span class="o">=</span> <span class="n">mon</span><span class="p">)</span>                           <span class="c1">### the Monitors object which is used to record variables                   </span>
+</code></pre></div>
+<p>A possible <em>simulation_function</em> could be:
+<div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">some_simulation</span><span class="p">(</span><span class="n">pop</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="n">get_population</span><span class="p">(</span><span class="n">pop</span><span class="p">)</span><span class="o">.</span><span class="n">a</span> <span class="o">=</span> <span class="mi">5</span>  <span class="c1">### adjust paramter a of pop</span>
+    <span class="n">get_population</span><span class="p">(</span><span class="n">pop</span><span class="p">)</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="mi">5</span>  <span class="c1">### adjust paramter b of pop</span>
+    <span class="n">simulate</span><span class="p">(</span><span class="n">duration</span><span class="p">)</span>         <span class="c1">### simulate the duration in ms</span>
+
+    <span class="c1">### return some info</span>
+    <span class="c1">### will later be accessible for each run</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;paramter a&#39;</span><span class="p">:</span> <span class="n">a</span><span class="p">,</span> <span class="s1">&#39;paramter b&#39;</span><span class="p">:</span> <span class="n">b</span><span class="p">,</span> <span class="s1">&#39;a_x_duration&#39;</span><span class="p">:</span> <span class="n">a</span><span class="o">*</span><span class="n">duration</span><span class="p">}</span> 
+</code></pre></div></p>
+<p>And a corresponding requirement could be:
+<div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">CompNeuroPy</span> <span class="kn">import</span> <span class="n">ReqPopHasAttr</span>
+<span class="n">req</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;req&#39;</span><span class="p">:</span><span class="n">ReqPopHasAttr</span><span class="p">,</span> <span class="s1">&#39;pop&#39;</span><span class="p">:</span><span class="n">pop1</span><span class="p">,</span> <span class="s1">&#39;attr&#39;</span><span class="p">:[</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">]}</span>
+</code></pre></div>
+Here, one checks if the population <em>pop1</em> contains the attributes <em>a</em> and <em>b</em>. The <a href="../../additional/simulation_requirements/#CompNeuroPy.simulation_requirements.ReqPopHasAttr"><code>ReqPopHasAttr</code></a> is a built-in requirements-class of CompNeuroPy (see below).</p>
+<p>A more detailed example is available in the <a href="../../examples/run_and_monitor_simulations/">Examples</a>.</p>
+<h2 id="simulation-information">Simulation information<a class="headerlink" href="#simulation-information" title="Permanent link">#</a></h2>
+<p>The function <em>simulation_info()</em> returns a <a href="#CompNeuroPy.generate_simulation.SimInfo"><code>SimInfo</code></a> object which contains usefull information about the simulation runs (see below). The <a href="#CompNeuroPy.generate_simulation.SimInfo"><code>SimInfo</code></a> object also provides usefull analysis functions associated with specific simulation functions. Currently it provides the <em>get_current_arr()</em> which returns arrays containing the input current for each time step of the built-in simulation functions <em>current_step()</em>, <em>current_stim()</em>, and <em>current_ramp()</em>.</p>
+<h2 id="simulation-functions">Simulation functions<a class="headerlink" href="#simulation-functions" title="Permanent link">#</a></h2>
+<p>Just define a classic ANNarchy simulation in a function. Within the functions, the ANNarchy functions <em>get_population()</em> and <em>get_projection()</em> can be used to access the populations and projections using the population and projection names provided by a <a href="../generate_models/#CompNeuroPy.generate_model.CompNeuroModel"><code>CompNeuroModel</code></a>. The return value of the simulation function can later be retrieved from the <a href="#CompNeuroPy.generate_simulation.SimInfo"><code>SimInfo</code></a> object (the <em>info</em> attribute) in a list containing the return value for each run of the simulation.</p>
+<h3 id="example_1">Example:<a class="headerlink" href="#example_1" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">ANNarchy</span> <span class="kn">import</span> <span class="n">simulate</span><span class="p">,</span> <span class="n">get_population</span>
+
+<span class="k">def</span> <span class="nf">current_step</span><span class="p">(</span><span class="n">pop</span><span class="p">,</span> <span class="n">t1</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">t2</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">a1</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">a2</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        stimulates a given population in two periods with two input currents</span>
+
+<span class="sd">        pop: population name of population, which should be stimulated with input current</span>
+<span class="sd">             neuron model of population has to contain &quot;I_app&quot; as input current in pA</span>
+<span class="sd">        t1/t2: times in ms before/after current step</span>
+<span class="sd">        a1/a2: current amplitudes before/after current step in pA</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1">### save prev input current</span>
+    <span class="n">I_prev</span> <span class="o">=</span> <span class="n">get_population</span><span class="p">(</span><span class="n">pop</span><span class="p">)</span><span class="o">.</span><span class="n">I_app</span>
+
+    <span class="c1">### first/pre current step simulation</span>
+    <span class="n">get_population</span><span class="p">(</span><span class="n">pop</span><span class="p">)</span><span class="o">.</span><span class="n">I_app</span> <span class="o">=</span> <span class="n">a1</span>
+    <span class="n">simulate</span><span class="p">(</span><span class="n">t1</span><span class="p">)</span>
+
+    <span class="c1">### second/post current step simulation</span>
+    <span class="n">get_population</span><span class="p">(</span><span class="n">pop</span><span class="p">)</span><span class="o">.</span><span class="n">I_app</span> <span class="o">=</span> <span class="n">a2</span>
+    <span class="n">simulate</span><span class="p">(</span><span class="n">t2</span><span class="p">)</span>
+
+    <span class="c1">### reset input current to previous value</span>
+    <span class="n">get_population</span><span class="p">(</span><span class="n">pop</span><span class="p">)</span><span class="o">.</span><span class="n">I_app</span> <span class="o">=</span> <span class="n">I_prev</span>
+
+    <span class="c1">### return some additional information which could be usefull</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;duration&#39;</span><span class="p">:</span><span class="n">t1</span><span class="o">+</span><span class="n">t2</span><span class="p">}</span>
+</code></pre></div>
+<h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">#</a></h2>
+<p>In order to perform simulations with models, the models must almost always fulfill certain requirements. For example, if the input current of a population is to be set, this population (or the neuron model) must of course have the corresponding variable. Such preconditions can be tested in advance with the <code>simulation_requirements</code> classes. They only need to contain a function <em>run()</em> to test the requirements (if requirements are not met, cause an error). In CompNeuroPy predefined <a href="../../additional/simulation_requirements/"><code>simulation_requirements</code></a> classes are available (CompNeuroPy.simulation_requirements; currently only <a href="../../additional/simulation_requirements/#CompNeuroPy.simulation_requirements.ReqPopHasAttr"><code>ReqPopHasAttr</code></a>). In the <a href="#CompNeuroPy.generate_simulation.CompNeuroSim"><code>CompNeuroSim</code></a> class, the requirements are passed as arguments in a list (see above). Each requirement (list entry) must be defined as a dictionary with keys <em>req</em> (the requirement class) and the arguments of the requirement class (e.g., <em>pop</em> and <em>attr</em> for the <a href="../../additional/simulation_requirements/#CompNeuroPy.simulation_requirements.ReqPopHasAttr"><code>ReqPopHasAttr</code></a>).</p>
+<p>Here two requirements are defined (both <a href="../../additional/simulation_requirements/#CompNeuroPy.simulation_requirements.ReqPopHasAttr"><code>ReqPopHasAttr</code></a>). All populations of <em>my_model</em> should contain the attribute (variable or parameter) <em>'I'</em> and all populations of <em>my_other_model</em> should contain the attribute <em>'v'</em>:</p>
+<div class="highlight"><pre><span></span><code><span class="n">req1</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;req&#39;</span><span class="p">:</span><span class="n">ReqPopHasAttr</span><span class="p">,</span> <span class="s1">&#39;pop&#39;</span><span class="p">:</span><span class="n">my_model</span><span class="o">.</span><span class="n">populations</span><span class="p">,</span> <span class="s1">&#39;attr&#39;</span><span class="p">:</span><span class="s1">&#39;I&#39;</span><span class="p">}</span>
+<span class="n">req2</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;req&#39;</span><span class="p">:</span><span class="n">ReqPopHasAttr</span><span class="p">,</span> <span class="s1">&#39;pop&#39;</span><span class="p">:</span><span class="n">my_other_model</span><span class="o">.</span><span class="n">populations</span><span class="p">,</span> <span class="s1">&#39;attr&#39;</span><span class="p">:</span><span class="s1">&#39;v&#39;</span><span class="p">}</span>
+<span class="n">my_two_model_simulation</span> <span class="o">=</span> <span class="n">CompNeuroSim</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">requirements</span><span class="o">=</span><span class="p">[</span><span class="n">req1</span><span class="p">,</span> <span class="n">req2</span><span class="p">])</span>
+</code></pre></div>
+<p>As described above, new simulation_kwargs can be passed to the <em>run()</em> function of a <a href="#CompNeuroPy.generate_simulation.CompNeuroSim"><code>CompNeuroSim</code></a> object. Thus, one could initially pass a particular model as simulation_kwargs and for a later run pass a different model. If the requirements are defined as shown above, it is not tested again whether the new model (e.g. <em>my_third_model</em>) also fulfills the requirements (because the requirements were defined for <em>my_model</em> and <em>my_other_model</em>). To work around this, an argument for a <code>simulation_requirements</code> class can also be linked to a simulation_kwargs entry. Thus, if new simulation_kwargs are used, also the simulation_requirements arguments adapt. This can be done using a string with the syntax "simulation_kwargs.&lt;kwarg_name&gt;.&lt;optional_attribute_of_kwarg&gt;", as shown in this example:</p>
+<div class="highlight"><pre><span></span><code><span class="n">req1</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;req&#39;</span><span class="p">:</span><span class="n">ReqPopHasAttr</span><span class="p">,</span> <span class="s1">&#39;pop&#39;</span><span class="p">:</span><span class="s2">&quot;simulation_kwargs.model1.populations&quot;</span><span class="p">,</span> <span class="s1">&#39;attr&#39;</span><span class="p">:</span><span class="s1">&#39;I&#39;</span><span class="p">}</span>
+<span class="n">req2</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;req&#39;</span><span class="p">:</span><span class="n">ReqPopHasAttr</span><span class="p">,</span> <span class="s1">&#39;pop&#39;</span><span class="p">:</span><span class="s2">&quot;simulation_kwargs.model2.populations&quot;</span><span class="p">,</span> <span class="s1">&#39;attr&#39;</span><span class="p">:</span><span class="s1">&#39;v&#39;</span><span class="p">}</span>
+<span class="n">my_two_model_simulation</span> <span class="o">=</span> <span class="n">CompNeuroSim</span><span class="p">(</span><span class="n">simulation_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;model1&#39;</span><span class="p">:</span><span class="n">my_model</span><span class="p">,</span> <span class="s1">&#39;model2&#39;</span><span class="p">:</span><span class="n">my_other_model</span><span class="p">,</span> <span class="s1">&#39;parameter&#39;</span><span class="p">:</span><span class="mi">5</span><span class="p">},</span>
+                                        <span class="o">...</span><span class="p">,</span>
+                                        <span class="n">requirements</span><span class="o">=</span><span class="p">[</span><span class="n">req1</span><span class="p">,</span> <span class="n">req2</span><span class="p">])</span>
+<span class="o">...</span>
+<span class="n">my_two_model_simulation</span><span class="o">.</span><span class="n">run</span><span class="p">({</span><span class="s1">&#39;model1&#39;</span><span class="p">:</span><span class="n">my_third_model</span><span class="p">})</span>
+</code></pre></div>
+<p>Due to the string "simulation_kwargs.model1.populations" the <em>pop</em> argument of <em>req1</em> is now linked to <em>model1</em> (defined in the simulation_kwargs). Thus, in the run where a different model (<em>my_third_model</em>) is used for <em>model1</em>, <em>req1</em> is automatically tested for the new <em>model1</em>.</p>
+
 
 <div class="doc doc-object doc-class">
 
@@ -3409,7 +3631,7 @@ run. If flat=True, returns a flattened array.</p>
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../..", "features": ["header.autohide"], "search": "../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": ["header.autohide", "content.code.copy"], "search": "../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
       <script src="../../assets/javascripts/bundle.d7c377c4.min.js"></script>

@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#CompNeuroPy.opt_neuron.OptNeuron" class="md-skip">
+        <a href="#introduction" class="md-skip">
           Skip to content
         </a>
       
@@ -409,6 +409,87 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduction
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Introduction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example:
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-the-optimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Run the optimization
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#define-the-experiment" class="md-nav__link">
+    <span class="md-ellipsis">
+      Define the experiment
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Define the experiment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example:
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-get_loss_function" class="md-nav__link">
+    <span class="md-ellipsis">
+      The get_loss_function
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The get_loss_function">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example:
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#CompNeuroPy.opt_neuron.OptNeuron" class="md-nav__link">
@@ -962,6 +1043,27 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/opt_neuron/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Optimize a neuron model
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1012,6 +1114,87 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduction
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Introduction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example:
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-the-optimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Run the optimization
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#define-the-experiment" class="md-nav__link">
+    <span class="md-ellipsis">
+      Define the experiment
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Define the experiment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example:
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-get_loss_function" class="md-nav__link">
+    <span class="md-ellipsis">
+      The get_loss_function
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The get_loss_function">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example:
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#CompNeuroPy.opt_neuron.OptNeuron" class="md-nav__link">
@@ -1065,6 +1248,153 @@
 
 
   <h1>Optimize a neuron model</h1>
+
+<h2 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">#</a></h2>
+<p>CompNeuroPy provides the <a href="#CompNeuroPy.opt_neuron.OptNeuron"><code>OptNeuron</code></a> class which can be used to define your optimization of an ANNarchy neuron model (tuning the parameters). You can either optimize your neuron model to some data or try to reproduce the dynamics of a different neuron model (for example to reduce a more complex model). In both cases, you have to define the experiment which generates the data of interest with your neuron model.</p>
+<h3 id="example">Example:<a class="headerlink" href="#example" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">opt</span> <span class="o">=</span> <span class="n">OptNeuron</span><span class="p">(</span>
+    <span class="n">experiment</span><span class="o">=</span><span class="n">my_exp</span><span class="p">,</span>
+    <span class="n">get_loss_function</span><span class="o">=</span><span class="n">get_loss</span><span class="p">,</span>
+    <span class="n">variables_bounds</span><span class="o">=</span><span class="n">variables_bounds</span><span class="p">,</span>
+    <span class="n">results_soll</span><span class="o">=</span><span class="n">experimental_data</span><span class="p">[</span><span class="s2">&quot;results_soll&quot;</span><span class="p">],</span>
+    <span class="n">time_step</span><span class="o">=</span><span class="n">experimental_data</span><span class="p">[</span><span class="s2">&quot;time_step&quot;</span><span class="p">],</span>
+    <span class="n">compile_folder_name</span><span class="o">=</span><span class="s2">&quot;annarchy_opt_neuron_example&quot;</span><span class="p">,</span>
+    <span class="n">neuron_model</span><span class="o">=</span><span class="n">my_neuron</span><span class="p">,</span>
+    <span class="n">method</span><span class="o">=</span><span class="s2">&quot;hyperopt&quot;</span><span class="p">,</span>
+    <span class="n">record</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;r&quot;</span><span class="p">],</span>
+<span class="p">)</span>
+</code></pre></div>
+<p>A full example is available in the <a href="../../examples/opt_neuron/">Examples</a>.</p>
+<h2 id="run-the-optimization">Run the optimization<a class="headerlink" href="#run-the-optimization" title="Permanent link">#</a></h2>
+<p>To run the optimization simply call the <em>run()</em> function of the <a href="#CompNeuroPy.opt_neuron.OptNeuron"><code>OptNeuron</code></a> object.</p>
+<h2 id="define-the-experiment">Define the experiment<a class="headerlink" href="#define-the-experiment" title="Permanent link">#</a></h2>
+<p>You have to define a <a href="../define_experiment/#CompNeuroPy.experiment.CompNeuroExp"><code>CompNeuroExp</code></a> object containing a <em>run()</em> function. In the <em>run()</em> function simulations and recordings are performed.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>While defining the <a href="../define_experiment/#CompNeuroPy.experiment.CompNeuroExp"><code>CompNeuroExp</code></a> <em>run()</em> function for the optimization with <a href="#CompNeuroPy.opt_neuron.OptNeuron"><code>OptNeuron</code></a> you must observe the following rules:</p>
+</div>
+<ul>
+<li>the <em>run()</em> function has to take a single argument (besides self) which contains the name of the population consiting of a single neuron of the optimized neuron model (you can use this to access the population)</li>
+<li>call <em>self.reset(parameters=False)</em> at the beginning of the run function, thus the neuron will be in its compile state (except the paramters) at the beginning of each simulation run</li>
+<li>always set <em>parameters=False</em> while calling the <em>self.reset()</em> function (otherwise the parameter optimization will not work)</li>
+<li>besides the optimized parameters and the loss, the results of the experiment (using the optimized parameters) will be available after the optimization, you can store any additional data in the <em>self.data</em> attribute</li>
+</ul>
+<h3 id="example_1">Example:<a class="headerlink" href="#example_1" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">my_exp</span><span class="p">(</span><span class="n">CompNeuroExp</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Define an experiment by inheriting from CompNeuroExp.</span>
+
+<span class="sd">    CompNeuroExp provides the attributes:</span>
+
+<span class="sd">        monitors (CompNeuroMonitors):</span>
+<span class="sd">            a CompNeuroMonitors object to do recordings, define during init otherwise</span>
+<span class="sd">            None</span>
+<span class="sd">        data (dict):</span>
+<span class="sd">            a dictionary for storing any optional data</span>
+
+<span class="sd">    and the functions:</span>
+<span class="sd">        reset():</span>
+<span class="sd">            resets the model and monitors</span>
+<span class="sd">        results():</span>
+<span class="sd">            returns a results object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">population_name</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Do the simulations and recordings.</span>
+
+<span class="sd">        To use the CompNeuroExp class, you need to define a run function which</span>
+<span class="sd">        does the simulations and recordings. The run function should return the</span>
+<span class="sd">        results object which can be obtained by calling self.results().</span>
+
+<span class="sd">        For using the CompNeuroExp for OptNeuron, the run function should have</span>
+<span class="sd">        one argument which is the name of the population which is automatically created</span>
+<span class="sd">        by OptNeuron, containing a single neuron of the model which should be optimized.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            population_name (str):</span>
+<span class="sd">                name of the population which contains a single neuron, this will be</span>
+<span class="sd">                automatically provided by opt_neuron</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            results (CompNeuroExp._ResultsCl):</span>
+<span class="sd">                results object with attributes:</span>
+<span class="sd">                    recordings (list):</span>
+<span class="sd">                        list of recordings</span>
+<span class="sd">                    recording_times (recording_times_cl):</span>
+<span class="sd">                        recording times object</span>
+<span class="sd">                    mon_dict (dict):</span>
+<span class="sd">                        dict of recorded variables of the monitors</span>
+<span class="sd">                    data (dict):</span>
+<span class="sd">                        dict with optional data stored during the experiment</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">### For OptNeuron you have to reset the model and monitors at the beginning of</span>
+        <span class="c1">### the run function! Do not reset the parameters, otherwise the optimization</span>
+        <span class="c1">### will not work!</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">parameters</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="c1">### you have to start monitors within the run function, otherwise nothing will</span>
+        <span class="c1">### be recorded</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">monitors</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+        <span class="c1">### run the simulation, remember setting parameters=False in the reset function!</span>
+        <span class="o">...</span>
+        <span class="n">simulate</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">parameters</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="o">...</span>
+
+        <span class="c1">### optional: store anything you want in the data dict. For example infomration</span>
+        <span class="c1">### about the simulations. This is not used for the optimization but can be</span>
+        <span class="c1">### retrieved after the optimization is finished</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;sim&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sim_step</span><span class="o">.</span><span class="n">simulation_info</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;population_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">population_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;time_step&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dt</span><span class="p">()</span>
+
+        <span class="c1">### return results, use the object&#39;s self.results()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">()</span>
+</code></pre></div>
+<h2 id="the-get_loss_function">The get_loss_function<a class="headerlink" href="#the-get_loss_function" title="Permanent link">#</a></h2>
+<p>The <em>get_loss_function</em> must have two arguments. When this function is called during optimization, the first argument is always the <em>results</em> object returned by the <em>experiment</em>, i.e. the results of the neuron you want to optimize. The second argument depends on whether you have specified <em>results_soll</em>, i.e. data to be reproduced by the <em>neuron_model</em>, or whether you have specified a <em>target_neuron_model</em> whose results are to be reproduced by the <em>neuron_model</em>. Thus, the second argument is either <em>results_soll</em> provided to the <a href="#CompNeuroPy.opt_neuron.OptNeuron"><code>OptNeuron</code></a> class during initialization or another <em>results</em> object (returned by the <a href="../define_experiment/#CompNeuroPy.experiment.CompNeuroExp"><code>CompNeuroExp</code></a> <em>run</em> function), generated with the <em>target_neuron_model</em>.</p>
+<h3 id="example_2">Example:<a class="headerlink" href="#example_2" title="Permanent link">#</a></h3>
+<p>In this example we assume, that <em>results_soll</em> was provided during initialization of the <a href="#CompNeuroPy.opt_neuron.OptNeuron"><code>OptNeuron</code></a> class (no <em>target_neuron_model</em> used).
+<div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">get_loss</span><span class="p">(</span><span class="n">results_ist</span><span class="p">:</span> <span class="n">CompNeuroExp</span><span class="o">.</span><span class="n">_ResultsCl</span><span class="p">,</span> <span class="n">results_soll</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function which has to have the arguments results_ist and results_soll and should</span>
+<span class="sd">    calculates and return the loss. This structure is needed for the OptNeuron class.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        results_ist (object):</span>
+<span class="sd">            the results object returned by the run function of experiment (see above)</span>
+<span class="sd">        results_soll (any):</span>
+<span class="sd">            the target data directly provided to OptNeuron during initialization</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        loss (float or list of floats):</span>
+<span class="sd">            the loss</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">### get the recordings and other important things for calculating the loss from</span>
+    <span class="c1">### results_ist, we do not use all available information here, but you could</span>
+    <span class="n">rec_ist</span> <span class="o">=</span> <span class="n">results_ist</span><span class="o">.</span><span class="n">recordings</span>
+    <span class="n">pop_ist</span> <span class="o">=</span> <span class="n">results_ist</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;population_name&quot;</span><span class="p">]</span>
+    <span class="n">neuron</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="c1">### get the data for calculating the loss from the results_soll</span>
+    <span class="n">r_target_0</span> <span class="o">=</span> <span class="n">results_soll</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">r_target_1</span> <span class="o">=</span> <span class="n">results_soll</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="c1">### get the data for calculating the loss from the recordings</span>
+    <span class="n">r_ist_0</span> <span class="o">=</span> <span class="n">rec_ist</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pop_ist</span><span class="si">}</span><span class="s2">;r&quot;</span><span class="p">][:,</span> <span class="n">neuron</span><span class="p">]</span>
+    <span class="n">r_ist_1</span> <span class="o">=</span> <span class="n">rec_ist</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pop_ist</span><span class="si">}</span><span class="s2">;r&quot;</span><span class="p">][:,</span> <span class="n">neuron</span><span class="p">]</span>
+
+    <span class="c1">### calculate the loss, e.g. the root mean squared error</span>
+    <span class="n">rmse1</span> <span class="o">=</span> <span class="n">rmse</span><span class="p">(</span><span class="n">r_target_0</span><span class="p">,</span> <span class="n">r_ist_0</span><span class="p">)</span>
+    <span class="n">rmse2</span> <span class="o">=</span> <span class="n">rmse</span><span class="p">(</span><span class="n">r_target_1</span><span class="p">,</span> <span class="n">r_ist_1</span><span class="p">)</span>
+
+    <span class="c1">### return the loss, one can return a singel value or a list of values which will</span>
+    <span class="c1">### be summed during the optimization</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">rmse1</span><span class="p">,</span> <span class="n">rmse2</span><span class="p">]</span>
+</code></pre></div></p>
+
 
 <div class="doc doc-object doc-class">
 
@@ -1906,13 +2236,15 @@
 <span class="normal">854</span>
 <span class="normal">855</span>
 <span class="normal">856</span>
-<span class="normal">857</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">OptNeuron</span><span class="p">:</span>
+<span class="normal">857</span>
+<span class="normal">858</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">OptNeuron</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    This class is used to optimize neuron models with ANNarchy.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">opt_created</span> <span class="o">=</span> <span class="p">[]</span>
 
+    <span class="c1"># @check_types() TODO check types does probably not work with type hint Any</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">experiment</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">CompNeuroExp</span><span class="p">],</span>
@@ -1921,7 +2253,7 @@
         <span class="n">neuron_model</span><span class="p">:</span> <span class="n">Neuron</span><span class="p">,</span>
         <span class="n">results_soll</span><span class="p">:</span> <span class="n">Any</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">target_neuron_model</span><span class="p">:</span> <span class="n">Neuron</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">time_step</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">time_step</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
         <span class="n">compile_folder_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;annarchy_OptNeuron&quot;</span><span class="p">,</span>
         <span class="n">num_rep_loss</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
         <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;hyperopt&quot;</span><span class="p">,</span>
@@ -2985,8 +3317,7 @@ be recorded. Default: [].</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/opt_neuron.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 43</span>
-<span class="normal"> 44</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 44</span>
 <span class="normal"> 45</span>
 <span class="normal"> 46</span>
 <span class="normal"> 47</span>
@@ -3132,7 +3463,8 @@ be recorded. Default: [].</p>
 <span class="normal">187</span>
 <span class="normal">188</span>
 <span class="normal">189</span>
-<span class="normal">190</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+<span class="normal">190</span>
+<span class="normal">191</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">experiment</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">CompNeuroExp</span><span class="p">],</span>
     <span class="n">get_loss_function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]],</span>
@@ -3140,7 +3472,7 @@ be recorded. Default: [].</p>
     <span class="n">neuron_model</span><span class="p">:</span> <span class="n">Neuron</span><span class="p">,</span>
     <span class="n">results_soll</span><span class="p">:</span> <span class="n">Any</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">target_neuron_model</span><span class="p">:</span> <span class="n">Neuron</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">time_step</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">time_step</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
     <span class="n">compile_folder_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;annarchy_OptNeuron&quot;</span><span class="p">,</span>
     <span class="n">num_rep_loss</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;hyperopt&quot;</span><span class="p">,</span>
@@ -3398,8 +3730,7 @@ the posterior. Default: "posterior.svg".</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/opt_neuron.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">795</span>
-<span class="normal">796</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">796</span>
 <span class="normal">797</span>
 <span class="normal">798</span>
 <span class="normal">799</span>
@@ -3460,7 +3791,8 @@ the posterior. Default: "posterior.svg".</p>
 <span class="normal">854</span>
 <span class="normal">855</span>
 <span class="normal">856</span>
-<span class="normal">857</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@check_types</span><span class="p">()</span>
+<span class="normal">857</span>
+<span class="normal">858</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@check_types</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">run</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">max_evals</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -3586,7 +3918,7 @@ the posterior. Default: "posterior.svg".</p>
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../..", "features": ["header.autohide"], "search": "../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": ["header.autohide", "content.code.copy"], "search": "../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
       <script src="../../assets/javascripts/bundle.d7c377c4.min.js"></script>
