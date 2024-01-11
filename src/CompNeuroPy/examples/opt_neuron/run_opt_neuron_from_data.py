@@ -207,7 +207,7 @@ def main():
     )
 
     ### run the optimization, define how often the experiment should be repeated
-    fit = opt.run(max_evals=1000, results_file_name="best_from_data.npy")
+    fit = opt.run(max_evals=1000, results_file_name="best_from_data")
 
     ### print optimized parameters, we should get around a=0.8 and b=2
     print("a", fit["a"])

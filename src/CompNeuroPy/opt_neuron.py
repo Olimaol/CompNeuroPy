@@ -797,8 +797,8 @@ class OptNeuron:
     def run(
         self,
         max_evals: int,
-        results_file_name="best.npy",
-        sbi_plot_file="posterior.svg",
+        results_file_name: str = "best",
+        sbi_plot_file: str = "posterior.svg",
     ):
         """
         Runs the optimization.
@@ -811,7 +811,7 @@ class OptNeuron:
                 name of the file which is saved. The file contains the optimized and
                 target results, the obtained parameters, the loss, and the SD of the
                 loss (in case of noisy models with multiple runs per loss calculation)
-                Default: "best.npy".
+                Default: "best".
 
             sbi_plot_file (str, optional):
                 If you use "sbi": the name of the figure which will be saved and shows
