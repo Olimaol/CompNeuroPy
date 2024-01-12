@@ -7,6 +7,7 @@ from ANNarchy import (
 import os
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy.generate_model import CompNeuroModel
+from ANNarchy.core import Global
 
 
 def compile_in_folder(folder_name, net=None, clean=False, silent=False):
@@ -32,6 +33,17 @@ def compile_in_folder(folder_name, net=None, clean=False, silent=False):
         net.compile("annarchy_folders/" + folder_name, clean=clean, silent=silent)
     if os.getcwd().split("/")[-1] == "annarchy_folders":
         os.chdir("../")
+
+
+def annarchy_compiled(net_id=0):
+    """
+    Check if ANNarchy network was compiled.
+
+    Args:
+        net_id (int, optional):
+            Network ID. Default: 0.
+    """
+    return Global._network[net_id]["compiled"]
 
 
 def get_full_model():
@@ -64,10 +76,10 @@ def cnp_clear(functions=True, neurons=True, synapses=True, constants=True):
             If True, all constants are cleared. Default: True.
     """
     clear(functions=functions, neurons=neurons, synapses=synapses, constants=constants)
-    for model_name in CompNeuroModel.initialized_models.keys():
-        CompNeuroModel.initialized_models[model_name] = False
-    for model_name in CompNeuroModel.compiled_models.keys():
-        CompNeuroModel.compiled_models[model_name] = False
+    for model_name in CompNeuroModel._initialized_models.keys():
+        CompNeuroModel._initialized_models[model_name] = False
+    for model_name in CompNeuroModel._compiled_models.keys():
+        CompNeuroModel._compiled_models[model_name] = False
 
 
 def _get_all_parameters():

@@ -1,8 +1,10 @@
+from typing import Callable
 from CompNeuroPy import model_functions as mf
 from CompNeuroPy import analysis_functions as af
 from ANNarchy import get_population, get_projection
 import numpy as np
 import pandas as pd
+from typingchecker import check_types
 
 
 class CompNeuroModel:
@@ -14,30 +16,38 @@ class CompNeuroModel:
             name of the model
         description (str):
             description of the model
+        model_creation_function (function):
+            function which creates the model
+        compile_folder_name (str):
+            name of the folder in which the model is compiled
+        model_kwargs (dict):
+            keyword arguments for model_creation_function
         populations (list):
-            list of all populations of the model
+            list of names of all populations of the model
         projections (list):
-            list of all projections of the model
-        attribute_df (pandas dataframe):
-            dataframe containing all attributes of the model compartments
+            list of names of all projections of the model
         created (bool):
             True if the model is created
         compiled (bool):
             True if the model is compiled
+        attribute_df (pandas dataframe):
+            dataframe containing all attributes of the model compartments
     """
 
-    initialized_models = {}
-    compiled_models = {}
+    _initialized_models = {}
+    _compiled_models = {}
+    _compiled_models_updated = False
 
+    @check_types()
     def __init__(
         self,
-        model_creation_function,
-        model_kwargs=None,
-        name="model",
-        description="",
-        do_create=True,
-        do_compile=True,
-        compile_folder_name="annarchy",
+        model_creation_function: Callable,
+        model_kwargs: dict | None = None,
+        name: str = "model",
+        description: str = "",
+        do_create: bool = True,
+        do_compile: bool = True,
+        compile_folder_name: str = "annarchy",
     ):
         """
         Initializes the CompNeuroModel class.
@@ -67,19 +77,73 @@ class CompNeuroModel:
         self.model_kwargs = model_kwargs
         self.populations = []
         self.projections = []
-        self.initialized_models[self.name] = False
-        self.compiled_models[self.name] = False
+        self.created = False
+        self.compiled = False
+        self._attribute_df = None
+        self._attribute_df_compiled = False
         if do_create:
             self.create(do_compile=do_compile, compile_folder_name=compile_folder_name)
 
-    def __getattr__(self, name):
-        if name == "created":
-            return self.initialized_models[self.name]
-        elif name == "compiled":
-            return self.compiled_models[self.name]
-        else:
-            # Default behaviour
-            raise AttributeError
+    @property
+    def compiled(self):
+        """
+        The compiled property.
+        """
+        ### check if ANNarchy was compiled and _compiled_models is not updated yet
+        if mf.annarchy_compiled() and not self._compiled_models_updated:
+            self._update_compiled_models()
+        return self._compiled_models[self.name]
+
+    @compiled.setter
+    def compiled(self, value):
+        """
+        Setter for compiled property.
+        """
+        self._compiled_models[self.name] = value
+
+    @property
+    def created(self):
+        """
+        The created property.
+        """
+        return self._initialized_models[self.name]
+
+    @created.setter
+    def created(self, value):
+        """
+        Setter for created property.
+        """
+        self._initialized_models[self.name] = value
+
+    @property
+    def attribute_df(self):
+        """
+        The attribute_df property.
+        """
+        ### check if ANNarchy was compiled and _attribute_df is not updated yet
+        if mf.annarchy_compiled() and not self._attribute_df_compiled:
+            self._update_attribute_df_weights()
+        return self._attribute_df
+
+    def _update_compiled_models(self):
+        """
+        Updates _compiled_models to True for all models.
+        """
+        ### update _compiled_models
+        for key in self._compiled_models.keys():
+            self._compiled_models[key] = True
+        self._compiled_models_updated = True
+
+    def _update_attribute_df_weights(self):
+        """
+        Updates _attribute_df for the weights of all projections.
+        """
+        for proj_name in self.projections:
+            values = get_projection(proj_name).w
+            self._update_attribute_df(
+                compartment=proj_name, parameter_name="w", parameter_value=values
+            )
+        self._attribute_df_compiled = True
 
     def compile(self, compile_folder_name=None):
         """
@@ -91,7 +155,7 @@ class CompNeuroModel:
                 initialization.
         """
         ### check if this model is created
-        if self.initialized_models[self.name]:
+        if self.created:
             if compile_folder_name == None:
                 compile_folder_name = self.compile_folder_name
 
@@ -106,7 +170,11 @@ class CompNeuroModel:
                     + "\n"
                 )
             mf.compile_in_folder(compile_folder_name)
-            self.compiled_models[self.name] = True
+            self.compiled = True
+
+            ### update attribute_df to compiled state, since weights are only available
+            ### after compilation
+            self._update_attribute_df_weights()
         else:
             print("\n")
             assert False, (
@@ -126,7 +194,7 @@ class CompNeuroModel:
                 Name of the folder in which the model is compiled. Default: value from
                 initialization.
         """
-        if self.initialized_models[self.name]:
+        if self.created:
             print("model", self.name, "already created!")
         else:
             initial_existing_model = mf.get_full_model()
@@ -135,7 +203,7 @@ class CompNeuroModel:
                 self.model_creation_function(**self.model_kwargs)
             else:
                 self.model_creation_function()
-            self.initialized_models[self.name] = True
+            self.created = True
 
             ### check which populations and projections have been added
             post_existing_model = mf.get_full_model()
@@ -147,13 +215,11 @@ class CompNeuroModel:
             self.populations = post_existing_model["populations"]
             self.projections = post_existing_model["projections"]
 
-            self.initialized_models[self.name] = True
-
             ### check if names of populations and projections are unique
             self._check_double_compartments()
 
             ### create parameter dictionary
-            self.attribute_df = self._get_attribute_df()
+            self._attribute_df = self._get_attribute_df()
 
             if do_compile:
                 self.compile(compile_folder_name)
@@ -168,8 +234,8 @@ class CompNeuroModel:
                 created yet
         """
         not_created_model_list = []
-        for key in self.initialized_models.keys():
-            if self.initialized_models[key] == False:
+        for key in self._initialized_models.keys():
+            if self._initialized_models[key] == False:
                 not_created_model_list.append(key)
 
         return not_created_model_list
@@ -181,7 +247,7 @@ class CompNeuroModel:
                 The current number of initialized (not considering "created")
                 CompNeuroPy models
         """
-        return len(list(self.initialized_models.keys()))
+        return len(list(self._initialized_models.keys()))
 
     def set_param(self, compartment, parameter_name, parameter_value):
         """
@@ -202,7 +268,7 @@ class CompNeuroModel:
         """
         ### catch if model is not created
         assert (
-            self.initialized_models[self.name] == True
+            self.created == True
         ), f"ERROR set_param: model {self.name} has to be created before setting parameters!"
 
         ### check if compartment is in populations or projections
@@ -237,17 +303,17 @@ class CompNeuroModel:
                 the value or values of the parameter
         """
         paramter_mask = (
-            (self.attribute_df["compartment_name"] == compartment).astype(int)
-            * (self.attribute_df["attribute_name"] == parameter_name).astype(int)
+            (self._attribute_df["compartment_name"] == compartment).astype(int)
+            * (self._attribute_df["attribute_name"] == parameter_name).astype(int)
         ).astype(bool)
         parameter_idx = np.arange(paramter_mask.size).astype(int)[paramter_mask][0]
         min_val = af.get_minimum(parameter_value)
         max_val = af.get_maximum(parameter_value)
         if min_val != max_val:
-            self.attribute_df.at[parameter_idx, "value"] = f"[{min_val}, {max_val}]"
+            self._attribute_df.at[parameter_idx, "value"] = f"[{min_val}, {max_val}]"
         else:
-            self.attribute_df.at[parameter_idx, "value"] = str(min_val)
-        self.attribute_df.at[parameter_idx, "definition"] = "modified"
+            self._attribute_df.at[parameter_idx, "value"] = str(min_val)
+        self._attribute_df.at[parameter_idx, "definition"] = "modified"
 
     def _check_double_compartments(self):
         """
@@ -260,7 +326,7 @@ class CompNeuroModel:
         """
         ### cach if model is not created, only if created populations and projections are available
         assert (
-            self.initialized_models[self.name] == True
+            self.created == True
         ), f"ERROR model {self.name}: model has to be created before checking for double compartments!"
         ### only have to go over populations and check if they are also projections (go over projections not neccessary)
         pop_in_projections_list = []
@@ -287,7 +353,7 @@ class CompNeuroModel:
         """
         ### cach if model is not created, only if created populations and projections are available
         assert (
-            self.initialized_models[self.name] == True
+            self.created == True
         ), f"ERROR model {self.name}: model has to be created before creating paramteer dictionary!"
 
         ### create empty paramteter dict
