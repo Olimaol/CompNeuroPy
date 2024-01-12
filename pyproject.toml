@@ -1,6 +1,6 @@
 
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=60", "setuptools-scm>=8.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -33,6 +33,3 @@ Source = "https://github.com/Olimaol/CompNeuroPy"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
-[tool.setuptools.package-data]
-CompNeuroPy = ["*.csv"]
