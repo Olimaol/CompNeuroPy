@@ -1,5 +1,3 @@
 ### full models
-from .H_and_H_model_Bischop import H_and_H_model_Bischop, HHmodelBischop
-from .H_and_H_model_Corbit import H_and_H_model_Corbit
-from .H_and_H_model_Corbit_syn import H_and_H_model_Corbit_syn
+from .hodgkin_huxley_single_pop import HHmodelBischop, HHmodelCorbit
 from .BGM_22.BGM import BGM
