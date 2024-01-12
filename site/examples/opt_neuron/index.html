@@ -1399,7 +1399,7 @@ model to some experimental data.</p>
     <span class="p">)</span>
 
     <span class="c1">### run the optimization, define how often the experiment should be repeated</span>
-    <span class="n">fit</span> <span class="o">=</span> <span class="n">opt</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">max_evals</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">results_file_name</span><span class="o">=</span><span class="s2">&quot;best_from_data.npy&quot;</span><span class="p">)</span>
+    <span class="n">fit</span> <span class="o">=</span> <span class="n">opt</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">max_evals</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">results_file_name</span><span class="o">=</span><span class="s2">&quot;best_from_data&quot;</span><span class="p">)</span>
 
     <span class="c1">### print optimized parameters, we should get around a=0.8 and b=2</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="n">fit</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">])</span>
@@ -1520,7 +1520,7 @@ model to the dynamics of another ANNarchy neuron model in a specific experiment.
     <span class="p">)</span>
 
     <span class="c1">### run the optimization, define how often the experiment should be repeated</span>
-    <span class="n">fit</span> <span class="o">=</span> <span class="n">opt</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">max_evals</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">results_file_name</span><span class="o">=</span><span class="s2">&quot;best_from_neuron.npy&quot;</span><span class="p">)</span>
+    <span class="n">fit</span> <span class="o">=</span> <span class="n">opt</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">max_evals</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">results_file_name</span><span class="o">=</span><span class="s2">&quot;best_from_neuron&quot;</span><span class="p">)</span>
 
     <span class="c1">### print optimized parameters, we should get around a=2.8 and b=0.28</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="n">fit</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">])</span>
