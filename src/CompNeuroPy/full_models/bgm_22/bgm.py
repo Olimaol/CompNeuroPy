@@ -8,60 +8,107 @@ from ANNarchy.core.Random import (
     Exponential,
     Gamma,
 )
-from CompNeuroPy import generate_model
+from CompNeuroPy import CompNeuroModel
 import csv
 import os
 import importlib
 import inspect
 import traceback
 import sys
+from typingchecker import check_types
 
 
-class BGM(generate_model):
+class BGM(CompNeuroModel):
     """
-    The basal ganglia model based on the model from Goenner et al. (2021)
+    The basal ganglia model based on the model from [Goenner et al. (2021)](https://doi.org/10.1111/ejn.15082).
+
+    Attributes:
+        name (str):
+            name of the model
+        description (str):
+            description of the model
+        model_creation_function (function):
+            function which creates the model
+        compile_folder_name (str):
+            name of the folder in which the model is compiled
+        model_kwargs (dict):
+            keyword arguments for model_creation_function
+        populations (list):
+            list of names of all populations of the model
+        projections (list):
+            list of names of all projections of the model
+        created (bool):
+            True if the model is created
+        compiled (bool):
+            True if the model is compiled
+        attribute_df (pandas dataframe):
+            dataframe containing all attributes of the model compartments
+        params (dict):
+            dictionary containing all parameters of the model
+        name_appendix (str):
+            string which is appended to all model compartments and parameters
     """
 
+    @check_types()
     def __init__(
         self,
-        name="BGM_v01_p01",
-        do_create=True,
-        do_compile=True,
-        compile_folder_name=None,
-        seed=None,
-        name_appendix=None,
+        name: str = "BGM_v01_p01",
+        do_create: bool = True,
+        do_compile: bool = True,
+        compile_folder_name: str | None = None,
+        seed: int | None = None,
+        name_appendix: str = "",
     ):
         """
-        runs the standard init but with already predefined model_creation_function and description
-        one can still adjust name, do_compile and compile_folder_name
-
-        seed: int, default=None, the seed for the random number generator used during model creation
+        Args:
+            name (str, optional):
+                name of the model, syntax: "BGM_v<model_version>_p<parameters_version>"
+                replace <model_version> and <parameters_version> with the versions you
+                want to use, see CompNeuroPy.full_models.BGM_22.parameters for available
+                versions. Default: "BGM_v01_p01"
+            do_create (bool, optional):
+                if True, the model is created after initialization. Default: True
+            do_compile (bool, optional):
+                if True, the model is compiled after creation. Default: True
+            compile_folder_name (str, optional):
+                name of the folder in which the compiled model is saved. Default: None,
+                i.e. "annarchy_BGM_v<model_version>" is used
+            seed (int, optional):
+                the seed for the random number generator used during model creation.
+                Default: None, i.e. random seed is used
+            name_appendix (str, optional):
+                string which is appended to all model compartments and parameters.
+                Allows to create multiple models with the same name and keep names of
+                compartments and parameters unique. Default: ""
         """
-        ### check if name is correct
-        self._name_split_ = name.split("_")
-        assert (
-            len(self._name_split_) == 3
-            and self._name_split_[0] == "BGM"
-            and self._name_split_[1][0] == "v"
-            and self._name_split_[2][0] == "p"
-        ), 'ERROR generate_model BGM: "name" must have form "BGM_vXX_pXX"'
-        self._model_version_name_ = "_".join(self._name_split_[:2])
+        ### check if name is correct, otherwise raise ValueError
+        if not (
+            len(name.split("_")) == 3
+            and name.split("_")[0] == "BGM"
+            and name.split("_")[1][0] == "v"
+            and name.split("_")[2][0] == "p"
+        ):
+            raise ValueError(
+                "name has to be of the form 'BGM_v<model_version>_p<parameters_version>'"
+            )
 
-        ### set name_appendix
-        if isinstance(name_appendix, type(None)):
-            self.name_appendix = ""
-            name = name + self.name_appendix
-        elif isinstance(name_appendix, type("txt")):
-            name_appendix = ":" + name_appendix
-            self.name_appendix = name_appendix
-            name = name + self.name_appendix
+        ### set attributes (except the ones which are set in the super().__init__())
+        self.name_appendix = name_appendix
+        self.seed = seed
+        if len(self.name_appendix) > 0:
+            self._name_appendix_to_add = ":" + name_appendix
         else:
-            raise TypeError("name_appendix has to be string")
-            quit()
+            self._name_appendix_to_add = ""
+
+        ### set model_version_name
+        self._model_version_name = "_".join(name.split("_")[:2])
+
+        ### update name with name_appendix
+        name = name + self._name_appendix_to_add
 
         ### init default compile_folder_name
         if compile_folder_name == None:
-            compile_folder_name = "annarchy_" + self._model_version_name_
+            compile_folder_name = "annarchy_" + self._model_version_name
 
         ### set description
         description = (
@@ -69,14 +116,14 @@ class BGM(generate_model):
         )
 
         ### init random number generator
-        self.rng = np.random.default_rng(seed)
+        self._rng = np.random.default_rng(seed)
 
         ### get model parameters before init, ignore name_appendix
-        self.params = self.__get_params__(name.split(":")[0])
+        self.params = self._get_params(name.split(":")[0])
 
         ### init
         super().__init__(
-            model_creation_function=self.__model_creation_function__,
+            model_creation_function=self._model_creation_function,
             name=name,
             description=description,
             do_create=do_create,
@@ -84,26 +131,29 @@ class BGM(generate_model):
             compile_folder_name=compile_folder_name,
         )
 
-    def __add_name_appendix__(self):
+    def _add_name_appendix(self):
         """
-        all model compartments names end with the name_appendix --> for setting the parameters you need to change the names of the model compartments in the paramter keys
+        Rename all model compartments, keys (except general) in params dict and
+        names in attribute_df by appending the name_appendix to the original name.
         """
-        ### update the attribute_df of the model object (it still contains the original names of the model creation)
+
+        ### update the attribute_df of the model object (it still contains the original
+        ### names of the model creation)
         self.attribute_df["compartment_name"] = (
-            self.attribute_df["compartment_name"] + self.name_appendix
+            self.attribute_df["compartment_name"] + self._name_appendix_to_add
         )
         ### rename populations and projections
         populations_new = []
         for pop_name in self.populations:
-            populations_new.append(pop_name + self.name_appendix)
-            get_population(pop_name).name = pop_name + self.name_appendix
+            populations_new.append(pop_name + self._name_appendix_to_add)
+            get_population(pop_name).name = pop_name + self._name_appendix_to_add
         self.populations = populations_new
         projections_new = []
         for proj_name in self.projections:
-            projections_new.append(proj_name + self.name_appendix)
-            get_projection(proj_name).name = proj_name + self.name_appendix
+            projections_new.append(proj_name + self._name_appendix_to_add)
+            get_projection(proj_name).name = proj_name + self._name_appendix_to_add
         self.projections = projections_new
-        ### rename parameters
+        ### rename parameter keys except general
         params_new = {}
         for key, param_val in self.params.items():
             param_object = key.split(".")[0]
@@ -113,48 +163,51 @@ class BGM(generate_model):
                 params_new[key] = param_val
                 continue
 
-            param_object = param_object + self.name_appendix
+            param_object = param_object + self._name_appendix_to_add
             key_new = param_object + "." + param_name
             params_new[key_new] = param_val
         self.params = params_new
 
-    def __model_creation_function__(self):
+    def _model_creation_function(self):
+        """
+        Creates the model using the model_creation_function from the
+        model_creation_functions.py file. The function is defined by the
+        model_version_name.
+        """
         model_creation_function = eval(
-            "importlib.import_module('CompNeuroPy.models.BGM_22.model_creation_functions')."
-            + self._model_version_name_
+            "importlib.import_module('CompNeuroPy.full_models.bgm_22.model_creation_functions')."
+            + self._model_version_name
         )
         model_creation_function(self)
 
     def create(self, do_compile=True, compile_folder_name=None):
-        super().create(do_compile=False, compile_folder_name=compile_folder_name)
-        ### after creating the model, self.populations and self.projections are available --> now set the parameters
-        ### do not compile during create but after setting parameters --> parameter values are included in compilation state
-        ### before setting parameters add name_appendix to model compartments and parameters
-        self.__add_name_appendix__()
-        self.__set_params__()
-        self.__set_noise_values__()
-        self.__set_connections__()
+        """
+        Creates the model and optionally compiles it directly.
 
+        Args:
+            do_compile (bool, optional):
+                If True the model is compiled directly. Default: True.
+            compile_folder_name (str, optional):
+                Name of the folder in which the model is compiled. Default: value from
+                initialization.
+        """
+        ### create the model, but do not compile to set parameters before compilation
+        super().create(do_compile=False, compile_folder_name=compile_folder_name)
+
+        ### update names of compartments and parameters
+        self._add_name_appendix()
+
+        ### set parameters and connectivity of projections
+        ### for each projection the connectivity has to be defined in the params
+        self._set_params()
+        self._set_noise_values()
+        self._set_connections()
+
+        ### compile the model, after setting all parameters (included in compile state)
         if do_compile:
             self.compile(compile_folder_name)
 
-    def compile(self, compile_folder_name=None):
-        ### just run the standard compile
-        super().compile(compile_folder_name)
-
-        ### and update the weights in the attribute_df
-        ### for each projection there has to be a connectivity parameter (otherwise error occurs)
-        ### and for each projections the weights are modified
-        ### thus just update weights of all projections
-        ### loop over all projections
-        for proj_name in self.projections:
-            ### update the model attribute_df
-            values = get_projection(proj_name).w
-            self.__update_attribute_df__(
-                compartment=proj_name, parameter_name="w", parameter_value=values
-            )
-
-    def __set_params__(self):
+    def _set_params(self):
         """
         sets params of all populations
         """
@@ -204,7 +257,7 @@ class BGM(generate_model):
                             parameter_value=param_val,
                         )
 
-    def __set_noise_values__(self):
+    def _set_noise_values(self):
         """
         sets noise params of all populations
         """
@@ -233,7 +286,7 @@ class BGM(generate_model):
                         self.set_param(
                             compartment=param_object,
                             parameter_name="rates_noise",
-                            parameter_value=self.rng.normal(
+                            parameter_value=self._rng.normal(
                                 mean, sd, get_population(param_object).size
                             ),
                         )
@@ -253,7 +306,7 @@ class BGM(generate_model):
                 else:
                     continue
 
-    def __set_connections__(self):
+    def _set_connections(self):
         """
         sets the connectivity and parameters of all projections
         """
@@ -350,12 +403,13 @@ class BGM(generate_model):
                     parameter_value=param_val,
                 )
 
-    def __get_params__(self, name):
+    def _get_params(self, name):
         """
         read all parameters for specified model name
 
-        name : str
-            specifies which column in the csv file is used
+        Args:
+            name (str):
+                name of the model, specifies which column in the csv file is used
         """
 
         csvPath = os.path.dirname(os.path.realpath(__file__)) + "/parameters.csv"
@@ -412,7 +466,7 @@ class BGM(generate_model):
 
         return params
 
-    def needed_imports(self):
+    def _needed_imports(self):
         for import_val in [
             Uniform,
             DiscreteUniform,

@@ -2,12 +2,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import matplotlib
-from ANNarchy import raster_plot, dt
+from ANNarchy import raster_plot, dt, inter_spike_interval, coefficient_of_variation
 import warnings
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy import extra_functions as ef
+from CompNeuroPy.monitors import RecordingTimes
 from scipy.interpolate import interp1d
 from multiprocessing import Process
+from typingchecker import check_types
 
 
 def my_raster_plot(spikes: dict):
@@ -721,8 +723,16 @@ def get_pop_rate(
     return (np.arange(t_start, t_start + duration, dt), ret)
 
 
+@check_types()
 def plot_recordings(
-    figname, recordings, recording_times, chunk, shape, plan, time_lim=[], dpi=300
+    figname: str,
+    recordings: list,
+    recording_times: RecordingTimes,
+    chunk: int,
+    shape: tuple,
+    plan: list[str],
+    time_lim: None | tuple = None,
+    dpi: int = 300,
 ):
     """
     Plots the recordings of a single chunk from recordings. Plotted variables are
@@ -733,10 +743,10 @@ def plot_recordings(
             path + name of figure (e.g. "figures/my_figure.png")
         recordings (list):
             a recordings list from CompNeuroPy obtained with the function
-            get_recordings() from a Monitors object.
+            get_recordings() from a CompNeuroMonitors object.
         recording_times (object):
             recording_times object from CompNeuroPy obtained with the
-            function get_recording_times() from a Monitors object.
+            function get_recording_times() from a CompNeuroMonitors object.
         chunk (int):
             which chunk of recordings should be used (the index of chunk)
         shape (tuple):
@@ -750,10 +760,10 @@ def plot_recordings(
                     - for spike data: raster, mean, hybrid
                     - for other data: line, mean, matrix
                     - only for projection data: matrix_mean
-        time_lim (list, optional):
+        time_lim (tuple, optional):
             Defines the x-axis for all subplots. The list contains two
             numbers: start and end time in ms. The times have to be
-            within the chunk. Default: time lims of chunk
+            within the chunk. Default: None, i.e., time lims of chunk
         dpi (int, optional):
             The dpi of the saved figure. Default: 300
     """
@@ -768,7 +778,14 @@ def plot_recordings(
 
 
 def _plot_recordings(
-    figname, recordings, recording_times, chunk, shape, plan, time_lim=[], dpi=300
+    figname: str,
+    recordings: list,
+    recording_times: RecordingTimes,
+    chunk: int,
+    shape: tuple,
+    plan: list[str],
+    time_lim: None | tuple,
+    dpi: int,
 ):
     """
     Plots the recordings for the given recording_times specified in plan.
@@ -778,10 +795,10 @@ def _plot_recordings(
             path + name of figure (e.g. "figures/my_figure.png")
         recordings (list):
             a recordings list from CompNeuroPy obtained with the function
-            get_recordings() from a Monitors object.
+            get_recordings() from a CompNeuroMonitors object.
         recording_times (object):
             recording_times object from CompNeuroPy obtained with the
-            function get_recording_times() from a Monitors object.
+            function get_recording_times() from a CompNeuroMonitors object.
         chunk (int):
             which chunk of recordings should be used (the index of chunk)
         shape (tuple):
@@ -795,16 +812,16 @@ def _plot_recordings(
                     - for spike data: raster, mean, hybrid
                     - for other data: line, mean, matrix
                     - only for projection data: matrix_mean
-        time_lim (list, optional):
+        time_lim (tuple):
             Defines the x-axis for all subplots. The list contains two
             numbers: start and end time in ms. The times have to be
-            within the chunk. Default: time lims of chunk
-        dpi (int, optional):
-            The dpi of the saved figure. Default: 300
+            within the chunk.
+        dpi (int):
+            The dpi of the saved figure.
     """
     print(f"generate fig {figname}", end="... ", flush=True)
     recordings = recordings[chunk]
-    if len(time_lim) == 0:
+    if isinstance(time_lim, type(None)):
         time_lim = recording_times.time_lims(chunk=chunk)
     start_time = time_lim[0]
     end_time = time_lim[1]
@@ -823,7 +840,7 @@ def _plot_recordings(
         time_arr_part = []
 
         ### loop over periods
-        nr_periods = recording_times.__get_nr_periods__(
+        nr_periods = recording_times._get_nr_periods(
             chunk=chunk, compartment=compartment
         )
         for period in range(nr_periods):
@@ -1009,9 +1026,14 @@ def _plot_recordings(
             elif len(data.shape) == 2 and isinstance(data[0, 0], list) is not True:
                 ### population: data[time,neurons]
                 for neuron in range(data.shape[1]):
+                    # in case of gaps file time gaps and add nan to data TODO also for other plots
+                    plot_x, plot_y = time_data_add_nan(
+                        time_arr_dict[part], data[:, neuron]
+                    )
+
                     plt.plot(
-                        time_arr_dict[part],
-                        data[:, neuron],
+                        plot_x,
+                        plot_y,
                         color="k",
                     )
                 plt.title(f"Variable {variable} of {part} ({data.shape[1]})")
@@ -1698,7 +1720,7 @@ def rsse(a, b):
     return np.sqrt(np.sum((a - b) ** 2))
 
 
-def get_minimum(input_data):
+def get_minimum(input_data: list | np.ndarray | tuple | float):
     """
     Returns the minimum of the input data.
 
@@ -1719,13 +1741,13 @@ def get_minimum(input_data):
                 sublist if isinstance(sublist, (list, np.ndarray, tuple)) else [sublist]
             )
         ]
-        return min(flattened_list)
+        return float(min(flattened_list))
     else:
         # If the input is a single value, return it as the minimum
-        return input_data
+        return float(input_data)
 
 
-def get_maximum(input_data):
+def get_maximum(input_data: list | np.ndarray | tuple | float):
     """
     Returns the maximum of the input data.
 
@@ -1747,7 +1769,861 @@ def get_maximum(input_data):
                 sublist if isinstance(sublist, (list, np.ndarray, tuple)) else [sublist]
             )
         ]
-        return max(flattened_list)
+        return float(max(flattened_list))
     else:
         # If the input is a single value, return it as the maximum
-        return input_data
+        return float(input_data)
+
+
+# plan = {
+#     "position": [1, 2, 3],
+#     "compartment": ["pop1", "pop2", "pop3"],
+#     "variable": ["v", "v", "v"],
+#     "format": ["line", "line", "line"],
+#     "color": ["k", "k", "k"],
+# }
+
+
+class PlotRecordings:
+    """
+    Plot recordings from CompNeuroMonitors.
+
+    TODO: CHeck if there are memory issues with large recordings or many subplots.
+    """
+
+    @check_types()
+    def __init__(
+        self,
+        figname: str,
+        recordings: list[dict],
+        recording_times: RecordingTimes,
+        shape: tuple[int, int],
+        plan: dict,
+        chunk: int = 0,
+        time_lim: None | tuple[float, float] = None,
+        dpi: int = 300,
+    ) -> None:
+        """
+        Create and save the plot.
+
+        Args:
+            figname (str):
+                The name of the figure to be saved.
+            recordings (list):
+                A recordings list obtained from CompNeuroMonitors.
+            recording_times (RecordingTimes):
+                The RecordingTimes object containing the recording times obtained from
+                CompNeuroMonitors.
+            shape (tuple):
+                The shape of the figure. (number of rows, number of columns)
+            plan (dict):
+                Defines which recordings are plotted in which subplot and how. The plan
+                has to contain the following keys: "position", "compartment",
+                "variable", "format". The values of the keys have to be lists of the
+                same length. The values of the key "position" have to be integers
+                between 1 and the number of subplots (defined by shape). The values of
+                the key "compartment" have to be the names of the model compartments as
+                strings. The values of the key "variable" have to be strings containing
+                the names of the recorded variables or equations using the recorded
+                variables. The values of the key "format" have to be strings defining
+                how the recordings are plotted. The following formats are available for
+                spike recordings: "raster", "mean", "hybrid", "interspike". The
+                following formats are available for other recordings: "line",
+                "line_mean", "matrix", "matrix_mean".
+            chunk (int, optional):
+                The chunk of the recordings to be plotted. Default: 0.
+            time_lim (tuple, optional):
+                Defines the x-axis for all subplots. The tuple contains two
+                numbers: start and end time in ms. The times have to be
+                within the chunk. Default: None, i.e., the whole chunk is plotted.
+            dpi (int, optional):
+                The dpi of the saved figure. Default: 300.
+        """
+        ### print start message
+        print(f"Generate fig {figname}", end="... ", flush=True)
+
+        ### set attributes
+        self.figname = figname
+        self.recordings = recordings
+        self.recording_times = recording_times
+        self.shape = shape
+        self.plan = plan
+        self.chunk = chunk
+        self.time_lim = time_lim
+        self.dpi = dpi
+
+        ### get available compartments (from recordings) and recorded variables for each
+        ### compartment
+        (
+            self._compartment_list,
+            self._compartment_recordings_dict,
+        ) = self._get_compartment_recordings()
+
+        ### check plan keys and values
+        self._check_plan()
+
+        ### get start and end time for plotting and timestep
+        self._start_time, self._end_time, self._time_step = self._get_start_end_time()
+
+        ### get compbined time array for recordings of each compartment
+        self._time_arr_list = self._get_time_arr_list()
+
+        ### get data from recordings for each subplot
+        self._raw_data_list = self._get_raw_data_list()
+
+        ### create plot
+        self._plot()
+
+        ### print end message
+        print("Done\n")
+
+    def _get_compartment_recordings(self):
+        """
+        Get available compartment names from recordings.
+        Get recorded variables (names) for each compartment.
+
+        Returns:
+            compartment_list (list):
+                List of compartment names.
+            compartment_recordings_dict (dict):
+                Dictionary with compartment names as keys and list of recorded variables
+                as values.
+        """
+        ### check if chunk is valid
+        if self.chunk >= len(self.recordings) or self.chunk < 0:
+            print(
+                f"\nERROR PlotRecordings: chunk {self.chunk} is not valid.\n"
+                f"Number of chunks: {len(self.recordings)}\n"
+            )
+            quit()
+
+        ### get compartment names and recorded variables for each compartment
+        compartment_list = []
+        compartment_recordings_dict = {}
+        for recordings_key in self.recordings[self.chunk].keys():
+            if ";" not in recordings_key:
+                continue
+
+            ### get compartment
+            compartment, recorded_variable = recordings_key.split(";")
+            if compartment not in compartment_list:
+                compartment_list.append(compartment)
+                compartment_recordings_dict[compartment] = []
+
+            ### get recordings for compartment
+            if recorded_variable != "period" and recorded_variable != "parameter_dict":
+                compartment_recordings_dict[compartment].append(recorded_variable)
+
+        return compartment_list, compartment_recordings_dict
+
+    def _check_plan(self):
+        """
+        Check if plan is valid.
+        """
+
+        ### check if plan keys are valid
+        valid_keys = ["position", "compartment", "variable", "format"]
+        for key in self.plan.keys():
+            if key not in valid_keys:
+                print(
+                    f"\nERROR PlotRecordings: plan key {key} is not valid.\n"
+                    f"Valid keys are {valid_keys}.\n"
+                )
+                quit()
+
+        ### check if plan values are valid (have same length)
+        for key in self.plan.keys():
+            if len(self.plan[key]) != len(self.plan["position"]):
+                print(
+                    f"\nERROR PlotRecordings: plan value of key '{key}' has not the same length as plan value of key 'position'.\n"
+                )
+                quit()
+
+        ### check if plan positions are valid
+        ### check if min and max are valid
+        if get_minimum(self.plan["position"]) < 1:
+            print(
+                f"\nERROR PlotRecordings: plan position has to be >= 1.\n"
+                f"plan position: {self.plan['position']}\n"
+            )
+            quit()
+        if get_maximum(self.plan["position"]) > self.shape[0] * self.shape[1]:
+            print(
+                f"\nERROR PlotRecordings: plan position has to be <= shape[0] * shape[1].\n"
+                f"plan position: {self.plan['position']}\n"
+                f"shape: {self.shape}\n"
+            )
+            quit()
+        ### check if plan positions are unique
+        if len(np.unique(self.plan["position"])) != len(self.plan["position"]):
+            print(
+                f"\nERROR PlotRecordings: plan position has to be unique.\n"
+                f"plan position: {self.plan['position']}\n"
+            )
+            quit()
+
+        ### check if plan compartments are valid
+        for compartment in self.plan["compartment"]:
+            if compartment not in self._compartment_list:
+                print(
+                    f"\nERROR PlotRecordings: plan compartment {compartment} is not valid.\n"
+                    f"Valid compartments are {self._compartment_list}.\n"
+                )
+                quit()
+
+        ### check if plan variables are valid
+        for plot_idx in range(len(self.plan["variable"])):
+            compartment = self.plan["compartment"][plot_idx]
+            variable: str = self.plan["variable"][plot_idx]
+            ### check if variable contains a mathematical expression
+            if "+" in variable or "-" in variable or "*" in variable or "/" in variable:
+                ### separate variables
+                variable = variable.replace(" ", "")
+                variable = variable.replace("+", " ")
+                variable = variable.replace("-", " ")
+                variable = variable.replace("*", " ")
+                variable = variable.replace("/", " ")
+                variables_list = variable.split(" ")
+                ### remove numbers
+                variables_list = [var for var in variables_list if not var.isdigit()]
+                ### spike and axon_spike are not allowed in equations
+                if "spike" in variables_list or "axon_spike" in variables_list:
+                    print(
+                        f"\nERROR PlotRecordings: plan variable {variable} is not valid.\n"
+                        f"Variables 'spike' and 'axon_spike' are not allowed in equations.\n"
+                    )
+                    quit()
+            else:
+                variables_list = [variable]
+            ### check if variables are valid
+            for var in variables_list:
+                if var not in self._compartment_recordings_dict[compartment]:
+                    print(
+                        f"\nERROR PlotRecordings: plan variable {var} is not valid for compartment {compartment}.\n"
+                        f"Valid variables are {self._compartment_recordings_dict[compartment]}.\n"
+                    )
+                    quit()
+
+        ### check if plan formats are valid
+        valid_formats_spike = ["raster", "mean", "hybrid", "interspike", "cv"]
+        valid_formats_other = ["line", "line_mean", "matrix", "matrix_mean"]
+        for plot_idx in range(len(self.plan["format"])):
+            variable = self.plan["variable"][plot_idx]
+            format = self.plan["format"][plot_idx]
+            ### check if format is valid
+            if variable == "spike" or variable == "axon_spike":
+                if format not in valid_formats_spike:
+                    print(
+                        f"\nERROR PlotRecordings: plan format {format} is not valid for variable {variable}.\n"
+                        f"Valid formats are {valid_formats_spike}.\n"
+                    )
+                    quit()
+            else:
+                if format not in valid_formats_other:
+                    print(
+                        f"\nERROR PlotRecordings: plan format {format} is not valid for variable {variable}.\n"
+                        f"Valid formats are {valid_formats_other}.\n"
+                    )
+                    quit()
+
+    def _get_start_end_time(self):
+        """
+        Check if time_lim is given and valid. If it's not given get it from recordings.
+        Get timestep from recordings.
+
+        Returns:
+            start_time (float):
+                The start time of the recordings.
+            end_time (float):
+                The end time of the recordings.
+            time_step (float):
+                The timestep of the recordings.
+
+        Raises:
+            ValueError: If given time_lim is not within the chunk.
+        """
+
+        chunk_time_lims = self.recording_times.time_lims(chunk=self.chunk)
+        ### check if time_lim is given
+        if isinstance(self.time_lim, type(None)):
+            ### get start and end time from recording_times
+            start_time, end_time = chunk_time_lims
+        else:
+            ### check if time_lim is within chunk
+            if (
+                self.time_lim[0] < chunk_time_lims[0]
+                or self.time_lim[1] > chunk_time_lims[1]
+            ):
+                raise ValueError(
+                    f"\nERROR PlotRecordings: time_lim {self.time_lim} is not within chunk.\n"
+                    f"chunk time lims: {chunk_time_lims[0]} - {chunk_time_lims[1]}\n"
+                )
+            start_time, end_time = self.time_lim
+
+        ### get timestep
+        time_step = self.recordings[self.chunk]["dt"]
+
+        return start_time, end_time, time_step
+
+    def _get_time_arr_list(self):
+        """
+        Get combined time array for each subplot of plan.
+
+        Returns:
+            time_arr_list (list):
+                List with time arrays for each subplot of plan.
+        """
+        ### loop over compartments of plan
+        time_arr_dict = {}
+        for compartment in np.unique(self.plan["compartment"]):
+            actual_period = self.recordings[self.chunk][f"{compartment};period"]
+
+            ### get time array for each recording period of the chunk
+            time_arr_period_list = []
+            nr_periods = self.recording_times._get_nr_periods(
+                chunk=self.chunk, compartment=compartment
+            )
+            for period in range(nr_periods):
+                time_lims = self.recording_times.time_lims(
+                    chunk=self.chunk, compartment=compartment, period=period
+                )
+                start_time_preiod = time_lims[0]
+                end_time_period = round(
+                    time_lims[1] + actual_period, get_number_of_decimals(actual_period)
+                )
+                time_arr_period_list.append(
+                    np.arange(start_time_preiod, end_time_period, actual_period)
+                )
+
+            ### combine time arrays of periods
+            time_arr_dict[compartment] = np.concatenate(time_arr_period_list)
+
+        ### get time array for each subplot of plan
+        time_arr_list = []
+        for plot_idx in range(len(self.plan["position"])):
+            compartment = self.plan["compartment"][plot_idx]
+            time_arr_list.append(time_arr_dict[compartment])
+
+        return time_arr_list
+
+    def _get_raw_data_list(self):
+        """
+        Get raw data for each subplot of plan.
+
+        Returns:
+            data_list (dict):
+                List with data for each subplot of plan.
+        """
+        data_list = []
+        ### loop over subplots of plan
+        for plot_idx in range(len(self.plan["position"])):
+            compartment = self.plan["compartment"][plot_idx]
+            variable: str = self.plan["variable"][plot_idx]
+            ### check if variable is equation
+            if "+" in variable or "-" in variable or "*" in variable or "/" in variable:
+                ### get the values of the recorded variables of the compartment, store
+                ### them in dict
+                value_dict = {
+                    rec_var_name: self.recordings[self.chunk][
+                        f"{compartment};{rec_var_name}"
+                    ]
+                    for rec_var_name in self._compartment_recordings_dict[compartment]
+                }
+                ### evaluate equation with these values
+                variable_data = ef.evaluate_expression_with_dict(
+                    expression=variable, value_dict=value_dict
+                )
+            else:
+                ### get data from recordings
+                variable_data = self.recordings[self.chunk][f"{compartment};{variable}"]
+            ### append data to data_list
+            data_list.append(variable_data)
+
+        return data_list
+
+    def _plot(self):
+        """
+        Create plot.
+        """
+        ### create figure
+        plt.figure(figsize=([6.4 * self.shape[1], 4.8 * self.shape[0]]))
+
+        ### loop over subplots of plan
+        for plot_idx in range(len(self.plan["position"])):
+            ### create subplot
+            plt.subplot(self.shape[0], self.shape[1], self.plan["position"][plot_idx])
+
+            ### fill subplot
+            self._fill_subplot(plot_idx)
+
+        ### save figure
+        plt.tight_layout()
+        figname_parts = self.figname.split("/")
+        if len(figname_parts) > 1:
+            save_dir = "/".join(figname_parts[:-1])
+            sf.create_dir(save_dir)
+        plt.savefig(self.figname, dpi=self.dpi)
+        plt.close()
+
+    def _fill_subplot(self, plot_idx):
+        """
+        Fill subplot with data.
+
+        Args:
+            plot_idx (int):
+                The index of the subplot in the plan.
+        """
+        variable: str = self.plan["variable"][plot_idx]
+
+        ### general subplot settings
+        plt.xlabel("time [ms]")
+        plt.xlim(self._start_time, self._end_time)
+
+        if variable == "spike" or variable == "axon_spike":
+            ### spike recordings
+            self._fill_subplot_spike(plot_idx)
+        else:
+            ### other (array) recordings
+            self._fill_subplot_other(plot_idx)
+
+    def _fill_subplot_spike(self, plot_idx):
+        """
+        Fill subplot with spike data.
+
+        Args:
+            plot_idx (int):
+                The index of the subplot in the plan.
+        """
+        ### get data
+        compartment = self.plan["compartment"][plot_idx]
+        format: str = self.plan["format"][plot_idx]
+        data = self._raw_data_list[plot_idx]
+
+        ### get spike times and ranks
+        spike_times, spike_ranks = my_raster_plot(data)
+        spike_times = spike_times * self._time_step
+
+        ### get spikes within time_lims
+        mask: np.ndarray = (
+            (spike_times >= self._start_time).astype(int)
+            * (spike_times <= self._end_time).astype(int)
+        ).astype(bool)
+
+        ### check if there are no spikes
+        if mask.size == 0:
+            ### set title
+            plt.title(f"Spikes {compartment}")
+            ### print warning
+            print(
+                f"\n  WARNING PlotRecordings: {compartment} does not contain any spikes in the given time interval."
+            )
+            ### plot text
+            plt.text(
+                0.5,
+                0.5,
+                f"{compartment} does not contain any spikes.",
+                va="center",
+                ha="center",
+            )
+            plt.xticks([])
+            plt.yticks([])
+            plt.xlim(0, 1)
+            plt.xlabel("")
+            return
+
+        ### plot raster plot
+        if format == "raster" or format == "hybrid":
+            self._raster_plot(compartment, spike_ranks, spike_times, mask)
+
+        ### plot mean firing rate
+        if format == "mean" or format == "hybrid":
+            self._mean_firing_rate_plot(compartment, data, format)
+
+        ### plot interspike interval histogram
+        if format == "interspike":
+            self._interspike_interval_plot(compartment, data)
+
+        ### plot coefficient of variation histogram
+        if format == "cv":
+            self._coefficient_of_variation_plot(compartment, data)
+
+    def _raster_plot(self, compartment, spike_ranks, spike_times, mask):
+        """
+        Plot raster plot.
+
+        Args:
+            compartment (str):
+                The name of the compartment.
+            spike_ranks (array):
+                The spike ranks.
+            spike_times (array):
+                The spike times.
+            mask (array):
+                The mask for the spike times.
+        """
+        ### set title
+        plt.title(f"Spikes {compartment} ({spike_ranks.max() + 1})")
+        ### check if there is only one neuron
+        if spike_ranks.max() == 0:
+            marker, size = ["|", 3000]
+        else:
+            marker, size = [".", 3]
+        ### plot spikes
+        plt.scatter(
+            spike_times[mask],
+            spike_ranks[mask],
+            color="k",
+            marker=marker,
+            s=size,
+            linewidth=0.1,
+        )
+        ### set limits
+        plt.ylim(-0.5, spike_ranks.max() + 0.5)
+        ### set ylabel
+        plt.ylabel("# neurons")
+        ### set yticks
+        if spike_ranks.max() == 0:
+            plt.yticks([0])
+        else:
+            plt.gca().yaxis.set_major_locator(MaxNLocator(integer=True))
+
+    def _mean_firing_rate_plot(self, compartment, data, format):
+        """
+        Plot mean firing rate.
+
+        Args:
+            compartment (str):
+                The name of the compartment.
+            data (array):
+                The spike data.
+            format (str):
+                The format of the plot.
+        """
+        ### set title
+        plt.title(f"Activity {compartment} ({len(data)})")
+        ### set axis
+        ax = plt.gca()
+        color = "k"
+        ### for hybrid format plot mean firing rate in second y-axis
+        if format == "hybrid":
+            ax = plt.gca().twinx()
+            color = "r"
+        ### get mean firing rate
+        time_arr, firing_rate = get_pop_rate(
+            spikes=data,
+            t_start=self._start_time,
+            t_end=self._end_time,
+            time_step=self._time_step,
+        )
+        ### plot mean firing rate
+        ax.plot(time_arr, firing_rate, color=color)
+        ### set limits
+        ax.set_xlim(self._start_time, self._end_time)
+        ### set ylabel
+        ax.set_ylabel("Mean firing rate [Hz]", color=color)
+        ax.tick_params(axis="y", colors=color)
+
+    def _interspike_interval_plot(self, compartment, data):
+        """
+        Plot interspike interval histogram.
+
+        Args:
+            compartment (str):
+                The name of the compartment.
+            data (dict):
+                The spike data.
+        """
+        ### set title
+        plt.title(f"Interspike interval histogram {compartment} ({len(data)})")
+        ### get interspike intervals
+        interspike_intervals_list = inter_spike_interval(spikes=data)
+        ### plot histogram
+        plt.hist(
+            interspike_intervals_list,
+            bins=100,
+            range=(0, 200),
+            density=True,
+            color="k",
+        )
+        ### set limits
+        plt.xlim(0, 200)
+        ### set ylabel
+        plt.ylabel("Probability")
+        plt.xlabel("Interspike interval [ms]")
+
+    def _coefficient_of_variation_plot(self, compartment, data):
+        """
+        Plot coefficient of variation histogram.
+
+        Args:
+            compartment (str):
+                The name of the compartment.
+            data (dict):
+                The spike data.
+        """
+        ### set title
+        plt.title(f"Coefficient of variation histogram {compartment} ({len(data)})")
+        ### get coefficient of variation
+        coefficient_of_variation_dict = coefficient_of_variation(
+            spikes=data,
+            per_neuron=True,
+        )
+        coefficient_of_variation_list = list(coefficient_of_variation_dict.values())
+        ### plot histogram
+        plt.hist(
+            coefficient_of_variation_list,
+            bins=100,
+            range=(0, 2),
+            density=True,
+            color="k",
+        )
+        ### set limits
+        plt.xlim(0, 2)
+        ### set ylabel
+        plt.ylabel("Probability")
+        plt.xlabel("Coefficient of variation")
+
+    def _fill_subplot_other(self, plot_idx):
+        """
+        Fill subplot with array data.
+
+        Args:
+            plot_idx (int):
+                The index of the subplot in the plan.
+        """
+        ### get data
+        compartment = self.plan["compartment"][plot_idx]
+        variable: str = self.plan["variable"][plot_idx]
+        format: str = self.plan["format"][plot_idx]
+        data_arr = self._raw_data_list[plot_idx]
+        time_arr = self._time_arr_list[plot_idx]
+
+        ### get data within time_lims
+        mask: np.ndarray = (
+            (time_arr >= self._start_time).astype(int)
+            * (time_arr <= self._end_time).astype(int)
+        ).astype(bool)
+
+        ### fill gaps in time_arr and data_arr with nan
+        time_arr, data_arr = time_data_add_nan(
+            time_arr=time_arr[mask], data_arr=data_arr[mask], axis=0
+        )
+
+        ### plot line plot
+        if "line" in format:
+            self._line_plot(
+                compartment,
+                variable,
+                time_arr,
+                data_arr,
+                plot_idx,
+                mean="mean" in format,
+            )
+
+        ### plot matrix plot
+        if "matrix" in format:
+            self._matrix_plot(
+                compartment,
+                variable,
+                time_arr,
+                data_arr,
+                plot_idx,
+                mean="mean" in format,
+            )
+
+    def _line_plot(self, compartment, variable, time_arr, data_arr, plot_idx, mean):
+        """
+        Plot line plot.
+
+        Args:
+            compartment (str):
+                The name of the compartment.
+            variable (str):
+                The name of the variable.
+            time_arr (array):
+                The time array.
+            data_arr (array):
+                The data array.
+            plot_idx (int):
+                The index of the subplot in the plan.
+            mean (bool):
+                If True, plot the mean of the data. Population: average over neurons.
+                Projection: average over preneurons (results in one line for each
+                postneuron).
+        """
+
+        ### set title
+        plt.title(f"Variable {variable} of {compartment} ({data_arr.shape[1]})")
+
+        ### Shape of data defines how to plot
+        ### 2D array where elements are no lists
+        ### = population data [time, neurons]
+        ### --> plot line for each neuron
+        if len(data_arr.shape) == 2 and isinstance(data_arr[0, 0], list) is not True:
+            ### mean -> average over neurons
+            if mean:
+                data_arr = np.mean(data_arr, 1, keepdims=True)
+            ### plot line for each neuron
+            for neuron in range(data_arr.shape[1]):
+                plt.plot(
+                    time_arr,
+                    data_arr[:, neuron],
+                    color="k",
+                )
+
+        ### 2D array where elements are lists
+        ### = projection data [time, postneurons][preneurons]
+        ### 3D array
+        ### = projection data [time, postneurons, preneurons]
+        ### --> plot line for each preneuron postneuron pair
+        elif len(data_arr.shape) == 3 or (
+            len(data_arr.shape) == 2 and isinstance(data_arr[0, 0], list) is True
+        ):
+            ### plot line for each preneuron postneuron pair
+            for post_neuron in range(data_arr.shape[1]):
+                ### the post_neuron has a constant number of preneurons
+                ### --> create array with preneuron indices [time, preneurons]
+                post_neuron_data = np.array(data_arr[:, post_neuron])
+                ### mean -> average over preneurons
+                if mean:
+                    post_neuron_data = np.mean(post_neuron_data, 1, keepdims=True)
+                for pre_neuron in range(post_neuron_data.shape[1]):
+                    plt.plot(
+                        time_arr,
+                        post_neuron_data[:, pre_neuron],
+                        color="k",
+                    )
+        else:
+            print(
+                f"\nERROR PlotRecordings: shape of data not supported, {compartment}, {variable} in plot {plot_idx}.\n"
+            )
+
+    def _matrix_plot(self, compartment, variable, time_arr, data_arr, plot_idx, mean):
+        """
+        Plot matrix plot.
+
+        Args:
+            compartment (str):
+                The name of the compartment.
+            variable (str):
+                The name of the variable.
+            time_arr (array):
+                The time array.
+            data_arr (array):
+                The data array.
+            plot_idx (int):
+                The index of the subplot in the plan.
+            mean (bool):
+                If True, plot the mean of the data. Population: average over neurons.
+                Projection: average over preneurons (results in one line for each
+                postneuron).
+        """
+        ### number of neurons i.e. postneurons
+        nr_neurons = data_arr.shape[1]
+
+        ### Shape of data defines how to plot
+        ### 2D array where elements are no lists
+        ### = population data [time, neurons]
+        ### --> plot matrix row for each neuron
+        ### mean -> average over neurons
+        if len(data_arr.shape) == 2 and isinstance(data_arr[0, 0], list) is not True:
+            ### mean -> average over neurons
+            if mean:
+                data_arr = np.mean(data_arr, 1, keepdims=True)
+
+        ### 2D array where elements are lists
+        ### = projection data [time, postneurons][preneurons]
+        ### 3D array
+        ### = projection data [time, postneurons, preneurons]
+        ### --> plot matrix row for each preneuron postneuron pair (has to reshape to 2D array [time, neuron pair])
+        ### mean -> average over preneurons
+        elif len(data_arr.shape) == 3 or (
+            len(data_arr.shape) == 2 and isinstance(data_arr[0, 0], list) is True
+        ):
+            array_2D_list = []
+            ### loop over postneurons
+            for post_neuron in range(data_arr.shape[1]):
+                ### the post_neuron has a constant number of preneurons
+                ### --> create array with preneuron indices [time, preneurons]
+                post_neuron_data = np.array(data_arr[:, post_neuron])
+                ### mean --> average over preneurons
+                if mean:
+                    post_neuron_data = np.mean(post_neuron_data, 1, keepdims=True)
+                ### append all preneurons arrays to array_2D_list
+                for pre_neuron in range(post_neuron_data.shape[1]):
+                    array_2D_list.append(post_neuron_data[:, pre_neuron])
+                ### append a None array to array_2D_list to separate postneurons
+                array_2D_list.append(np.empty(post_neuron_data.shape[0]) * np.nan)
+
+            ### convert array_2D_list to 2D array, not use last None array
+            data_arr = np.array(array_2D_list[:-1]).T
+
+        ### some other shape not supported
+        else:
+            print(
+                f"\nERROR PlotRecordings: shape of data not supported, {compartment}, {variable} in plot {plot_idx}.\n"
+            )
+
+        ### plot matrix row for each neuron or preneuron postneuron pair
+        plt.imshow(
+            data_arr.T,
+            aspect="auto",
+            vmin=np.nanmin(data_arr),
+            vmax=np.nanmax(data_arr),
+            extent=[
+                time_arr.min()
+                - self.recordings[self.chunk][f"{compartment};period"] / 2,
+                time_arr.max()
+                + self.recordings[self.chunk][f"{compartment};period"] / 2,
+                data_arr.shape[1] - 0.5,
+                -0.5,
+            ],
+            cmap="viridis",
+            interpolation="none",
+        )
+        if data_arr.shape[1] == 1:
+            plt.yticks([0])
+        else:
+            ### all y ticks
+            y_tick_positions_all_arr = np.arange(data_arr.shape[1])
+            ### boolean array of valid y ticks
+            valid_y_ticks = np.logical_not(np.isnan(data_arr).any(axis=0))
+            ### get y tick labels
+            if False in valid_y_ticks:
+                ### there are nan entries
+                ### split at nan entries
+                y_tick_positions_split_list = np.array_split(
+                    y_tick_positions_all_arr, np.where(np.logical_not(valid_y_ticks))[0]
+                )
+                ### decrease by 1 after each nan entry
+                y_tick_positions_split_list = [
+                    y_tick_positions_split - idx_split
+                    for idx_split, y_tick_positions_split in enumerate(
+                        y_tick_positions_split_list
+                    )
+                ]
+                ### join split arrays
+                y_tick_labels_all_arr = np.concatenate(y_tick_positions_split_list)
+            else:
+                y_tick_labels_all_arr = y_tick_positions_all_arr
+
+            valid_y_ticks_selected_idx_arr = np.linspace(
+                0,
+                np.sum(valid_y_ticks),
+                num=min([10, np.sum(valid_y_ticks)]),
+                dtype=int,
+                endpoint=False,
+            )
+            valid_y_ticks_selected_arr = y_tick_positions_all_arr[valid_y_ticks][
+                valid_y_ticks_selected_idx_arr
+            ]
+            valid_y_ticks_labels_selected_arr = y_tick_labels_all_arr[valid_y_ticks][
+                valid_y_ticks_selected_idx_arr
+            ]
+
+            plt.yticks(valid_y_ticks_selected_arr, valid_y_ticks_labels_selected_arr)
+
+        ### set title
+        plt.title(
+            f"Variable {variable} of {compartment} ({nr_neurons}) [{ef.sci(np.nanmin(data_arr))}, {ef.sci(np.nanmax(data_arr))}]"
+        )

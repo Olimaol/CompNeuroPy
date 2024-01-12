@@ -5,6 +5,7 @@ theme:
 
   features:
      - header.autohide
+     - content.code.copy
   
   palette:
     primary: black
@@ -16,7 +17,9 @@ theme:
 copyright: Copyright &copy; Oliver Maith
 repo_url: https://github.com/Olimaol/CompNeuroPy
 
-
+extra_css:
+  - stylesheets/extra.css
+  
 plugins:
   - search
   - mkdocstrings:
@@ -27,6 +30,8 @@ plugins:
               show_root_heading: true
               members_order: source
               docstring_style: google
+            selection:
+                new_path_syntax: true
 
 markdown_extensions:
   - admonition
@@ -46,18 +51,26 @@ nav:
     - Generate Simulations: 'main/generate_simulations.md'
     - Monitors / Recordings: 'main/monitors_recordings.md'
     - Optimize a neuron model: 'main/optimize_neuron.md'
-    - Define an Experiment: 'main/define_experiment.md'
+    - Define Experiments: 'main/define_experiment.md'
     - DBS Stimulator: 'main/dbs_stimulator.md'
     - Model Configurator: 'main/model_configurator.md'
-  - 'Built-in Objects':
-    - Models: 'built_in/models.md'
-    - Simulations: 'built_in/simulations.md'
+  - 'Built-in Models':
+    - Full Models: 'built_in/models.md'
     - Neuron Models: 'built_in/neuron_models.md'
     - Synapse Models: 'built_in/synapse_models.md'
   - 'Additional Features':
+    - Simulation Functions: 'additional/simulation_functions.md'
+    - Simulation Requirements: 'additional/simulation_requirements.md'
     - Analysis Functions: 'additional/analysis_functions.md'
+    - Model Functions: 'additional/model_functions.md'
     - System Functions: 'additional/system_functions.md'
     - Extra Functions: 'additional/extra_functions.md'
   - 'Examples':
     - Generate Models: 'examples/generate_models.md'
+    - Generate Simulations: 'examples/run_and_monitor_simulations.md'
+    - Monitor Recordings: 'examples/monitor_recordings.md'
+    - Plot Recordings: 'examples/plot_recordings.md'
+    - Define Experiments: 'examples/experiment.md'
+    - DBS Simulator: 'examples/dbs.md'
+    - Optimize a neuron model: 'examples/opt_neuron.md'
   - License: 'license.md'

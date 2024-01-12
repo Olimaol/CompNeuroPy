@@ -83,7 +83,7 @@ class _CreateDBSmodel:
         )
 
         ### clear model
-        mf.cnp_clear()
+        mf.cnp_clear(functions=False, neurons=True, synapses=True, constants=False)
 
         ### recreate model with DBS mechanisms
         self.recreate_model()
@@ -515,9 +515,11 @@ class _CreateDBSmodel:
         for line_idx, line in enumerate(equations_line_split_list):
             if self.get_line_is_dvdt(line):
                 ### add depolarization term
-                equations_line_split_list[
-                    line_idx
-                ] = f"{line} + pulse(t)*dbs_on*dbs_depolarization*neg(-90 - v)"
+                equations_line_split_list[line_idx] = self.add_term_to_eq_line(
+                    line=equations_line_split_list[line_idx],
+                    term=" + pulse(t)*dbs_on*dbs_depolarization*neg(-90 - v)",
+                )
+                ### increase counter
                 lines_with_v_count += 1
         if lines_with_v_count == 0:
             raise ValueError(
@@ -547,6 +549,34 @@ class _CreateDBSmodel:
         ] = f"{neuron_model_init_parameter_dict['description']}\nWith DBS mechanisms implemented."
 
         return neuron_model_init_parameter_dict
+
+    def add_term_to_eq_line(self, line: str, term: str):
+        """
+        Add a term to an equation string.
+
+        Args:
+            line (str):
+                Equation string
+            term (str):
+                Term to add
+
+        Returns:
+            line_new (str):
+                Equation string with added term
+        """
+        ### check if colon is in line
+        if ":" not in line:
+            ### add term
+            line_new = line + term
+        else:
+            ### split line at colon
+            line_split = line.split(":")
+            ### add term
+            line_split[0] = line_split[0] + term
+            ### join line again
+            line_new = ":".join(line_split)
+        ### return new line
+        return line_new
 
     def get_line_is_dvdt(self, line: str):
         """
@@ -632,9 +662,10 @@ class _CreateDBSmodel:
         for line_idx, line in enumerate(equations_line_split_list):
             if self.get_line_is_dmpdt(line):
                 ### add depolarization term
-                equations_line_split_list[
-                    line_idx
-                ] = f"{line} + pulse(t)*dbs_on*dbs_depolarization*neg(-1 - mp)"
+                equations_line_split_list[line_idx] = self.add_term_to_eq_line(
+                    line=equations_line_split_list[line_idx],
+                    term=" + pulse(t)*dbs_on*dbs_depolarization*neg(-1 - mp)",
+                )
                 lines_with_mp_count += 1
         if lines_with_mp_count == 0:
             raise ValueError(
@@ -913,6 +944,51 @@ class _CreateDBSmodelcnp(_CreateDBSmodel):
 class DBSstimulator:
     """
     Class for stimulating a population with DBS.
+
+    !!! warning
+        If you use auto_implement, pointers to the populations and projections of
+        the model are not valid anymore (new populations and projections are
+        created)! Use a CompNeuroPy model working with names of populations and
+        projections anyway (recommended) or use the update_pointers method.
+
+    Examples:
+        ```python
+        from ANNarchy import Population, Izhikevich, compile, simulate, setup
+        from CompNeuroPy import DBSstimulator
+
+        # setup ANNarchy
+        setup(dt=0.1)
+
+        # create populations
+        population1 = Population(10, neuron=Izhikevich, name="my_pop1")
+        population2 = Population(10, neuron=Izhikevich, name="my_pop2")
+        >>>
+        # create DBS stimulator
+        dbs = DBSstimulator(
+            stimulated_population=population1,
+            population_proportion=0.5,
+            dbs_depolarization=30,
+            auto_implement=True,
+        )
+
+        # update pointers to correct populations
+        population1, population2 = dbs.update_pointers(
+            pointer_list=[population1, population2]
+        )
+
+        # compile network
+        compile()
+
+        # run simulation
+        # 1000 ms without dbs
+        simulate(1000)
+        # 1000 ms with dbs
+        dbs.on()
+        simulate(1000)
+        # 1000 ms without dbs
+        dbs.off()
+        simulate(1000)
+        ```
     """
 
     @check_types()
@@ -1683,3 +1759,29 @@ class DBSstimulator:
 
         ### deactivate DBS axon transmission
         self._deactivate_axon_DBS()
+
+    def update_pointers(self, pointer_list):
+        """
+        Update pointers to populations and projections after recreating the model.
+
+        Args:
+            pointer_list (list):
+                List of pointers to populations and projections
+
+        Returns:
+            pointer_list_new (list):
+                List of pointers to populations and projections of the new model
+        """
+        ### update pointers
+        pointer_list_new: list[Population | Projection] = []
+        for pointer in pointer_list:
+            compartment_name = pointer.name
+            if isinstance(pointer, Population):
+                pointer_list_new.append(get_population(compartment_name))
+            elif isinstance(pointer, Projection):
+                pointer_list_new.append(get_projection(compartment_name))
+            else:
+                raise TypeError(
+                    f"Pointer {pointer} is neither a Population nor a Projection"
+                )
+        return pointer_list_new

@@ -1,20 +1,46 @@
-from ANNarchy import get_population
+from ANNarchy import get_population, Population
 
-class req_pop_attr:
+
+class ReqPopHasAttr:
+    """
+    Checks if population(s) contains the attribute(s) (parameters or variables)
+    """
+
     def __init__(self, pop, attr):
         """
-            pop: string or list of strings, population name(s)
-            attr: string or list of strings, attribute name(s)
+        Args:
+            pop (str or list of strings):
+                population name(s)
+            attr (str or list of strings):
+                attribute name(s)
         """
-        self.pop=pop
-        self.attr=attr
+        self.pop_name_list = pop
+        self.attr_name_list = attr
         ### convert single strings into list
-        if not(isinstance(pop,list)): self.pop=[pop]  
-        if not(isinstance(attr,list)): self.attr=[attr]  
+        if not (isinstance(pop, list)):
+            self.pop_name_list = [pop]
+        if not (isinstance(attr, list)):
+            self.attr_name_list = [attr]
+
     def run(self):
         """
-            checks if population(s) contains the attribute(s) (parameters or variables)
+        Checks if population(s) contains the attribute(s) (parameters or variables)
+
+        Raises:
+            ValueError: if population(s) does not contain the attribute(s)
         """
-        for attr in self.attr:
-            for pop in self.pop:
-                assert attr in vars(get_population(pop))['attributes'], 'Error: Population '+pop+' does not contain attribute '+attr+'!\n'
+        for attr_name in self.attr_name_list:
+            for pop_name in self.pop_name_list:
+                pop: Population = get_population(pop_name)
+                if not (attr_name in pop.attributes):
+                    raise ValueError(
+                        "Population "
+                        + pop_name
+                        + " does not contain attribute "
+                        + attr_name
+                        + "!\n"
+                    )
+
+
+### old name for backwards compatibility, TODO: remove
+req_pop_attr = ReqPopHasAttr

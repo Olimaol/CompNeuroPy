@@ -1,4 +1,3 @@
- ### GENERAL PARAMS,,,,,,,,,,,,,,,,,
 general.id,BGM_v01_p01,BGM_v02_p01,BGM_vTEST_pTEST,BGM_v02_p02,BGM_v03_p01,BGM_v02_p03,BGM_v03_p02,BGM_v04alt_p01,BGM_v04_p01,BGM_v02_p04,BGM_v05alt_01,BGM_v05_p02,BGM_v06_p01,BGM_v04_p02,BGM_v04oliver_p02,BGM_v04oliver_p03,BGM_v04newgpe_p01
 ### POPULATIONS AND NEURON PARAMS,,,,,,,,,,,,,,,,,
 ### CORTEX-GO PARAMS,,,,,,,,,,,,,,,,,
@@ -55,7 +54,7 @@ str_d2.v_init,-80,-80,-80,-80,-80,-80,-80,-80,-80,-80,-80,-80,-80,-80,-80,-80,-8
 str_d2.u_init,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 str_d2.freq,0,0,0,0,20,0,20,0,0,0,20,20,0,0,0,0,0
 ### STRIATUM FSI PARAMS,,,,,,,,,,,,,,,,,
-str_fsi.size,100,100,100,100,100,100,100,100,100,100,100,8 ,100,8 ,8 ,8 ,8 
+str_fsi.size,100,100,100,100,100,100,100,100,100,100,100,8,100,8,8,8,8
 str_fsi.C,80,1,80,1,1,1,80,1,1,1,1,1,1,1,1,1,1
 str_fsi.k,1,0.065839636773661,1,0.065839636773661,0.065839636773661,0.065839636773661,1,0.065839636773661,0.065839636773661,0.065839636773661,0.065839636773661,0.065839636773661,0.065839636773661,0.065839636773661,0.065839636773661,0.065839636773661,0.065839636773661
 str_fsi.v_r,-70,-70.04,-70,-70.04,-70.04,-70.04,-70,-70.04,-70.04,-70.04,-70.04,-70.04,-70.04,-70.04,-70.04,-70.04,-70.04
@@ -143,7 +142,7 @@ gpe_proto.u_init,-17.34,-17.34,-17.34,-17.34,-17.34,-17.34,-17.34,-17.34,-17.34,
 gpe_proto.freq,,,,,,,,,,,20,,0,,,,
 gpe_proto.nonlin,,,,,,,,,,,,,,,,,1.24211891385612
 ### GPE-ARKY PARAMS,"optimized fit of Abdi,Mallet et al.","optimized fit of Abdi,Mallet et al.","optimized fit of Abdi,Mallet et al.","optimized fit of Abdi,Mallet et al.","optimized fit of Abdi,Mallet et al.","optimized fit of Abdi,Mallet et al.","optimized fit of Abdi,Mallet et al.","optimized fit of Abdi,Mallet et al.","optimized fit of Abdi,Mallet et al.","optimized fit of Abdi,Mallet et al.","optimized fit of Abdi,Mallet et al.","optimized fit of Abdi,Mallet et al.","optimized fit of Abdi,Mallet et al.","optimized fit of Abdi,Mallet et al.","optimized fit of Abdi,Mallet et al.","optimized fit of Abdi,Mallet et al.","refitted, data from Bogacz et al. 2016"
-gpe_arky.size,100,100,100,100,100,100,100,100,100,100,100,8 ,100,8 ,8 ,8 ,NOT IN MODEL VERSION
+gpe_arky.size,100,100,100,100,100,100,100,100,100,100,100,8,100,8,8,8,NOT IN MODEL VERSION
 gpe_arky.a,0.0054,0.0054,0.0054,0.0054,0.0054,0.0054,0.0054,0.0054,0.0054,0.0054,0.0054,0.0054,0.0054,0.0054,0.0054,0.0054,0.007839724855153
 gpe_arky.b,0.34,0.34,0.34,0.34,0.34,0.34,0.34,0.34,0.34,0.34,0.34,0.34,0.34,0.34,0.34,0.34,0.244053762830856
 gpe_arky.c,-71,-71,-71,-71,-71,-71,-71,-71,-71,-71,-71,-71,-71,-71,-71,-71,-63.4413477316561
@@ -204,12 +203,12 @@ thal.u_init,-6.1,-6.1,-6.1,-6.1,-6.1,-6.1,-6.1,-6.1,-6.1,-6.1,-6.1,,-6.1,,,,
 integrator_go.size,1,1,1,1,1,1,1,1,1,1,1,,1,,,,
 integrator_go.tau,200,200,200,200,200,200,200,200,200,200,200,,200,,,,
 integrator_go.threshold,0.13,0.13,0.13,0.13,0.13,0.13,0.13,0.13,0.13,0.13,0.13,,0.13,,,,
-integrator_go.neuron_id,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,,-1,,,,
-### INTEGRATOR-STOP PARAMS,,,,,,,,,,,,,, , , , 
+integrator_go.neuron_id,1,1,1,1,1,1,1,1,1,1,1,,1,,,,
+### INTEGRATOR-STOP PARAMS,,,,,,,,,,,,,,,,,
 integrator_stop.size,1,1,1,1,1,1,1,1,1,1,1,,1,,,,
 integrator_stop.tau,30,30,30,30,30,30,30,30,30,30,30,,30,,,,
 integrator_stop.threshold,0.13,0.13,0.13,0.13,0.13,0.13,0.13,0.13,0.13,0.13,0.13,,0.13,,,,
-integrator_stop.neuron_id,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,,-1,,,,
+integrator_stop.neuron_id,1,1,1,1,1,1,1,1,1,1,1,,1,,,,
 ### PROJECTION AND SYNAPSE PARAMS,,,,,,,,,,,,,,,,,
 ### CORTEX GO - STR D1 PROJECTION PARAMS,,,,,,,,,,,,,,,,,
 cor_go__str_d1.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,

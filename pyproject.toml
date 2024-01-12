@@ -10,7 +10,7 @@ description = 'General package for computational neuroscience with ANNarchy.'
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
-keywords = ["ANNarchy", "computational neuroscience", "neuroscience", "ANN", "artificial neural network", "neural network", "neuron"]
+keywords = ["ANNarchy", "computational neuroscience", "neuroscience", "artificial neural network", "neural network", "neuron", "optimization", "model"]
 authors = [{ name = "Oliver Maith", email = "oliver_maith@gmx.de" }]
 classifiers = [
     "License :: OSI Approved :: MIT License",
@@ -25,6 +25,7 @@ dependencies = [
     "numpy",
     "typingchecker",
     "pandas",
+    "tabulate",
 ]
 
 [project.urls]

@@ -1,12 +1,12 @@
 """
-In this example, the DBS stimulator is tested with a simple spiking and rate-coded model.
-The spiking model is based on the Izhikevich model (Izhikevich, 2007) with conductance-based synapses.
-The rate-coded model is based on neurons including membrane potential and a resulting firing rate.
-The DBS stimulator is tested with different stimulation parameters.
-The resulting activity of the populations is compared to the expected activity. (included for testing purposes)
-The resulting activity of the populations is plotted.
-The figures are saved in the DBS_spiking_figure and DBS_rate_figure folders.
-The different DBS conditions are:
+In this example, the DBS stimulator is tested with a simple spiking and rate-coded
+model. The spiking model is based on the Izhikevich model (Izhikevich, 2007) with
+conductance-based synapses. The rate-coded model is based on neurons including membrane
+potential and a resulting firing rate. The DBS stimulator is tested with different
+stimulation parameters. The resulting activity of the populations is compared to the
+expected activity (not part of example, included for testing purposes only). The
+resulting activity of the populations is plotted. The figures are saved in the
+DBS_spiking_figure and DBS_rate_figure folders. The different DBS conditions are:
     - no stimulation
     - orthodromic stimulation of efferents
     - orthodromic stimulation of afferents
@@ -35,15 +35,16 @@ from ANNarchy import (
     DefaultRateCodedSynapse,
     DefaultSpikingSynapse,
     dt,
+    Constant,
 )
 from CompNeuroPy import (
-    Monitors,
-    plot_recordings,
-    generate_model,
+    CompNeuroMonitors,
+    PlotRecordings,
+    CompNeuroModel,
     cnp_clear,
     DBSstimulator,
 )
-from CompNeuroPy.Monitors import recording_times_cl
+from CompNeuroPy.monitors import RecordingTimes
 import numpy as np
 
 ### setup ANNarchy
@@ -52,47 +53,57 @@ setup(dt=0.1, seed=12345)
 
 ### create dbs test model
 class dbs_test_model_class:
+    """
+    Class to create dbs test model.
+
+    The used neuron models have the following constraints:
+        The neuron model has to contain the following parameters:
+        - base_mean: mean of the base current
+        - base_noise: standard deviation of the base current noise
+        Spiking neuron models have to contain conductance based synapses using the
+        following conductance variables:
+        - g_ampa: excitatory synapse
+        - g_gaba: inhibitory synapse
+        Rate neuron models have to contain the following input variables:
+        - sum(ampa): excitatory input
+        - sum(gaba): inhibitory input
+        For DBS rate-coded models have to contain a membrane potential variable mp
+        and spiking models have to be Izhihkevich models.
+
+    Model structure:
+    -------------------------
+            POP1       POP2
+            |          |
+            o          v
+    DBS--->POP3------oPOP4
+                .----.
+                |    |
+            POP5   '-->POP6
+
+    -o = inhibitory synapse
+    -> = excitatory synapse
+    .-> = passing fibre excitatory synapse
+
+    Attributes:
+        model (CompNeuroModel):
+            dbs test model
+    """
+
     def __init__(self, mode) -> None:
         """
         Initialize dbs test model
 
-        The used neuron models have the following constraints:
-            The neuron model has to contain the following parameters:
-            - base_mean: mean of the base current
-            - base_noise: standard deviation of the base current noise
-            Spiking neuron models have to contain conductance based synapses using the following conductance variables:
-            - g_ampa: excitatory synapse
-            - g_gaba: inhibitory synapse
-            Rate neuron models have to contain the following input variables:
-            - sum(ampa): excitatory input
-            - sum(gaba): inhibitory input
-
-        Resulting model structure:
-        -------------------------
-               POP1       POP2
-                |          |
-                o          v
-        DBS--->POP3------oPOP4
-                 .----.
-                 |    |
-               POP5   '-->POP6
-
-        -o = inhibitory synapse
-        -> = excitatory synapse
-        .-> = passing fibre excitatory synapse
-
-        Parameters:
-        ----------
-        mode: str
-            Mode of the dbs test model, either "spiking" or "rate-coded"
-
-        Variables:
-        ---------
-        model: CompNeuroPy Model
-            dbs test model
+        Args:
+            mode (str):
+                Mode of the dbs test model, either "spiking" or "rate-coded"
         """
+        ### constants should still be available after DBSstimulator recreates the model
+        ### test this by creating this constant
+        Constant("my_important_const", 0.0)
+
+        ### check if model to create is spiking or rate-coded
         if mode == "spiking":
-            self.model = generate_model(
+            self.model = CompNeuroModel(
                 model_creation_function=self.create_model,
                 model_kwargs={
                     "neuron_model": self.get_neuron_model_spiking(),
@@ -104,7 +115,7 @@ class dbs_test_model_class:
                 do_compile=False,
             )
         elif mode == "rate-coded":
-            self.model = generate_model(
+            self.model = CompNeuroModel(
                 model_creation_function=self.create_model,
                 model_kwargs={
                     "neuron_model": self.get_neuron_model_rate_coded(),
@@ -132,20 +143,22 @@ class dbs_test_model_class:
         """
         Create dbs test model
 
-        Parameters:
-        ----------
-        neuron_model: Neuron
-            Neuron model to use for the dbs test model
-        pop_size: int, optional
-            Number of neurons in each population, by default 10
-        base_current_list: list, optional
-            List of base currents for the four populations, by default [0, 0, 0, 0, 0, 0]
-        base_current_noise: float, optional
-            Standard deviation of the base current noise, by default 0
-        prob_list: list, optional
-            List of connection probabilities for the inhibitory and excitatory path, by default [0.5, 0.5, 0.5, 0.5]
-        weight_list: list, optional
-            List of connection weights for the inhibitory and excitatory path, by default [0.1, 0.1, 0.1, 0.1]
+        Args:
+            neuron_model (Neuron):
+                Neuron model to use for the dbs test model
+            pop_size (int, optional):
+                Number of neurons in each population. Default: 10
+            base_current_list (list, optional):
+                List of base currents for the four populations.
+                Default: [0, 0, 0, 0, 0, 0]
+            base_current_noise (float, optional):
+                Standard deviation of the base current noise. Default: 0
+            prob_list (list, optional):
+                List of connection probabilities for the inhibitory and excitatory path.
+                Default: [0.5, 0.5, 0.5, 0.5]
+            weight_list (list, optional):
+                List of connection weights for the inhibitory and excitatory path.
+                Default: [0.1, 0.1, 0.1, 0.1]
         """
         ### create populations
         pop1 = Population(pop_size, neuron_model, name=f"pop1_{neuron_model.name}")
@@ -221,10 +234,9 @@ class dbs_test_model_class:
         """
         Get neuron model with spiking dynamics
 
-        Returns:
-        -------
-        neuron_model: Neuron
-            Neuron model with spiking dynamics
+        Returns
+            neuron_model (Neuron):
+                Neuron model with spiking dynamics
         """
         neuron_model = Neuron(
             parameters="""
@@ -249,7 +261,7 @@ class dbs_test_model_class:
             equations="""
                 ### noisy base input
                 offset_base = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rate_base_noise, offset_base, Normal(0., 1.) * base_noise)
-                I_base      = base_mean + offset_base
+                I_base      = base_mean + offset_base + my_important_const
                 ### input conductances
                 dg_ampa/dt = -g_ampa/tau_ampa
                 dg_gaba/dt = -g_gaba/tau_gaba
@@ -277,9 +289,8 @@ class dbs_test_model_class:
         Get neuron model with rate-coded dynamics
 
         Returns:
-        -------
-        neuron_model: Neuron
-            Neuron model with rate-coded dynamics
+            neuron_model (Neuron):
+                Neuron model with rate-coded dynamics
         """
         neuron_model = Neuron(
             parameters="""
@@ -296,7 +307,7 @@ class dbs_test_model_class:
             equations="""
                 ### noisy base input
                 offset_base = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rate_base_noise, offset_base, Normal(0., 1.) * base_noise)
-                I_base      = base_mean + offset_base
+                I_base      = base_mean + offset_base + my_important_const
                 ### input currents
                 I = sum(ampa) - sum(gaba) + I_base + I_app
                 ### membrane potential
@@ -315,7 +326,15 @@ class dbs_test_model_class:
 
     def get_synapse(self, mode):
         """
-        create a synapse
+        Create a synapse.
+
+        Args:
+            mode (str):
+                Mode of the dbs test model, either "spiking" or "rate-coded"
+
+        Returns:
+            synapse (DefaultRateCodedSynapse or DefaultSpikingSynapse):
+                Synapse object
         """
         if mode == "rate-coded":
             return DefaultRateCodedSynapse()
@@ -326,7 +345,7 @@ class dbs_test_model_class:
 
 
 def do_simulation(
-    mon: Monitors,
+    mon: CompNeuroMonitors,
     dbs: DBSstimulator,
     dbs_val_list: list[list],
     dbs_key_list: list[str],
@@ -334,16 +353,21 @@ def do_simulation(
     """
     Do the simulation
 
-    Parameters:
-    ----------
-    mon: Monitors
-        Monitors object
-    dbs: DBSstimulator
-        DBS stimulator object
-    dbs_val_list: list[list]
-        List of lists with DBS stimulation values used by the dbs.on() function
-    dbs_key_list: list[str]
-        List of DBS stimulation keys used by the dbs.on() function
+    Args:
+        mon (CompNeuroMonitors):
+            CompNeuroMonitors object
+        dbs (DBSstimulator):
+            DBS stimulator object
+        dbs_val_list (list[list]):
+            List of lists with DBS stimulation values used by the dbs.on() function
+        dbs_key_list (list[str]):
+            List of DBS stimulation keys used by the dbs.on() function
+
+    Returns:
+        recordings (list):
+            List of recordings from the monitors
+        recording_times (RecordingTimes):
+            Recording times object
     """
     ### run initial ramp up simulation
     simulate(2000.0)
@@ -378,22 +402,21 @@ def do_simulation(
 def check_dbs_effects_spiking(
     dbs_val_list: list[list],
     recordings: list,
-    model: generate_model,
-    recording_times: recording_times_cl,
+    model: CompNeuroModel,
+    recording_times: RecordingTimes,
 ):
     """
-    Check if the dbs effects are as expected
+    Check if the dbs effects are as expecteds.
 
-    Parameters:
-    ----------
-    dbs_val_list: list[list]
-        List of lists with DBS stimulation values used by the dbs.on() function
-    recordings: list
-        List of recordings from the monitors
-    model: generate_model
-        Model used for the simulation
-    recording_times: recording_times_cl
-        Recording times object
+    Args:
+        dbs_val_list (list[list]):
+            List of lists with DBS stimulation values used by the dbs.on() function
+        recordings (list):
+            List of recordings from the monitors
+        model (CompNeuroModel):
+            Model used for the simulation
+        recording_times (RecordingTimes):
+            Recording times object
     """
     ### effects_on_activity_list contains the expected effects of dbs on the activity of the populations for each trial
     ### 0 means no effect, 1 means increase, -1 means decrease
@@ -487,22 +510,21 @@ def check_dbs_effects_spiking(
 def check_dbs_effects_rate_coded(
     dbs_val_list: list[list],
     recordings: list,
-    model: generate_model,
-    recording_times: recording_times_cl,
+    model: CompNeuroModel,
+    recording_times: RecordingTimes,
 ):
     """
-    Check if the dbs effects are as expected
+    Check if the dbs effects are as expected.
 
-    Parameters:
-    ----------
-    dbs_val_list: list[list]
-        List of lists with DBS stimulation values used by the dbs.on() function
-    recordings: list
-        List of recordings from the monitors
-    model: generate_model
-        Model used for the simulation
-    recording_times: recording_times_cl
-        Recording times object
+    Args:
+        dbs_val_list (list[list]):
+            List of lists with DBS stimulation values used by the dbs.on() function
+        recordings (list):
+            List of recordings from the monitors
+        model (CompNeuroModel):
+            Model used for the simulation
+        recording_times (RecordingTimes):
+            Recording times object
     """
     ### effects_on_activity_list contains the expected effects of dbs on the activity of the populations for each trial
     ### 0 means no effect, 1 means increase, -1 means decrease
@@ -595,56 +617,59 @@ def check_dbs_effects_rate_coded(
 def plot_spiking(
     dbs_val_list: list[list],
     recordings: list,
-    recording_times: recording_times_cl,
-    model: generate_model,
+    recording_times: RecordingTimes,
+    model: CompNeuroModel,
     plotting: bool,
 ):
     """
-    Plot spiking data
+    Plot spiking data.
 
-    Parameters:
-    ----------
-    dbs_val_list: list[list]
-        List of lists with DBS stimulation values used by the dbs.on() function
-    recordings: list
-        List of recordings from the monitors
-    recording_times: recording_times_cl
-        Recording times object
-    model: generate_model
-        Model used for the simulation
-    plotting: bool
-        If True, plots are created
+    Args:
+        dbs_val_list (list[list]):
+            List of lists with DBS stimulation values used by the dbs.on() function
+        recordings (list):
+            List of recordings from the monitors
+        recording_times (RecordingTimes):
+            Recording times object
+        model (CompNeuroModel):
+            Model used for the simulation
+        plotting (bool):
+            If True, plots are created
     """
     if not plotting:
         return
 
     ### plot data
     for trial in range(len(dbs_val_list)):
-        plot_recordings(
+        PlotRecordings(
             figname=f"DBS_spiking_figure/membrane_trial_{trial}.png",
             recordings=recordings,
             recording_times=recording_times,
             chunk=trial,
             shape=(3, 2),
-            plan=[
-                f"{pop_idx+1};{pop_name};v;matrix"
-                for pop_idx, pop_name in enumerate(model.populations)
-            ],
+            plan={
+                "position": np.arange(len(model.populations), dtype=int) + 1,
+                "compartment": model.populations,
+                "variable": ["v"] * len(model.populations),
+                "format": ["matrix"] * len(model.populations),
+            },
             time_lim=(
                 recording_times.time_lims(chunk=trial)[0] + 500,
                 recording_times.time_lims(chunk=trial)[1] - 500,
             ),
         )
-        plot_recordings(
+        PlotRecordings(
             figname=f"DBS_spiking_figure/axon_spikes_{trial}.png",
             recordings=recordings,
             recording_times=recording_times,
             chunk=trial,
             shape=(3, 2),
-            plan=[
-                f"{pop_idx+1};{pop_name};axon_spike;raster"
-                for pop_idx, pop_name in enumerate(model.populations)
-            ],
+            plan={
+                "position": np.arange(len(model.populations), dtype=int) + 1,
+                "compartment": model.populations,
+                "variable": ["axon_spike"] * len(model.populations),
+                "format": ["raster"] * len(model.populations),
+            },
             time_lim=(
                 recording_times.time_lims(chunk=trial)[0] + 1000,
                 recording_times.time_lims(chunk=trial)[0] + 1030,
@@ -655,41 +680,42 @@ def plot_spiking(
 def plot_rate_coded(
     dbs_val_list: list[list],
     recordings: list,
-    recording_times: recording_times_cl,
-    model: generate_model,
+    recording_times: RecordingTimes,
+    model: CompNeuroModel,
     plotting: bool,
 ):
     """
-    Plot rate-coded data
+    Plot rate-coded data.
 
-    Parameters:
-    ----------
-    dbs_val_list: list[list]
-        List of lists with DBS stimulation values used by the dbs.on() function
-    recordings: list
-        List of recordings from the monitors
-    recording_times: recording_times_cl
-        Recording times object
-    model: generate_model
-        Model used for the simulation
-    plotting: bool
-        If True, plots are created
+    Args:
+        dbs_val_list (list[list]):
+            List of lists with DBS stimulation values used by the dbs.on() function
+        recordings (list):
+            List of recordings from the monitors
+        recording_times (RecordingTimes):
+            Recording times object
+        model (CompNeuroModel):
+            Model used for the simulation
+        plotting (bool):
+            If True, plots are created
     """
     if not plotting:
         return
 
     ### plot data
     for trial in range(len(dbs_val_list)):
-        plot_recordings(
+        PlotRecordings(
             figname=f"DBS_rate_figure/activity_trial_{trial}.png",
             recordings=recordings,
             recording_times=recording_times,
             chunk=trial,
             shape=(3, 2),
-            plan=[
-                f"{pop_idx+1};{pop_name};r;matrix"
-                for pop_idx, pop_name in enumerate(model.populations)
-            ],
+            plan={
+                "position": np.arange(len(model.populations), dtype=int) + 1,
+                "compartment": model.populations,
+                "variable": ["r"] * len(model.populations),
+                "format": ["matrix"] * len(model.populations),
+            },
             time_lim=(
                 recording_times.time_lims(chunk=trial)[0] + 500,
                 recording_times.time_lims(chunk=trial)[1] - 500,
@@ -701,14 +727,14 @@ def main(plotting: bool = False):
     """
     Main function
 
-    Parameters:
-    ----------
-    plotting: bool, optional
-        If True, plots are created, by default False
+    Args:
+        plotting (bool, optional):
+            If True, plots are created. Default: False
     """
     ### define simulations
     ### i.e. the parameters for the dbs stimulator on function
-    ### do simulate calls repeatedly dbs.on() and dbs.off() with different parameters specified in dbs_val_list
+    ### do simulate calls repeatedly dbs.on() and dbs.off() with different parameters
+    ### specified in dbs_val_list
     dbs_key_list = [
         "population_proportion",
         "dbs_depolarization",
@@ -773,8 +799,8 @@ def main(plotting: bool = False):
         ### create monitors
         mon_dict = {}
         for pop_name in model.populations:
-            mon_dict[f"pop;{pop_name}"] = ["v", "spike", "axon_spike"]
-        mon = Monitors(monDict=mon_dict)
+            mon_dict[pop_name] = ["v", "spike", "axon_spike"]
+        mon = CompNeuroMonitors(mon_dict)
 
         ### run simulation and get data from monitors
         recordings, recording_times = do_simulation(
@@ -817,8 +843,8 @@ def main(plotting: bool = False):
         ### create monitors
         mon_dict = {}
         for pop_name in model.populations:
-            mon_dict[f"pop;{pop_name}"] = ["r"]
-        mon = Monitors(monDict=mon_dict)
+            mon_dict[pop_name] = ["r"]
+        mon = CompNeuroMonitors(mon_dict)
 
         ### run simulation and get data from monitors
         recordings, recording_times = do_simulation(

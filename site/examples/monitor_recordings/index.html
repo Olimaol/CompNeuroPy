@@ -1,0 +1,1532 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../run_and_monitor_simulations/">
+      
+      
+        <link rel="next" href="../plot_recordings/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.0">
+    
+    
+      
+        <title>Monitor Recordings - CompNeuroPy</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.45e1311d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#introduction" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="CompNeuroPy" class="md-header__button md-logo" aria-label="CompNeuroPy" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            CompNeuroPy
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Monitor Recordings
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Olimaol/CompNeuroPy" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="CompNeuroPy" class="md-nav__button md-logo" aria-label="CompNeuroPy" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    CompNeuroPy
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Olimaol/CompNeuroPy" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Installation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Main Features
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Main Features
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../main/generate_models/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Generate Models
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../main/generate_simulations/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Generate Simulations
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../main/monitors_recordings/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Monitors / Recordings
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../main/optimize_neuron/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Optimize a neuron model
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../main/define_experiment/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Define Experiments
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../main/dbs_stimulator/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DBS Stimulator
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../main/model_configurator/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Model Configurator
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Built-in Models
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Built-in Models
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../built_in/models/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Full Models
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../built_in/neuron_models/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Neuron Models
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../built_in/synapse_models/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Synapse Models
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Additional Features
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Additional Features
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../additional/simulation_functions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Simulation Functions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../additional/simulation_requirements/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Simulation Requirements
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../additional/analysis_functions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Analysis Functions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../additional/model_functions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Model Functions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../additional/system_functions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    System Functions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../additional/extra_functions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Extra Functions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Examples
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generate_models/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Generate Models
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../run_and_monitor_simulations/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Generate Simulations
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Monitor Recordings
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Monitor Recordings
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduction
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#code" class="md-nav__link">
+    <span class="md-ellipsis">
+      Code
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conosole-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      Conosole Output
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../plot_recordings/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Plot Recordings
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../experiment/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Define Experiments
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dbs/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DBS Simulator
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../opt_neuron/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Optimize a neuron model
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../license/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    License
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduction
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#code" class="md-nav__link">
+    <span class="md-ellipsis">
+      Code
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conosole-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      Conosole Output
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+  <h1>Monitor Recordings</h1>
+
+<h2 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">#</a></h2>
+<p>This example demonstrates how to use the CompNeuroMonitors class to record variables.
+It is shown how to start/pause monitors, how to split recordings into chunks and
+optionally reset the model and how to get recordings during and after simulation.</p>
+<h2 id="code">Code<a class="headerlink" href="#code" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">ANNarchy</span> <span class="kn">import</span> <span class="n">Population</span><span class="p">,</span> <span class="n">setup</span><span class="p">,</span> <span class="n">simulate</span><span class="p">,</span> <span class="nb">compile</span>
+<span class="kn">from</span> <span class="nn">CompNeuroPy</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">CompNeuroMonitors</span><span class="p">,</span>
+    <span class="n">PlotRecordings</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">CompNeuroPy.neuron_models</span> <span class="kn">import</span> <span class="n">Izhikevich2007</span>
+
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="c1">### setup ANNarchy timestep and create results folder</span>
+    <span class="n">setup</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+
+    <span class="c1">### first we create two populations, each consist of 1 neuron</span>
+    <span class="n">Population</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">neuron</span><span class="o">=</span><span class="n">Izhikevich2007</span><span class="p">(</span><span class="n">I_app</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;my_pop1&quot;</span><span class="p">)</span>
+    <span class="n">Population</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">neuron</span><span class="o">=</span><span class="n">Izhikevich2007</span><span class="p">(</span><span class="n">I_app</span><span class="o">=</span><span class="mi">52</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;my_pop2&quot;</span><span class="p">)</span>
+
+    <span class="c1">### compile</span>
+    <span class="nb">compile</span><span class="p">()</span>
+
+    <span class="c1">### after compilation we can define the monitors using the monitor_dictionary</span>
+    <span class="c1">### and the CompNeuroMonitors class</span>
+    <span class="c1">### for my_pop1 we use a recording period of 2 ms</span>
+    <span class="c1">### for my_pop2 we do not give a recording preiod, therefore record every timestep</span>
+    <span class="n">monitor_dictionary</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;my_pop1;2&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="s2">&quot;spike&quot;</span><span class="p">],</span> <span class="s2">&quot;my_pop2&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;v&quot;</span><span class="p">]}</span>
+    <span class="n">mon</span> <span class="o">=</span> <span class="n">CompNeuroMonitors</span><span class="p">(</span><span class="n">monitor_dictionary</span><span class="p">)</span>
+
+    <span class="c1">### In this part we demonstrate starting/pausing all monitors</span>
+    <span class="c1">### simulate for 100 ms [0, 100]</span>
+    <span class="n">simulate</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+
+    <span class="c1">### start all monitors and simulate for 100 ms [100, 200]</span>
+    <span class="n">mon</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="n">simulate</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+
+    <span class="c1">### pause all monitors and simulate for 100 ms [200, 300]</span>
+    <span class="n">mon</span><span class="o">.</span><span class="n">pause</span><span class="p">()</span>
+    <span class="n">simulate</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+
+    <span class="c1">### In this part we demonstrate starting single monitors</span>
+    <span class="c1">### start only monitor for my_pop1 and simulate for 100 ms [300, 400]</span>
+    <span class="n">mon</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">compartment_list</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;my_pop1&quot;</span><span class="p">])</span>
+    <span class="n">simulate</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+
+    <span class="c1">### start all monitors and simulate for 100 ms [400, 500]</span>
+    <span class="n">mon</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="n">simulate</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+
+    <span class="c1">### In this part we demonstrate pausing single monitors</span>
+    <span class="c1">### pause monitor for my_pop1 and simulate for 100 ms [500, 600]</span>
+    <span class="n">mon</span><span class="o">.</span><span class="n">pause</span><span class="p">(</span><span class="n">compartment_list</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;my_pop1&quot;</span><span class="p">])</span>
+    <span class="n">simulate</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+
+    <span class="c1">### start all monitors and simulate for 100 ms [600, 700]</span>
+    <span class="n">mon</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="n">simulate</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+
+    <span class="c1">### In this part we demonstrate chunking recordings by reset</span>
+    <span class="c1">### reset WITHOUT model, creating new chunk --&gt; first chunk [0, 700]</span>
+    <span class="c1">### also in this chunk do not record the first 100 ms</span>
+    <span class="c1">### WITHOUT model --&gt; time continues at 700 ms [700, 800]</span>
+    <span class="n">mon</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">mon</span><span class="o">.</span><span class="n">pause</span><span class="p">()</span>
+    <span class="n">simulate</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+
+    <span class="c1">### start all monitors and simulate for 700 ms [800, 1500]</span>
+    <span class="n">mon</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="n">simulate</span><span class="p">(</span><span class="mi">700</span><span class="p">)</span>
+
+    <span class="c1">### reset WITH model, creating new chunk --&gt; second chunk [700, 1500]</span>
+    <span class="c1">### in third chunk time is reset to 0 ms</span>
+    <span class="c1">### also in this chunk do not record the first 100 ms [0, 100]</span>
+    <span class="n">mon</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">mon</span><span class="o">.</span><span class="n">pause</span><span class="p">()</span>
+    <span class="n">simulate</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+
+    <span class="c1">### start all monitors and simulate for 700 ms [100, 800]</span>
+    <span class="n">mon</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="n">simulate</span><span class="p">(</span><span class="mi">700</span><span class="p">)</span>
+
+    <span class="c1">### Next we demonstrate getting recordings DURING SIMULATION by using</span>
+    <span class="c1">### get_recordings_and_clear</span>
+    <span class="c1">### this also resets the monitors back to their initialized state, i.e. there are no</span>
+    <span class="c1">### recordings and they are not started yet</span>
+    <span class="c1">### recordings1 consists of 3 chunks, third chunk [0, 800]</span>
+    <span class="n">recordings1</span><span class="p">,</span> <span class="n">recording_times1</span> <span class="o">=</span> <span class="n">mon</span><span class="o">.</span><span class="n">get_recordings_and_clear</span><span class="p">()</span>
+
+    <span class="c1">### Now continue simulation, creating NEW RECORDINGS, monitors are not started yet</span>
+    <span class="c1">### model was not reset, so time continues at 800 ms</span>
+    <span class="c1">### simulate for 100 ms [800, 900]</span>
+    <span class="n">simulate</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+
+    <span class="c1">### start all monitors and simulate for 100 ms [900, 1000]</span>
+    <span class="n">mon</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="n">simulate</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+
+    <span class="c1">### reset monitors and model, creating new chunk --&gt; first chunk [800, 1000]</span>
+    <span class="c1">### simulate for 100 ms [0, 100]</span>
+    <span class="n">mon</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">simulate</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+
+    <span class="c1">### get recordings using get_recordings_and_clear</span>
+    <span class="c1">### this time directly start recording again</span>
+    <span class="c1">### recordings2 consists of 2 chunks, second chunk [0, 100]</span>
+    <span class="n">recordings2</span><span class="p">,</span> <span class="n">recording_times2</span> <span class="o">=</span> <span class="n">mon</span><span class="o">.</span><span class="n">get_recordings_and_clear</span><span class="p">()</span>
+
+    <span class="c1">### Now continue simulation, creating NEW RECORDINGS</span>
+    <span class="c1">### directly start monitors and reset model so time is reset to 0 ms</span>
+    <span class="c1">### simulate for 100 ms [0, 100]</span>
+    <span class="n">mon</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="n">mon</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">simulate</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+
+    <span class="c1">### get recordings the normal way (simultions are finished)</span>
+    <span class="c1">### recordings3 consists of 1 chunk [0, 100]</span>
+    <span class="n">recordings3</span> <span class="o">=</span> <span class="n">mon</span><span class="o">.</span><span class="n">get_recordings</span><span class="p">()</span>
+    <span class="n">recording_times3</span> <span class="o">=</span> <span class="n">mon</span><span class="o">.</span><span class="n">get_recording_times</span><span class="p">()</span>
+
+    <span class="c1">### print the idx and time lims of the recordings and the sizes of the recorded</span>
+    <span class="c1">### arrays</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;#################### ALL RECORDINGS INFO ####################&quot;</span><span class="p">)</span>
+    <span class="n">recordings_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">recordings1</span><span class="p">,</span> <span class="n">recordings2</span><span class="p">,</span> <span class="n">recordings3</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">all_times_idx</span><span class="p">,</span> <span class="n">all_times</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">recording_times1</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span> <span class="n">recording_times2</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span> <span class="n">recording_times3</span><span class="o">.</span><span class="n">all</span><span class="p">()]</span>
+    <span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;recordings</span><span class="si">{</span><span class="n">all_times_idx</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">all_times</span><span class="p">)):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">chunk: </span><span class="si">{</span><span class="n">chunk</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">pop_name</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;my_pop1&quot;</span><span class="p">,</span> <span class="s2">&quot;my_pop2&quot;</span><span class="p">]:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\t\t</span><span class="s2">pop_name: </span><span class="si">{</span><span class="n">pop_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\t\t</span><span class="s2">recording_array_size: </span><span class="si">{</span><span class="n">recordings_list</span><span class="p">[</span><span class="n">all_times_idx</span><span class="p">][</span><span class="n">chunk</span><span class="p">][</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">pop_name</span><span class="si">}</span><span class="s1">;v&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+                <span class="k">for</span> <span class="n">time_point</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;start&quot;</span><span class="p">,</span> <span class="s2">&quot;stop&quot;</span><span class="p">]:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\t\t\t</span><span class="s2">time_point: </span><span class="si">{</span><span class="n">time_point</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">unit</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;ms&quot;</span><span class="p">,</span> <span class="s2">&quot;idx&quot;</span><span class="p">]:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\t\t\t\t</span><span class="s2">unit: </span><span class="si">{</span><span class="n">unit</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="k">for</span> <span class="n">period</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span>
+                            <span class="nb">len</span><span class="p">(</span><span class="n">all_times</span><span class="p">[</span><span class="n">chunk</span><span class="p">][</span><span class="n">pop_name</span><span class="p">][</span><span class="n">time_point</span><span class="p">][</span><span class="n">unit</span><span class="p">])</span>
+                        <span class="p">):</span>
+                            <span class="nb">print</span><span class="p">(</span>
+                                <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\t\t\t\t\t</span><span class="s2">period </span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">all_times</span><span class="p">[</span><span class="n">chunk</span><span class="p">][</span><span class="n">pop_name</span><span class="p">][</span><span class="n">time_point</span><span class="p">][</span><span class="n">unit</span><span class="p">][</span><span class="n">period</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+                            <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;#############################################################&quot;</span><span class="p">)</span>
+
+    <span class="c1">### plot recordings 1 consisting of 3 chunks</span>
+    <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">recordings1</span><span class="p">)):</span>
+        <span class="c1">### using plot_recordings which plots the recordings of one chunk</span>
+        <span class="n">PlotRecordings</span><span class="p">(</span>
+            <span class="n">figname</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;monitor_recordings_1_chunk</span><span class="si">{</span><span class="n">chunk</span><span class="si">}</span><span class="s2">.png&quot;</span><span class="p">,</span>
+            <span class="n">recordings</span><span class="o">=</span><span class="n">recordings1</span><span class="p">,</span>
+            <span class="n">recording_times</span><span class="o">=</span><span class="n">recording_times1</span><span class="p">,</span>
+            <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+            <span class="n">plan</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;position&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+                <span class="s2">&quot;compartment&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;my_pop1&quot;</span><span class="p">,</span> <span class="s2">&quot;my_pop2&quot;</span><span class="p">,</span> <span class="s2">&quot;my_pop1&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;variable&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="s2">&quot;spike&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;format&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;line&quot;</span><span class="p">,</span> <span class="s2">&quot;line&quot;</span><span class="p">,</span> <span class="s2">&quot;raster&quot;</span><span class="p">],</span>
+            <span class="p">},</span>
+            <span class="n">chunk</span><span class="o">=</span><span class="n">chunk</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="c1">### plot recordings 2 consisting of 2 chunks</span>
+    <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">recordings2</span><span class="p">)):</span>
+        <span class="c1">### using plot_recordings which plots the recordings of one chunk</span>
+        <span class="n">PlotRecordings</span><span class="p">(</span>
+            <span class="n">figname</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;monitor_recordings_2_chunk</span><span class="si">{</span><span class="n">chunk</span><span class="si">}</span><span class="s2">.png&quot;</span><span class="p">,</span>
+            <span class="n">recordings</span><span class="o">=</span><span class="n">recordings2</span><span class="p">,</span>
+            <span class="n">recording_times</span><span class="o">=</span><span class="n">recording_times2</span><span class="p">,</span>
+            <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+            <span class="n">plan</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;position&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+                <span class="s2">&quot;compartment&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;my_pop1&quot;</span><span class="p">,</span> <span class="s2">&quot;my_pop2&quot;</span><span class="p">,</span> <span class="s2">&quot;my_pop1&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;variable&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="s2">&quot;spike&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;format&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;line&quot;</span><span class="p">,</span> <span class="s2">&quot;line&quot;</span><span class="p">,</span> <span class="s2">&quot;raster&quot;</span><span class="p">],</span>
+            <span class="p">},</span>
+            <span class="n">chunk</span><span class="o">=</span><span class="n">chunk</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="c1">### plot recordings 3 consisting of 1 chunk</span>
+    <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">recordings3</span><span class="p">)):</span>
+        <span class="c1">### using plot_recordings which plots the recordings of one chunk</span>
+        <span class="n">PlotRecordings</span><span class="p">(</span>
+            <span class="n">figname</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;monitor_recordings_3_chunk</span><span class="si">{</span><span class="n">chunk</span><span class="si">}</span><span class="s2">.png&quot;</span><span class="p">,</span>
+            <span class="n">recordings</span><span class="o">=</span><span class="n">recordings3</span><span class="p">,</span>
+            <span class="n">recording_times</span><span class="o">=</span><span class="n">recording_times3</span><span class="p">,</span>
+            <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+            <span class="n">plan</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;position&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+                <span class="s2">&quot;compartment&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;my_pop1&quot;</span><span class="p">,</span> <span class="s2">&quot;my_pop2&quot;</span><span class="p">,</span> <span class="s2">&quot;my_pop1&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;variable&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="s2">&quot;spike&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;format&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;line&quot;</span><span class="p">,</span> <span class="s2">&quot;line&quot;</span><span class="p">,</span> <span class="s2">&quot;raster&quot;</span><span class="p">],</span>
+            <span class="p">},</span>
+            <span class="n">chunk</span><span class="o">=</span><span class="n">chunk</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="mi">1</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</code></pre></div>
+<h2 id="conosole-output">Conosole Output<a class="headerlink" href="#conosole-output" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>python<span class="w"> </span>monitor_recordings.py<span class="w"> </span>
+<span class="go">ANNarchy 4.7 (4.7.3b) on linux (posix).</span>
+<span class="go">Compiling ...  OK </span>
+<span class="gp">#</span><span class="c1">################### ALL RECORDINGS INFO ####################</span>
+<span class="go">recordings1</span>
+<span class="go">    chunk: 0</span>
+<span class="go">        pop_name: my_pop1</span>
+<span class="go">        recording_array_size: (200, 1)</span>
+<span class="go">            time_point: start</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 100.0</span>
+<span class="go">                    period 1: 300.0</span>
+<span class="go">                    period 2: 600.0</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 0</span>
+<span class="go">                    period 1: 50</span>
+<span class="go">                    period 2: 150</span>
+<span class="go">            time_point: stop</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 198.0</span>
+<span class="go">                    period 1: 498.0</span>
+<span class="go">                    period 2: 698.0</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 49</span>
+<span class="go">                    period 1: 149</span>
+<span class="go">                    period 2: 199</span>
+<span class="go">        pop_name: my_pop2</span>
+<span class="go">        recording_array_size: (4000, 1)</span>
+<span class="go">            time_point: start</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 100.0</span>
+<span class="go">                    period 1: 400.0</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 0</span>
+<span class="go">                    period 1: 1000</span>
+<span class="go">            time_point: stop</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 199.9</span>
+<span class="go">                    period 1: 699.9</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 999</span>
+<span class="go">                    period 1: 3999</span>
+<span class="go">    chunk: 1</span>
+<span class="go">        pop_name: my_pop1</span>
+<span class="go">        recording_array_size: (350, 1)</span>
+<span class="go">            time_point: start</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 800.0</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 0</span>
+<span class="go">            time_point: stop</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 1498.0</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 349</span>
+<span class="go">        pop_name: my_pop2</span>
+<span class="go">        recording_array_size: (7000, 1)</span>
+<span class="go">            time_point: start</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 800.0</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 0</span>
+<span class="go">            time_point: stop</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 1499.9</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 6999</span>
+<span class="go">    chunk: 2</span>
+<span class="go">        pop_name: my_pop1</span>
+<span class="go">        recording_array_size: (350, 1)</span>
+<span class="go">            time_point: start</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 100.0</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 0</span>
+<span class="go">            time_point: stop</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 798.0</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 349</span>
+<span class="go">        pop_name: my_pop2</span>
+<span class="go">        recording_array_size: (7000, 1)</span>
+<span class="go">            time_point: start</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 100.0</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 0</span>
+<span class="go">            time_point: stop</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 799.9</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 6999</span>
+<span class="go">recordings2</span>
+<span class="go">    chunk: 0</span>
+<span class="go">        pop_name: my_pop1</span>
+<span class="go">        recording_array_size: (50, 1)</span>
+<span class="go">            time_point: start</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 900.0</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 0</span>
+<span class="go">            time_point: stop</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 998.0</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 49</span>
+<span class="go">        pop_name: my_pop2</span>
+<span class="go">        recording_array_size: (1000, 1)</span>
+<span class="go">            time_point: start</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 900.0</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 0</span>
+<span class="go">            time_point: stop</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 999.9</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 999</span>
+<span class="go">    chunk: 1</span>
+<span class="go">        pop_name: my_pop1</span>
+<span class="go">        recording_array_size: (50, 1)</span>
+<span class="go">            time_point: start</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 0.0</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 0</span>
+<span class="go">            time_point: stop</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 98.0</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 49</span>
+<span class="go">        pop_name: my_pop2</span>
+<span class="go">        recording_array_size: (1000, 1)</span>
+<span class="go">            time_point: start</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 0.0</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 0</span>
+<span class="go">            time_point: stop</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 99.9</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 999</span>
+<span class="go">recordings3</span>
+<span class="go">    chunk: 0</span>
+<span class="go">        pop_name: my_pop1</span>
+<span class="go">        recording_array_size: (50, 1)</span>
+<span class="go">            time_point: start</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 0.0</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 0</span>
+<span class="go">            time_point: stop</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 98.0</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 49</span>
+<span class="go">        pop_name: my_pop2</span>
+<span class="go">        recording_array_size: (1000, 1)</span>
+<span class="go">            time_point: start</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 0.0</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 0</span>
+<span class="go">            time_point: stop</span>
+<span class="go">                unit: ms</span>
+<span class="go">                    period 0: 99.9</span>
+<span class="go">                unit: idx</span>
+<span class="go">                    period 0: 999</span>
+<span class="gp">#</span><span class="c1">############################################################</span>
+<span class="go">Generate fig monitor_recordings_1_chunk0.png... </span>
+<span class="go">  WARNING PlotRecordings: my_pop1 does not contain any spikes in the given time interval.</span>
+<span class="go">Done</span>
+
+<span class="go">Generate fig monitor_recordings_1_chunk1.png... </span>
+<span class="go">  WARNING PlotRecordings: my_pop1 does not contain any spikes in the given time interval.</span>
+<span class="go">Done</span>
+
+<span class="go">Generate fig monitor_recordings_1_chunk2.png... </span>
+<span class="go">  WARNING PlotRecordings: my_pop1 does not contain any spikes in the given time interval.</span>
+<span class="go">Done</span>
+
+<span class="go">Generate fig monitor_recordings_2_chunk0.png... </span>
+<span class="go">  WARNING PlotRecordings: my_pop1 does not contain any spikes in the given time interval.</span>
+<span class="go">Done</span>
+
+<span class="go">Generate fig monitor_recordings_2_chunk1.png... Done</span>
+
+<span class="go">Generate fig monitor_recordings_3_chunk0.png... Done</span>
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; Oliver Maith
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["header.autohide", "content.code.copy"], "search": "../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7c377c4.min.js"></script>
+      
+    
+  </body>
+</html>

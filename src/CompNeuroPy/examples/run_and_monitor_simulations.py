@@ -1,293 +1,223 @@
-import numpy as np
-from CompNeuroPy import Monitors, save_data, generate_simulation, req_pop_attr
-from ANNarchy import simulate, get_population
+"""
+This example demonstrates how to use the CompNeuroSim class to define simulations.
+It is shown how to define the simulation functions, requirements and how to use the
+simulation information object.
 
-### we can import our model initialized in create_model.py
+This example imports the "my_model" from other example "create_model.py" and saves
+recorded data used in other example "plot_recordings.py".
+"""
+import numpy as np
+from CompNeuroPy import (
+    CompNeuroMonitors,
+    CompNeuroSim,
+    ReqPopHasAttr,
+    save_variables,
+    CompNeuroModel,
+)
+from ANNarchy import (
+    simulate,
+    get_population,
+    Population,
+    Neuron,
+    Projection,
+    Synapse,
+    Uniform,
+)
 from CompNeuroPy.examples.create_model import my_model
 
 
+### CompNeuroSim is a class to define simulations
+### It requires a simulation function, which we will define here:
+def set_rates(pop_name: str, rates: float = 0.0, duration: float = 0.0):
+    """
+    Sets the rates variable of a population given by pop_name and simulates duration ms.
+
+    Args:
+        pop_name (str):
+            name of the population
+        rates (float, optional):
+            rates variable of the population
+        duration (float, optional):
+            duration of the simulation in ms
+    """
+    ### set rates and simulate
+    get_population(pop_name).rates = rates
+    simulate(duration)
+
+
+### Also create a second more complex simulation function
+def increase_rates(
+    pop_name: str | list[str],
+    rate_step: float = 0.0,
+    time_step: float = 0.0,
+    nr_steps: int = 0,
+):
+    """
+    Increase rates variable of population(s).
+
+    Args:
+        pop_name (str or list of str):
+            name of population(s)
+        rate_step (float, optional):
+            increase of rate with each step, initial step = current rates of pop
+        time_step (float, optional):
+            duration of each step in ms
+        nr_steps (int, optional):
+            number of steps
+    """
+
+    ### convert single pop into list
+    pop_name_list = pop_name
+    if not (isinstance(pop_name_list, list)):
+        pop_name_list = [pop_name_list]
+
+    ### define initial value for rates for each pop (assume all neurons have same rates)
+    start_rate_arr = np.array(
+        [get_population(pop_name).rates[0] for pop_name in pop_name_list]
+    )
+
+    ### simulate all steps
+    for step in range(nr_steps):
+        ### calculate rates for each pop
+        rates_arr = step * rate_step + start_rate_arr
+        ### set rates variable of all populations
+        for pop_idx, pop_name in enumerate(pop_name_list):
+            set_rates(
+                pop_name, rates=rates_arr[pop_idx], duration=0
+            )  # use already defined simulation set_rates
+        ### then simulate step
+        set_rates(pop_name_list[0], rates=rates_arr[0], duration=time_step)
+
+    ### simulation_functions can return some information which may be helpful later
+    ### the simulation arguments do not need to be returned, since they are accessible
+    ### through the CompNeuroSim object anyway (see below)
+    return {"duration": time_step * nr_steps, "d_rates": rate_step * nr_steps}
+
+
+### see below why we need this function
+def extend_model(my_model: CompNeuroModel):
+    """
+    Create a simple projections and a projection with decaying weights.
+
+    Args:
+        my_model (CompNeuroModel):
+            model to which the projection should be added
+    """
+
+    ### create a simple population for later use
+    Population(1, neuron=Neuron(equations="r=0"), name="simple_pop")
+
+    ### create a projection with decaying weights to demonstrate recording of projection
+    proj = Projection(
+        pre=my_model.populations[0],
+        post=my_model.populations[1],
+        target="ampa",
+        synapse=Synapse(parameters="tau=500", equations="dw/dt=-w/tau"),
+        name="ampa_proj",
+    )
+    proj.connect_all_to_all(weights=Uniform(1.0, 2.0))
+
+
 def main():
-    ### create and compile the model
-    my_model.create()
+    ### create and compile the model from other example "create_model.py"
+    my_model.create(do_compile=False)
 
-    ### Next we define what should be recorded, i.e., create monitors with the Monitors object from CompNeuroPy
-    ### the Monitors object helps to create multiple monitors at once
-    ### Monitors takes a monitor_dictionary as argument
-    ### format: monitor_dictionary = {'what;name;period':['variables', 'to', 'record']}
-    ### the Monitors object currently only supports populations, thus, 'what;' has to be 'pop;'
-    ### period can be a time larger than the simulation time step and defines how often values are recorded
-    ### here we record from each population the variable p and spikes
-    ### from first population get values every 10 ms, from second population every 15 ms
-    ### spike recordings are not affected by the period (each spike is recorded)
+    ### extend the model to demonstrate the functionality of CompNeuroSim requirements
+    ### (see below) and the recording of projections (recorded data will be used in
+    ### other example "plot_recordings.py")
+    extend_model(my_model)
+    my_model.compile()
+
+    ### Define Monitors, recording p and spike from both model populations with periods
+    ### of 10 ms and 15 ms and the weights of the ampa projection with period of 10 ms
     monitor_dictionary = {
-        f"pop;{my_model.populations[0]};10": ["p", "spike"],
-        f"pop;{my_model.populations[1]};15": ["p", "spike"],
+        f"{my_model.populations[0]};10": ["p", "spike"],
+        f"{my_model.populations[1]};15": ["p", "spike"],
+        "ampa_proj;10": ["w"],
     }
-    mon = Monitors(monitor_dictionary)
+    mon = CompNeuroMonitors(monitor_dictionary)
 
-    ### next we define some simulations with the generate_simulations object of CompNeuroPy
-    ### similar to the generate_model object with the model_creation_function we also need a simulation_function here, in which the actual simulation is defined
-    ### here are two examples in which we consider our model with multiple Poisson populations which contain the parameter 'rates'
-    ### use the ANNarchy functions get_population and get_projection to access populations and projections using their names which should be unique and obtainable from the CompNeuroPy model
-    def set_rates(pop, rates=0, duration=0):
-        """
-        sets the rates variable of one population and simulates duration in ms
-        """
-        ### set rates and simulate
-        get_population(pop).rates = rates
-        simulate(duration)
-
-    ### the set_rates function is already a complete simulation_function, but let's create something more complex using it
-    def increase_rates(pop, rate_step=0, time_step=0, nr_steps=0):
-        """
-        increase rates variable of pop, if pop == list --> increase rates variable of multiple populations
-        rate_step: increase of rate with each step, initial step = current rates of pop
-        time_step: duration of each step in ms
-        """
-
-        ### convert single pop into list
-        if not (isinstance(pop, list)):
-            pop = [pop]
-
-        ### define initial value for rates for each pop
-        start_rate = np.array([get_population(pop_name).rates[0] for pop_name in pop])
-
-        ### simulate all steps
-        for step in range(nr_steps):
-            ### calculate rates for each pop
-            rates = step * rate_step + start_rate
-            ### set rates variable of all populations
-            for pop_idx, pop_name in enumerate(pop):
-                set_rates(
-                    pop_name, rates=rates[pop_idx], duration=0
-                )  # use already defined simulation set_rates
-            ### then simulate step
-            set_rates(pop[0], rates=rates[0], duration=time_step)
-
-        ### simulation_functions can return some information which may be helpful later
-        ### the simulation arguments do not need to be returned, since they are accessible through the generate_model object anyway (see below)
-        return {"duration": time_step * nr_steps, "d_rates": rate_step * nr_steps}
-
-    ### Now use the simulation_function and add a clear framework with the generate_simulation object
-    ### as arguments provide the simulation_function, its arguments (as kwargs dictionary), the name and description of the simualtion and a requirements list
-    ### the requirements list contains requirements objects (here req_pop_attr)
-    ### with requirements one can determine things that the model should fulfill
-    ### req_pop_attr checks if a population (or multiple) contain a specific attribut (or multiple)
-    ### for our defined simulation_function we test if the model populations contain the variable 'rates'
-    increase_rates_pop1 = generate_simulation(
-        increase_rates,
+    ### Now use CompNeuroSim to define a simulation. Use the previously defined
+    ### simulation functions and define their arguments as kwargs dictionary. Give the
+    ### simulation a name and description and you can also define requirements for the
+    ### simulation. Here, for example, we require that the populations contain the
+    ### attribute 'rates'. One can define multiple requirements in a list of
+    ### dictionaries. The arguments of the requirements can be inherited from the
+    ### simulation kwargs by using the syntax 'simulation_kwargs.<kwarg_name>'.
+    ### The monitor object is also given to the simulation, so that the simulation
+    ### runs can be automatically associated with the monitor recording chunks.
+    increase_rates_pop = CompNeuroSim(
+        simulation_function=increase_rates,
         simulation_kwargs={
-            "pop": my_model.populations[0],
+            "pop_name": my_model.populations[0],
             "rate_step": 10,
             "time_step": 100,
             "nr_steps": 15,
         },
-        name="increase_rates_pop1",
-        description="increase rates variable of pop1",
+        name="increase_rates_pop",
+        description="increase rates variable of pop",
         requirements=[
-            {"req": req_pop_attr, "pop": my_model.populations[0], "attr": "rates"}
+            {"req": ReqPopHasAttr, "pop": "simulation_kwargs.pop_name", "attr": "rates"}
         ],
+        monitor_object=mon,
     )
 
-    increase_rates_all_pops = generate_simulation(
-        increase_rates,
-        simulation_kwargs={
-            "pop": my_model.populations,
-            "rate_step": 10,
-            "time_step": 100,
-            "nr_steps": 15,
-        },
-        name="increase_rates_all_pops",
-        description="increase rates variable of all pops",
-        requirements=[
-            {"req": req_pop_attr, "pop": "simulation_kwargs.pop", "attr": "rates"}
-        ],
-    )
-
-    ### Now let's use these simulations
-    ### in the following lines various different use cases for the simulations and Monitors object functions are demonstrated
-    ### the Monitors object automatically structures the recordings based on recording pauses and model resets
-    ### the recordings are split into chunks by resets
-    ### in this script we will have two chunks (one reset)
-    ### further, chunks are subdivided into periods which are separeted by pauses (a reset automatically closes a period)
-    ### in this script the first chunk will only contain one period, the second chunk will contain two periods
-    ### first start the monitors with the Monitors object after a 500 ms resting-state simulation
+    ### Now let's use this simulation
+    ### Simulate 500 ms without recordings and then run the simulation
     simulate(500)
     mon.start()
+    increase_rates_pop.run()
 
-    ### run the simulation increase_rates_pop1
-    increase_rates_pop1.run()
-
-    ### run the simulation increase_rates_all_pops
-    increase_rates_all_pops.run()
-
-    ### by resetting the model one can start again from scratch (time=0 again and model in its compile state)
-    ### if one uses the Monitors object one should reset the model with the Monitors object function reset (thus, the recordings are automatically structured)
+    ### resetting monitors and model, creating new recording chunk
     mon.reset()
 
-    ### let's simulate again a resting-state simulation
-    ### monitors work the same as before a reset, therefore the monitors must be paused here if one does not want to record the resting-state simulation
+    ### again simulate 700 ms without recording
+    ### then run the simulation with different simulation kwargs (for all populations)
     mon.pause()
     simulate(700)
     mon.start()
+    increase_rates_pop.run({"pop_name": my_model.populations})
+    simulate(500)
 
-    ### run again the simulation increase_rates_all_pops
-    increase_rates_all_pops.run()
+    ### now again change the pop_name kwarg but use the simple_pop population without
+    ### the required attribute 'rates'
+    ### this will raise an error
+    try:
+        increase_rates_pop.run({"pop_name": "simple_pop"})
+    except Exception as e:
+        print("\n###############################################")
+        print(
+            "Running simulation with population not containing attribute 'rates' causes the following error:"
+        )
+        print(e)
+        print("###############################################\n")
 
-    ### simulate 1000 ms but do not record
-    mon.pause()
-    simulate(1000)
-    mon.start()
-
-    ### run again the simulation increase_rates_all_pops, but this time with different simulation kwargs
-    increase_rates_all_pops.run({"rate_step": 50, "time_step": 500, "nr_steps": 2})
-
-    ### simulate another 1000 ms, again do not record
-    mon.pause()
-    simulate(1000)
-
-    ### get recordings and recording times from the Monitors object
+    ### get recordings and recording times from the CompNeuroMonitors object
     recordings = mon.get_recordings()
     recording_times = mon.get_recording_times()
 
-    ### one could directly analyze/plot recordings here but we first save them with CompNeuroPy save_data function
-    ### one can save different things, given in a list + for each thing the corresponding save folder + name, also given in a list
-    ### all things are saved in the directory dataRaw/
-    ### we here save, for example, the two simulation objects which contain usefull information for later analyses and the recordings and recording_times
-    folder = "run_and_monitor_simulations/"
-    save_data(
-        [
-            recordings,
-            recording_times,
-        ],
-        [
-            folder + "recordings.npy",
-            folder + "recording_times.npy",
-        ],
+    ### get the simulation information object from the CompNeuroSim object
+    increase_rates_pop_info = increase_rates_pop.simulation_info()
+
+    ### save the recordings, recording times and simulation information
+    save_variables(
+        variable_list=[recordings, recording_times, increase_rates_pop_info],
+        name_list=["recordings", "recording_times", "increase_rates_pop_info"],
+        path="run_and_monitor_simulations",
     )
 
-    ### the following information will be available if we load the generate_simulation objects
-    print("\n\nA simulation object contains:")
-    for var in ["name", "description", "start", "end", "info", "kwargs"]:
-        if var in ["start", "end", "info", "kwargs"]:
-            print(f'{var} (for each run)\n {eval("increase_rates_all_pops." + var)}\n')
-        else:
-            print(f'{var}\n {eval("increase_rates_all_pops." + var)}\n')
-
-    ### this is the structure of recordings:
-    print("\n\nrecordings = list with len=" + str(len(recordings)))
-    print("--> separate recordings for each chunk (separated by reset)")
-    print("e.g., recordings[0]:", list(recordings[0].keys()))
-    print(
-        "you can see that for each recorded compartment also a variable 'period' is stored, thats the sampling period of the monitor in ms (e.g. if no period is given durign monitor initialization default=dt)"
-    )
-    print(
-        f"period of {my_model.populations[0]}:",
-        recordings[0][f"{my_model.populations[0]};period"],
-    )
-    print(
-        f"period of {my_model.populations[1]}:",
-        recordings[0][f"{my_model.populations[1]};period"],
-    )
-    print("dt:", recordings[0]["dt"])
-
-    ### recording_times is very helpful for later analyses
-    ### it provides all the times (in ms) and indizes (for the arrays of recordings) for simulation chunks and periods
-    ### here for example the first chunk:
-    print("\n\nrecording times of first chunk:")
-    print("     time_lims:", recording_times.time_lims(chunk=0))
-    print("     idx_lims", recording_times.idx_lims(chunk=0))
-    ### and the second chunk
-    print("\nrecording times of second chunk:")
-    print("     time_lims:", recording_times.time_lims(chunk=1))
-    print(
-        "     idx_lims",
-        recording_times.idx_lims(chunk=1),
-        "here the difference of time_lims and idx_lims does not fit, due to a 1000 ms pause within the chunk --> one can get the limits of the periods",
-    )
-    ### and the individual periods of the second chunk
-    print("\nrecording times of second chunk, first period:")
-    print("     time_lims:", recording_times.time_lims(chunk=1, period=0))
-    print("     idx_lims", recording_times.idx_lims(chunk=1, period=0))
-    print("\nrecording times of second chunk, second period:")
-    print("     time_lims:", recording_times.time_lims(chunk=1, period=1))
-    print("     idx_lims", recording_times.idx_lims(chunk=1, period=1))
-    ### one could also specifiy a specific model compartment (here, e.g., 'first_poisson') to get its recording times
-    ### by default the first compartment is used
-    ### here this is not useful, because all compartments are started and paused at the same times
-    ### you can also get the complete recording times information
-    print("\ncomplete recording time information (list of dicts):")
-    for chunk in range(len(recording_times.all())):
-        print("chunk", chunk)
-        for key in recording_times.all()[chunk].keys():
-            print("   ", key, recording_times.all()[chunk][key])
+    ### print the information contained in the simulation information object
+    print("\nA simulation object contains:")
+    print("name\n", increase_rates_pop_info.name)
+    print("\ndescription\n", increase_rates_pop_info.description)
+    print("\nstart (for each run)\n", increase_rates_pop_info.start)
+    print("\nend (for each run)\n", increase_rates_pop_info.end)
+    print("\ninfo (for each run)\n", increase_rates_pop_info.info)
+    print("\nkwargs (for each run)\n", increase_rates_pop_info.kwargs)
+    print("\nmonitor chunk (for each run)\n", increase_rates_pop_info.monitor_chunk)
 
     return 1
 
 
 if __name__ == "__main__":
     main()
-
-### console output of this file:
-"""
-created model, other parameters: 0 1 2
-Compiling ...  OK
-
-WARNING! run increase_rates_all_pops changed simulation kwargs, initial requirements may no longer be fulfilled!
-
-
-
-A simulation object contains:
-name
- increase_rates_all_pops
-
-description
- increase rates variable of all pops
-
-start (for each run)
- [2000.0, 700.0, 3200.0]
-
-end (for each run)
- [3500.0, 2200.0, 4200.0]
-
-info (for each run)
- [{'duration': 1500, 'd_rates': 150}, {'duration': 1500, 'd_rates': 150}, {'duration': 1000, 'd_rates': 100}]
-
-kwargs (for each run)
- [{'pop': ['first_poisson', 'second_poisson'], 'rate_step': 10, 'time_step': 100, 'nr_steps': 15}, {'pop': ['first_poisson', 'second_poisson'], 'rate_step': 10, 'time_step': 100, 'nr_steps': 15}, {'pop': ['first_poisson', 'second_poisson'], 'rate_step': 50, 'time_step': 500, 'nr_steps': 2}]
-
-
-
-recordings = list with len=2
---> separate recordings for each chunk (separated by reset)
-e.g., recordings[0]: ['first_poisson;period', 'first_poisson;p', 'first_poisson;spike', 'second_poisson;period', 'second_poisson;p', 'second_poisson;spike', 'dt']
-you can see that for each recorded compartment also a variable 'period' is stored, thats the sampling period of the monitor in ms (e.g. if no period is given durign monitor initialization default=dt)
-period of first_poisson: 10.0
-period of second_poisson: 15.0
-dt: 1.0
-
-
-recording times of first chunk:
-     time_lims: [500.0, 3490.0]
-     idx_lims [0, 299]
-
-recording times of second chunk:
-     time_lims: [700.0, 4190.0]
-     idx_lims [0, 249] here the difference of time_lims and idx_lims does not fit, due to a 1000 ms pause within the chunk --> one can get the limits of the periods
-
-recording times of second chunk, first period:
-     time_lims: [700.0, 2190.0]
-     idx_lims [0, 149]
-
-recording times of second chunk, second period:
-     time_lims: [3200.0, 4190.0]
-     idx_lims [150, 249]
-
-complete recording time information (list of dicts):
-chunk 0
-    first_poisson {'start': {'ms': [500.0], 'idx': [0]}, 'stop': {'ms': [3490.0], 'idx': [299]}}
-    second_poisson {'start': {'ms': [510.0], 'idx': [0]}, 'stop': {'ms': [3495.0], 'idx': [199]}}
-chunk 1
-    first_poisson {'start': {'ms': [700.0, 3200.0], 'idx': [0, 150]}, 'stop': {'ms': [2190.0, 4190.0], 'idx': [149, 249]}}
-    second_poisson {'start': {'ms': [705.0, 3210.0], 'idx': [0, 100]}, 'stop': {'ms': [2190.0, 4185.0], 'idx': [99, 165]}}
-"""

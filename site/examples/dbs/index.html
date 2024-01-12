@@ -1,0 +1,2430 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../experiment/">
+      
+      
+        <link rel="next" href="../opt_neuron/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.0">
+    
+    
+      
+        <title>DBS Simulator - CompNeuroPy</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.45e1311d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#simple-example" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="CompNeuroPy" class="md-header__button md-logo" aria-label="CompNeuroPy" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            CompNeuroPy
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              DBS Simulator
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Olimaol/CompNeuroPy" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="CompNeuroPy" class="md-nav__button md-logo" aria-label="CompNeuroPy" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    CompNeuroPy
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Olimaol/CompNeuroPy" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Installation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Main Features
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Main Features
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../main/generate_models/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Generate Models
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../main/generate_simulations/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Generate Simulations
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../main/monitors_recordings/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Monitors / Recordings
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../main/optimize_neuron/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Optimize a neuron model
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../main/define_experiment/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Define Experiments
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../main/dbs_stimulator/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DBS Stimulator
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../main/model_configurator/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Model Configurator
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Built-in Models
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Built-in Models
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../built_in/models/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Full Models
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../built_in/neuron_models/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Neuron Models
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../built_in/synapse_models/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Synapse Models
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Additional Features
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Additional Features
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../additional/simulation_functions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Simulation Functions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../additional/simulation_requirements/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Simulation Requirements
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../additional/analysis_functions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Analysis Functions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../additional/model_functions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Model Functions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../additional/system_functions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    System Functions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../additional/extra_functions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Extra Functions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Examples
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generate_models/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Generate Models
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../run_and_monitor_simulations/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Generate Simulations
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_recordings/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Monitor Recordings
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../plot_recordings/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Plot Recordings
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../experiment/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Define Experiments
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    DBS Simulator
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    DBS Simulator
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#simple-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Simple example
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Simple example">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduction
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#code" class="md-nav__link">
+    <span class="md-ellipsis">
+      Code
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#console-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      Console Output
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complex-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Complex Example
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Complex Example">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#introduction_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduction
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#code_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Code
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#console-output_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Console Output
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../opt_neuron/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Optimize a neuron model
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../license/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    License
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#simple-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Simple example
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Simple example">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduction
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#code" class="md-nav__link">
+    <span class="md-ellipsis">
+      Code
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#console-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      Console Output
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complex-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Complex Example
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Complex Example">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#introduction_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduction
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#code_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Code
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#console-output_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Console Output
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+  <h1>DBS Simulator</h1>
+
+<h2 id="simple-example">Simple example<a class="headerlink" href="#simple-example" title="Permanent link">#</a></h2>
+<h3 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">#</a></h3>
+<p>This example demonstrates how to use the DBSstimulator class to implement DBS in a
+network. It is shown how to create a DBSstimulator, how to use it and how to update
+pointers. In this simple example only the depolarization of the stimulated population is
+demostrated. All other possible DBS mechanisms are demonstrated in the other example
+<a href="#complex-example">dbs_stimulator.py</a>.</p>
+<h3 id="code">Code<a class="headerlink" href="#code" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">ANNarchy</span> <span class="kn">import</span> <span class="n">Population</span><span class="p">,</span> <span class="n">Izhikevich</span><span class="p">,</span> <span class="nb">compile</span><span class="p">,</span> <span class="n">simulate</span>
+<span class="kn">from</span> <span class="nn">CompNeuroPy</span> <span class="kn">import</span> <span class="n">DBSstimulator</span>
+
+<span class="kn">from</span> <span class="nn">ANNarchy</span> <span class="kn">import</span> <span class="n">setup</span>
+<span class="kn">from</span> <span class="nn">CompNeuroPy</span> <span class="kn">import</span> <span class="n">CompNeuroMonitors</span><span class="p">,</span> <span class="n">PlotRecordings</span>
+
+<span class="n">setup</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+
+<span class="c1"># create populations</span>
+<span class="n">population1</span> <span class="o">=</span> <span class="n">Population</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">neuron</span><span class="o">=</span><span class="n">Izhikevich</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;my_pop1&quot;</span><span class="p">)</span>
+<span class="n">population2</span> <span class="o">=</span> <span class="n">Population</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">neuron</span><span class="o">=</span><span class="n">Izhikevich</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;my_pop2&quot;</span><span class="p">)</span>
+
+<span class="c1"># create DBS stimulator</span>
+<span class="n">dbs</span> <span class="o">=</span> <span class="n">DBSstimulator</span><span class="p">(</span>
+    <span class="n">stimulated_population</span><span class="o">=</span><span class="n">population1</span><span class="p">,</span>
+    <span class="n">population_proportion</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">dbs_depolarization</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+    <span class="n">auto_implement</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># if you work with names of populations/projections everything will work, but if you</span>
+<span class="c1"># want to work with pointers you have to update them after calling the DBSstimulator</span>
+<span class="n">population1</span><span class="p">,</span> <span class="n">population2</span> <span class="o">=</span> <span class="n">dbs</span><span class="o">.</span><span class="n">update_pointers</span><span class="p">(</span><span class="n">pointer_list</span><span class="o">=</span><span class="p">[</span><span class="n">population1</span><span class="p">,</span> <span class="n">population2</span><span class="p">])</span>
+
+<span class="c1"># compile network</span>
+<span class="nb">compile</span><span class="p">()</span>
+
+<span class="c1"># create monitors</span>
+<span class="n">monitors</span> <span class="o">=</span> <span class="n">CompNeuroMonitors</span><span class="p">({</span><span class="s2">&quot;my_pop1&quot;</span><span class="p">:</span> <span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="s2">&quot;my_pop2&quot;</span><span class="p">:</span> <span class="s2">&quot;v&quot;</span><span class="p">})</span>
+<span class="n">monitors</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+<span class="c1"># run simulation</span>
+<span class="c1"># 1000 ms without dbs</span>
+<span class="n">simulate</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
+<span class="c1"># 1000 ms with dbs</span>
+<span class="n">dbs</span><span class="o">.</span><span class="n">on</span><span class="p">()</span>
+<span class="n">simulate</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
+<span class="c1"># 1000 ms without dbs</span>
+<span class="n">dbs</span><span class="o">.</span><span class="n">off</span><span class="p">()</span>
+<span class="n">simulate</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
+
+<span class="c1"># plot recordings</span>
+<span class="n">PlotRecordings</span><span class="p">(</span>
+    <span class="n">figname</span><span class="o">=</span><span class="s2">&quot;dbs_stimulator_simple.png&quot;</span><span class="p">,</span>
+    <span class="n">recordings</span><span class="o">=</span><span class="n">monitors</span><span class="o">.</span><span class="n">get_recordings</span><span class="p">(),</span>
+    <span class="n">recording_times</span><span class="o">=</span><span class="n">monitors</span><span class="o">.</span><span class="n">get_recording_times</span><span class="p">(),</span>
+    <span class="n">chunk</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+    <span class="n">plan</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;position&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>
+        <span class="s2">&quot;compartment&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;my_pop1&quot;</span><span class="p">,</span> <span class="s2">&quot;my_pop2&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;variable&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="s2">&quot;v&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;format&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;matrix&quot;</span><span class="p">,</span> <span class="s2">&quot;matrix&quot;</span><span class="p">],</span>
+    <span class="p">},</span>
+<span class="p">)</span>
+</code></pre></div>
+<h3 id="console-output">Console Output<a class="headerlink" href="#console-output" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>python<span class="w"> </span>dbs_stimulator_simple.py<span class="w"> </span>
+<span class="go">ANNarchy 4.7 (4.7.3b) on linux (posix).</span>
+<span class="go">Compiling ...  OK </span>
+<span class="go">Generate fig dbs_stimulator_simple.png... Done</span>
+</code></pre></div>
+<h2 id="complex-example">Complex Example<a class="headerlink" href="#complex-example" title="Permanent link">#</a></h2>
+<h3 id="introduction_1">Introduction<a class="headerlink" href="#introduction_1" title="Permanent link">#</a></h3>
+<p>In this example, the DBS stimulator is tested with a simple spiking and rate-coded
+model. The spiking model is based on the <a href="https://isbnsearch.org/isbn/9780262090438">Izhikevich model</a> with
+conductance-based synapses. The rate-coded model is based on neurons including membrane
+potential and a resulting firing rate. The DBS stimulator is tested with different
+stimulation parameters. The resulting activity of the populations is compared to the
+expected activity (not part of example, included for testing purposes only). The
+resulting activity of the populations is plotted. The figures are saved in the
+DBS_spiking_figure and DBS_rate_figure folders. The different DBS conditions are:
+    - no stimulation
+    - orthodromic stimulation of efferents
+    - orthodromic stimulation of afferents
+    - orthodromic stimulation of efferents and afferents
+    - orthodromic stimulation of passing fibres
+    - depolarization of the stimulated population
+    - antidromic stimulation of efferents
+    - antidromic stimulation of afferents
+    - antidromic stimulation of efferents and afferents
+    - antidromic stimulation of passing fibres
+    - antidromic stimulation of passing fibres with lower strength
+    - full dbs stimulation
+    - full dbs stimulation without axon spikes (only effective for spiking model)
+    - full dbs stimulation without axon_rate_amp (only effective for rate-coded model)</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>For rate-coded models, antidromic stimulation of projections is not available.</p>
+</div>
+<h3 id="code_1">Code<a class="headerlink" href="#code_1" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">ANNarchy</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Neuron</span><span class="p">,</span>
+    <span class="n">Population</span><span class="p">,</span>
+    <span class="n">setup</span><span class="p">,</span>
+    <span class="n">simulate</span><span class="p">,</span>
+    <span class="n">Projection</span><span class="p">,</span>
+    <span class="n">get_population</span><span class="p">,</span>
+    <span class="n">get_projection</span><span class="p">,</span>
+    <span class="n">DefaultRateCodedSynapse</span><span class="p">,</span>
+    <span class="n">DefaultSpikingSynapse</span><span class="p">,</span>
+    <span class="n">dt</span><span class="p">,</span>
+    <span class="n">Constant</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">CompNeuroPy</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">CompNeuroMonitors</span><span class="p">,</span>
+    <span class="n">PlotRecordings</span><span class="p">,</span>
+    <span class="n">CompNeuroModel</span><span class="p">,</span>
+    <span class="n">cnp_clear</span><span class="p">,</span>
+    <span class="n">DBSstimulator</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">CompNeuroPy.monitors</span> <span class="kn">import</span> <span class="n">RecordingTimes</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="c1">### setup ANNarchy</span>
+<span class="n">setup</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">12345</span><span class="p">)</span>
+
+
+<span class="c1">### create dbs test model</span>
+<span class="k">class</span> <span class="nc">dbs_test_model_class</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class to create dbs test model.</span>
+
+<span class="sd">    The used neuron models have the following constraints:</span>
+<span class="sd">        The neuron model has to contain the following parameters:</span>
+<span class="sd">        - base_mean: mean of the base current</span>
+<span class="sd">        - base_noise: standard deviation of the base current noise</span>
+<span class="sd">        Spiking neuron models have to contain conductance based synapses using the</span>
+<span class="sd">        following conductance variables:</span>
+<span class="sd">        - g_ampa: excitatory synapse</span>
+<span class="sd">        - g_gaba: inhibitory synapse</span>
+<span class="sd">        Rate neuron models have to contain the following input variables:</span>
+<span class="sd">        - sum(ampa): excitatory input</span>
+<span class="sd">        - sum(gaba): inhibitory input</span>
+<span class="sd">        For DBS rate-coded models have to contain a membrane potential variable mp</span>
+<span class="sd">        and spiking models have to be Izhihkevich models.</span>
+
+<span class="sd">    Model structure:</span>
+<span class="sd">    -------------------------</span>
+<span class="sd">            POP1       POP2</span>
+<span class="sd">            |          |</span>
+<span class="sd">            o          v</span>
+<span class="sd">    DBS---&gt;POP3------oPOP4</span>
+<span class="sd">                .----.</span>
+<span class="sd">                |    |</span>
+<span class="sd">            POP5   &#39;--&gt;POP6</span>
+
+<span class="sd">    -o = inhibitory synapse</span>
+<span class="sd">    -&gt; = excitatory synapse</span>
+<span class="sd">    .-&gt; = passing fibre excitatory synapse</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        model (CompNeuroModel):</span>
+<span class="sd">            dbs test model</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize dbs test model</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            mode (str):</span>
+<span class="sd">                Mode of the dbs test model, either &quot;spiking&quot; or &quot;rate-coded&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">### constants should still be available after DBSstimulator recreates the model</span>
+        <span class="c1">### test this by creating this constant</span>
+        <span class="n">Constant</span><span class="p">(</span><span class="s2">&quot;my_important_const&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+
+        <span class="c1">### check if model to create is spiking or rate-coded</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;spiking&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">CompNeuroModel</span><span class="p">(</span>
+                <span class="n">model_creation_function</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">create_model</span><span class="p">,</span>
+                <span class="n">model_kwargs</span><span class="o">=</span><span class="p">{</span>
+                    <span class="s2">&quot;neuron_model&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_neuron_model_spiking</span><span class="p">(),</span>
+                    <span class="s2">&quot;base_current_list&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">40</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">200</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">40</span><span class="p">],</span>
+                    <span class="s2">&quot;base_current_noise&quot;</span><span class="p">:</span> <span class="mi">40</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="n">name</span><span class="o">=</span><span class="s2">&quot;dbs_test_spiking&quot;</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Simple spiking model to test dbs&quot;</span><span class="p">,</span>
+                <span class="n">do_compile</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;rate-coded&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">CompNeuroModel</span><span class="p">(</span>
+                <span class="n">model_creation_function</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">create_model</span><span class="p">,</span>
+                <span class="n">model_kwargs</span><span class="o">=</span><span class="p">{</span>
+                    <span class="s2">&quot;neuron_model&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_neuron_model_rate_coded</span><span class="p">(),</span>
+                    <span class="s2">&quot;base_current_list&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.35</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">,</span> <span class="mf">0.85</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">],</span>
+                    <span class="s2">&quot;base_current_noise&quot;</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span>
+                    <span class="s2">&quot;weight_list&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">],</span>
+                    <span class="s2">&quot;prob_list&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">],</span>
+                <span class="p">},</span>
+                <span class="n">name</span><span class="o">=</span><span class="s2">&quot;dbs_test_rate-coded&quot;</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Simple rate-coded model to test dbs&quot;</span><span class="p">,</span>
+                <span class="n">do_compile</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Neuron model not recognized&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">create_model</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">neuron_model</span><span class="p">:</span> <span class="n">Neuron</span><span class="p">,</span>
+        <span class="n">pop_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="n">base_current_list</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="n">base_current_noise</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">prob_list</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">],</span>
+        <span class="n">weight_list</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create dbs test model</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            neuron_model (Neuron):</span>
+<span class="sd">                Neuron model to use for the dbs test model</span>
+<span class="sd">            pop_size (int, optional):</span>
+<span class="sd">                Number of neurons in each population. Default: 10</span>
+<span class="sd">            base_current_list (list, optional):</span>
+<span class="sd">                List of base currents for the four populations.</span>
+<span class="sd">                Default: [0, 0, 0, 0, 0, 0]</span>
+<span class="sd">            base_current_noise (float, optional):</span>
+<span class="sd">                Standard deviation of the base current noise. Default: 0</span>
+<span class="sd">            prob_list (list, optional):</span>
+<span class="sd">                List of connection probabilities for the inhibitory and excitatory path.</span>
+<span class="sd">                Default: [0.5, 0.5, 0.5, 0.5]</span>
+<span class="sd">            weight_list (list, optional):</span>
+<span class="sd">                List of connection weights for the inhibitory and excitatory path.</span>
+<span class="sd">                Default: [0.1, 0.1, 0.1, 0.1]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">### create populations</span>
+        <span class="n">pop1</span> <span class="o">=</span> <span class="n">Population</span><span class="p">(</span><span class="n">pop_size</span><span class="p">,</span> <span class="n">neuron_model</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;pop1_</span><span class="si">{</span><span class="n">neuron_model</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">pop2</span> <span class="o">=</span> <span class="n">Population</span><span class="p">(</span><span class="n">pop_size</span><span class="p">,</span> <span class="n">neuron_model</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;pop2_</span><span class="si">{</span><span class="n">neuron_model</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">pop3</span> <span class="o">=</span> <span class="n">Population</span><span class="p">(</span><span class="n">pop_size</span><span class="p">,</span> <span class="n">neuron_model</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;pop3_</span><span class="si">{</span><span class="n">neuron_model</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">pop4</span> <span class="o">=</span> <span class="n">Population</span><span class="p">(</span><span class="n">pop_size</span><span class="p">,</span> <span class="n">neuron_model</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;pop4_</span><span class="si">{</span><span class="n">neuron_model</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">pop5</span> <span class="o">=</span> <span class="n">Population</span><span class="p">(</span><span class="n">pop_size</span><span class="p">,</span> <span class="n">neuron_model</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;pop5_</span><span class="si">{</span><span class="n">neuron_model</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">pop6</span> <span class="o">=</span> <span class="n">Population</span><span class="p">(</span><span class="n">pop_size</span><span class="p">,</span> <span class="n">neuron_model</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;pop6_</span><span class="si">{</span><span class="n">neuron_model</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1">### create projections of inhhibitory path</span>
+        <span class="n">proj_1_3</span> <span class="o">=</span> <span class="n">Projection</span><span class="p">(</span>
+            <span class="n">pre</span><span class="o">=</span><span class="n">pop1</span><span class="p">,</span>
+            <span class="n">post</span><span class="o">=</span><span class="n">pop3</span><span class="p">,</span>
+            <span class="n">target</span><span class="o">=</span><span class="s2">&quot;gaba&quot;</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;proj_1_3_</span><span class="si">{</span><span class="n">neuron_model</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">synapse</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_synapse</span><span class="p">(</span><span class="n">neuron_model</span><span class="o">.</span><span class="n">name</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">proj_1_3</span><span class="o">.</span><span class="n">connect_fixed_probability</span><span class="p">(</span>
+            <span class="n">probability</span><span class="o">=</span><span class="n">prob_list</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">weights</span><span class="o">=</span><span class="n">weight_list</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="p">)</span>
+        <span class="n">proj_3_4</span> <span class="o">=</span> <span class="n">Projection</span><span class="p">(</span>
+            <span class="n">pre</span><span class="o">=</span><span class="n">pop3</span><span class="p">,</span>
+            <span class="n">post</span><span class="o">=</span><span class="n">pop4</span><span class="p">,</span>
+            <span class="n">target</span><span class="o">=</span><span class="s2">&quot;gaba&quot;</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;proj_3_4_</span><span class="si">{</span><span class="n">neuron_model</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">synapse</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_synapse</span><span class="p">(</span><span class="n">neuron_model</span><span class="o">.</span><span class="n">name</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">proj_3_4</span><span class="o">.</span><span class="n">connect_fixed_probability</span><span class="p">(</span>
+            <span class="n">probability</span><span class="o">=</span><span class="n">prob_list</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">weights</span><span class="o">=</span><span class="n">weight_list</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="p">)</span>
+        <span class="c1">### create projections of excitatory path</span>
+        <span class="n">proj_2_4</span> <span class="o">=</span> <span class="n">Projection</span><span class="p">(</span>
+            <span class="n">pre</span><span class="o">=</span><span class="n">pop2</span><span class="p">,</span>
+            <span class="n">post</span><span class="o">=</span><span class="n">pop4</span><span class="p">,</span>
+            <span class="n">target</span><span class="o">=</span><span class="s2">&quot;ampa&quot;</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;proj_2_4_</span><span class="si">{</span><span class="n">neuron_model</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">synapse</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_synapse</span><span class="p">(</span><span class="n">neuron_model</span><span class="o">.</span><span class="n">name</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">proj_2_4</span><span class="o">.</span><span class="n">connect_fixed_probability</span><span class="p">(</span>
+            <span class="n">probability</span><span class="o">=</span><span class="n">prob_list</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+            <span class="n">weights</span><span class="o">=</span><span class="n">weight_list</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+        <span class="p">)</span>
+        <span class="c1">### create projection of passing fibres</span>
+        <span class="n">proj_5_6</span> <span class="o">=</span> <span class="n">Projection</span><span class="p">(</span>
+            <span class="n">pre</span><span class="o">=</span><span class="n">pop5</span><span class="p">,</span>
+            <span class="n">post</span><span class="o">=</span><span class="n">pop6</span><span class="p">,</span>
+            <span class="n">target</span><span class="o">=</span><span class="s2">&quot;ampa&quot;</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;proj_5_6_</span><span class="si">{</span><span class="n">neuron_model</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">synapse</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_synapse</span><span class="p">(</span><span class="n">neuron_model</span><span class="o">.</span><span class="n">name</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">proj_5_6</span><span class="o">.</span><span class="n">connect_fixed_probability</span><span class="p">(</span>
+            <span class="n">probability</span><span class="o">=</span><span class="n">prob_list</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span>
+            <span class="n">weights</span><span class="o">=</span><span class="n">weight_list</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="c1">### set baseline activity parameters</span>
+        <span class="n">pop1</span><span class="o">.</span><span class="n">base_mean</span> <span class="o">=</span> <span class="n">base_current_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">pop2</span><span class="o">.</span><span class="n">base_mean</span> <span class="o">=</span> <span class="n">base_current_list</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">pop3</span><span class="o">.</span><span class="n">base_mean</span> <span class="o">=</span> <span class="n">base_current_list</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">pop4</span><span class="o">.</span><span class="n">base_mean</span> <span class="o">=</span> <span class="n">base_current_list</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+        <span class="n">pop5</span><span class="o">.</span><span class="n">base_mean</span> <span class="o">=</span> <span class="n">base_current_list</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>
+        <span class="n">pop6</span><span class="o">.</span><span class="n">base_mean</span> <span class="o">=</span> <span class="n">base_current_list</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span>
+        <span class="n">pop1</span><span class="o">.</span><span class="n">base_noise</span> <span class="o">=</span> <span class="n">base_current_noise</span>
+        <span class="n">pop2</span><span class="o">.</span><span class="n">base_noise</span> <span class="o">=</span> <span class="n">base_current_noise</span>
+        <span class="n">pop3</span><span class="o">.</span><span class="n">base_noise</span> <span class="o">=</span> <span class="n">base_current_noise</span>
+        <span class="n">pop4</span><span class="o">.</span><span class="n">base_noise</span> <span class="o">=</span> <span class="n">base_current_noise</span>
+        <span class="n">pop5</span><span class="o">.</span><span class="n">base_noise</span> <span class="o">=</span> <span class="n">base_current_noise</span>
+        <span class="n">pop6</span><span class="o">.</span><span class="n">base_noise</span> <span class="o">=</span> <span class="n">base_current_noise</span>
+
+    <span class="k">def</span> <span class="nf">get_neuron_model_spiking</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get neuron model with spiking dynamics</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">            neuron_model (Neuron):</span>
+<span class="sd">                Neuron model with spiking dynamics</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">neuron_model</span> <span class="o">=</span> <span class="n">Neuron</span><span class="p">(</span>
+            <span class="n">parameters</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                C      = 100     : population # pF</span>
+<span class="s2">                k      = 0.7     : population # pS * mV**-1</span>
+<span class="s2">                v_r    = -60     : population # mV</span>
+<span class="s2">                v_t    = -40     : population # mV</span>
+<span class="s2">                a      = 0.03     : population # ms**-1</span>
+<span class="s2">                b      = -2     : population # nS</span>
+<span class="s2">                c      = -50     : population # mV</span>
+<span class="s2">                d      = 100     : population # pA</span>
+<span class="s2">                v_peak = 35     : population # mV</span>
+<span class="s2">                I_app  = 0     # pA</span>
+<span class="s2">                tau_ampa = 10  : population # ms</span>
+<span class="s2">                tau_gaba = 10  : population # ms</span>
+<span class="s2">                E_ampa   = 0   : population # mV</span>
+<span class="s2">                E_gaba   = -90 : population # mV</span>
+<span class="s2">                base_mean       = 0 # pA</span>
+<span class="s2">                base_noise      = 0 # pA</span>
+<span class="s2">                rate_base_noise = 100 # Hz</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="n">equations</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                ### noisy base input</span>
+<span class="s2">                offset_base = ite(Uniform(0.0, 1.0) * 1000.0 / dt &gt; rate_base_noise, offset_base, Normal(0., 1.) * base_noise)</span>
+<span class="s2">                I_base      = base_mean + offset_base + my_important_const</span>
+<span class="s2">                ### input conductances</span>
+<span class="s2">                dg_ampa/dt = -g_ampa/tau_ampa</span>
+<span class="s2">                dg_gaba/dt = -g_gaba/tau_gaba</span>
+<span class="s2">                ### input currents</span>
+<span class="s2">                I = I_app - g_ampa*neg(v - E_ampa) - g_gaba*pos(v - E_gaba) + I_base</span>
+<span class="s2">                ### membrane potential and recovery variable</span>
+<span class="s2">                C * dv/dt  = k*(v - v_r)*(v - v_t) - u + I</span>
+<span class="s2">                du/dt      = a*(b*(v - v_r) - u)</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="n">spike</span><span class="o">=</span><span class="s2">&quot;v &gt;= v_peak&quot;</span><span class="p">,</span>
+            <span class="n">reset</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                v = c</span>
+<span class="s2">                u = u + d</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;spiking&quot;</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                Simple neuron model equations from Izhikevich (2007) using regular-spiking parameters</span>
+<span class="s2">                with conductance-based AMPA and GABA synapses/currents.</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">neuron_model</span>
+
+    <span class="k">def</span> <span class="nf">get_neuron_model_rate_coded</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get neuron model with rate-coded dynamics</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            neuron_model (Neuron):</span>
+<span class="sd">                Neuron model with rate-coded dynamics</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">neuron_model</span> <span class="o">=</span> <span class="n">Neuron</span><span class="p">(</span>
+            <span class="n">parameters</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                tau = 10.0 : population</span>
+<span class="s2">                sigma = 0.6 : population</span>
+<span class="s2">                I_0 = 0.2 : population</span>
+<span class="s2">                I_app = 0.</span>
+<span class="s2">                base_mean       = 0</span>
+<span class="s2">                base_noise      = 0</span>
+<span class="s2">                rate_base_noise = 100 # Hz</span>
+<span class="s2">                # = (sigma*I_0 + I_0)/(sigma - sigma*I_0) : population</span>
+<span class="s2">                c = (0.6*0.2 + 0.2)/(0.6 - 0.6*0.2) : population</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="n">equations</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                ### noisy base input</span>
+<span class="s2">                offset_base = ite(Uniform(0.0, 1.0) * 1000.0 / dt &gt; rate_base_noise, offset_base, Normal(0., 1.) * base_noise)</span>
+<span class="s2">                I_base      = base_mean + offset_base + my_important_const</span>
+<span class="s2">                ### input currents</span>
+<span class="s2">                I = sum(ampa) - sum(gaba) + I_base + I_app</span>
+<span class="s2">                ### membrane potential</span>
+<span class="s2">                tau * dmp/dt = -mp + I</span>
+<span class="s2">                mp_r = mp: min=-0.99*sigma</span>
+<span class="s2">                ### activation function</span>
+<span class="s2">                r = activation(mp_r,sigma,c) : max=1., min=0.</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;rate-coded&quot;</span><span class="p">,</span>
+            <span class="n">functions</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                activation(x,sigma,c) = ((sigma*x + x)/(sigma + x)) * (1 + c) - c</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Rate-coded neuron with excitatory (ampa) and inhibitory (gaba) inputs plus baseline and noise.&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">neuron_model</span>
+
+    <span class="k">def</span> <span class="nf">get_synapse</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a synapse.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            mode (str):</span>
+<span class="sd">                Mode of the dbs test model, either &quot;spiking&quot; or &quot;rate-coded&quot;</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            synapse (DefaultRateCodedSynapse or DefaultSpikingSynapse):</span>
+<span class="sd">                Synapse object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;rate-coded&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">DefaultRateCodedSynapse</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;spiking&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">DefaultSpikingSynapse</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Neuron model not recognized&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">do_simulation</span><span class="p">(</span>
+    <span class="n">mon</span><span class="p">:</span> <span class="n">CompNeuroMonitors</span><span class="p">,</span>
+    <span class="n">dbs</span><span class="p">:</span> <span class="n">DBSstimulator</span><span class="p">,</span>
+    <span class="n">dbs_val_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">],</span>
+    <span class="n">dbs_key_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Do the simulation</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        mon (CompNeuroMonitors):</span>
+<span class="sd">            CompNeuroMonitors object</span>
+<span class="sd">        dbs (DBSstimulator):</span>
+<span class="sd">            DBS stimulator object</span>
+<span class="sd">        dbs_val_list (list[list]):</span>
+<span class="sd">            List of lists with DBS stimulation values used by the dbs.on() function</span>
+<span class="sd">        dbs_key_list (list[str]):</span>
+<span class="sd">            List of DBS stimulation keys used by the dbs.on() function</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        recordings (list):</span>
+<span class="sd">            List of recordings from the monitors</span>
+<span class="sd">        recording_times (RecordingTimes):</span>
+<span class="sd">            Recording times object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">### run initial ramp up simulation</span>
+    <span class="n">simulate</span><span class="p">(</span><span class="mf">2000.0</span><span class="p">)</span>
+
+    <span class="c1">### start monitors</span>
+    <span class="n">mon</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+    <span class="c1">### loop over trials</span>
+    <span class="k">for</span> <span class="n">trial</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dbs_val_list</span><span class="p">)):</span>
+        <span class="c1">### 1000 ms with DBS off</span>
+        <span class="n">simulate</span><span class="p">(</span><span class="mf">1000.0</span><span class="p">)</span>
+        <span class="c1">### 500 ms with DBS on</span>
+        <span class="n">dbs</span><span class="o">.</span><span class="n">on</span><span class="p">(</span>
+            <span class="o">**</span><span class="p">{</span>
+                <span class="n">dbs_key_list</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span> <span class="n">dbs_val_list</span><span class="p">[</span><span class="n">trial</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dbs_key_list</span><span class="p">))</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+        <span class="n">simulate</span><span class="p">(</span><span class="mf">500.0</span><span class="p">)</span>
+        <span class="c1">### 1000 ms with DBS off</span>
+        <span class="n">dbs</span><span class="o">.</span><span class="n">off</span><span class="p">()</span>
+        <span class="n">simulate</span><span class="p">(</span><span class="mf">1000.0</span><span class="p">)</span>
+        <span class="n">mon</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="c1">### get data from monitors</span>
+    <span class="n">recordings</span> <span class="o">=</span> <span class="n">mon</span><span class="o">.</span><span class="n">get_recordings</span><span class="p">()</span>
+    <span class="n">recording_times</span> <span class="o">=</span> <span class="n">mon</span><span class="o">.</span><span class="n">get_recording_times</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">recordings</span><span class="p">,</span> <span class="n">recording_times</span>
+
+
+<span class="k">def</span> <span class="nf">check_dbs_effects_spiking</span><span class="p">(</span>
+    <span class="n">dbs_val_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">],</span>
+    <span class="n">recordings</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+    <span class="n">model</span><span class="p">:</span> <span class="n">CompNeuroModel</span><span class="p">,</span>
+    <span class="n">recording_times</span><span class="p">:</span> <span class="n">RecordingTimes</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Check if the dbs effects are as expecteds.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        dbs_val_list (list[list]):</span>
+<span class="sd">            List of lists with DBS stimulation values used by the dbs.on() function</span>
+<span class="sd">        recordings (list):</span>
+<span class="sd">            List of recordings from the monitors</span>
+<span class="sd">        model (CompNeuroModel):</span>
+<span class="sd">            Model used for the simulation</span>
+<span class="sd">        recording_times (RecordingTimes):</span>
+<span class="sd">            Recording times object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">### effects_on_activity_list contains the expected effects of dbs on the activity of the populations for each trial</span>
+    <span class="c1">### 0 means no effect, 1 means increase, -1 means decrease</span>
+    <span class="n">effects_on_activity</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="c1">### check if the expected effects are present in the data</span>
+    <span class="n">effect_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">high_effect_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">low_effect_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">trial_idx</span><span class="p">,</span> <span class="n">trial</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dbs_val_list</span><span class="p">))):</span>
+        <span class="n">effect_list</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
+        <span class="k">for</span> <span class="n">pop_name_idx</span><span class="p">,</span> <span class="n">pop_name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">):</span>
+            <span class="n">v_arr</span> <span class="o">=</span> <span class="n">recordings</span><span class="p">[</span><span class="n">trial</span><span class="p">][</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pop_name</span><span class="si">}</span><span class="s2">;v&quot;</span><span class="p">]</span>
+            <span class="c1">### mean over neurons</span>
+            <span class="n">v_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">v_arr</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="c1">### mean of first period</span>
+            <span class="n">v_mean_1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span>
+                <span class="n">v_arr</span><span class="p">[</span>
+                    <span class="n">recording_times</span><span class="o">.</span><span class="n">idx_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mi">500</span> <span class="o">/</span> <span class="n">dt</span><span class="p">()))</span> <span class="p">:</span> <span class="n">recording_times</span><span class="o">.</span><span class="n">idx_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mi">1000</span> <span class="o">/</span> <span class="n">dt</span><span class="p">()))</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">v_std_1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span>
+                <span class="n">v_arr</span><span class="p">[</span>
+                    <span class="n">recording_times</span><span class="o">.</span><span class="n">idx_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mi">500</span> <span class="o">/</span> <span class="n">dt</span><span class="p">()))</span> <span class="p">:</span> <span class="n">recording_times</span><span class="o">.</span><span class="n">idx_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mi">1000</span> <span class="o">/</span> <span class="n">dt</span><span class="p">()))</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+            <span class="c1">### mean of second period</span>
+            <span class="n">v_mean_2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span>
+                <span class="n">v_arr</span><span class="p">[</span>
+                    <span class="n">recording_times</span><span class="o">.</span><span class="n">idx_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mi">1000</span> <span class="o">/</span> <span class="n">dt</span><span class="p">()))</span> <span class="p">:</span> <span class="n">recording_times</span><span class="o">.</span><span class="n">idx_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mi">1500</span> <span class="o">/</span> <span class="n">dt</span><span class="p">()))</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+            <span class="c1">### mean of third period</span>
+            <span class="n">v_mean_3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span>
+                <span class="n">v_arr</span><span class="p">[</span>
+                    <span class="n">recording_times</span><span class="o">.</span><span class="n">idx_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mi">1500</span> <span class="o">/</span> <span class="n">dt</span><span class="p">()))</span> <span class="p">:</span> <span class="n">recording_times</span><span class="o">.</span><span class="n">idx_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mi">2000</span> <span class="o">/</span> <span class="n">dt</span><span class="p">()))</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">v_std_3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span>
+                <span class="n">v_arr</span><span class="p">[</span>
+                    <span class="n">recording_times</span><span class="o">.</span><span class="n">idx_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mi">1500</span> <span class="o">/</span> <span class="n">dt</span><span class="p">()))</span> <span class="p">:</span> <span class="n">recording_times</span><span class="o">.</span><span class="n">idx_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mi">2000</span> <span class="o">/</span> <span class="n">dt</span><span class="p">()))</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+            <span class="c1">### get meand depending on dbs</span>
+            <span class="n">mean_on</span> <span class="o">=</span> <span class="n">v_mean_2</span>
+            <span class="n">mean_off</span> <span class="o">=</span> <span class="p">(</span><span class="n">v_mean_1</span> <span class="o">+</span> <span class="n">v_mean_3</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+            <span class="n">std_off</span> <span class="o">=</span> <span class="p">(</span><span class="n">v_std_1</span> <span class="o">+</span> <span class="n">v_std_3</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+            <span class="c1">### calculate effect</span>
+            <span class="n">effect</span> <span class="o">=</span> <span class="p">(</span><span class="n">mean_on</span> <span class="o">-</span> <span class="n">mean_off</span><span class="p">)</span> <span class="o">/</span> <span class="n">std_off</span>
+            <span class="k">if</span> <span class="n">effect</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">high_effect_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">effect</span><span class="p">))</span>
+                <span class="n">effect</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">effect</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="n">high_effect_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">effect</span><span class="p">))</span>
+                <span class="n">effect</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">low_effect_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">effect</span><span class="p">))</span>
+                <span class="n">effect</span> <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="n">effect_list</span><span class="p">[</span><span class="n">trial_idx</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">effect</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">effects_on_activity</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">effect_list</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span> <span class="s2">&quot;Effects on activity not as expected for spiking model&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">check_dbs_effects_rate_coded</span><span class="p">(</span>
+    <span class="n">dbs_val_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">],</span>
+    <span class="n">recordings</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+    <span class="n">model</span><span class="p">:</span> <span class="n">CompNeuroModel</span><span class="p">,</span>
+    <span class="n">recording_times</span><span class="p">:</span> <span class="n">RecordingTimes</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Check if the dbs effects are as expected.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        dbs_val_list (list[list]):</span>
+<span class="sd">            List of lists with DBS stimulation values used by the dbs.on() function</span>
+<span class="sd">        recordings (list):</span>
+<span class="sd">            List of recordings from the monitors</span>
+<span class="sd">        model (CompNeuroModel):</span>
+<span class="sd">            Model used for the simulation</span>
+<span class="sd">        recording_times (RecordingTimes):</span>
+<span class="sd">            Recording times object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">### effects_on_activity_list contains the expected effects of dbs on the activity of the populations for each trial</span>
+    <span class="c1">### 0 means no effect, 1 means increase, -1 means decrease</span>
+    <span class="n">effects_on_activity</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="c1">### check if the expected effects are present in the data</span>
+    <span class="n">effect_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">high_effect_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">low_effect_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">trial_idx</span><span class="p">,</span> <span class="n">trial</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dbs_val_list</span><span class="p">))):</span>
+        <span class="n">effect_list</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
+        <span class="k">for</span> <span class="n">pop_name_idx</span><span class="p">,</span> <span class="n">pop_name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">):</span>
+            <span class="n">v_arr</span> <span class="o">=</span> <span class="n">recordings</span><span class="p">[</span><span class="n">trial</span><span class="p">][</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pop_name</span><span class="si">}</span><span class="s2">;r&quot;</span><span class="p">]</span>
+            <span class="c1">### mean over neurons</span>
+            <span class="n">v_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">v_arr</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="c1">### mean of first period</span>
+            <span class="n">v_mean_1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span>
+                <span class="n">v_arr</span><span class="p">[</span>
+                    <span class="n">recording_times</span><span class="o">.</span><span class="n">idx_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mi">500</span> <span class="o">/</span> <span class="n">dt</span><span class="p">()))</span> <span class="p">:</span> <span class="n">recording_times</span><span class="o">.</span><span class="n">idx_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mi">1000</span> <span class="o">/</span> <span class="n">dt</span><span class="p">()))</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">v_std_1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span>
+                <span class="n">v_arr</span><span class="p">[</span>
+                    <span class="n">recording_times</span><span class="o">.</span><span class="n">idx_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mi">500</span> <span class="o">/</span> <span class="n">dt</span><span class="p">()))</span> <span class="p">:</span> <span class="n">recording_times</span><span class="o">.</span><span class="n">idx_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mi">1000</span> <span class="o">/</span> <span class="n">dt</span><span class="p">()))</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+            <span class="c1">### mean of second period</span>
+            <span class="n">v_mean_2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span>
+                <span class="n">v_arr</span><span class="p">[</span>
+                    <span class="n">recording_times</span><span class="o">.</span><span class="n">idx_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mi">1000</span> <span class="o">/</span> <span class="n">dt</span><span class="p">()))</span> <span class="p">:</span> <span class="n">recording_times</span><span class="o">.</span><span class="n">idx_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mi">1500</span> <span class="o">/</span> <span class="n">dt</span><span class="p">()))</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+            <span class="c1">### mean of third period</span>
+            <span class="n">v_mean_3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span>
+                <span class="n">v_arr</span><span class="p">[</span>
+                    <span class="n">recording_times</span><span class="o">.</span><span class="n">idx_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mi">1500</span> <span class="o">/</span> <span class="n">dt</span><span class="p">()))</span> <span class="p">:</span> <span class="n">recording_times</span><span class="o">.</span><span class="n">idx_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mi">2000</span> <span class="o">/</span> <span class="n">dt</span><span class="p">()))</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">v_std_3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span>
+                <span class="n">v_arr</span><span class="p">[</span>
+                    <span class="n">recording_times</span><span class="o">.</span><span class="n">idx_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mi">1500</span> <span class="o">/</span> <span class="n">dt</span><span class="p">()))</span> <span class="p">:</span> <span class="n">recording_times</span><span class="o">.</span><span class="n">idx_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mi">2000</span> <span class="o">/</span> <span class="n">dt</span><span class="p">()))</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+            <span class="c1">### get meand depending on dbs</span>
+            <span class="n">mean_on</span> <span class="o">=</span> <span class="n">v_mean_2</span>
+            <span class="n">mean_off</span> <span class="o">=</span> <span class="p">(</span><span class="n">v_mean_1</span> <span class="o">+</span> <span class="n">v_mean_3</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+            <span class="n">std_off</span> <span class="o">=</span> <span class="p">(</span><span class="n">v_std_1</span> <span class="o">+</span> <span class="n">v_std_3</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+            <span class="c1">### calculate effect</span>
+            <span class="n">effect</span> <span class="o">=</span> <span class="p">(</span><span class="n">mean_on</span> <span class="o">-</span> <span class="n">mean_off</span><span class="p">)</span> <span class="o">/</span> <span class="n">std_off</span>
+            <span class="k">if</span> <span class="n">effect</span> <span class="o">&gt;</span> <span class="mf">2.5</span><span class="p">:</span>
+                <span class="n">high_effect_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">effect</span><span class="p">))</span>
+                <span class="n">effect</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">effect</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mf">2.5</span><span class="p">:</span>
+                <span class="n">high_effect_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">effect</span><span class="p">))</span>
+                <span class="n">effect</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">low_effect_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">effect</span><span class="p">))</span>
+                <span class="n">effect</span> <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="n">effect_list</span><span class="p">[</span><span class="n">trial_idx</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">effect</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">effects_on_activity</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">effect_list</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span> <span class="s2">&quot;Effects on activity not as expected for rate-coded model&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">plot_spiking</span><span class="p">(</span>
+    <span class="n">dbs_val_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">],</span>
+    <span class="n">recordings</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+    <span class="n">recording_times</span><span class="p">:</span> <span class="n">RecordingTimes</span><span class="p">,</span>
+    <span class="n">model</span><span class="p">:</span> <span class="n">CompNeuroModel</span><span class="p">,</span>
+    <span class="n">plotting</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plot spiking data.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        dbs_val_list (list[list]):</span>
+<span class="sd">            List of lists with DBS stimulation values used by the dbs.on() function</span>
+<span class="sd">        recordings (list):</span>
+<span class="sd">            List of recordings from the monitors</span>
+<span class="sd">        recording_times (RecordingTimes):</span>
+<span class="sd">            Recording times object</span>
+<span class="sd">        model (CompNeuroModel):</span>
+<span class="sd">            Model used for the simulation</span>
+<span class="sd">        plotting (bool):</span>
+<span class="sd">            If True, plots are created</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">plotting</span><span class="p">:</span>
+        <span class="k">return</span>
+
+    <span class="c1">### plot data</span>
+    <span class="k">for</span> <span class="n">trial</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dbs_val_list</span><span class="p">)):</span>
+        <span class="n">PlotRecordings</span><span class="p">(</span>
+            <span class="n">figname</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;DBS_spiking_figure/membrane_trial_</span><span class="si">{</span><span class="n">trial</span><span class="si">}</span><span class="s2">.png&quot;</span><span class="p">,</span>
+            <span class="n">recordings</span><span class="o">=</span><span class="n">recordings</span><span class="p">,</span>
+            <span class="n">recording_times</span><span class="o">=</span><span class="n">recording_times</span><span class="p">,</span>
+            <span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">,</span>
+            <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+            <span class="n">plan</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;position&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="s2">&quot;compartment&quot;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">,</span>
+                <span class="s2">&quot;variable&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;v&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">),</span>
+                <span class="s2">&quot;format&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;matrix&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">),</span>
+            <span class="p">},</span>
+            <span class="n">time_lim</span><span class="o">=</span><span class="p">(</span>
+                <span class="n">recording_times</span><span class="o">.</span><span class="n">time_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">500</span><span class="p">,</span>
+                <span class="n">recording_times</span><span class="o">.</span><span class="n">time_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">500</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">PlotRecordings</span><span class="p">(</span>
+            <span class="n">figname</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;DBS_spiking_figure/axon_spikes_</span><span class="si">{</span><span class="n">trial</span><span class="si">}</span><span class="s2">.png&quot;</span><span class="p">,</span>
+            <span class="n">recordings</span><span class="o">=</span><span class="n">recordings</span><span class="p">,</span>
+            <span class="n">recording_times</span><span class="o">=</span><span class="n">recording_times</span><span class="p">,</span>
+            <span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">,</span>
+            <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+            <span class="n">plan</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;position&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="s2">&quot;compartment&quot;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">,</span>
+                <span class="s2">&quot;variable&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;axon_spike&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">),</span>
+                <span class="s2">&quot;format&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;raster&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">),</span>
+            <span class="p">},</span>
+            <span class="n">time_lim</span><span class="o">=</span><span class="p">(</span>
+                <span class="n">recording_times</span><span class="o">.</span><span class="n">time_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1000</span><span class="p">,</span>
+                <span class="n">recording_times</span><span class="o">.</span><span class="n">time_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1030</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">plot_rate_coded</span><span class="p">(</span>
+    <span class="n">dbs_val_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">],</span>
+    <span class="n">recordings</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+    <span class="n">recording_times</span><span class="p">:</span> <span class="n">RecordingTimes</span><span class="p">,</span>
+    <span class="n">model</span><span class="p">:</span> <span class="n">CompNeuroModel</span><span class="p">,</span>
+    <span class="n">plotting</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plot rate-coded data.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        dbs_val_list (list[list]):</span>
+<span class="sd">            List of lists with DBS stimulation values used by the dbs.on() function</span>
+<span class="sd">        recordings (list):</span>
+<span class="sd">            List of recordings from the monitors</span>
+<span class="sd">        recording_times (RecordingTimes):</span>
+<span class="sd">            Recording times object</span>
+<span class="sd">        model (CompNeuroModel):</span>
+<span class="sd">            Model used for the simulation</span>
+<span class="sd">        plotting (bool):</span>
+<span class="sd">            If True, plots are created</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">plotting</span><span class="p">:</span>
+        <span class="k">return</span>
+
+    <span class="c1">### plot data</span>
+    <span class="k">for</span> <span class="n">trial</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dbs_val_list</span><span class="p">)):</span>
+        <span class="n">PlotRecordings</span><span class="p">(</span>
+            <span class="n">figname</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;DBS_rate_figure/activity_trial_</span><span class="si">{</span><span class="n">trial</span><span class="si">}</span><span class="s2">.png&quot;</span><span class="p">,</span>
+            <span class="n">recordings</span><span class="o">=</span><span class="n">recordings</span><span class="p">,</span>
+            <span class="n">recording_times</span><span class="o">=</span><span class="n">recording_times</span><span class="p">,</span>
+            <span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">,</span>
+            <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+            <span class="n">plan</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;position&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="s2">&quot;compartment&quot;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">,</span>
+                <span class="s2">&quot;variable&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;r&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">),</span>
+                <span class="s2">&quot;format&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;matrix&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">),</span>
+            <span class="p">},</span>
+            <span class="n">time_lim</span><span class="o">=</span><span class="p">(</span>
+                <span class="n">recording_times</span><span class="o">.</span><span class="n">time_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">500</span><span class="p">,</span>
+                <span class="n">recording_times</span><span class="o">.</span><span class="n">time_lims</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">trial</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">500</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">plotting</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Main function</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        plotting (bool, optional):</span>
+<span class="sd">            If True, plots are created. Default: False</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">### define simulations</span>
+    <span class="c1">### i.e. the parameters for the dbs stimulator on function</span>
+    <span class="c1">### do simulate calls repeatedly dbs.on() and dbs.off() with different parameters</span>
+    <span class="c1">### specified in dbs_val_list</span>
+    <span class="n">dbs_key_list</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">&quot;population_proportion&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;dbs_depolarization&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;orthodromic&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;antidromic&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;efferents&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;afferents&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;passing_fibres&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;passing_fibres_strength&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;axon_spikes_per_pulse&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;axon_rate_amp&quot;</span><span class="p">,</span>
+    <span class="p">]</span>
+    <span class="n">dbs_val_list</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="c1"># 0 - nothing</span>
+        <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="c1"># 1 - orthodromic efferents</span>
+        <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="c1"># 2 - orthodromic afferents</span>
+        <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="c1"># 3 - orthodromic efferents and afferents</span>
+        <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="c1"># 4 - orthodromic passing fibres</span>
+        <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="c1"># 5 - depolarization</span>
+        <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="c1"># 6 - antidromic efferents</span>
+        <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="c1"># 7 - antidromic afferents</span>
+        <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="c1"># 8 - antidromic efferents and afferents</span>
+        <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="c1"># 9 - antidromic passing fibres</span>
+        <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="c1"># 10 - antidromic passing fibres lower strength</span>
+        <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="c1"># 11 - all</span>
+        <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="c1"># 12 - all without axon spikes, should not affect rate-coded model</span>
+        <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="c1"># 13 - all without axon_rate_amp, should not affect spiking model</span>
+        <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+    <span class="p">]</span>
+
+    <span class="n">spiking_model</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">rate_coded_model</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">if</span> <span class="n">spiking_model</span><span class="p">:</span>
+        <span class="c1">### create the spiking network</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">dbs_test_model_class</span><span class="p">(</span><span class="s2">&quot;spiking&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">model</span>
+        <span class="n">dbs</span> <span class="o">=</span> <span class="n">DBSstimulator</span><span class="p">(</span>
+            <span class="n">stimulated_population</span><span class="o">=</span><span class="n">get_population</span><span class="p">(</span><span class="s2">&quot;pop3_spiking&quot;</span><span class="p">),</span>
+            <span class="n">passing_fibres_list</span><span class="o">=</span><span class="p">[</span><span class="n">get_projection</span><span class="p">(</span><span class="s2">&quot;proj_5_6_spiking&quot;</span><span class="p">)],</span>
+            <span class="n">passing_fibres_strength</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+            <span class="n">auto_implement</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">dbs</span><span class="o">.</span><span class="n">model</span>
+
+        <span class="c1">### compile model</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">compile_folder_name</span><span class="o">=</span><span class="s2">&quot;DBS_test_spiking&quot;</span><span class="p">)</span>
+
+        <span class="c1">### create monitors</span>
+        <span class="n">mon_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">pop_name</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">:</span>
+            <span class="n">mon_dict</span><span class="p">[</span><span class="n">pop_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="s2">&quot;spike&quot;</span><span class="p">,</span> <span class="s2">&quot;axon_spike&quot;</span><span class="p">]</span>
+        <span class="n">mon</span> <span class="o">=</span> <span class="n">CompNeuroMonitors</span><span class="p">(</span><span class="n">mon_dict</span><span class="p">)</span>
+
+        <span class="c1">### run simulation and get data from monitors</span>
+        <span class="n">recordings</span><span class="p">,</span> <span class="n">recording_times</span> <span class="o">=</span> <span class="n">do_simulation</span><span class="p">(</span>
+            <span class="n">mon</span><span class="p">,</span> <span class="n">dbs</span><span class="p">,</span> <span class="n">dbs_val_list</span><span class="p">,</span> <span class="n">dbs_key_list</span>
+        <span class="p">)</span>
+
+        <span class="c1">### plot data</span>
+        <span class="n">plot_spiking</span><span class="p">(</span>
+            <span class="n">dbs_val_list</span><span class="o">=</span><span class="n">dbs_val_list</span><span class="p">,</span>
+            <span class="n">recordings</span><span class="o">=</span><span class="n">recordings</span><span class="p">,</span>
+            <span class="n">recording_times</span><span class="o">=</span><span class="n">recording_times</span><span class="p">,</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+            <span class="n">plotting</span><span class="o">=</span><span class="n">plotting</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1">### check dbs effects</span>
+        <span class="n">check_dbs_effects_spiking</span><span class="p">(</span>
+            <span class="n">dbs_val_list</span><span class="p">,</span>
+            <span class="n">recordings</span><span class="p">,</span>
+            <span class="n">model</span><span class="p">,</span>
+            <span class="n">recording_times</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">rate_coded_model</span><span class="p">:</span>
+        <span class="c1">### create the rate-coded network</span>
+        <span class="n">cnp_clear</span><span class="p">()</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">dbs_test_model_class</span><span class="p">(</span><span class="s2">&quot;rate-coded&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">model</span>
+        <span class="n">dbs</span> <span class="o">=</span> <span class="n">DBSstimulator</span><span class="p">(</span>
+            <span class="n">stimulated_population</span><span class="o">=</span><span class="n">get_population</span><span class="p">(</span><span class="s2">&quot;pop3_rate-coded&quot;</span><span class="p">),</span>
+            <span class="n">passing_fibres_list</span><span class="o">=</span><span class="p">[</span><span class="n">get_projection</span><span class="p">(</span><span class="s2">&quot;proj_5_6_rate-coded&quot;</span><span class="p">)],</span>
+            <span class="n">passing_fibres_strength</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+            <span class="n">auto_implement</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">dbs</span><span class="o">.</span><span class="n">model</span>
+
+        <span class="c1">### compile model</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">compile_folder_name</span><span class="o">=</span><span class="s2">&quot;DBS_test_rate_coded&quot;</span><span class="p">)</span>
+
+        <span class="c1">### create monitors</span>
+        <span class="n">mon_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">pop_name</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">:</span>
+            <span class="n">mon_dict</span><span class="p">[</span><span class="n">pop_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;r&quot;</span><span class="p">]</span>
+        <span class="n">mon</span> <span class="o">=</span> <span class="n">CompNeuroMonitors</span><span class="p">(</span><span class="n">mon_dict</span><span class="p">)</span>
+
+        <span class="c1">### run simulation and get data from monitors</span>
+        <span class="n">recordings</span><span class="p">,</span> <span class="n">recording_times</span> <span class="o">=</span> <span class="n">do_simulation</span><span class="p">(</span>
+            <span class="n">mon</span><span class="p">,</span> <span class="n">dbs</span><span class="p">,</span> <span class="n">dbs_val_list</span><span class="p">,</span> <span class="n">dbs_key_list</span>
+        <span class="p">)</span>
+
+        <span class="c1">### plot data</span>
+        <span class="n">plot_rate_coded</span><span class="p">(</span>
+            <span class="n">dbs_val_list</span><span class="o">=</span><span class="n">dbs_val_list</span><span class="p">,</span>
+            <span class="n">recordings</span><span class="o">=</span><span class="n">recordings</span><span class="p">,</span>
+            <span class="n">recording_times</span><span class="o">=</span><span class="n">recording_times</span><span class="p">,</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+            <span class="n">plotting</span><span class="o">=</span><span class="n">plotting</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1">### check dbs effects</span>
+        <span class="n">check_dbs_effects_rate_coded</span><span class="p">(</span>
+            <span class="n">dbs_val_list</span><span class="p">,</span>
+            <span class="n">recordings</span><span class="p">,</span>
+            <span class="n">model</span><span class="p">,</span>
+            <span class="n">recording_times</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="mi">1</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">(</span><span class="n">plotting</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="console-output_1">Console Output<a class="headerlink" href="#console-output_1" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>python<span class="w"> </span>dbs_stimulator.py<span class="w"> </span>
+<span class="go">ANNarchy 4.7 (4.7.3b) on linux (posix).</span>
+
+<span class="go">WARNING during compile of model dbs_test_spiking_dbs: There are initialized models which are not created, thus not compiled! models:</span>
+<span class="go">dbs_test_spiking</span>
+
+<span class="go">Compiling ...  OK </span>
+<span class="go">Generate fig DBS_spiking_figure/membrane_trial_0.png... Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/axon_spikes_0.png... </span>
+<span class="go">  WARNING PlotRecordings: pop1_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop2_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop3_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop4_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop5_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop6_spiking does not contain any spikes in the given time interval.</span>
+<span class="go">Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/membrane_trial_1.png... Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/axon_spikes_1.png... </span>
+<span class="go">  WARNING PlotRecordings: pop1_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop2_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop4_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop5_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop6_spiking does not contain any spikes in the given time interval.</span>
+<span class="go">Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/membrane_trial_2.png... Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/axon_spikes_2.png... </span>
+<span class="go">  WARNING PlotRecordings: pop2_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop3_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop4_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop5_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop6_spiking does not contain any spikes in the given time interval.</span>
+<span class="go">Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/membrane_trial_3.png... Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/axon_spikes_3.png... </span>
+<span class="go">  WARNING PlotRecordings: pop2_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop4_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop5_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop6_spiking does not contain any spikes in the given time interval.</span>
+<span class="go">Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/membrane_trial_4.png... Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/axon_spikes_4.png... </span>
+<span class="go">  WARNING PlotRecordings: pop1_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop2_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop3_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop4_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop6_spiking does not contain any spikes in the given time interval.</span>
+<span class="go">Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/membrane_trial_5.png... Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/axon_spikes_5.png... </span>
+<span class="go">  WARNING PlotRecordings: pop1_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop2_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop3_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop4_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop5_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop6_spiking does not contain any spikes in the given time interval.</span>
+<span class="go">Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/membrane_trial_6.png... Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/axon_spikes_6.png... </span>
+<span class="go">  WARNING PlotRecordings: pop1_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop2_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop4_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop5_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop6_spiking does not contain any spikes in the given time interval.</span>
+<span class="go">Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/membrane_trial_7.png... Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/axon_spikes_7.png... </span>
+<span class="go">  WARNING PlotRecordings: pop2_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop3_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop4_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop5_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop6_spiking does not contain any spikes in the given time interval.</span>
+<span class="go">Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/membrane_trial_8.png... Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/axon_spikes_8.png... </span>
+<span class="go">  WARNING PlotRecordings: pop2_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop4_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop5_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop6_spiking does not contain any spikes in the given time interval.</span>
+<span class="go">Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/membrane_trial_9.png... Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/axon_spikes_9.png... </span>
+<span class="go">  WARNING PlotRecordings: pop1_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop2_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop3_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop4_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop6_spiking does not contain any spikes in the given time interval.</span>
+<span class="go">Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/membrane_trial_10.png... Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/axon_spikes_10.png... </span>
+<span class="go">  WARNING PlotRecordings: pop1_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop2_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop3_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop4_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop6_spiking does not contain any spikes in the given time interval.</span>
+<span class="go">Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/membrane_trial_11.png... Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/axon_spikes_11.png... </span>
+<span class="go">  WARNING PlotRecordings: pop2_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop4_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop6_spiking does not contain any spikes in the given time interval.</span>
+<span class="go">Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/membrane_trial_12.png... Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/axon_spikes_12.png... </span>
+<span class="go">  WARNING PlotRecordings: pop1_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop2_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop3_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop4_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop5_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop6_spiking does not contain any spikes in the given time interval.</span>
+<span class="go">Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/membrane_trial_13.png... Done</span>
+
+<span class="go">Generate fig DBS_spiking_figure/axon_spikes_13.png... </span>
+<span class="go">  WARNING PlotRecordings: pop2_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop4_spiking does not contain any spikes in the given time interval.</span>
+
+<span class="go">  WARNING PlotRecordings: pop6_spiking does not contain any spikes in the given time interval.</span>
+<span class="go">Done</span>
+
+
+<span class="go">WARNING during compile of model dbs_test_rate-coded_dbs: There are initialized models which are not created, thus not compiled! models:</span>
+<span class="go">dbs_test_spiking</span>
+<span class="go">dbs_test_spiking_dbs</span>
+<span class="go">dbs_test_rate-coded</span>
+
+<span class="go">Compiling ...  OK </span>
+<span class="go">Generate fig DBS_rate_figure/activity_trial_0.png... Done</span>
+
+<span class="go">Generate fig DBS_rate_figure/activity_trial_1.png... Done</span>
+
+<span class="go">Generate fig DBS_rate_figure/activity_trial_2.png... Done</span>
+
+<span class="go">Generate fig DBS_rate_figure/activity_trial_3.png... Done</span>
+
+<span class="go">Generate fig DBS_rate_figure/activity_trial_4.png... Done</span>
+
+<span class="go">Generate fig DBS_rate_figure/activity_trial_5.png... Done</span>
+
+<span class="go">Generate fig DBS_rate_figure/activity_trial_6.png... Done</span>
+
+<span class="go">Generate fig DBS_rate_figure/activity_trial_7.png... Done</span>
+
+<span class="go">Generate fig DBS_rate_figure/activity_trial_8.png... Done</span>
+
+<span class="go">Generate fig DBS_rate_figure/activity_trial_9.png... Done</span>
+
+<span class="go">Generate fig DBS_rate_figure/activity_trial_10.png... Done</span>
+
+<span class="go">Generate fig DBS_rate_figure/activity_trial_11.png... Done</span>
+
+<span class="go">Generate fig DBS_rate_figure/activity_trial_12.png... Done</span>
+
+<span class="go">Generate fig DBS_rate_figure/activity_trial_13.png... Done</span>
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; Oliver Maith
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["header.autohide", "content.code.copy"], "search": "../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7c377c4.min.js"></script>
+      
+    
+  </body>
+</html>
