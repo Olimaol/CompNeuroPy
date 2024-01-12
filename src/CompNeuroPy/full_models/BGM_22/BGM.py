@@ -120,7 +120,7 @@ class BGM(generate_model):
 
     def __model_creation_function__(self):
         model_creation_function = eval(
-            "importlib.import_module('CompNeuroPy.models.BGM_22.model_creation_functions')."
+            "importlib.import_module('CompNeuroPy.full_models.BGM_22.model_creation_functions')."
             + self._model_version_name_
         )
         model_creation_function(self)
@@ -150,7 +150,7 @@ class BGM(generate_model):
         for proj_name in self.projections:
             ### update the model attribute_df
             values = get_projection(proj_name).w
-            self.__update_attribute_df__(
+            self._update_attribute_df(
                 compartment=proj_name, parameter_name="w", parameter_value=values
             )
 

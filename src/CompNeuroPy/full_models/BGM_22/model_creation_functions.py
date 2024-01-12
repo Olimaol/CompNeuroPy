@@ -64,13 +64,13 @@ def BGM_v01(self):
     integrator_go = Population(
         self.params["integrator_go.size"],
         integrator_neuron,
-        stop_condition="decision < 0 : any",
+        stop_condition="decision>=0 : any",
         name="integrator_go",
     )
     integrator_stop = Population(
         self.params["integrator_stop.size"],
         integrator_neuron,
-        stop_condition="decision < 0 : any",
+        stop_condition="decision>=0 : any",
         name="integrator_stop",
     )
 
@@ -432,13 +432,13 @@ def BGM_v02(self):
     integrator_go = Population(
         self.params["integrator_go.size"],
         integrator_neuron,
-        stop_condition="decision < 0 : any",
+        stop_condition="decision>=0 : any",
         name="integrator_go",
     )
     integrator_stop = Population(
         self.params["integrator_stop.size"],
         integrator_neuron,
-        stop_condition="decision < 0 : any",
+        stop_condition="decision>=0 : any",
         name="integrator_stop",
     )
 
@@ -796,13 +796,13 @@ def BGM_vTEST(self):
     integrator_go = Population(
         self.params["integrator_go.size"],
         integrator_neuron,
-        stop_condition="decision < 0 : any",
+        stop_condition="decision>=0 : any",
         name="integrator_go",
     )
     integrator_stop = Population(
         self.params["integrator_stop.size"],
         integrator_neuron,
-        stop_condition="decision < 0 : any",
+        stop_condition="decision>=0 : any",
         name="integrator_stop",
     )
 
@@ -1171,13 +1171,13 @@ def BGM_v03(self):
     integrator_go = Population(
         self.params["integrator_go.size"],
         integrator_neuron,
-        stop_condition="decision < 0 : any",
+        stop_condition="decision>=0 : any",
         name="integrator_go",
     )
     integrator_stop = Population(
         self.params["integrator_stop.size"],
         integrator_neuron,
-        stop_condition="decision < 0 : any",
+        stop_condition="decision>=0 : any",
         name="integrator_stop",
     )
 
@@ -1536,13 +1536,13 @@ def BGM_v04(self):
     integrator_go = Population(
         self.params["integrator_go.size"],
         integrator_neuron,
-        stop_condition="decision < 0 : any",
+        stop_condition="decision>=0 : any",
         name="integrator_go",
     )
     integrator_stop = Population(
         self.params["integrator_stop.size"],
         integrator_neuron,
-        stop_condition="decision < 0 : any",
+        stop_condition="decision>=0 : any",
         name="integrator_stop",
     )
 
@@ -2076,13 +2076,13 @@ def BGM_v05(self):
     integrator_go = Population(
         self.params["integrator_go.size"],
         integrator_neuron,
-        stop_condition="decision < 0 : any",
+        stop_condition="decision>=0 : any",
         name="integrator_go",
     )
     integrator_stop = Population(
         self.params["integrator_stop.size"],
         integrator_neuron,
-        stop_condition="decision < 0 : any",
+        stop_condition="decision>=0 : any",
         name="integrator_stop",
     )
 
@@ -2469,13 +2469,13 @@ def BGM_v06(self):
     integrator_go = Population(
         self.params["integrator_go.size"],
         integrator_neuron,
-        stop_condition="decision < 0 : any",
+        stop_condition="decision>=0 : any",
         name="integrator_go",
     )
     integrator_stop = Population(
         self.params["integrator_stop.size"],
         integrator_neuron,
-        stop_condition="decision < 0 : any",
+        stop_condition="decision>=0 : any",
         name="integrator_stop",
     )
 
