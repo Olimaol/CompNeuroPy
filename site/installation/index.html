@@ -978,7 +978,26 @@
 
   <h1>Installation</h1>
 
-
+<p>From PyPI using pip:</p>
+<div class="highlight"><pre><span></span><code>pip install CompNeuroPy
+</code></pre></div>
+<p>With downloaded source code; using pip in the top-level directory of the downloaded source code:</p>
+<div class="highlight"><pre><span></span><code>pip install .
+</code></pre></div>
+<p>or in development mode:</p>
+<div class="highlight"><pre><span></span><code>pip install -e .
+</code></pre></div>
+<p>You must install ANNarchy separately, best <strong>after</strong> CompNeuroPy.</p>
+<div class="highlight"><pre><span></span><code>git clone https://github.com/ANNarchy/ANNarchy
+cd ANNarchy
+git checkout develop
+pip install .
+cd ..
+rm -rf ANNarchy
+</code></pre></div>
+<p>Optional install torch, sbi, and hyperopt to be able to use <a href="../main/optimize_neuron/">OptNeuron</a>
+<div class="highlight"><pre><span></span><code>pip install torch sbi hyperopt
+</code></pre></div></p>
 
 
 

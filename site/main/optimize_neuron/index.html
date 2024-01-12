@@ -1251,6 +1251,21 @@
 
 <h2 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">#</a></h2>
 <p>CompNeuroPy provides the <a href="#CompNeuroPy.opt_neuron.OptNeuron"><code>OptNeuron</code></a> class which can be used to define your optimization of an ANNarchy neuron model (tuning the parameters). You can either optimize your neuron model to some data or try to reproduce the dynamics of a different neuron model (for example to reduce a more complex model). In both cases, you have to define the experiment which generates the data of interest with your neuron model.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>OptNeuron has to be imported from "CompNeuroPy.opt_neuron" and you have to install torch, sbi and hyperopt (e.g. pip install torch sbi hyperopt)</p>
+</div>
+<p>Used optimization methods:</p>
+<ul>
+<li>
+<p><a href="http://hyperopt.github.io/hyperopt/">hyperopt</a></p>
+<p>Bergstra, J., Yamins, D., Cox, D. D. (2013) Making a Science of Model Search: Hyperparameter Optimization in Hundreds of Dimensions for Vision Architectures. TProc. of the 30th International Conference on Machine Learning (ICML 2013), June 2013, pp. I-115 to I-23.</p>
+</li>
+<li>
+<p><a href="https://sbi-dev.github.io/sbi/">sbi</a></p>
+<p>Tejero-Cantero et al., (2020). sbi: A toolkit for simulation-based inference. Journal of Open Source Software, 5(52), 2505, <a href="https://doi.org/10.21105/joss.02505">https://doi.org/10.21105/joss.02505</a></p>
+</li>
+</ul>
 <h3 id="example">Example:<a class="headerlink" href="#example" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code><span class="n">opt</span> <span class="o">=</span> <span class="n">OptNeuron</span><span class="p">(</span>
     <span class="n">experiment</span><span class="o">=</span><span class="n">my_exp</span><span class="p">,</span>
@@ -2244,7 +2259,7 @@
 
     <span class="n">opt_created</span> <span class="o">=</span> <span class="p">[]</span>
 
-    <span class="c1"># @check_types() TODO check types does probably not work with type hint Any</span>
+    <span class="nd">@check_types</span><span class="p">()</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">experiment</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">CompNeuroExp</span><span class="p">],</span>
@@ -3001,8 +3016,8 @@
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">max_evals</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-        <span class="n">results_file_name</span><span class="o">=</span><span class="s2">&quot;best.npy&quot;</span><span class="p">,</span>
-        <span class="n">sbi_plot_file</span><span class="o">=</span><span class="s2">&quot;posterior.svg&quot;</span><span class="p">,</span>
+        <span class="n">results_file_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;best&quot;</span><span class="p">,</span>
+        <span class="n">sbi_plot_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;posterior.svg&quot;</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Runs the optimization.</span>
@@ -3015,7 +3030,7 @@
 <span class="sd">                name of the file which is saved. The file contains the optimized and</span>
 <span class="sd">                target results, the obtained parameters, the loss, and the SD of the</span>
 <span class="sd">                loss (in case of noisy models with multiple runs per loss calculation)</span>
-<span class="sd">                Default: &quot;best.npy&quot;.</span>
+<span class="sd">                Default: &quot;best&quot;.</span>
 
 <span class="sd">            sbi_plot_file (str, optional):</span>
 <span class="sd">                If you use &quot;sbi&quot;: the name of the figure which will be saved and shows</span>
@@ -3317,7 +3332,8 @@ be recorded. Default: [].</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/opt_neuron.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 44</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 43</span>
+<span class="normal"> 44</span>
 <span class="normal"> 45</span>
 <span class="normal"> 46</span>
 <span class="normal"> 47</span>
@@ -3464,7 +3480,8 @@ be recorded. Default: [].</p>
 <span class="normal">188</span>
 <span class="normal">189</span>
 <span class="normal">190</span>
-<span class="normal">191</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+<span class="normal">191</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@check_types</span><span class="p">()</span>
+<span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">experiment</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">CompNeuroExp</span><span class="p">],</span>
     <span class="n">get_loss_function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]],</span>
@@ -3625,7 +3642,7 @@ be recorded. Default: [].</p>
 
 
 <h3 id="CompNeuroPy.opt_neuron.OptNeuron.run" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">run</span><span class="p">(</span><span class="n">max_evals</span><span class="p">,</span> <span class="n">results_file_name</span><span class="o">=</span><span class="s1">&#39;best.npy&#39;</span><span class="p">,</span> <span class="n">sbi_plot_file</span><span class="o">=</span><span class="s1">&#39;posterior.svg&#39;</span><span class="p">)</span></code>
+          <code class="highlight language-python"><span class="n">run</span><span class="p">(</span><span class="n">max_evals</span><span class="p">,</span> <span class="n">results_file_name</span><span class="o">=</span><span class="s1">&#39;best&#39;</span><span class="p">,</span> <span class="n">sbi_plot_file</span><span class="o">=</span><span class="s1">&#39;posterior.svg&#39;</span><span class="p">)</span></code>
 
 <a href="#CompNeuroPy.opt_neuron.OptNeuron.run" class="headerlink" title="Permanent link">#</a></h3>
 
@@ -3671,11 +3688,11 @@ be recorded. Default: [].</p>
               <p>name of the file which is saved. The file contains the optimized and
 target results, the obtained parameters, the loss, and the SD of the
 loss (in case of noisy models with multiple runs per loss calculation)
-Default: "best.npy".</p>
+Default: "best".</p>
             </div>
           </td>
           <td>
-                <code>&#39;best.npy&#39;</code>
+                <code>&#39;best&#39;</code>
           </td>
         </tr>
         <tr>
@@ -3796,8 +3813,8 @@ the posterior. Default: "posterior.svg".</p>
 <span class="k">def</span> <span class="nf">run</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">max_evals</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">results_file_name</span><span class="o">=</span><span class="s2">&quot;best.npy&quot;</span><span class="p">,</span>
-    <span class="n">sbi_plot_file</span><span class="o">=</span><span class="s2">&quot;posterior.svg&quot;</span><span class="p">,</span>
+    <span class="n">results_file_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;best&quot;</span><span class="p">,</span>
+    <span class="n">sbi_plot_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;posterior.svg&quot;</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Runs the optimization.</span>
@@ -3810,7 +3827,7 @@ the posterior. Default: "posterior.svg".</p>
 <span class="sd">            name of the file which is saved. The file contains the optimized and</span>
 <span class="sd">            target results, the obtained parameters, the loss, and the SD of the</span>
 <span class="sd">            loss (in case of noisy models with multiple runs per loss calculation)</span>
-<span class="sd">            Default: &quot;best.npy&quot;.</span>
+<span class="sd">            Default: &quot;best&quot;.</span>
 
 <span class="sd">        sbi_plot_file (str, optional):</span>
 <span class="sd">            If you use &quot;sbi&quot;: the name of the figure which will be saved and shows</span>
