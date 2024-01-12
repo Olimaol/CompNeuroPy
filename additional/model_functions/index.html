@@ -727,6 +727,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#CompNeuroPy.model_functions.annarchy_compiled" class="md-nav__link">
+    <span class="md-ellipsis">
+      annarchy_compiled()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#CompNeuroPy.model_functions.get_full_model" class="md-nav__link">
     <span class="md-ellipsis">
       get_full_model()
@@ -1056,6 +1065,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#CompNeuroPy.model_functions.annarchy_compiled" class="md-nav__link">
+    <span class="md-ellipsis">
+      annarchy_compiled()
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#CompNeuroPy.model_functions.get_full_model" class="md-nav__link">
     <span class="md-ellipsis">
       get_full_model()
@@ -1204,8 +1222,7 @@ last compilation are compiled. Default: False.</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/model_functions.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">12</span>
-<span class="normal">13</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">13</span>
 <span class="normal">14</span>
 <span class="normal">15</span>
 <span class="normal">16</span>
@@ -1226,7 +1243,8 @@ last compilation are compiled. Default: False.</p>
 <span class="normal">31</span>
 <span class="normal">32</span>
 <span class="normal">33</span>
-<span class="normal">34</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">compile_in_folder</span><span class="p">(</span><span class="n">folder_name</span><span class="p">,</span> <span class="n">net</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">clean</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="normal">34</span>
+<span class="normal">35</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">compile_in_folder</span><span class="p">(</span><span class="n">folder_name</span><span class="p">,</span> <span class="n">net</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">clean</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Creates the compilation folder in annarchy_folders/ or uses existing ones. Compiles</span>
 <span class="sd">    the current network.</span>
@@ -1249,6 +1267,77 @@ last compilation are compiled. Default: False.</p>
         <span class="n">net</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s2">&quot;annarchy_folders/&quot;</span> <span class="o">+</span> <span class="n">folder_name</span><span class="p">,</span> <span class="n">clean</span><span class="o">=</span><span class="n">clean</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="n">silent</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;annarchy_folders&quot;</span><span class="p">:</span>
         <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s2">&quot;../&quot;</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+
+<h2 id="CompNeuroPy.model_functions.annarchy_compiled" class="doc doc-heading">
+          <code class="highlight language-python"><span class="n">annarchy_compiled</span><span class="p">(</span><span class="n">net_id</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span></code>
+
+<a href="#CompNeuroPy.model_functions.annarchy_compiled" class="headerlink" title="Permanent link">#</a></h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Check if ANNarchy network was compiled.</p>
+
+
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>net_id</code></td>
+          <td>
+                <code>int</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Network ID. Default: 0.</p>
+            </div>
+          </td>
+          <td>
+                <code>0</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+          <details class="quote">
+            <summary>Source code in <code>src/CompNeuroPy/model_functions.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">annarchy_compiled</span><span class="p">(</span><span class="n">net_id</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Check if ANNarchy network was compiled.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        net_id (int, optional):</span>
+<span class="sd">            Network ID. Default: 0.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">Global</span><span class="o">.</span><span class="n">_network</span><span class="p">[</span><span class="n">net_id</span><span class="p">][</span><span class="s2">&quot;compiled&quot;</span><span class="p">]</span>
 </code></pre></div></td></tr></table></div>
           </details>
   </div>
@@ -1298,19 +1387,19 @@ population and projection names, respectively.</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/model_functions.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">37</span>
-<span class="normal">38</span>
-<span class="normal">39</span>
-<span class="normal">40</span>
-<span class="normal">41</span>
-<span class="normal">42</span>
-<span class="normal">43</span>
-<span class="normal">44</span>
-<span class="normal">45</span>
-<span class="normal">46</span>
-<span class="normal">47</span>
-<span class="normal">48</span>
-<span class="normal">49</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_full_model</span><span class="p">():</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_full_model</span><span class="p">():</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return all current population and projection names.</span>
 
@@ -1419,25 +1508,25 @@ population and projection names, respectively.</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/model_functions.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">52</span>
-<span class="normal">53</span>
-<span class="normal">54</span>
-<span class="normal">55</span>
-<span class="normal">56</span>
-<span class="normal">57</span>
-<span class="normal">58</span>
-<span class="normal">59</span>
-<span class="normal">60</span>
-<span class="normal">61</span>
-<span class="normal">62</span>
-<span class="normal">63</span>
-<span class="normal">64</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">64</span>
 <span class="normal">65</span>
 <span class="normal">66</span>
 <span class="normal">67</span>
 <span class="normal">68</span>
 <span class="normal">69</span>
-<span class="normal">70</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">cnp_clear</span><span class="p">(</span><span class="n">functions</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">neurons</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">synapses</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">constants</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="normal">70</span>
+<span class="normal">71</span>
+<span class="normal">72</span>
+<span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span>
+<span class="normal">76</span>
+<span class="normal">77</span>
+<span class="normal">78</span>
+<span class="normal">79</span>
+<span class="normal">80</span>
+<span class="normal">81</span>
+<span class="normal">82</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">cnp_clear</span><span class="p">(</span><span class="n">functions</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">neurons</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">synapses</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">constants</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Like clear with ANNarchy, but CompNeuroModel objects are also cleared.</span>
 
@@ -1452,10 +1541,10 @@ population and projection names, respectively.</p>
 <span class="sd">            If True, all constants are cleared. Default: True.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">clear</span><span class="p">(</span><span class="n">functions</span><span class="o">=</span><span class="n">functions</span><span class="p">,</span> <span class="n">neurons</span><span class="o">=</span><span class="n">neurons</span><span class="p">,</span> <span class="n">synapses</span><span class="o">=</span><span class="n">synapses</span><span class="p">,</span> <span class="n">constants</span><span class="o">=</span><span class="n">constants</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">model_name</span> <span class="ow">in</span> <span class="n">CompNeuroModel</span><span class="o">.</span><span class="n">initialized_models</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-        <span class="n">CompNeuroModel</span><span class="o">.</span><span class="n">initialized_models</span><span class="p">[</span><span class="n">model_name</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="k">for</span> <span class="n">model_name</span> <span class="ow">in</span> <span class="n">CompNeuroModel</span><span class="o">.</span><span class="n">compiled_models</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-        <span class="n">CompNeuroModel</span><span class="o">.</span><span class="n">compiled_models</span><span class="p">[</span><span class="n">model_name</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">for</span> <span class="n">model_name</span> <span class="ow">in</span> <span class="n">CompNeuroModel</span><span class="o">.</span><span class="n">_initialized_models</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="n">CompNeuroModel</span><span class="o">.</span><span class="n">_initialized_models</span><span class="p">[</span><span class="n">model_name</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">for</span> <span class="n">model_name</span> <span class="ow">in</span> <span class="n">CompNeuroModel</span><span class="o">.</span><span class="n">_compiled_models</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="n">CompNeuroModel</span><span class="o">.</span><span class="n">_compiled_models</span><span class="p">[</span><span class="n">model_name</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
 </code></pre></div></td></tr></table></div>
           </details>
   </div>
