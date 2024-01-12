@@ -3,6 +3,7 @@ import traceback
 import shutil
 from time import time
 import pickle
+from functools import wraps
 
 
 def clear_dir(path):
@@ -193,6 +194,7 @@ def timing_decorator(threshold=0.1):
     """
 
     def decorator(func):
+        @wraps(func)
         def wrapper(*args, **kwargs):
             start_time = time()
             result = func(*args, **kwargs)

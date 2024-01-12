@@ -44,8 +44,14 @@ from CompNeuroPy.simulation_functions import (
     current_ramp,
     increasing_current,
 )
-from CompNeuroPy.system_functions import *
-from CompNeuroPy.simulation_requirements import *
+from CompNeuroPy.system_functions import (
+    clear_dir,
+    create_dir,
+    save_variables,
+    load_variables,
+    timing_decorator,
+)
+from CompNeuroPy.simulation_requirements import req_pop_attr, ReqPopHasAttr
 
 ### classes
 from CompNeuroPy.monitors import Monitors, CompNeuroMonitors
@@ -56,4 +62,4 @@ from CompNeuroPy.dbs import DBSstimulator
 
 ### modules
 ### for opt_neuron you need to install torch, sbi, and hyperopt
-# import CompNeuroPy.opt_neuron as opt_neuron
+# from CompNeuroPy.opt_neuron as OptNeuron

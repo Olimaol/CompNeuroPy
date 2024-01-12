@@ -1,6 +1,9 @@
 ## Introduction
 CompNeuroPy provides the [`OptNeuron`](#CompNeuroPy.opt_neuron.OptNeuron) class which can be used to define your optimization of an ANNarchy neuron model (tuning the parameters). You can either optimize your neuron model to some data or try to reproduce the dynamics of a different neuron model (for example to reduce a more complex model). In both cases, you have to define the experiment which generates the data of interest with your neuron model.
 
+!!! warning
+    OptNeuron has to be imported from "CompNeuroPy.opt_neuron" and you have to install torch, sbi and hyperopt (e.g. pip install torch sbi hyperopt)
+
 Used optimization methods:
 
 - [hyperopt](http://hyperopt.github.io/hyperopt/)
