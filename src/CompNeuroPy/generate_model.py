@@ -87,7 +87,7 @@ class CompNeuroModel:
     @property
     def compiled(self):
         """
-        The compiled property.
+        True if the model is compiled.
         """
         ### check if ANNarchy was compiled and _compiled_models is not updated yet
         if mf.annarchy_compiled() and not self._compiled_models_updated:
@@ -104,7 +104,7 @@ class CompNeuroModel:
     @property
     def created(self):
         """
-        The created property.
+        True if the model is created.
         """
         return self._initialized_models[self.name]
 
@@ -118,7 +118,7 @@ class CompNeuroModel:
     @property
     def attribute_df(self):
         """
-        The attribute_df property.
+        Dataframe containing all attributes of the model compartments.
         """
         ### check if ANNarchy was compiled and _attribute_df is not updated yet
         if mf.annarchy_compiled() and not self._attribute_df_compiled:
