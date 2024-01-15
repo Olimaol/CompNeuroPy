@@ -32,6 +32,9 @@ except:
     )
     sys.exit()
 
+### TODO extend with some evolutionary algorithms (e.g. DEAP)
+### https://efel.readthedocs.io/en/latest/deap_optimisation.html
+
 
 class OptNeuron:
     """
