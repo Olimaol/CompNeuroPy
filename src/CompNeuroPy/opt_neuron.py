@@ -40,7 +40,7 @@ class OptNeuron:
 
     opt_created = []
 
-    @check_types()
+    @check_types(warnings=False)
     def __init__(
         self,
         experiment: Type[CompNeuroExp],
