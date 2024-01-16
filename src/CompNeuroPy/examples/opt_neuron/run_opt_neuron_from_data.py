@@ -146,6 +146,9 @@ class my_exp(CompNeuroExp):
 
 
 ### Next, the OptNeuron class needs a function to calculate the loss.
+# TODO add neuron_id to the arguments of the get_loss function, the fucntion has to be
+# created that it works with multiple neurons in the population and the current
+# neuron is selected by the neuron_id which is provided by OptNeuron
 def get_loss(results_ist: CompNeuroExp._ResultsCl, results_soll):
     """
     Function which has to have the arguments results_ist and results_soll and should
@@ -202,7 +205,7 @@ def main():
         results_soll=experimental_data["results_soll"],
         time_step=experimental_data["time_step"],
         compile_folder_name="annarchy_opt_neuron_example_from_data",
-        method="hyperopt",
+        method="deap",
         record=["r"],
     )
 

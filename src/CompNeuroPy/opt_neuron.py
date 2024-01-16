@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import sys
 from typing import Callable, Any, Type
 from typingchecker import check_types
+import random
 
 # multiprocessing
 from multiprocessing import Process
@@ -26,14 +27,26 @@ try:
     from sbi import analysis as analysis
     from sbi import utils as utils
     from sbi.inference import SNPE, prepare_for_sbi, simulate_for_sbi
+
+    # efel
+    import efel
+
+    # deap
+    import deap
+    import deap.gp
+    import deap.benchmarks
+    from deap import base
+    from deap import creator
+    from deap import tools
+    from deap import algorithms
+    from deap.tools import cxSimulatedBinaryBounded, mutPolynomialBounded
+    from deap.algorithms import varAnd
+
 except:
     print(
         "OptNeuron: Error: You need to install hyperopt, torch, and sbi to use OptNeuron (e.g. use pip install hyperopt torch sbi))"
     )
     sys.exit()
-
-### TODO extend with some evolutionary algorithms (e.g. DEAP)
-### https://efel.readthedocs.io/en/latest/deap_optimisation.html
 
 
 class OptNeuron:
@@ -155,7 +168,7 @@ class OptNeuron:
                 self.prior = self._get_prior(prior)
             self.target_neuron = target_neuron_model
             self.compile_folder_name = compile_folder_name
-            self.__get_loss__ = get_loss_function
+            self._get_loss = get_loss_function
 
             ### check target_neuron/results_soll
             self._check_target()
@@ -392,7 +405,7 @@ class OptNeuron:
             )["results"]
 
         try:
-            self.__get_loss__(results_ist, self.results_soll)
+            self._get_loss(results_ist, self.results_soll)
         except:
             print(
                 "\nThe get_loss_function, experiment and neuron model(s) are not compatible:\n"
@@ -522,6 +535,20 @@ class OptNeuron:
 
         return torch.as_tensor(data)
 
+    def _deap_simulation_wrapper(self, individual: list):
+        """
+        Obtain the loss of the individual from the deap optimization.
+
+        Args:
+            individual (list):
+                list with values for fitting parameters
+
+        Returns:
+            loss (tuple):
+                loss as tuple for deap optimization
+        """
+        return (self._run_simulator(individual)["loss"],)
+
     def _run_simulator_with_results(self, fitparams, pop=None):
         """
         Runs the function simulator with the multiprocessing manager (if function is
@@ -639,7 +666,7 @@ class OptNeuron:
 
         if self.results_soll is not None:
             ### compute loss
-            all_loss = self.__get_loss__(results, self.results_soll)
+            all_loss = self._get_loss(results, self.results_soll)
             if isinstance(all_loss, list) or isinstance(all_loss, type(np.zeros(1))):
                 loss = sum(all_loss)
             else:
@@ -842,6 +869,8 @@ class OptNeuron:
         elif self.method == "sbi":
             ### run optimization with sbi and return best dict
             best = self._run_with_sbi(max_evals, sbi_plot_file)
+        elif self.method == "deap":
+            best = self._run_with_deap()
         else:
             print("ERROR run; method should be 'hyperopt' or 'sbi'")
             quit()
@@ -859,6 +888,210 @@ class OptNeuron:
         sf.save_variables([best], [results_file_name], "parameter_fit")
 
         return best
+
+    def _run_with_deap(self):
+        # general paramters
+        MATE_FUNCTION_KEY = "cxSimulatedBinaryBounded"
+        MUTATE_FUNCTION_KEY = "mutPolynomialBounded"
+        VARIATE_FUNCTION_KEY = "varOr"
+        POP_SIZE = 100
+        # mate, mutate and variate parameters
+        ETA = 20.0
+        INDPB = 0.1
+        LAMBDA = POP_SIZE * 2
+        REPRODPB = 0.1
+        CXPB = 0.7 * (1 - REPRODPB)
+        MUTPB = 0.3 * (1 - REPRODPB)
+        TOURNSIZE = max(int(round(POP_SIZE * 0.01)), 2)
+        # derived parameters
+        LOWER = [
+            min(self.variables_bounds[name])
+            for name in self.fitting_variables_name_list
+        ]
+        UPPER = [
+            max(self.variables_bounds[name])
+            for name in self.fitting_variables_name_list
+        ]
+        MATE_FUNCTION = {
+            "cxOnePoint": tools.cxOnePoint,
+            "cxTwoPoint": tools.cxTwoPoint,
+            "cxUniform": tools.cxUniform,
+            "cxPartialyMatched": tools.cxPartialyMatched,
+            "cxUniformPartialyMatched": tools.cxUniformPartialyMatched,
+            "cxOrdered": tools.cxOrdered,
+            "cxBlend": tools.cxBlend,
+            "cxSimulatedBinary": tools.cxSimulatedBinary,
+            "cxSimulatedBinaryBounded": tools.cxSimulatedBinaryBounded,
+            "cxMessyOnePoint": tools.cxMessyOnePoint,
+        }[MATE_FUNCTION_KEY]
+        MUTATE_FUNCTION = {
+            "mutGaussian": tools.mutGaussian,
+            "mutPolynomialBounded": tools.mutPolynomialBounded,
+        }[MUTATE_FUNCTION_KEY]
+        VARIATE_FUNCTION = {
+            "varOr": algorithms.varOr,
+            "varAnd": algorithms.varAnd,
+        }[VARIATE_FUNCTION_KEY]
+        SELECT_FUNCTION_KEY = "selTournament"
+        SELECT_FUNCTION = {
+            "selTournament": tools.selTournament,
+            "selBest": tools.selBest,
+            "selNSGA2": tools.selNSGA2,
+            "selSPEA2": tools.selSPEA2,
+        }[SELECT_FUNCTION_KEY]
+
+        # init deap toolbox
+        toolbox = base.Toolbox()
+
+        # define what individuals are (numbers for the fitting parameters), how their
+        # fitness is weighted (negative to get fitness = negative loss), and how they
+        # are created initially (uniformly between the bounds)
+        creator.create("Fitness", base.Fitness, weights=(-1.0,))
+        creator.create("Individual", list, fitness=creator.Fitness)
+        toolbox.register("uniformparams", self.init_uniform_deap)
+        toolbox.register(
+            "Individual", tools.initIterate, creator.Individual, toolbox.uniformparams
+        )
+        toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
+
+        # register evaluate function which gets an individual and returns the loss
+        # (which will be multiplied by -1.0 to get the fitness)
+        toolbox.register("evaluate", self._deap_simulation_wrapper)
+
+        # register functions for the genetic algorithm
+        # mate (mate two individuals to create two children) TODO generalize MATE_FUNCTION kwargs
+        # mutate (mutate two individuals to create two new ones) TODO generalize MUTATE_FUNCTION kwargs
+        # variate (how crossover, variate and reproduce are applied to create an
+        #          offspring population from the current population)
+        # select (how individuals are selected from the offspring population to create
+        #         the next generation population)
+        toolbox.register(
+            "mate",
+            MATE_FUNCTION,
+            **{"eta": ETA, "low": LOWER, "up": UPPER},
+        )
+        toolbox.register(
+            "mutate",
+            MUTATE_FUNCTION,
+            **{"eta": ETA, "low": LOWER, "up": UPPER, "indpb": INDPB},
+        )
+        toolbox.register(
+            "variate",
+            VARIATE_FUNCTION,
+            **{"toolbox": toolbox, "lambda_": LAMBDA, "cxpb": CXPB, "mutpb": MUTPB},
+        )
+        toolbox.register(
+            "select", SELECT_FUNCTION, {"k": POP_SIZE, "tournsize": TOURNSIZE}
+        )
+
+        # initialize population (initial variables for POP_SIZE individuals/neurons)
+        pop = toolbox.population(n=POP_SIZE)
+
+        # register some statistics we want to print during the run of the algorithm
+        stats = tools.Statistics(lambda ind: ind.fitness.values)
+        stats.register("avg", np.mean)
+        stats.register("std", np.std)
+        stats.register("min", np.min)
+        stats.register("max", np.max)
+
+        # run the algorithm
+        pop, logbook = self._evolutionary_algorithm()
+
+    def _evolutionary_algorithm(
+        self,
+        population,
+        toolbox,
+        cxpb,
+        mutpb,
+        ngen,
+        stats=None,
+        halloffame=None,
+        verbose=__debug__,
+    ):
+        """This algorithm reproduce the simplest evolutionary algorithm as
+        presented in chapter 7 of [Back2000]_.
+
+        :param population: A list of individuals.
+        :param toolbox: A :class:`~deap.base.Toolbox` that contains the evolution
+                        operators.
+        :param cxpb: The probability of mating two individuals.
+        :param mutpb: The probability of mutating an individual.
+        :param ngen: The number of generation.
+        :param stats: A :class:`~deap.tools.Statistics` object that is updated
+                    inplace, optional.
+        :param halloffame: A :class:`~deap.tools.HallOfFame` object that will
+                        contain the best individuals, optional.
+        :param verbose: Whether or not to log the statistics.
+        :returns: The final population
+        :returns: A class:`~deap.tools.Logbook` with the statistics of the
+                evolution
+
+        """
+        # TODO
+        logbook = tools.Logbook()
+        logbook.header = ["gen", "nevals"] + (stats.fields if stats else [])
+
+        # Evaluate the individuals with an invalid fitness
+        invalid_ind = [ind for ind in population if not ind.fitness.valid]
+        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+        for ind, fit in zip(invalid_ind, fitnesses):
+            ind.fitness.values = fit
+
+        if halloffame is not None:
+            halloffame.update(population)
+
+        record = stats.compile(population) if stats else {}
+        logbook.record(gen=0, nevals=len(invalid_ind), **record)
+        if verbose:
+            print(logbook.stream)
+
+        # Begin the generational process
+        for gen in range(1, ngen + 1):
+            # Select the next generation individuals
+            offspring = toolbox.select(population, len(population))
+
+            # Vary the pool of individuals
+            offspring = varAnd(offspring, toolbox, cxpb, mutpb)
+
+            # Evaluate the individuals with an invalid fitness
+            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+            fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+            for ind, fit in zip(invalid_ind, fitnesses):
+                ind.fitness.values = fit
+
+            # Update the hall of fame with the generated individuals
+            if halloffame is not None:
+                halloffame.update(offspring)
+
+            # Replace the current population by the offspring
+            population[:] = offspring
+
+            # Append the current generation statistics to the logbook
+            record = stats.compile(population) if stats else {}
+            logbook.record(gen=gen, nevals=len(invalid_ind), **record)
+            if verbose:
+                print(logbook.stream)
+
+        return population, logbook
+
+    def init_uniform_deap(self):
+        """
+        Returns:
+            uniform (list):
+                list with values for fitting parameters
+        """
+        lower_list = [
+            min(self.variables_bounds[name])
+            for name in self.fitting_variables_name_list
+        ]
+        upper_list = [
+            max(self.variables_bounds[name])
+            for name in self.fitting_variables_name_list
+        ]
+        return [
+            random.uniform(lower_list, upper_list)
+            for _ in range(len(self.fitting_variables_name_list))
+        ]
 
 
 ### old name for backward compatibility, TODO remove
