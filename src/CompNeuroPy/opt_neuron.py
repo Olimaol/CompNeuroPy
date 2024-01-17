@@ -11,6 +11,8 @@ import sys
 from typing import Callable, Any, Type
 from typingchecker import check_types
 import random
+from tqdm import tqdm
+from copy import deepcopy
 
 # multiprocessing
 from multiprocessing import Process
@@ -41,6 +43,7 @@ try:
     from deap import algorithms
     from deap.tools import cxSimulatedBinaryBounded, mutPolynomialBounded
     from deap.algorithms import varAnd
+    from deap import cma
 
 except:
     print(
@@ -170,6 +173,12 @@ class OptNeuron:
             self.compile_folder_name = compile_folder_name
             self._get_loss = get_loss_function
 
+            ### prepare deap and get popsize
+            if method == "deap":
+                self.deap_dict, self.popsize = self._get_deap_dict()
+            else:
+                self.popsize = 1
+
             ### check target_neuron/results_soll
             self._check_target()
             ### check neuron models
@@ -181,7 +190,7 @@ class OptNeuron:
             ### create and compile model
             ### if neuron models and target neuron model --> create both models then
             ### test, then clear and create only model for neuron model
-            model, target_model, monitors = self._generate_models()
+            model, target_model, monitors = self._generate_models(self.popsize)
 
             self.pop = model.populations[0]
             if target_model is not None:
@@ -199,16 +208,20 @@ class OptNeuron:
             self._check_get_loss_function()
 
             ### after checking neuron models, experiment, get_loss
-            ### if two models exist --> clear ANNarchy and create/compile again only
+            ### clear ANNarchy and create/compile again only
             ### standard model, thus recreate also monitors and experiment
             clear()
-            model, _, monitors = self._generate_models()
+            model, _, monitors = self._generate_models(self.popsize)
             self.monitors = monitors
             self.experiment = experiment(monitors=monitors)
 
-    def _generate_models(self):
+    def _generate_models(self, popsize=1):
         """
         Generates the tuned model and the target_model (only if results_soll is None).
+
+        Args:
+            popsize (int, optional):
+                The number of neurons in the population(s). Default: 1.
 
         Returns:
             model (CompNeuroModel):
@@ -230,7 +243,11 @@ class OptNeuron:
                 ### create two models
                 model = CompNeuroModel(
                     model_creation_function=self._raw_neuron,
-                    model_kwargs={"neuron": self.neuron_model, "name": "model_neuron"},
+                    model_kwargs={
+                        "neuron": self.neuron_model,
+                        "name": "model_neuron",
+                        "size": popsize,
+                    },
                     name="standard_model",
                     do_create=True,
                     do_compile=False,
@@ -242,6 +259,7 @@ class OptNeuron:
                     model_kwargs={
                         "neuron": self.target_neuron,
                         "name": "target_model_neuron",
+                        "size": 1,
                     },
                     name="target_model",
                     do_create=True,
@@ -265,7 +283,11 @@ class OptNeuron:
                 ### create one model
                 model = CompNeuroModel(
                     model_creation_function=self._raw_neuron,
-                    model_kwargs={"neuron": self.neuron_model, "name": "model_neuron"},
+                    model_kwargs={
+                        "neuron": self.neuron_model,
+                        "name": "model_neuron",
+                        "size": popsize,
+                    },
                     name="single_model",
                     do_create=True,
                     do_compile=True,
@@ -405,7 +427,7 @@ class OptNeuron:
             )["results"]
 
         try:
-            self._get_loss(results_ist, self.results_soll)
+            self._wrapper_get_loss(results_ist, self.results_soll)
         except:
             print(
                 "\nThe get_loss_function, experiment and neuron model(s) are not compatible:\n"
@@ -414,18 +436,66 @@ class OptNeuron:
             quit()
         print("Done\n")
 
-    def _raw_neuron(self, neuron, name):
+    def _wrapper_get_loss(self, results_ist, results_soll):
+        """
+        TODO
+        """
+        ###
+        all_loss_list = []
+        for neuron_idx in range(self.popsize):
+            results_ist_neuron = self._get_results_of_single_neuron(
+                results_ist, neuron_idx
+            )
+            all_loss_list.append(self._get_loss(results_ist_neuron, results_soll))
+
+        return all_loss_list
+
+    def _get_results_of_single_neuron(self, results, neuron_idx):
+        """
+        TODO
+        """
+        if self.popsize == 1:
+            return results
+
+        results_neuron = deepcopy(results)
+
+        for chunk in range(len(results_neuron.recordings)):
+            for rec_key in results_neuron.recordings[chunk].keys():
+                if "spike" in rec_key and not ("target" in rec_key):
+                    results_neuron.recordings[chunk][rec_key] = {
+                        0: results_neuron.recordings[chunk][rec_key][neuron_idx]
+                    }
+                elif not (
+                    "period" in rec_key
+                    or "parameter_dict" in rec_key
+                    or "dt" in rec_key
+                    or "target" in rec_key
+                ):
+                    # print(rec_key)
+                    # print(results_neuron.recordings[chunk][rec_key].shape)
+                    results_neuron.recordings[chunk][
+                        rec_key
+                    ] = results_neuron.recordings[chunk][rec_key][
+                        :, neuron_idx
+                    ].reshape(
+                        -1, 1
+                    )
+
+        return results_neuron
+
+    def _raw_neuron(self, neuron, name, size):
         """
         Generates a population with one neuron of the given neuron model.
 
         Args:
             neuron (ANNarchy Neuron):
                 The neuron model.
-
             name (str):
                 The name of the population.
+            size (int):
+                The number of neurons in the population.
         """
-        Population(1, neuron=neuron, name=name)
+        Population(size, neuron=neuron, name=name)
 
     def _test_variables(self):
         """
@@ -480,7 +550,7 @@ class OptNeuron:
         m_list = manager.dict()
 
         ### in case of noisy models, here optionally run multiple simulations, to mean the loss
-        lossAr = np.zeros(self.num_rep_loss)
+        loss_list_over_runs = []
 
         return_results = False
         for nr_run in range(self.num_rep_loss):
@@ -493,17 +563,28 @@ class OptNeuron:
             proc.start()
             proc.join()
             ### get simulation results/loss
-            lossAr[nr_run] = m_list[0]
+            loss_list_from_simulator = m_list[0]
+            loss_list_over_runs.append(loss_list_from_simulator)
 
+        loss_arr = np.array(loss_list_over_runs)
         ### calculate mean and std of loss
         if self.num_rep_loss > 1:
-            loss = np.mean(lossAr)
-            std = np.std(lossAr)
+            ### multiple runs, mean over runs
+            loss_ret_arr = np.mean(loss_arr, 0)
+            std_ret_arr = np.std(loss_arr, 0)
         else:
-            loss = lossAr[0]
-            std = None
+            loss_ret_arr = loss_arr[0]
+            std_ret_arr = [None] * self.popsize
 
-        ### return loss and other things for optimization
+        if self.popsize == 1:
+            loss = loss_ret_arr[0]
+            std = std_ret_arr[0]
+        else:
+            loss = loss_ret_arr
+            std = std_ret_arr
+
+        ### return loss and other things for optimization, if multiple neurons
+        ### --> loss and std are arrays with loss/std for each neuron
         if self.num_rep_loss > 1:
             return {"status": STATUS_OK, "loss": loss, "loss_variance": std}
         else:
@@ -535,19 +616,16 @@ class OptNeuron:
 
         return torch.as_tensor(data)
 
-    def _deap_simulation_wrapper(self, individual: list):
+    def _deap_simulation_wrapper(self, population: list):
         """
-        Obtain the loss of the individual from the deap optimization.
-
-        Args:
-            individual (list):
-                list with values for fitting parameters
-
-        Returns:
-            loss (tuple):
-                loss as tuple for deap optimization
+        TODO
         """
-        return (self._run_simulator(individual)["loss"],)
+        ### transpose population list
+        populationT = np.array(population).T.tolist()
+        ### get loss list
+        loss_list = self._run_simulator(populationT)["loss"]
+
+        return [(loss_list[neuron_idx],) for neuron_idx in range(len(population))]
 
     def _run_simulator_with_results(self, fitparams, pop=None):
         """
@@ -578,8 +656,8 @@ class OptNeuron:
         m_list = manager.dict()
 
         ### in case of noisy models, here optionally run multiple simulations, to mean the loss
-        lossAr = np.zeros(self.num_rep_loss)
-        all_loss_list = []
+        loss_list_over_runs = []
+        all_loss_list_over_runs = []
         return_results = True
         for nr_run in range(self.num_rep_loss):
             ### initialize for each run a new rng (--> not always have same noise in case of noisy models/simulations)
@@ -592,20 +670,30 @@ class OptNeuron:
             proc.start()
             proc.join()
             ### get simulation results/loss
-            lossAr[nr_run] = m_list[0]
+            loss_list_over_runs.append(m_list[0])
             results_ist = m_list[1]
-            all_loss_list.append(m_list[2])
+            all_loss_list_over_runs.append(m_list[2])
 
-        all_loss_arr = np.array(all_loss_list)
-        ### calculate mean and std of loss
+        all_loss_arr = np.array(all_loss_list_over_runs)
+        loss_arr = np.array(loss_list_over_runs)
+        ### calculate mean and std of loss over runs
         if self.num_rep_loss > 1:
-            loss = np.mean(lossAr)
-            std = np.std(lossAr)
+            loss = np.mean(loss_arr, 0)
+            std = np.std(loss_arr)
             all_loss = np.mean(all_loss_arr, 0)
         else:
-            loss = lossAr[0]
-            std = None
+            loss = loss_arr[0]
+            std = [None] * self.popsize
             all_loss = all_loss_arr[0]
+
+        if self.popsize == 1:
+            loss = loss[0]
+            std = std[0]
+            all_loss = all_loss[0]
+        else:
+            loss = loss
+            std = std
+            all_loss = all_loss
 
         ### return loss and other things for optimization and results
         if self.num_rep_loss > 1:
@@ -665,64 +753,91 @@ class OptNeuron:
         results = self.experiment.run(pop)
 
         if self.results_soll is not None:
-            ### compute loss
-            all_loss = self._get_loss(results, self.results_soll)
-            if isinstance(all_loss, list) or isinstance(all_loss, type(np.zeros(1))):
-                loss = sum(all_loss)
-            else:
-                loss = all_loss
+            ### compute loss_list, loss for each neuron
+            loss_list = []
+            ### wrapper_get_loss returns list (neurons) of lists (individual losses)
+            all_loss_list = self._wrapper_get_loss(results, self.results_soll)
+            for all_loss in all_loss_list:
+                if isinstance(all_loss, list) or isinstance(
+                    all_loss, type(np.zeros(1))
+                ):
+                    loss_list.append(sum(all_loss))
+                else:
+                    loss_list.append(all_loss)
         else:
-            all_loss = 999
-            loss = 999
+            all_loss_list = [999] * self.popsize
+            loss_list = [999] * self.popsize
         ### "return" loss and other optional things
-        m_list[0] = loss
+        m_list[0] = loss_list
         if return_results:
             m_list[1] = results
-            m_list[2] = all_loss
+            m_list[2] = all_loss_list
 
     def _set_fitting_parameters(
         self,
         fitparams,
-        pop=None,
+        pop,
     ):
         """
         Sets all given parameters for the population pop.
 
         Args:
+            fitparams (list):
+                list with values for fitting parameters, either a single list or a list
+                of lists (first dimensio is the number of parameters, second dimension
+                is the number of neurons)
             pop (str, optional):
                 ANNarchy population name. Default: None, i.e., the tuned population
                 is used.
         """
-        if pop is None:
-            pop = self.pop
+        ### only set parameters of the fitted neuron model
+        if pop != self.pop:
+            return
 
         ### get all variables dict (combine fitting variables and const variables)
         all_variables_dict = self.const_params.copy()
 
+        ### multiply const params for number of neurons
+        for const_param_key, const_param_val in all_variables_dict.items():
+            if not (isinstance(const_param_val, str)):
+                all_variables_dict[const_param_key] = [
+                    all_variables_dict[const_param_key]
+                ] * self.popsize
+
         for fitting_variable_idx, fitting_variable_name in enumerate(
             self.fitting_variables_name_list
         ):
-            all_variables_dict[fitting_variable_name] = fitparams[fitting_variable_idx]
+            if not (isinstance(fitparams[fitting_variable_idx], list)):
+                add_params = [fitparams[fitting_variable_idx]] * self.popsize
+            else:
+                add_params = fitparams[fitting_variable_idx]
+            all_variables_dict[fitting_variable_name] = add_params
 
         ### evaluate variables defined by a str
         for key, val in all_variables_dict.items():
             if isinstance(val, str):
-                all_variables_dict[key] = ef.evaluate_expression_with_dict(
-                    val, all_variables_dict
-                )
-
-        ### only set parameters of the fitted neuron model (in case target neuron model is given)
-        if pop == self.pop:
-            ### set parameters
-            for param_name, param_val in all_variables_dict.items():
-                pop_parameter_names = get_population(pop).attributes
-                ### only if param_name in parameter attributes
-                if param_name in pop_parameter_names:
-                    setattr(
-                        get_population(pop),
-                        param_name,
-                        param_val,
+                all_variables_dict[key] = [
+                    ef.evaluate_expression_with_dict(
+                        val,
+                        {
+                            all_variables_key: all_variables_dict[all_variables_key][
+                                neuron_idx
+                            ]
+                            for all_variables_key in all_variables_dict.keys()
+                        },
                     )
+                    for neuron_idx in range(self.popsize)
+                ]
+
+        ### set parameters
+        for param_name, param_val in all_variables_dict.items():
+            pop_parameter_names = get_population(pop).attributes
+            ### only if param_name in parameter attributes
+            if param_name in pop_parameter_names:
+                if self.popsize == 1:
+                    setattr(get_population(pop), param_name, param_val[0])
+                else:
+                    setattr(get_population(pop), param_name, param_val)
 
     def _test_fit(self, fitparams_dict):
         """
@@ -889,133 +1004,83 @@ class OptNeuron:
 
         return best
 
-    def _run_with_deap(self):
-        # general paramters
-        MATE_FUNCTION_KEY = "cxSimulatedBinaryBounded"
-        MUTATE_FUNCTION_KEY = "mutPolynomialBounded"
-        VARIATE_FUNCTION_KEY = "varOr"
-        POP_SIZE = 100
-        # mate, mutate and variate parameters
-        ETA = 20.0
-        INDPB = 0.1
-        LAMBDA = POP_SIZE * 2
-        REPRODPB = 0.1
-        CXPB = 0.7 * (1 - REPRODPB)
-        MUTPB = 0.3 * (1 - REPRODPB)
-        TOURNSIZE = max(int(round(POP_SIZE * 0.01)), 2)
-        # derived parameters
-        LOWER = [
-            min(self.variables_bounds[name])
-            for name in self.fitting_variables_name_list
-        ]
-        UPPER = [
-            max(self.variables_bounds[name])
-            for name in self.fitting_variables_name_list
-        ]
-        MATE_FUNCTION = {
-            "cxOnePoint": tools.cxOnePoint,
-            "cxTwoPoint": tools.cxTwoPoint,
-            "cxUniform": tools.cxUniform,
-            "cxPartialyMatched": tools.cxPartialyMatched,
-            "cxUniformPartialyMatched": tools.cxUniformPartialyMatched,
-            "cxOrdered": tools.cxOrdered,
-            "cxBlend": tools.cxBlend,
-            "cxSimulatedBinary": tools.cxSimulatedBinary,
-            "cxSimulatedBinaryBounded": tools.cxSimulatedBinaryBounded,
-            "cxMessyOnePoint": tools.cxMessyOnePoint,
-        }[MATE_FUNCTION_KEY]
-        MUTATE_FUNCTION = {
-            "mutGaussian": tools.mutGaussian,
-            "mutPolynomialBounded": tools.mutPolynomialBounded,
-        }[MUTATE_FUNCTION_KEY]
-        VARIATE_FUNCTION = {
-            "varOr": algorithms.varOr,
-            "varAnd": algorithms.varAnd,
-        }[VARIATE_FUNCTION_KEY]
-        SELECT_FUNCTION_KEY = "selTournament"
-        SELECT_FUNCTION = {
-            "selTournament": tools.selTournament,
-            "selBest": tools.selBest,
-            "selNSGA2": tools.selNSGA2,
-            "selSPEA2": tools.selSPEA2,
-        }[SELECT_FUNCTION_KEY]
-
-        # init deap toolbox
-        toolbox = base.Toolbox()
-
-        # define what individuals are (numbers for the fitting parameters), how their
-        # fitness is weighted (negative to get fitness = negative loss), and how they
-        # are created initially (uniformly between the bounds)
-        creator.create("Fitness", base.Fitness, weights=(-1.0,))
-        creator.create("Individual", list, fitness=creator.Fitness)
-        toolbox.register("uniformparams", self.init_uniform_deap)
-        toolbox.register(
-            "Individual", tools.initIterate, creator.Individual, toolbox.uniformparams
+    def _get_deap_dict(self):
+        LOWER = np.array(
+            [
+                min(self.variables_bounds[name])
+                for name in self.fitting_variables_name_list
+            ]
         )
-        toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
+        UPPER = np.array(
+            [
+                max(self.variables_bounds[name])
+                for name in self.fitting_variables_name_list
+            ]
+        )
 
-        # register evaluate function which gets an individual and returns the loss
-        # (which will be multiplied by -1.0 to get the fitness)
+        creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
+        creator.create("Individual", list, fitness=creator.FitnessMin)
+
+        toolbox = base.Toolbox()
         toolbox.register("evaluate", self._deap_simulation_wrapper)
 
-        # register functions for the genetic algorithm
-        # mate (mate two individuals to create two children) TODO generalize MATE_FUNCTION kwargs
-        # mutate (mutate two individuals to create two new ones) TODO generalize MUTATE_FUNCTION kwargs
-        # variate (how crossover, variate and reproduce are applied to create an
-        #          offspring population from the current population)
-        # select (how individuals are selected from the offspring population to create
-        #         the next generation population)
-        toolbox.register(
-            "mate",
-            MATE_FUNCTION,
-            **{"eta": ETA, "low": LOWER, "up": UPPER},
-        )
-        toolbox.register(
-            "mutate",
-            MUTATE_FUNCTION,
-            **{"eta": ETA, "low": LOWER, "up": UPPER, "indpb": INDPB},
-        )
-        toolbox.register(
-            "variate",
-            VARIATE_FUNCTION,
-            **{"toolbox": toolbox, "lambda_": LAMBDA, "cxpb": CXPB, "mutpb": MUTPB},
-        )
-        toolbox.register(
-            "select", SELECT_FUNCTION, {"k": POP_SIZE, "tournsize": TOURNSIZE}
+        strategy = cma.Strategy(
+            centroid=(LOWER + UPPER) / 2,
+            sigma=UPPER - LOWER,
         )
 
-        # initialize population (initial variables for POP_SIZE individuals/neurons)
-        pop = toolbox.population(n=POP_SIZE)
+        toolbox.register("generate", strategy.generate, creator.Individual)
+        toolbox.register("update", strategy.update)
 
-        # register some statistics we want to print during the run of the algorithm
+        hof = tools.HallOfFame(1)
         stats = tools.Statistics(lambda ind: ind.fitness.values)
         stats.register("avg", np.mean)
         stats.register("std", np.std)
         stats.register("min", np.min)
         stats.register("max", np.max)
 
-        # run the algorithm
-        pop, logbook = self._evolutionary_algorithm()
+        return {
+            "toolbox": toolbox,
+            "hof": hof,
+            "stats": stats,
+        }, strategy.lambda_
 
-    def _evolutionary_algorithm(
-        self,
-        population,
-        toolbox,
-        cxpb,
-        mutpb,
-        ngen,
-        stats=None,
-        halloffame=None,
-        verbose=__debug__,
+    def _run_with_deap(self):
+        """
+        TODO
+        """
+
+        pop, logbook = self._eaGenerateUpdate(
+            self.deap_dict["toolbox"],
+            ngen=500,
+            stats=self.deap_dict["stats"],
+            halloffame=self.deap_dict["hof"],
+            verbose=False,
+        )
+
+        best = {}
+        for param_idx, param_name in enumerate(self.fitting_variables_name_list):
+            best[param_name] = self.deap_dict["hof"][0][param_idx]
+        best["logbook"] = logbook
+        best["deap_pop"] = pop
+
+        ### plot logbook
+        plt.figure()
+        plt.plot(logbook.select("gen"), logbook.select("min"))
+        plt.xlabel("generation")
+        plt.ylabel("loss")
+        plt.savefig("logbook.png")
+
+        return best
+
+    def _eaGenerateUpdate(
+        self, toolbox, ngen, halloffame=None, stats=None, verbose=__debug__
     ):
-        """This algorithm reproduce the simplest evolutionary algorithm as
-        presented in chapter 7 of [Back2000]_.
+        """This is algorithm implements the ask-tell model proposed in
+        [Colette2010]_, where ask is called `generate` and tell is called `update`.
 
-        :param population: A list of individuals.
         :param toolbox: A :class:`~deap.base.Toolbox` that contains the evolution
                         operators.
-        :param cxpb: The probability of mating two individuals.
-        :param mutpb: The probability of mutating an individual.
         :param ngen: The number of generation.
         :param stats: A :class:`~deap.tools.Statistics` object that is updated
                     inplace, optional.
@@ -1026,51 +1091,68 @@ class OptNeuron:
         :returns: A class:`~deap.tools.Logbook` with the statistics of the
                 evolution
 
+        The algorithm generates the individuals using the :func:`toolbox.generate`
+        function and updates the generation method with the :func:`toolbox.update`
+        function. It returns the optimized population and a
+        :class:`~deap.tools.Logbook` with the statistics of the evolution. The
+        logbook will contain the generation number, the number of evaluations for
+        each generation and the statistics if a :class:`~deap.tools.Statistics` is
+        given as argument. The pseudocode goes as follow ::
+
+            for g in range(ngen):
+                population = toolbox.generate()
+                evaluate(population)
+                toolbox.update(population)
+
+
+        This function expects :meth:`toolbox.generate` and :meth:`toolbox.evaluate` aliases to be
+        registered in the toolbox.
+
+        .. [Colette2010] Collette, Y., N. Hansen, G. Pujol, D. Salazar Aponte and
+        R. Le Riche (2010). On Object-Oriented Programming of Optimizers -
+        Examples in Scilab. In P. Breitkopf and R. F. Coelho, eds.:
+        Multidisciplinary Design Optimization in Computational Mechanics,
+        Wiley, pp. 527-565;
+
         """
-        # TODO
         logbook = tools.Logbook()
         logbook.header = ["gen", "nevals"] + (stats.fields if stats else [])
 
-        # Evaluate the individuals with an invalid fitness
-        invalid_ind = [ind for ind in population if not ind.fitness.valid]
-        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
-        for ind, fit in zip(invalid_ind, fitnesses):
-            ind.fitness.values = fit
+        # define progress bar 1000/1000 [00:45<00:00, 22.17trial/s, best loss: 0.08673317798888838]
+        progress_bar = tqdm(range(ngen), total=ngen, unit="gen")
 
-        if halloffame is not None:
-            halloffame.update(population)
-
-        record = stats.compile(population) if stats else {}
-        logbook.record(gen=0, nevals=len(invalid_ind), **record)
-        if verbose:
-            print(logbook.stream)
-
-        # Begin the generational process
-        for gen in range(1, ngen + 1):
-            # Select the next generation individuals
-            offspring = toolbox.select(population, len(population))
-
-            # Vary the pool of individuals
-            offspring = varAnd(offspring, toolbox, cxpb, mutpb)
-
-            # Evaluate the individuals with an invalid fitness
-            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-            fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
-            for ind, fit in zip(invalid_ind, fitnesses):
+        for gen in progress_bar:
+            # Generate a new population
+            population = toolbox.generate()
+            # clip individuals of population to bounds
+            for ind in population:
+                for idx, param_name in enumerate(self.fitting_variables_name_list):
+                    if ind[idx] < min(self.variables_bounds[param_name]):
+                        ind[idx] = min(self.variables_bounds[param_name])
+                    elif ind[idx] > max(self.variables_bounds[param_name]):
+                        ind[idx] = max(self.variables_bounds[param_name])
+            # Evaluate the individuals
+            fitnesses = toolbox.evaluate(population)
+            for ind, fit in zip(population, fitnesses):
                 ind.fitness.values = fit
 
-            # Update the hall of fame with the generated individuals
-            if halloffame is not None:
-                halloffame.update(offspring)
+            for ind in population:
+                nan_in_pop = np.isnan(ind.fitness.values[0])
 
-            # Replace the current population by the offspring
-            population[:] = offspring
+            if halloffame is not None and not nan_in_pop:
+                halloffame.update(population)
 
-            # Append the current generation statistics to the logbook
-            record = stats.compile(population) if stats else {}
-            logbook.record(gen=gen, nevals=len(invalid_ind), **record)
+            # Update the strategy with the evaluated individuals
+            toolbox.update(population)
+
+            record = stats.compile(population) if stats is not None else {}
+            logbook.record(gen=gen, nevals=len(population), **record)
             if verbose:
                 print(logbook.stream)
+            # update progress bar with current best loss
+            progress_bar.set_postfix_str(
+                f"best loss: {halloffame[0].fitness.values[0]:.5f}"
+            )
 
         return population, logbook
 

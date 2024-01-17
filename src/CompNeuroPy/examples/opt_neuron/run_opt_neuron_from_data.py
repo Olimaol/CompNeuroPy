@@ -7,15 +7,15 @@ from CompNeuroPy.opt_neuron import OptNeuron
 import numpy as np
 from ANNarchy import Neuron, dt
 
-
+# TODO update docs for OptNeuron and examples, warn that neuron sjhoudl not have :population and that the experiment should be conductable for a population consisting of  multiple neurons
 ### in this example we want to fit an ANNarchy neuron model to some data (which ca be
 ### somehow obtained by simulating the neuron and recording variables) for this example,
 ### we have the following simple neuron model
 my_neuron = Neuron(
     parameters="""
         I_app = 0
-        a = 0 : population
-        b = 0 : population
+        a = 0
+        b = 0
     """,
     equations="""
         r = a*I_app + b
