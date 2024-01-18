@@ -60,6 +60,9 @@ def get_loss(
     pop_ist = results_ist.data["population_name"]
     rec_soll = results_soll.recordings
     pop_soll = results_soll.data["population_name"]
+
+    ### the get_loss function should always calculate the loss for neuron rank 0! For
+    ### both, the target and the optimized neuron model.
     neuron = 0
 
     ### get the data for calculating the loss from the recordings of the
@@ -96,7 +99,7 @@ def main():
     )
 
     ### run the optimization, define how often the experiment should be repeated
-    fit = opt.run(max_evals=1000, results_file_name="best_from_neuron")
+    fit = opt.run(max_evals=100, results_file_name="best_from_neuron")
 
     ### print optimized parameters, we should get around a=6 and b=0
     print("a", fit["a"])

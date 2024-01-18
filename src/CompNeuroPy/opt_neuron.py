@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import sys
 from typing import Callable, Any, Type
 from typingchecker import check_types
-import random
 from tqdm import tqdm
 from copy import deepcopy
 
@@ -30,24 +29,15 @@ try:
     from sbi import utils as utils
     from sbi.inference import SNPE, prepare_for_sbi, simulate_for_sbi
 
-    # efel
-    import efel
-
     # deap
-    import deap
-    import deap.gp
-    import deap.benchmarks
     from deap import base
     from deap import creator
     from deap import tools
-    from deap import algorithms
-    from deap.tools import cxSimulatedBinaryBounded, mutPolynomialBounded
-    from deap.algorithms import varAnd
     from deap import cma
 
 except:
     print(
-        "OptNeuron: Error: You need to install hyperopt, torch, and sbi to use OptNeuron (e.g. use pip install hyperopt torch sbi))"
+        "OptNeuron: Error: You need to install hyperopt, torch, sbi, and deap to use OptNeuron (e.g. use pip install hyperopt torch sbi deap))"
     )
     sys.exit()
 
@@ -71,7 +61,7 @@ class OptNeuron:
         time_step: float = 1.0,
         compile_folder_name: str = "annarchy_OptNeuron",
         num_rep_loss: int = 1,
-        method: str = "hyperopt",
+        method: str = "deap",
         prior=None,
         fv_space: list = None,
         record: list[str] = [],
@@ -125,9 +115,8 @@ class OptNeuron:
                 is obtained and averaged). Default: 1.
 
             method (str, optional):
-                Either 'sbi' or 'hyperopt'. If 'sbi' is used, the optimization is
-                performed with sbi. If 'hyperopt' is used, the optimization is
-                performed with hyperopt. Default: 'hyperopt'.
+                Either 'deap', 'sbi', or 'hyperopt'. Defines the tool which is used for
+                optimization. Default: 'deap'.
 
             prior (distribution, optional):
                 The prior distribution used by sbi. Default: None, i.e., uniform
@@ -438,9 +427,22 @@ class OptNeuron:
 
     def _wrapper_get_loss(self, results_ist, results_soll):
         """
-        TODO
+        Makes it possible to use the get_loss_function with multiple neurons. The
+        get_loss_function should always calculate the loss for neuron rank 0!
+
+        Args:
+            results_ist (object):
+                the results object returned by the run function of experiment (see above)
+                it can contain recordings of multiple neurons
+            results_soll (any):
+                the target data directly provided to OptNeuron during initialization
+                it always contains only the recordings of a single neuron
+
+        Returns:
+            all_loss_list (list):
+                list of lists containing the 'all_loss_list' for each neuron
         """
-        ###
+        ### loop over neurons and calculate all_loss_list for each neuron
         all_loss_list = []
         for neuron_idx in range(self.popsize):
             results_ist_neuron = self._get_results_of_single_neuron(
@@ -452,27 +454,45 @@ class OptNeuron:
 
     def _get_results_of_single_neuron(self, results, neuron_idx):
         """
-        TODO
+        Returns a results object which contains only the recordings of the given neuron
+        index. The defined neuron will be neuron rank 0 in the returned results object.
+
+        Args:
+            results (object):
+                the results object returned by the run function of experiment (see above)
+                it can contain recordings of multiple neurons
+            neuron_idx (int):
+                index of the neuron whose recordings should be returned
+
+        Returns:
+            results_neuron (object):
+                the results object as returned by the run function of experiment for a
+                single neuron
         """
+        ### if only one neuron, simply return results
         if self.popsize == 1:
             return results
 
+        ### if multiple neurons, return results for single neuron, do not change
+        ### original results!
         results_neuron = deepcopy(results)
 
+        ### loop over chunks and recordings and select only the recordings of the
+        ### defined neuron
         for chunk in range(len(results_neuron.recordings)):
             for rec_key in results_neuron.recordings[chunk].keys():
+                ### adjust spike dictionary
                 if "spike" in rec_key and not ("target" in rec_key):
                     results_neuron.recordings[chunk][rec_key] = {
                         0: results_neuron.recordings[chunk][rec_key][neuron_idx]
                     }
+                ### adjust all recorded arrays
                 elif not (
                     "period" in rec_key
                     or "parameter_dict" in rec_key
                     or "dt" in rec_key
                     or "target" in rec_key
                 ):
-                    # print(rec_key)
-                    # print(results_neuron.recordings[chunk][rec_key].shape)
                     results_neuron.recordings[chunk][
                         rec_key
                     ] = results_neuron.recordings[chunk][rec_key][
@@ -480,6 +500,20 @@ class OptNeuron:
                     ].reshape(
                         -1, 1
                     )
+                ### adjust parameter_dict
+                elif "parameter_dict" in rec_key and not ("target" in rec_key):
+                    results_neuron.recordings[chunk][rec_key] = {
+                        parameter_dict_key: np.array(
+                            [
+                                results_neuron.recordings[chunk][rec_key][
+                                    parameter_dict_key
+                                ][neuron_idx]
+                            ]
+                        )
+                        for parameter_dict_key in results_neuron.recordings[chunk][
+                            rec_key
+                        ].keys()
+                    }
 
         return results_neuron
 
@@ -536,7 +570,9 @@ class OptNeuron:
 
         Args:
             fitparams (list):
-                list with values for fitting parameters
+                list with values for fitting parameters or list of lists with values
+                for fitting parameters (first dimension is the number of parameters,
+                second dimension is the number of neurons)
 
         Returns:
             return_dict (dict):
@@ -553,7 +589,7 @@ class OptNeuron:
         loss_list_over_runs = []
 
         return_results = False
-        for nr_run in range(self.num_rep_loss):
+        for _ in range(self.num_rep_loss):
             ### initialize for each run a new rng (--> not always have same noise in case of noisy models/simulations)
             rng = np.random.default_rng()
             ### run simulator with multiprocessign manager
@@ -562,20 +598,26 @@ class OptNeuron:
             )
             proc.start()
             proc.join()
-            ### get simulation results/loss
-            loss_list_from_simulator = m_list[0]
-            loss_list_over_runs.append(loss_list_from_simulator)
+            ### get simulation results/loss (list of losses for each neuron)
+            loss_list_over_runs.append(m_list[0])
 
+        ### create loss array, first dimension is the number of runs, second dimension
+        ### is the number of neurons
         loss_arr = np.array(loss_list_over_runs)
-        ### calculate mean and std of loss
+
+        ### calculate mean and std of loss over runs
         if self.num_rep_loss > 1:
             ### multiple runs, mean over runs
+            ### -> resulting in 1D arrays for neurons
             loss_ret_arr = np.mean(loss_arr, 0)
             std_ret_arr = np.std(loss_arr, 0)
         else:
+            ### just take the first entry (the only one)
+            ### -> resulting in 1D arrays for neurons
             loss_ret_arr = loss_arr[0]
-            std_ret_arr = [None] * self.popsize
+            std_ret_arr = np.array([None] * self.popsize)
 
+        ### if only one neuron, return loss and std as single values
         if self.popsize == 1:
             loss = loss_ret_arr[0]
             std = std_ret_arr[0]
@@ -608,6 +650,10 @@ class OptNeuron:
         if len(fitparams.shape) == 2:
             ### batch parameters!
             data = []
+            ### TODO the run_simulator_function can now handle multiple parameter sets
+            ### and directly can return the loss for each parameter set, but the model
+            ### has to have the corrects size, i.e., the number of neurons has to be
+            ### the same as the number of parameter sets, maybe adjust sbi to this
             for idx in range(fitparams.shape[0]):
                 data.append(self._run_simulator(fitparams[idx])["loss"])
         else:
@@ -618,13 +664,20 @@ class OptNeuron:
 
     def _deap_simulation_wrapper(self, population: list):
         """
-        TODO
+        This function is called by deap. It calls the simulator function and
+        returns the loss and adjusts the format of the input parameters.
+
+        Args:
+            population (list):
+                list of lists with values for fitting parameters (first dimension is
+                the number of neurons, second dimension is the number of parameters)
+                given by deap
         """
-        ### transpose population list
+        ### transpose population list (now first dimension is the number of parameters,)
         populationT = np.array(population).T.tolist()
         ### get loss list
         loss_list = self._run_simulator(populationT)["loss"]
-
+        ### return loss list as list of tuples (deap needs this format)
         return [(loss_list[neuron_idx],) for neuron_idx in range(len(population))]
 
     def _run_simulator_with_results(self, fitparams, pop=None):
@@ -635,7 +688,9 @@ class OptNeuron:
 
         Args:
             fitparams (list):
-                list with values for fitting parameters
+                list with values for fitting parameters or list of lists with values
+                for fitting parameters (first dimension is the number of parameters,
+                second dimension is the number of neurons)
 
             pop (str, optional):
                 ANNarchy population name. Default: None, i.e., the tuned population
@@ -655,12 +710,14 @@ class OptNeuron:
         manager = multiprocessing.Manager()
         m_list = manager.dict()
 
-        ### in case of noisy models, here optionally run multiple simulations, to mean the loss
+        ### in case of noisy models, here optionally run multiple simulations, to mean
+        ### the loss
         loss_list_over_runs = []
         all_loss_list_over_runs = []
         return_results = True
-        for nr_run in range(self.num_rep_loss):
-            ### initialize for each run a new rng (--> not always have same noise in case of noisy models/simulations)
+        for _ in range(self.num_rep_loss):
+            ### initialize for each run a new rng (--> not always have same noise in
+            ### case of noisy models/simulations)
             rng = np.random.default_rng()
             ### run simulator with multiprocessign manager
             proc = Process(
@@ -670,22 +727,38 @@ class OptNeuron:
             proc.start()
             proc.join()
             ### get simulation results/loss
+            ### list of losses for each neuron
             loss_list_over_runs.append(m_list[0])
+            ### results object of experiment
             results_ist = m_list[1]
+            ### list of the all_loss_list for each neuron
             all_loss_list_over_runs.append(m_list[2])
 
-        all_loss_arr = np.array(all_loss_list_over_runs)
+        ### create loss array, first dimension is the number of runs, second dimension
+        ### is the number of neurons
         loss_arr = np.array(loss_list_over_runs)
+        ### create all_loss array, first dimension is the number of runs, second
+        ### dimension is the number of neurons, third dimension is the number of
+        ### individual losses
+        all_loss_arr = np.array(all_loss_list_over_runs)
+
         ### calculate mean and std of loss over runs
         if self.num_rep_loss > 1:
+            ### resulting in 1D arrays for neurons
             loss = np.mean(loss_arr, 0)
             std = np.std(loss_arr)
+            ### resulting in 2D array for neurons (1st dim) and individual losses (2nd dim)
             all_loss = np.mean(all_loss_arr, 0)
         else:
+            ### just take the first entry (the only one)
+            ### resulting in 1D arrays for neurons
             loss = loss_arr[0]
-            std = [None] * self.popsize
+            std = np.array([None] * self.popsize)
+            ### resulting in 2D array for neurons (1st dim) and individual losses (2nd dim)
             all_loss = all_loss_arr[0]
 
+        ### if only one neuron, return loss and std as single values and all_loss as
+        ### single 1D array (length is the number of individual losses)
         if self.popsize == 1:
             loss = loss[0]
             std = std[0]
@@ -724,7 +797,9 @@ class OptNeuron:
 
         Args:
             fitparams (list):
-                list with values for fitting parameters
+                list with values for fitting parameters or list of lists with values
+                for fitting parameters (first dimension is the number of parameters,
+                second dimension is the number of neurons)
 
             rng (numpy random generator):
                 random generator for the simulation
@@ -757,16 +832,20 @@ class OptNeuron:
             loss_list = []
             ### wrapper_get_loss returns list (neurons) of lists (individual losses)
             all_loss_list = self._wrapper_get_loss(results, self.results_soll)
+            ### loop over neurons
             for all_loss in all_loss_list:
+                ### if all_loss is list, sum up individual losses
                 if isinstance(all_loss, list) or isinstance(
                     all_loss, type(np.zeros(1))
                 ):
                     loss_list.append(sum(all_loss))
+                ### if all_loss is single value, just append to loss_list
                 else:
                     loss_list.append(all_loss)
         else:
             all_loss_list = [999] * self.popsize
             loss_list = [999] * self.popsize
+
         ### "return" loss and other optional things
         m_list[0] = loss_list
         if return_results:
@@ -784,7 +863,7 @@ class OptNeuron:
         Args:
             fitparams (list):
                 list with values for fitting parameters, either a single list or a list
-                of lists (first dimensio is the number of parameters, second dimension
+                of lists (first dimension is the number of parameters, second dimension
                 is the number of neurons)
             pop (str, optional):
                 ANNarchy population name. Default: None, i.e., the tuned population
@@ -855,9 +934,18 @@ class OptNeuron:
                 models with multiple runs per loss calculation), and the status
                 (STATUS_OK for hyperopt) and the results generated by the experiment.
         """
-        return self._run_simulator_with_results(
+        results = self._run_simulator_with_results(
             [fitparams_dict[name] for name in self.fitting_variables_name_list]
         )
+        ### if self.popsize > 1 --> transform results, loss etc. to only 1 neuron
+        if self.popsize > 1:
+            results["loss"] = results["loss"][0]
+            results["std"] = results["std"][0]
+            results["all_loss"] = results["all_loss"][0]
+            results["results"] = self._get_results_of_single_neuron(
+                results["results"], 0
+            )
+        return results
 
     def _run_with_sbi(self, max_evals, sbi_plot_file):
         """
@@ -934,7 +1022,7 @@ class OptNeuron:
 
         ### save plot
         sf.create_dir("/".join(sbi_plot_file.split("/")[:-1]))
-        plt.savefig(sbi_plot_file)
+        plt.savefig(sbi_plot_file, dpi=300)
 
         return best
 
@@ -943,7 +1031,8 @@ class OptNeuron:
         self,
         max_evals: int,
         results_file_name: str = "best",
-        sbi_plot_file: str = "posterior.svg",
+        sbi_plot_file: str = "posterior.png",
+        deap_plot_file: str = "logbook.png",
     ):
         """
         Runs the optimization.
@@ -960,7 +1049,11 @@ class OptNeuron:
 
             sbi_plot_file (str, optional):
                 If you use "sbi": the name of the figure which will be saved and shows
-                the posterior. Default: "posterior.svg".
+                the posterior. Default: "posterior.png".
+
+            deap_plot_file (str, optional):
+                If you use "deap": the name of the figure which will be saved and shows
+                the logbook. Default: "logbook.png".
 
         Returns:
             best (dict):
@@ -985,14 +1078,13 @@ class OptNeuron:
             ### run optimization with sbi and return best dict
             best = self._run_with_sbi(max_evals, sbi_plot_file)
         elif self.method == "deap":
-            best = self._run_with_deap()
+            best = self._run_with_deap(max_evals, deap_plot_file)
         else:
             print("ERROR run; method should be 'hyperopt' or 'sbi'")
             quit()
+        ### obtain loss for the best parameters
         fit = self._test_fit(best)
         best["loss"] = fit["loss"]
-        if self.method == "sbi":
-            print("\tbest loss:", best["loss"])
         best["all_loss"] = fit["all_loss"]
         best["std"] = fit["std"]
         best["results"] = fit["results"]
@@ -1005,6 +1097,10 @@ class OptNeuron:
         return best
 
     def _get_deap_dict(self):
+        """
+        Prepares the deap optimization.
+        """
+        ### get lower and upper bounds
         LOWER = np.array(
             [
                 min(self.variables_bounds[name])
@@ -1018,21 +1114,26 @@ class OptNeuron:
             ]
         )
 
+        ### create the individual class
         creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
         creator.create("Individual", list, fitness=creator.FitnessMin)
 
+        ### create the toolbox
         toolbox = base.Toolbox()
+        ### function calculating losses from individuals
         toolbox.register("evaluate", self._deap_simulation_wrapper)
-
+        ### search strategy
         strategy = cma.Strategy(
             centroid=(LOWER + UPPER) / 2,
             sigma=UPPER - LOWER,
         )
-
+        ### function generating a population during optimization
         toolbox.register("generate", strategy.generate, creator.Individual)
+        ### function updating the search strategy
         toolbox.register("update", strategy.update)
-
+        ### hall of fame to track best individual i.e. parameters
         hof = tools.HallOfFame(1)
+        ### statistics to track evolution of loss
         stats = tools.Statistics(lambda ind: ind.fitness.values)
         stats.register("avg", np.mean)
         stats.register("std", np.std)
@@ -1045,19 +1146,27 @@ class OptNeuron:
             "stats": stats,
         }, strategy.lambda_
 
-    def _run_with_deap(self):
+    def _run_with_deap(self, max_evals, deap_plot_file):
         """
-        TODO
-        """
+        Runs the optimization with deap.
 
-        pop, logbook = self._eaGenerateUpdate(
+        Args:
+            max_evals (int):
+                number of runs (here generations) the optimization method performs
+
+            deap_plot_file (str):
+                the name of the figure which will be saved and shows the logbook
+        """
+        ### run the search algorithm with the prepared deap_dict
+        pop, logbook = self._ea_generate_update(
             self.deap_dict["toolbox"],
-            ngen=500,
+            ngen=max_evals,
             stats=self.deap_dict["stats"],
             halloffame=self.deap_dict["hof"],
             verbose=False,
         )
 
+        ### get best parameters, last population of inidividuals and logbook
         best = {}
         for param_idx, param_name in enumerate(self.fitting_variables_name_list):
             best[param_name] = self.deap_dict["hof"][0][param_idx]
@@ -1066,47 +1175,24 @@ class OptNeuron:
 
         ### plot logbook
         plt.figure()
-        plt.plot(logbook.select("gen"), logbook.select("min"))
+        plt.plot(logbook.select("gen"), logbook.select("min"), "g", label="min")
+        plt.plot(logbook.select("gen"), logbook.select("avg"), "k", label="avg")
+        plt.plot(logbook.select("gen"), logbook.select("max"), "r", label="max")
+        plt.legend()
         plt.xlabel("generation")
         plt.ylabel("loss")
-        plt.savefig("logbook.png")
+        sf.create_dir("/".join(deap_plot_file.split("/")[:-1]))
+        plt.savefig(deap_plot_file, dpi=300)
 
         return best
 
-    def _eaGenerateUpdate(
+    def _ea_generate_update(
         self, toolbox, ngen, halloffame=None, stats=None, verbose=__debug__
     ):
-        """This is algorithm implements the ask-tell model proposed in
+        """
+        This function is copied from deap.algorithms.eaGenerateUpdate and modified.
+        This is algorithm implements the ask-tell model proposed in
         [Colette2010]_, where ask is called `generate` and tell is called `update`.
-
-        :param toolbox: A :class:`~deap.base.Toolbox` that contains the evolution
-                        operators.
-        :param ngen: The number of generation.
-        :param stats: A :class:`~deap.tools.Statistics` object that is updated
-                    inplace, optional.
-        :param halloffame: A :class:`~deap.tools.HallOfFame` object that will
-                        contain the best individuals, optional.
-        :param verbose: Whether or not to log the statistics.
-        :returns: The final population
-        :returns: A class:`~deap.tools.Logbook` with the statistics of the
-                evolution
-
-        The algorithm generates the individuals using the :func:`toolbox.generate`
-        function and updates the generation method with the :func:`toolbox.update`
-        function. It returns the optimized population and a
-        :class:`~deap.tools.Logbook` with the statistics of the evolution. The
-        logbook will contain the generation number, the number of evaluations for
-        each generation and the statistics if a :class:`~deap.tools.Statistics` is
-        given as argument. The pseudocode goes as follow ::
-
-            for g in range(ngen):
-                population = toolbox.generate()
-                evaluate(population)
-                toolbox.update(population)
-
-
-        This function expects :meth:`toolbox.generate` and :meth:`toolbox.evaluate` aliases to be
-        registered in the toolbox.
 
         .. [Colette2010] Collette, Y., N. Hansen, G. Pujol, D. Salazar Aponte and
         R. Le Riche (2010). On Object-Oriented Programming of Optimizers -
@@ -1114,66 +1200,70 @@ class OptNeuron:
         Multidisciplinary Design Optimization in Computational Mechanics,
         Wiley, pp. 527-565;
 
+        Args:
+            toolbox:
+                A deap Toolbox object that contains the evolution operators.
+            ngen:
+                The number of generations to run.
+            halloffame:
+                A deap HallOfFame object that will to track the best individuals
+            stats:
+                A deap Statistics object to track the statistics of the evolution.
+            verbose:
+                Whether or not to print the statistics for each gen.
+
+        Returns:
+            population:
+                A list of individuals.
+            logbook:
+                A Logbook() object that contains the evolution statistics.
         """
+        ### init logbook
         logbook = tools.Logbook()
         logbook.header = ["gen", "nevals"] + (stats.fields if stats else [])
 
-        # define progress bar 1000/1000 [00:45<00:00, 22.17trial/s, best loss: 0.08673317798888838]
+        ### define progress bar
         progress_bar = tqdm(range(ngen), total=ngen, unit="gen")
 
+        ### loop over generations
         for gen in progress_bar:
-            # Generate a new population
+            ### Generate a new population
             population = toolbox.generate()
-            # clip individuals of population to bounds
+            ### clip individuals of population to variable bounds
             for ind in population:
                 for idx, param_name in enumerate(self.fitting_variables_name_list):
                     if ind[idx] < min(self.variables_bounds[param_name]):
                         ind[idx] = min(self.variables_bounds[param_name])
                     elif ind[idx] > max(self.variables_bounds[param_name]):
                         ind[idx] = max(self.variables_bounds[param_name])
-            # Evaluate the individuals
+            ### Evaluate the individuals (here whole population at once)
             fitnesses = toolbox.evaluate(population)
             for ind, fit in zip(population, fitnesses):
                 ind.fitness.values = fit
 
+            ### check if nan in population
             for ind in population:
                 nan_in_pop = np.isnan(ind.fitness.values[0])
 
+            ### Update the hall of fame with the generated individuals
             if halloffame is not None and not nan_in_pop:
                 halloffame.update(population)
 
-            # Update the strategy with the evaluated individuals
+            ### Update the strategy with the evaluated individuals
             toolbox.update(population)
 
+            ### Append the current generation statistics to the logbook
             record = stats.compile(population) if stats is not None else {}
             logbook.record(gen=gen, nevals=len(population), **record)
             if verbose:
                 print(logbook.stream)
-            # update progress bar with current best loss
+
+            ### update progress bar with current best loss
             progress_bar.set_postfix_str(
                 f"best loss: {halloffame[0].fitness.values[0]:.5f}"
             )
 
         return population, logbook
-
-    def init_uniform_deap(self):
-        """
-        Returns:
-            uniform (list):
-                list with values for fitting parameters
-        """
-        lower_list = [
-            min(self.variables_bounds[name])
-            for name in self.fitting_variables_name_list
-        ]
-        upper_list = [
-            max(self.variables_bounds[name])
-            for name in self.fitting_variables_name_list
-        ]
-        return [
-            random.uniform(lower_list, upper_list)
-            for _ in range(len(self.fitting_variables_name_list))
-        ]
 
 
 ### old name for backward compatibility, TODO remove

@@ -14,6 +14,10 @@ Used optimization methods:
 
     Tejero-Cantero et al., (2020). sbi: A toolkit for simulation-based inference. Journal of Open Source Software, 5(52), 2505, [https://doi.org/10.21105/joss.02505](https://doi.org/10.21105/joss.02505)
 
+- [deap](https://github.com/deap/deap) (using the [CMAES](https://deap.readthedocs.io/en/master/api/algo.html#module-deap.cma) strategy)
+
+    Fortin, F. A., De Rainville, F. M., Gardner, M. A. G., Parizeau, M., & Gagné, C. (2012). DEAP: Evolutionary algorithms made easy. The Journal of Machine Learning Research, 13(1), 2171-2175.
+
 ### Example:
 ```python
 opt = OptNeuron(
@@ -40,7 +44,8 @@ You have to define a [`CompNeuroExp`](define_experiment.md#CompNeuroPy.experimen
 !!! warning
     While defining the [`CompNeuroExp`](define_experiment.md#CompNeuroPy.experiment.CompNeuroExp) _run()_ function for the optimization with [`OptNeuron`](#CompNeuroPy.opt_neuron.OptNeuron) you must observe the following rules:
 
-- the _run()_ function has to take a single argument (besides self) which contains the name of the population consiting of a single neuron of the optimized neuron model (you can use this to access the population)
+- the _run()_ function has to take a single argument (besides self) which contains the name of the population consiting of a single neuron or multiple neurons of the optimized neuron model (you can use this to access the population)
+- thus, the simulation has to be compatible with a population consisting of a single or multiple neurons
 - call _self.reset(parameters=False)_ at the beginning of the run function, thus the neuron will be in its compile state (except the paramters) at the beginning of each simulation run
 - always set _parameters=False_ while calling the _self.reset()_ function (otherwise the parameter optimization will not work)
 - besides the optimized parameters and the loss, the results of the experiment (using the optimized parameters) will be available after the optimization, you can store any additional data in the _self.data_ attribute
@@ -124,6 +129,9 @@ class my_exp(CompNeuroExp):
 
 ## The get_loss_function
 The _get_loss_function_ must have two arguments. When this function is called during optimization, the first argument is always the _results_ object returned by the _experiment_, i.e. the results of the neuron you want to optimize. The second argument depends on whether you have specified _results_soll_, i.e. data to be reproduced by the _neuron_model_, or whether you have specified a _target_neuron_model_ whose results are to be reproduced by the _neuron_model_. Thus, the second argument is either _results_soll_ provided to the [`OptNeuron`](#CompNeuroPy.opt_neuron.OptNeuron) class during initialization or another _results_ object (returned by the [`CompNeuroExp`](define_experiment.md#CompNeuroPy.experiment.CompNeuroExp) _run_ function), generated with the _target_neuron_model_.
+
+!!! warning
+    You always have to work with the neuron rank 0 within the _get_loss_function_!
 
 ### Example:
 In this example we assume, that _results_soll_ was provided during initialization of the [`OptNeuron`](#CompNeuroPy.opt_neuron.OptNeuron) class (no _target_neuron_model_ used).

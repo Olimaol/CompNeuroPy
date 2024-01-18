@@ -11,15 +11,15 @@ from CompNeuroPy.opt_neuron import OptNeuron
 import numpy as np
 from ANNarchy import Neuron, dt
 
-
 ### in this example we want to fit an ANNarchy neuron model to some data (which ca be
 ### somehow obtained by simulating the neuron and recording variables) for this example,
-### we have the following simple neuron model
+### we have the following simple neuron model, you must not use the :population flag
+### for the parameters!
 my_neuron = Neuron(
     parameters="""
         I_app = 0
-        a = 0 : population
-        b = 0 : population
+        a = 0
+        b = 0
     """,
     equations="""
         r = a*I_app + b
@@ -88,12 +88,14 @@ class my_exp(CompNeuroExp):
 
         For using the CompNeuroExp for OptNeuron, the run function should have
         one argument which is the name of the population which is automatically created
-        by OptNeuron, containing a single neuron of the model which should be optimized.
+        by OptNeuron, containing a single or multiple neurons of the neuron model which
+        should be optimized. Thus, the run function should be able to run the experiment
+        with a single or multiple neurons in the given population!
 
         Args:
             population_name (str):
-                name of the population which contains a single neuron, this will be
-                automatically provided by OptNeuron
+                name of the population with neurons of the tuned neuron model, this will
+                be automatically provided by OptNeuron
 
         Returns:
             results (CompNeuroExp._ResultsCl):
@@ -169,6 +171,8 @@ def get_loss(results_ist: CompNeuroExp._ResultsCl, results_soll):
     ### results_ist, we do not use all available information here, but you could
     rec_ist = results_ist.recordings
     pop_ist = results_ist.data["population_name"]
+
+    ### the get_loss function should always calculate the loss for neuron rank 0!
     neuron = 0
 
     ### get the data for calculating the loss from the results_soll
@@ -206,12 +210,12 @@ def main():
         results_soll=experimental_data["results_soll"],
         time_step=experimental_data["time_step"],
         compile_folder_name="annarchy_opt_neuron_example_from_data",
-        method="hyperopt",
+        method="deap",
         record=["r"],
     )
 
     ### run the optimization, define how often the experiment should be repeated
-    fit = opt.run(max_evals=1000, results_file_name="best_from_data")
+    fit = opt.run(max_evals=100, results_file_name="best_from_data")
 
     ### print optimized parameters, we should get around a=0.8 and b=2
     print("a", fit["a"])
@@ -231,10 +235,10 @@ OptNeuron: Initialize OptNeuron... do not create anything with ANNarchy before!
 OptNeuron: WARNING: attributes ['I_app', 'r'] are not used/initialized.
 checking neuron_models, experiment, get_loss...Done
 
-100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1000/1000 [00:45<00:00, 21.99trial/s, best loss: 0.31922683758789056]
-a 0.7609542202637395
-b 2.171783070482363
-['a', 'b', 'loss', 'all_loss', 'std', 'results', 'results_soll']
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 100/100 [00:03<00:00, 26.66gen/s, best loss: 0.00000]
+a 0.8000000007960777
+b 1.9999999939091158
+['a', 'b', 'logbook', 'deap_pop', 'loss', 'all_loss', 'std', 'results', 'results_soll']
 ```
 
 ## Optimize neuron model from other neuron model
@@ -262,15 +266,15 @@ from run_opt_neuron_from_data import my_neuron as simple_neuron
 complex_neuron = Neuron(
     parameters="""
         I_app = 0
-        f = 6.0542364610842572e-002 : population
-        e = 3.7144041714209490e+000 : population
-        d = -4.9446336126026436e-001 : population
-        c = 9.0909599124334911e-002 : population
-        b = -4.4497411506061648e-003 : population
-        a = -6.2239117460540167e-005 : population
+        m0 = 1
+        m1 = 2
+        m2 = 3
+        n0 = 1
+        n1 = 0
+        n2 = -1
     """,
     equations="""
-        r = a*I_app**5 + b*I_app**4 + c*I_app**3 + d*I_app**2 + e*I_app**1 + f
+        r = m0*I_app + n0 + m1*I_app + n1 + m2*I_app + n2
     """,
 )
 
@@ -302,6 +306,9 @@ def get_loss(
     pop_ist = results_ist.data["population_name"]
     rec_soll = results_soll.recordings
     pop_soll = results_soll.data["population_name"]
+
+    ### the get_loss function should always calculate the loss for neuron rank 0! For
+    ### both, the target and the optimized neuron model.
     neuron = 0
 
     ### get the data for calculating the loss from the recordings of the
@@ -333,14 +340,14 @@ def main():
         target_neuron_model=complex_neuron,
         time_step=1,
         compile_folder_name="annarchy_opt_neuron_example_from_neuron",
-        method="hyperopt",
+        method="deap",
         record=["r"],
     )
 
     ### run the optimization, define how often the experiment should be repeated
-    fit = opt.run(max_evals=1000, results_file_name="best_from_neuron")
+    fit = opt.run(max_evals=100, results_file_name="best_from_neuron")
 
-    ### print optimized parameters, we should get around a=2.8 and b=0.28
+    ### print optimized parameters, we should get around a=6 and b=0
     print("a", fit["a"])
     print("b", fit["b"])
     print(list(fit.keys()))
@@ -358,8 +365,8 @@ OptNeuron: Initialize OptNeuron... do not create anything with ANNarchy before!
 OptNeuron: WARNING: attributes ['I_app', 'r'] are not used/initialized.
 checking neuron_models, experiment, get_loss...Done
 
-100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1000/1000 [00:47<00:00, 21.10trial/s, best loss: 0.5607444520201438]
-a 2.8009641859311354
-b 0.22697565003968234
-['a', 'b', 'loss', 'all_loss', 'std', 'results', 'results_soll']
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 100/100 [00:03<00:00, 26.96gen/s, best loss: 0.00000]
+a 5.99999999677215
+b 2.8379565285300652e-08
+['a', 'b', 'logbook', 'deap_pop', 'loss', 'all_loss', 'std', 'results', 'results_soll']
 ```

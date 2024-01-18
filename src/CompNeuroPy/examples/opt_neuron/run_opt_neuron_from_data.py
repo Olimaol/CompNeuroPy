@@ -7,10 +7,10 @@ from CompNeuroPy.opt_neuron import OptNeuron
 import numpy as np
 from ANNarchy import Neuron, dt
 
-# TODO update docs for OptNeuron and examples, warn that neuron sjhoudl not have :population and that the experiment should be conductable for a population consisting of  multiple neurons
 ### in this example we want to fit an ANNarchy neuron model to some data (which ca be
 ### somehow obtained by simulating the neuron and recording variables) for this example,
-### we have the following simple neuron model
+### we have the following simple neuron model, you must not use the :population flag
+### for the parameters!
 my_neuron = Neuron(
     parameters="""
         I_app = 0
@@ -84,12 +84,14 @@ class my_exp(CompNeuroExp):
 
         For using the CompNeuroExp for OptNeuron, the run function should have
         one argument which is the name of the population which is automatically created
-        by OptNeuron, containing a single neuron of the model which should be optimized.
+        by OptNeuron, containing a single or multiple neurons of the neuron model which
+        should be optimized. Thus, the run function should be able to run the experiment
+        with a single or multiple neurons in the given population!
 
         Args:
             population_name (str):
-                name of the population which contains a single neuron, this will be
-                automatically provided by OptNeuron
+                name of the population with neurons of the tuned neuron model, this will
+                be automatically provided by OptNeuron
 
         Returns:
             results (CompNeuroExp._ResultsCl):
@@ -146,9 +148,6 @@ class my_exp(CompNeuroExp):
 
 
 ### Next, the OptNeuron class needs a function to calculate the loss.
-# TODO add neuron_id to the arguments of the get_loss function, the fucntion has to be
-# created that it works with multiple neurons in the population and the current
-# neuron is selected by the neuron_id which is provided by OptNeuron
 def get_loss(results_ist: CompNeuroExp._ResultsCl, results_soll):
     """
     Function which has to have the arguments results_ist and results_soll and should
@@ -168,6 +167,8 @@ def get_loss(results_ist: CompNeuroExp._ResultsCl, results_soll):
     ### results_ist, we do not use all available information here, but you could
     rec_ist = results_ist.recordings
     pop_ist = results_ist.data["population_name"]
+
+    ### the get_loss function should always calculate the loss for neuron rank 0!
     neuron = 0
 
     ### get the data for calculating the loss from the results_soll
@@ -210,7 +211,7 @@ def main():
     )
 
     ### run the optimization, define how often the experiment should be repeated
-    fit = opt.run(max_evals=1000, results_file_name="best_from_data")
+    fit = opt.run(max_evals=100, results_file_name="best_from_data")
 
     ### print optimized parameters, we should get around a=0.8 and b=2
     print("a", fit["a"])
