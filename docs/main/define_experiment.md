@@ -1,1 +1,0 @@
-::: CompNeuroPy.experiment.CompNeuroExp
