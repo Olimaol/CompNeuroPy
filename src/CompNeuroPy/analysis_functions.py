@@ -1741,7 +1741,7 @@ def get_minimum(input_data: list | np.ndarray | tuple | float):
                 sublist if isinstance(sublist, (list, np.ndarray, tuple)) else [sublist]
             )
         ]
-        return float(min(flattened_list))
+        return float(np.nanmin(flattened_list))
     else:
         # If the input is a single value, return it as the minimum
         return float(input_data)
@@ -1769,7 +1769,7 @@ def get_maximum(input_data: list | np.ndarray | tuple | float):
                 sublist if isinstance(sublist, (list, np.ndarray, tuple)) else [sublist]
             )
         ]
-        return float(max(flattened_list))
+        return float(np.nanmax(flattened_list))
     else:
         # If the input is a single value, return it as the maximum
         return float(input_data)
@@ -2042,8 +2042,23 @@ class PlotRecordings:
         Raises:
             ValueError: If given time_lim is not within the chunk.
         """
-
-        chunk_time_lims = self.recording_times.time_lims(chunk=self.chunk)
+        ### get time limits of chunk of each compartment (use try because not all
+        ### compartments have to be recorded)
+        chunk_time_lims_list = []
+        for compartment in self._compartment_list:
+            try:
+                chunk_time_lims = self.recording_times.time_lims(
+                    chunk=self.chunk, compartment=compartment
+                )
+                chunk_time_lims_list.append(chunk_time_lims)
+            except:
+                continue
+        ### use the minimum and maximum of the time limits of the chunk as chunk time
+        ### limits
+        chunk_time_lims = (
+            get_minimum(np.array(chunk_time_lims_list)[:, 0]),
+            get_maximum(np.array(chunk_time_lims_list)[:, 1]),
+        )
         ### check if time_lim is given
         if isinstance(self.time_lim, type(None)):
             ### get start and end time from recording_times
