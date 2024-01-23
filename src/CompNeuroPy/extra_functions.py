@@ -712,7 +712,7 @@ def _prepare_cma_deap(
     )
     strategy.ccov1 *= 0.5
     strategy.ccovmu *= 0.5
-    # strategy.damps /= 0.5
+    # strategy.damps /= 0.5 #TODO what slows down?
     print(
         f"lambda (The number of children to produce at each generation): {strategy.lambda_}"
     )
