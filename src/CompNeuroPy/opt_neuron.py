@@ -1100,6 +1100,7 @@ class OptNeuron:
         """
         Prepares the deap optimization.
         """
+
         ### get lower and upper bounds
         LOWER = np.array(
             [
@@ -1114,37 +1115,12 @@ class OptNeuron:
             ]
         )
 
-        ### create the individual class
-        creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
-        creator.create("Individual", list, fitness=creator.FitnessMin)
-
-        ### create the toolbox
-        toolbox = base.Toolbox()
-        ### function calculating losses from individuals
-        toolbox.register("evaluate", self._deap_simulation_wrapper)
-        ### search strategy
-        strategy = cma.Strategy(
-            centroid=(LOWER + UPPER) / 2,
-            sigma=UPPER - LOWER,
+        return ef._prepare_cma_deap(
+            lower=LOWER,
+            upper=UPPER,
+            evaluate_function=self._deap_simulation_wrapper,
+            param_names=self.fitting_variables_name_list,
         )
-        ### function generating a population during optimization
-        toolbox.register("generate", strategy.generate, creator.Individual)
-        ### function updating the search strategy
-        toolbox.register("update", strategy.update)
-        ### hall of fame to track best individual i.e. parameters
-        hof = tools.HallOfFame(1)
-        ### statistics to track evolution of loss
-        stats = tools.Statistics(lambda ind: ind.fitness.values)
-        stats.register("avg", np.mean)
-        stats.register("std", np.std)
-        stats.register("min", np.min)
-        stats.register("max", np.max)
-
-        return {
-            "toolbox": toolbox,
-            "hof": hof,
-            "stats": stats,
-        }, strategy.lambda_
 
     def _run_with_deap(self, max_evals, deap_plot_file):
         """
@@ -1157,113 +1133,7 @@ class OptNeuron:
             deap_plot_file (str):
                 the name of the figure which will be saved and shows the logbook
         """
-        ### run the search algorithm with the prepared deap_dict
-        pop, logbook = self._ea_generate_update(
-            self.deap_dict["toolbox"],
-            ngen=max_evals,
-            stats=self.deap_dict["stats"],
-            halloffame=self.deap_dict["hof"],
-            verbose=False,
-        )
-
-        ### get best parameters, last population of inidividuals and logbook
-        best = {}
-        for param_idx, param_name in enumerate(self.fitting_variables_name_list):
-            best[param_name] = self.deap_dict["hof"][0][param_idx]
-        best["logbook"] = logbook
-        best["deap_pop"] = pop
-
-        ### plot logbook
-        plt.figure()
-        plt.plot(logbook.select("gen"), logbook.select("min"), "g", label="min")
-        plt.plot(logbook.select("gen"), logbook.select("avg"), "k", label="avg")
-        plt.plot(logbook.select("gen"), logbook.select("max"), "r", label="max")
-        plt.legend()
-        plt.xlabel("generation")
-        plt.ylabel("loss")
-        sf.create_dir("/".join(deap_plot_file.split("/")[:-1]))
-        plt.savefig(deap_plot_file, dpi=300)
-
-        return best
-
-    def _ea_generate_update(
-        self, toolbox, ngen, halloffame=None, stats=None, verbose=__debug__
-    ):
-        """
-        This function is copied from deap.algorithms.eaGenerateUpdate and modified.
-        This is algorithm implements the ask-tell model proposed in
-        [Colette2010]_, where ask is called `generate` and tell is called `update`.
-
-        .. [Colette2010] Collette, Y., N. Hansen, G. Pujol, D. Salazar Aponte and
-        R. Le Riche (2010). On Object-Oriented Programming of Optimizers -
-        Examples in Scilab. In P. Breitkopf and R. F. Coelho, eds.:
-        Multidisciplinary Design Optimization in Computational Mechanics,
-        Wiley, pp. 527-565;
-
-        Args:
-            toolbox:
-                A deap Toolbox object that contains the evolution operators.
-            ngen:
-                The number of generations to run.
-            halloffame:
-                A deap HallOfFame object that will to track the best individuals
-            stats:
-                A deap Statistics object to track the statistics of the evolution.
-            verbose:
-                Whether or not to print the statistics for each gen.
-
-        Returns:
-            population:
-                A list of individuals.
-            logbook:
-                A Logbook() object that contains the evolution statistics.
-        """
-        ### init logbook
-        logbook = tools.Logbook()
-        logbook.header = ["gen", "nevals"] + (stats.fields if stats else [])
-
-        ### define progress bar
-        progress_bar = tqdm(range(ngen), total=ngen, unit="gen")
-
-        ### loop over generations
-        for gen in progress_bar:
-            ### Generate a new population
-            population = toolbox.generate()
-            ### clip individuals of population to variable bounds
-            for ind in population:
-                for idx, param_name in enumerate(self.fitting_variables_name_list):
-                    if ind[idx] < min(self.variables_bounds[param_name]):
-                        ind[idx] = min(self.variables_bounds[param_name])
-                    elif ind[idx] > max(self.variables_bounds[param_name]):
-                        ind[idx] = max(self.variables_bounds[param_name])
-            ### Evaluate the individuals (here whole population at once)
-            fitnesses = toolbox.evaluate(population)
-            for ind, fit in zip(population, fitnesses):
-                ind.fitness.values = fit
-
-            ### check if nan in population
-            for ind in population:
-                nan_in_pop = np.isnan(ind.fitness.values[0])
-
-            ### Update the hall of fame with the generated individuals
-            if halloffame is not None and not nan_in_pop:
-                halloffame.update(population)
-
-            ### Update the strategy with the evaluated individuals
-            toolbox.update(population)
-
-            ### Append the current generation statistics to the logbook
-            record = stats.compile(population) if stats is not None else {}
-            logbook.record(gen=gen, nevals=len(population), **record)
-            if verbose:
-                print(logbook.stream)
-
-            ### update progress bar with current best loss
-            progress_bar.set_postfix_str(
-                f"best loss: {halloffame[0].fitness.values[0]:.5f}"
-            )
-
-        return population, logbook
+        return ef._cma_deap(max_evals, deap_plot_file, self.deap_dict)
 
 
 ### old name for backward compatibility, TODO remove

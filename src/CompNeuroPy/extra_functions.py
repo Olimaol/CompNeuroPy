@@ -3,12 +3,21 @@ from contextlib import contextmanager
 import sys
 import os
 from CompNeuroPy import analysis_functions as af
+from CompNeuroPy import system_functions as sf
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.colors import LinearSegmentedColormap, to_rgba_array
 import numpy as np
 from collections.abc import Sized
+from typing import Callable
+from tqdm import tqdm
+from copy import deepcopy
+
+from deap import base
+from deap import creator
+from deap import tools
+from deap import cma
 
 
 def print_df(df):
@@ -652,3 +661,238 @@ def _replace_substrings_except_within_braces(input_string, replacement_mapping):
                 i += 1
 
     return "".join(result)
+
+
+def _prepare_cma_deap(
+    lower: np.ndarray, upper: np.ndarray, evaluate_function: Callable, param_names=None
+):
+    """
+    Prepares the deap Covariance Matrix Adaptation Evolution Strategy optimization.
+
+    Args:
+        lower (np.ndarray):
+            Lower bounds of the parameters
+        upper (np.ndarray):
+            Upper bounds of the parameters
+        evaluate_function (Callable):
+            Function evaluating the losses of a population of individuals. Should be
+            a list of tuples with the losses of the individuals.
+
+    Returns:
+        deap_dict (dict):
+            Dictionary containing the deap toolbox, hall of fame, statistics, lower
+            and upper bounds
+        lambda_ (int):
+            Number of individuals in a population
+    """
+    ### create scaler to scale parameters into range [0,1] based on lower and upper bounds
+    upper_orig = deepcopy(upper)
+    lower_orig = deepcopy(lower)
+    scaler = lambda x: (x - lower_orig) / (upper_orig - lower_orig)
+
+    ### create inverse scaler to scale parameters back into original range [lower,upper]
+    inv_scaler = lambda x: x * (upper_orig - lower_orig) + lower_orig
+
+    ### scale upper and lower bounds
+    lower = scaler(lower)
+    upper = scaler(upper)
+
+    ### create the individual class
+    creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
+    creator.create("Individual", list, fitness=creator.FitnessMin)
+
+    ### create the toolbox
+    toolbox = base.Toolbox()
+    ### function calculating losses from individuals (from whole population)
+    toolbox.register("evaluate", evaluate_function)
+    ### search strategy
+    strategy = cma.Strategy(
+        centroid=(lower + upper) / 2,
+        sigma=upper - lower,
+    )
+    strategy.ccov1 *= 0.5
+    strategy.ccovmu *= 0.5
+    # strategy.damps /= 0.5
+    print(
+        f"lambda (The number of children to produce at each generation): {strategy.lambda_}"
+    )
+    print(f"mu (The number of parents to keep from the lambda children): {strategy.mu}")
+    print(f"weights: {strategy.weights}")
+    print(f"mueff: {strategy.mueff}")
+    print(f"ccum (Cumulation constant for covariance matrix.): {strategy.cc}")
+    print(f"cs (Cumulation constant for step-size): {strategy.cs}")
+    print(f"ccov1 (Learning rate for rank-one update): {strategy.ccov1}")
+    print(f"ccovmu (Learning rate for rank-mu update): {strategy.ccovmu}")
+    print(f"damps (Damping for step-size): {strategy.damps}")
+    ### function generating a population during optimization
+    toolbox.register("generate", strategy.generate, creator.Individual)
+    ### function updating the search strategy
+    toolbox.register("update", strategy.update)
+    ### hall of fame to track best individual i.e. parameters
+    hof = tools.HallOfFame(1)
+    ### statistics to track evolution of loss
+    stats = tools.Statistics(lambda ind: ind.fitness.values)
+    stats.register("avg", np.mean)
+    stats.register("std", np.std)
+    stats.register("min", np.min)
+    stats.register("max", np.max)
+
+    return {
+        "toolbox": toolbox,
+        "hof": hof,
+        "stats": stats,
+        "lower": lower,
+        "upper": upper,
+        "param_names": param_names,
+        "inv_scaler": inv_scaler,
+    }, strategy.lambda_
+
+
+def _cma_deap(max_evals, deap_plot_file, deap_dict):
+    """
+    Runs the optimization with deap.
+
+    Args:
+        max_evals (int):
+            number of runs (here generations) the optimization method performs
+
+        deap_plot_file (str):
+            the name of the figure which will be saved and shows the logbook
+    """
+    ### run the search algorithm with the prepared deap_dict
+    pop, logbook = _deap_ea_generate_update(
+        toolbox=deap_dict["toolbox"],
+        ngen=max_evals,
+        lower=deap_dict["lower"],
+        upper=deap_dict["upper"],
+        inv_scaler=deap_dict["inv_scaler"],
+        stats=deap_dict["stats"],
+        halloffame=deap_dict["hof"],
+        verbose=False,
+    )
+
+    ### scale parameters of hall of fame back into original range [lower,upper]
+    hof_final = deap_dict["inv_scaler"](deap_dict["hof"][0])
+
+    ### get best parameters, last population of inidividuals and logbook
+    best = {}
+    for param_idx in range(len(deap_dict["lower"])):
+        if deap_dict["param_names"] is not None:
+            param_key = deap_dict["param_names"][param_idx]
+        else:
+            param_key = f"param{param_idx}"
+        best[param_key] = hof_final[param_idx]
+    best["logbook"] = logbook
+    best["deap_pop"] = pop
+
+    ### plot logbook with logaritmic y-axis
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.set_yscale("log")
+    ax.plot(logbook.select("gen"), logbook.select("min"), label="min")
+    ax.plot(logbook.select("gen"), logbook.select("avg"), label="avg")
+    ax.plot(logbook.select("gen"), logbook.select("max"), label="max")
+    ax.legend()
+    ax.set_xlabel("Generation")
+    ax.set_ylabel("Loss")
+    fig.tight_layout()
+    sf.create_dir("/".join(deap_plot_file.split("/")[:-1]))
+    fig.savefig(deap_plot_file, dpi=300)
+
+    return best
+
+
+def _deap_ea_generate_update(
+    toolbox,
+    ngen,
+    lower,
+    upper,
+    inv_scaler,
+    halloffame=None,
+    stats=None,
+    verbose=__debug__,
+):
+    """
+    This function is copied from deap.algorithms.eaGenerateUpdate and modified.
+    This is algorithm implements the ask-tell model proposed in
+    [Colette2010]_, where ask is called `generate` and tell is called `update`.
+
+    .. [Colette2010] Collette, Y., N. Hansen, G. Pujol, D. Salazar Aponte and
+    R. Le Riche (2010). On Object-Oriented Programming of Optimizers -
+    Examples in Scilab. In P. Breitkopf and R. F. Coelho, eds.:
+    Multidisciplinary Design Optimization in Computational Mechanics,
+    Wiley, pp. 527-565;
+
+    Args:
+        toolbox:
+            A deap Toolbox object that contains the evolution operators.
+        ngen:
+            The number of generations to run.
+        lower:
+            A list of lower bounds for the individuals.
+        upper:
+            A list of upper bounds for the individuals.
+        inv_scaler:
+            A function to scale parameters back into original range [lower,upper]
+        halloffame:
+            A deap HallOfFame object that will to track the best individuals
+        stats:
+            A deap Statistics object to track the statistics of the evolution.
+        verbose:
+            Whether or not to print the statistics for each gen.
+
+    Returns:
+        population:
+            A list of individuals.
+        logbook:
+            A Logbook() object that contains the evolution statistics.
+    """
+    ### init logbook
+    logbook = tools.Logbook()
+    logbook.header = ["gen", "nevals"] + (stats.fields if stats else [])
+
+    ### define progress bar
+    progress_bar = tqdm(range(ngen), total=ngen, unit="gen")
+
+    ### loop over generations
+    for gen in progress_bar:
+        ### Generate a new population
+        population = toolbox.generate()
+        ### clip individuals of population to variable bounds
+        for ind in population:
+            for idx in range(len(ind)):
+                if ind[idx] < lower[idx]:
+                    ind[idx] = lower[idx]
+                elif ind[idx] > upper[idx]:
+                    ind[idx] = upper[idx]
+        ### Evaluate the individuals (here whole population at once)
+        ### scale parameters back into original range [lower,upper]
+        population_inv_scaled = [inv_scaler(ind) for ind in deepcopy(population)]
+        fitnesses = toolbox.evaluate(population_inv_scaled)
+
+        ### set fitnesses of individuals
+        for ind, fit in zip(population, fitnesses):
+            ind.fitness.values = fit
+
+        ### check if nan in population
+        for ind in population:
+            nan_in_pop = np.isnan(ind.fitness.values[0])
+
+        ### Update the hall of fame with the generated individuals
+        if halloffame is not None and not nan_in_pop:
+            halloffame.update(population)
+
+        ### Update the strategy with the evaluated individuals
+        toolbox.update(population)
+
+        ### Append the current generation statistics to the logbook
+        record = stats.compile(population) if stats is not None else {}
+        logbook.record(gen=gen, nevals=len(population), **record)
+        if verbose:
+            print(logbook.stream)
+
+        ### update progress bar with current best loss
+        progress_bar.set_postfix_str(
+            f"best loss: {halloffame[0].fitness.values[0]:.5f}"
+        )
+
+    return population, logbook
