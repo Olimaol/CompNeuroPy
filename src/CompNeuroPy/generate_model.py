@@ -169,7 +169,7 @@ class CompNeuroModel:
                     + "\n".join(not_created_model_list)
                     + "\n"
                 )
-            mf.compile_in_folder(compile_folder_name)
+            mf.compile_in_folder(compile_folder_name, silent=True)
             self.compiled = True
 
             ### update attribute_df to compiled state, since weights are only available
