@@ -28,6 +28,7 @@ from CompNeuroPy.extra_functions import (
     DecisionTree,
     DecisionTreeNode,
     evaluate_expression_with_dict,
+    VClampParamSearch,
     data_obj,  # TODO remove
     my_linear_cmap_obj,  # TODO remove
     decision_tree,  # TODO remove
