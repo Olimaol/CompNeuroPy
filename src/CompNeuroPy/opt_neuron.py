@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import sys
 from typing import Callable, Any, Type
 from typingchecker import check_types
-from tqdm import tqdm
 from copy import deepcopy
 
 # multiprocessing
@@ -28,12 +27,6 @@ try:
     from sbi import analysis as analysis
     from sbi import utils as utils
     from sbi.inference import SNPE, prepare_for_sbi, simulate_for_sbi
-
-    # deap
-    from deap import base
-    from deap import creator
-    from deap import tools
-    from deap import cma
 
 except:
     print(
@@ -54,7 +47,7 @@ class OptNeuron:
         self,
         experiment: Type[CompNeuroExp],
         get_loss_function: Callable[[Any, Any], float | list[float]],
-        variables_bounds: dict[str, float | list[float]],
+        variables_bounds: dict[str, float | str | list[float | str]],
         neuron_model: Neuron,
         results_soll: Any | None = None,
         target_neuron_model: Neuron | None = None,
@@ -65,6 +58,7 @@ class OptNeuron:
         prior=None,
         fv_space: list = None,
         record: list[str] = [],
+        cma_params_dict: dict = {},
     ):
         """
         This prepares the optimization. To run the optimization call the run function.
@@ -73,62 +67,55 @@ class OptNeuron:
             experiment (CompNeuroExp class):
                 CompNeuroExp class containing a 'run' function which defines the
                 simulations and recordings
-
             get_loss_function (function):
                 function which takes results_ist and results_soll as arguments and
                 calculates/returns the loss
-
             variables_bounds (dict):
                 Dictionary with parameter names (keys) and their bounds (values). If
                 single values are given as values, the parameter is constant, i.e., not
                 optimized. If a list is given as value, the parameter is optimized and
                 the list contains the lower and upper bound of the parameter (order is
-                not important).
-
+                not important). If strings instead of numbers are given, the string is
+                interpreted as an mathematical expression which is evaluated with the
+                other parameter values (i.e. {"x":[0,1],"dxy":[-1,1],"y":"x+dxy","z":5}).
             neuron_model (ANNarchy Neuron):
                 The neuron model whose parameters should be optimized.
-
             results_soll (Any, optional):
                 Some variable which contains the target data and can be used by the
                 get_loss_function (second argument of get_loss_function)
                 !!! warning
                     Either provide results_soll or a target_neuron_model not both!
                 Default: None.
-
             target_neuron_model (ANNarchy Neuron, optional):
                 The neuron model which produces the target data by running the
                 experiment.
                 !!! warning
                     Either provide results_soll or a target_neuron_model not both!
                 Default: None.
-
             time_step (float, optional):
                 The time step for the simulation in ms. Default: 1.
-
             compile_folder_name (string, optional):
                 The name of the annarchy compilation folder within annarchy_folders/.
                 Default: 'annarchy_OptNeuron'.
-
             num_rep_loss (int, optional):
                 Only interesting for noisy simulations/models. How often should the
                 simulaiton be run to calculate the loss (the defined number of losses
                 is obtained and averaged). Default: 1.
-
             method (str, optional):
                 Either 'deap', 'sbi', or 'hyperopt'. Defines the tool which is used for
                 optimization. Default: 'deap'.
-
             prior (distribution, optional):
                 The prior distribution used by sbi. Default: None, i.e., uniform
                 distributions between the variable bounds are assumed.
-
             fv_space (list, optional):
                 The search space for hyperopt. Default: None, i.e., uniform
                 distributions between the variable bounds are assumed.
-
             record (list, optional):
                 List of strings which define what variables of the tuned neuron should
                 be recorded. Default: [].
+            cma_params_dict (dict, optional):
+                Dictionary with parameters for the deap.cma.Strategy. Default: {}.
+                See [here](https://deap.readthedocs.io/en/master/api/algo.html#deap.cma.Strategy) for more information.
         """
 
         if len(self.opt_created) > 0:
@@ -161,10 +148,12 @@ class OptNeuron:
             self.target_neuron = target_neuron_model
             self.compile_folder_name = compile_folder_name
             self._get_loss = get_loss_function
+            self.cma_params_dict = cma_params_dict
 
-            ### prepare deap and get popsize
+            ### if using deap pop size is the number of individuals for the optimization
             if method == "deap":
-                self.deap_dict, self.popsize = self._get_deap_dict()
+                self._deap_cma = self._prepare_deap_cma()
+                self.popsize = self._deap_cma.deap_dict["strategy"].lambda_
             else:
                 self.popsize = 1
 
@@ -203,6 +192,41 @@ class OptNeuron:
             model, _, monitors = self._generate_models(self.popsize)
             self.monitors = monitors
             self.experiment = experiment(monitors=monitors)
+
+    def _prepare_deap_cma(self):
+        """
+        Initializes the DeapCma class.
+
+        Returns:
+            deap_cma (DeapCma):
+                The initialized DeapCma object.
+        """
+        LOWER = np.array(
+            [
+                min(self.variables_bounds[name])
+                for name in self.fitting_variables_name_list
+            ]
+        )
+        UPPER = np.array(
+            [
+                max(self.variables_bounds[name])
+                for name in self.fitting_variables_name_list
+            ]
+        )
+        deap_cma = ef.DeapCma(
+            max_evals=0,
+            lower=LOWER,
+            upper=UPPER,
+            evaluate_function=self._deap_simulation_wrapper,
+            p0=None,
+            param_names=self.fitting_variables_name_list,
+            learn_rate_factor=1,
+            damping_factor=1,
+            verbose=False,
+            plot_file=None,
+            cma_params_dict=self.cma_params_dict,
+        )
+        return deap_cma
 
     def _generate_models(self, popsize=1):
         """
@@ -1030,9 +1054,9 @@ class OptNeuron:
     def run(
         self,
         max_evals: int,
-        results_file_name: str = "best",
-        sbi_plot_file: str = "posterior.png",
-        deap_plot_file: str = "logbook.png",
+        results_file_name: str = "opt_neuron_results/best",
+        sbi_plot_file: str = "opt_neuron_plots/posterior.png",
+        deap_plot_file: str = "opt_neuron_plots/logbook.png",
     ):
         """
         Runs the optimization.
@@ -1092,35 +1116,15 @@ class OptNeuron:
         self.results = best
 
         ### SAVE OPTIMIZED PARAMS AND LOSS
-        sf.save_variables([best], [results_file_name], "parameter_fit")
+        sf.save_variables(
+            [best],
+            [results_file_name.split("/")[-1]],
+            "/".join(results_file_name.split("/")[:-1])
+            if len(results_file_name.split("/")) > 1
+            else "./",
+        )
 
         return best
-
-    def _get_deap_dict(self):
-        """
-        Prepares the deap optimization.
-        """
-
-        ### get lower and upper bounds
-        LOWER = np.array(
-            [
-                min(self.variables_bounds[name])
-                for name in self.fitting_variables_name_list
-            ]
-        )
-        UPPER = np.array(
-            [
-                max(self.variables_bounds[name])
-                for name in self.fitting_variables_name_list
-            ]
-        )
-
-        return ef._prepare_cma_deap(
-            lower=LOWER,
-            upper=UPPER,
-            evaluate_function=self._deap_simulation_wrapper,
-            param_names=self.fitting_variables_name_list,
-        )
 
     def _run_with_deap(self, max_evals, deap_plot_file):
         """
@@ -1133,7 +1137,11 @@ class OptNeuron:
             deap_plot_file (str):
                 the name of the figure which will be saved and shows the logbook
         """
-        return ef._cma_deap(max_evals, deap_plot_file, self.deap_dict)
+
+        return self._deap_cma.run(
+            max_evals=max_evals,
+            plot_file=deap_plot_file,
+        )
 
 
 ### old name for backward compatibility, TODO remove

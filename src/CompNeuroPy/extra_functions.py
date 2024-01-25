@@ -23,6 +23,8 @@ from ANNarchy import Neuron, Population, simulate, setup, get_population
 from sympy import symbols, Symbol, solve, sympify, Eq, lambdify, factor
 from scipy.interpolate import griddata
 import re
+from typingchecker import check_types
+import warnings
 
 
 def print_df(df):
@@ -668,260 +670,343 @@ def _replace_substrings_except_within_braces(input_string, replacement_mapping):
     return "".join(result)
 
 
-def _prepare_cma_deap(
-    lower: np.ndarray,
-    upper: np.ndarray,
-    evaluate_function: Callable,
-    p0: None | np.ndarray = None,
-    param_names=None,
-):
+class DeapCma:
     """
-    Prepares the deap Covariance Matrix Adaptation Evolution Strategy optimization.
+    Class to run the deap Covariance Matrix Adaptation Evolution Strategy optimization.
 
-    Args:
-        lower (np.ndarray):
-            Lower bounds of the parameters
-        upper (np.ndarray):
-            Upper bounds of the parameters
-        p0 (np.ndarray, optional):
-            Initial guess for the parameters. By default the mean of lower and upper
-            bounds.
-        evaluate_function (Callable):
-            Function evaluating the losses of a population of individuals. Should be
-            a list of tuples with the losses of the individuals.
-
-    Returns:
+    Attributes:
         deap_dict (dict):
-            Dictionary containing the deap toolbox, hall of fame, statistics, lower
-            and upper bounds, parameter names, inverse scaler and strategy
-        lambda_ (int):
-            Number of individuals in a population
+            Dictionary containing the toolbox, the hall of fame, the statistics, the
+            lower and upper bounds, the parameter names, the inverse scaler and the
+            strategy.
     """
-    ### create scaler to scale parameters into range [0,1] based on lower and upper bounds
-    upper_orig = deepcopy(upper)
-    lower_orig = deepcopy(lower)
 
-    def scaler(x):
-        return (x - lower_orig) / (upper_orig - lower_orig)
+    def __init__(
+        self,
+        lower: np.ndarray,
+        upper: np.ndarray,
+        evaluate_function: Callable,
+        max_evals: None | int = None,
+        p0: None | np.ndarray = None,
+        param_names: None | list[str] = None,
+        learn_rate_factor: float = 1,
+        damping_factor: float = 1,
+        verbose: bool = False,
+        plot_file: None | str = "logbook.png",
+        cma_params_dict: dict = {},
+    ):
+        """
 
-    ### create inverse scaler to scale parameters back into original range [lower,upper]
-    def inv_scaler(x):
-        return x * (upper_orig - lower_orig) + lower_orig
+        Args:
+            lower (np.ndarray):
+                Lower bounds of the parameters
+            upper (np.ndarray):
+                Upper bounds of the parameters
+            evaluate_function (Callable):
+                Function evaluating the losses of a population of individuals. Return value
+                should be a list of tuples with the losses of the individuals.
+            max_evals (int, optional):
+                Maximum number of evaluations. If not given here, it has to be given in
+                the run function. By default None.
+            p0 (None | np.ndarray, optional):
+                Initial guess for the parameters. By default the mean of lower and upper
+                bounds.
+            param_names (None | list[str], optional):
+                Names of the parameters. By default None.
+            learn_rate_factor (float, optional):
+                Learning rate factor (decrease -> slower). By default 1.
+            damping_factor (float, optional):
+                Damping factor (increase -> slower). By default 1.
+            verbose (bool, optional):
+                Whether or not to print details. By default False.
+            plot_file (None | str, optional):
+                File to save the deap plot to. If not given here, it has to be given in
+                the run function. By default "logbook.png".
+            cma_params_dict (dict, optional):
+                Parameters for the deap cma strategy (deap.cma.Strategy). See [here](https://deap.readthedocs.io/en/master/api/algo.html#deap.cma.Strategy) for more
+                details
+        """
+        ### store attributes
+        self.max_evals = max_evals
+        self.lower = lower
+        self.upper = upper
+        self.evaluate_function = evaluate_function
+        self.p0 = p0
+        self.param_names = param_names
+        self.learn_rate_factor = learn_rate_factor
+        self.damping_factor = damping_factor
+        self.verbose = verbose
+        self.plot_file = plot_file
+        self.cma_params_dict = cma_params_dict
 
-    ### scale upper and lower bounds
-    lower = scaler(lower)
-    upper = scaler(upper)
+        ### prepare the optimization
+        self.deap_dict = self._prepare()
 
-    ### create the individual class
-    creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
-    creator.create("Individual", list, fitness=creator.FitnessMin)
+    def _prepare(self):
+        """
+        Prepares the deap Covariance Matrix Adaptation Evolution Strategy optimization.
 
-    ### create the toolbox
-    toolbox = base.Toolbox()
-    ### function calculating losses from individuals (from whole population)
-    toolbox.register("evaluate", evaluate_function)
-    ### search strategy
-    strategy = cma.Strategy(
-        centroid=(lower + upper) / 2 if isinstance(p0, type(None)) else p0,
-        sigma=upper - lower,
-    )
-    strategy.ccov1 *= 0.1
-    strategy.ccovmu *= 0.1
-    strategy.damps *= 100  # TODO what slows down?
-    print(
-        f"lambda (The number of children to produce at each generation): {strategy.lambda_}"
-    )
-    print(f"mu (The number of parents to keep from the lambda children): {strategy.mu}")
-    print(f"weights: {strategy.weights}")
-    print(f"mueff: {strategy.mueff}")
-    print(f"ccum (Cumulation constant for covariance matrix.): {strategy.cc}")
-    print(f"cs (Cumulation constant for step-size): {strategy.cs}")
-    print(f"ccov1 (Learning rate for rank-one update): {strategy.ccov1}")
-    print(f"ccovmu (Learning rate for rank-mu update): {strategy.ccovmu}")
-    print(f"damps (Damping for step-size): {strategy.damps}")
-    ### function generating a population during optimization
-    toolbox.register("generate", strategy.generate, creator.Individual)
-    ### function updating the search strategy
-    toolbox.register("update", strategy.update)
-    ### hall of fame to track best individual i.e. parameters
-    hof = tools.HallOfFame(1)
-    ### statistics to track evolution of loss
-    stats = tools.Statistics(lambda ind: ind.fitness.values)
-    stats.register("avg", np.mean)
-    stats.register("std", np.std)
-    stats.register("min", np.min)
-    stats.register("max", np.max)
+        Returns:
+            dict:
+                Dictionary containing the toolbox, the hall of fame, the statistics, the
+                lower and upper bounds, the parameter names, the inverse scaler and the
+                strategy.
+        """
 
-    return {
-        "toolbox": toolbox,
-        "hof": hof,
-        "stats": stats,
-        "lower": lower,
-        "upper": upper,
-        "param_names": param_names,
-        "inv_scaler": inv_scaler,
-        "strategy": strategy,
-    }, strategy.lambda_
+        ### get attributes
+        lower = self.lower
+        upper = self.upper
+        evaluate_function = self.evaluate_function
+        p0 = self.p0
+        param_names = self.param_names
+        learn_rate_factor = self.learn_rate_factor
+        damping_factor = self.damping_factor
+        verbose = self.verbose
+        cma_params_dict = self.cma_params_dict
 
+        ### create scaler to scale parameters into range [0,1] based on lower and upper bounds
+        upper_orig = deepcopy(upper)
+        lower_orig = deepcopy(lower)
 
-def _cma_deap(max_evals, deap_plot_file, deap_dict):
-    """
-    Runs the optimization with deap.
+        def scaler(x):
+            return (x - lower_orig) / (upper_orig - lower_orig)
 
-    Args:
-        max_evals (int):
-            number of runs (here generations) the optimization method performs
+        ### create inverse scaler to scale parameters back into original range [lower,upper]
+        def inv_scaler(x):
+            return x * (upper_orig - lower_orig) + lower_orig
 
-        deap_plot_file (str):
-            the name of the figure which will be saved and shows the logbook
-    """
-    ### run the search algorithm with the prepared deap_dict
-    pop, logbook = _deap_ea_generate_update(
-        toolbox=deap_dict["toolbox"],
-        ngen=max_evals,
-        lower=deap_dict["lower"],
-        upper=deap_dict["upper"],
-        inv_scaler=deap_dict["inv_scaler"],
-        stats=deap_dict["stats"],
-        halloffame=deap_dict["hof"],
-        verbose=False,
-        strategy=deap_dict["strategy"],
-    )
+        ### scale upper and lower bounds
+        lower = scaler(lower)
+        upper = scaler(upper)
 
-    ### scale parameters of hall of fame back into original range [lower,upper]
-    hof_final = deap_dict["inv_scaler"](deap_dict["hof"][0])
+        ### create the individual class, since this is eventually called multiple times
+        ### deactivate warnings (it warns that the classes already exist)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
+            creator.create("Individual", list, fitness=creator.FitnessMin)
 
-    ### get best parameters, last population of inidividuals and logbook
-    best = {}
-    for param_idx in range(len(deap_dict["lower"])):
-        if deap_dict["param_names"] is not None:
-            param_key = deap_dict["param_names"][param_idx]
-        else:
-            param_key = f"param{param_idx}"
-        best[param_key] = hof_final[param_idx]
-    best["logbook"] = logbook
-    best["deap_pop"] = pop
-
-    ### plot logbook with logaritmic y-axis
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.set_yscale("log")
-    ax.plot(logbook.select("gen"), logbook.select("min"), label="min")
-    ax.plot(logbook.select("gen"), logbook.select("avg"), label="avg")
-    ax.plot(logbook.select("gen"), logbook.select("max"), label="max")
-    ax.legend()
-    ax.set_xlabel("Generation")
-    ax.set_ylabel("Loss")
-    fig.tight_layout()
-    sf.create_dir("/".join(deap_plot_file.split("/")[:-1]))
-    fig.savefig(deap_plot_file, dpi=300)
-
-    return best
-
-
-def _deap_ea_generate_update(
-    toolbox,
-    ngen,
-    lower,
-    upper,
-    inv_scaler,
-    halloffame=None,
-    stats=None,
-    verbose=__debug__,
-    strategy=None,
-):
-    """
-    This function is copied from deap.algorithms.eaGenerateUpdate and modified.
-    This is algorithm implements the ask-tell model proposed in
-    [Colette2010]_, where ask is called `generate` and tell is called `update`.
-
-    .. [Colette2010] Collette, Y., N. Hansen, G. Pujol, D. Salazar Aponte and
-    R. Le Riche (2010). On Object-Oriented Programming of Optimizers -
-    Examples in Scilab. In P. Breitkopf and R. F. Coelho, eds.:
-    Multidisciplinary Design Optimization in Computational Mechanics,
-    Wiley, pp. 527-565;
-
-    Args:
-        toolbox:
-            A deap Toolbox object that contains the evolution operators.
-        ngen:
-            The number of generations to run.
-        lower:
-            A list of lower bounds for the individuals.
-        upper:
-            A list of upper bounds for the individuals.
-        inv_scaler:
-            A function to scale parameters back into original range [lower,upper]
-        halloffame:
-            A deap HallOfFame object that will to track the best individuals
-        stats:
-            A deap Statistics object to track the statistics of the evolution.
-        verbose:
-            Whether or not to print the statistics for each gen.
-
-    Returns:
-        population:
-            A list of individuals.
-        logbook:
-            A Logbook() object that contains the evolution statistics.
-    """
-    ### init logbook
-    logbook = tools.Logbook()
-    logbook.header = ["gen", "nevals"] + (stats.fields if stats else [])
-
-    ### define progress bar
-    progress_bar = tqdm(range(ngen), total=ngen, unit="gen")
-    early_stop = False
-
-    ### loop over generations
-    for gen in progress_bar:
-        ### Generate a new population
-        population = toolbox.generate()
-        ### clip individuals of population to variable bounds
-        for ind in population:
-            for idx in range(len(ind)):
-                if ind[idx] < lower[idx]:
-                    ind[idx] = lower[idx]
-                elif ind[idx] > upper[idx]:
-                    ind[idx] = upper[idx]
-        ### Evaluate the individuals (here whole population at once)
-        ### scale parameters back into original range [lower,upper]
-        population_inv_scaled = [inv_scaler(ind) for ind in deepcopy(population)]
-        fitnesses = toolbox.evaluate(population_inv_scaled)
-
-        ### set fitnesses of individuals
-        for ind, fit in zip(population, fitnesses):
-            ind.fitness.values = fit
-
-        ### check if nan in population
-        for ind in population:
-            nan_in_pop = np.isnan(ind.fitness.values[0])
-
-        ### Update the hall of fame with the generated individuals
-        if halloffame is not None and not nan_in_pop:
-            halloffame.update(population)
-
-        ### Update the strategy with the evaluated individuals
-        toolbox.update(population)
-
-        ### Stop if diagD is too small
-        if np.min(strategy.diagD) < 1e-5:
-            early_stop = True
-            break
-
-        ### Append the current generation statistics to the logbook
-        record = stats.compile(population) if stats is not None else {}
-        logbook.record(gen=gen, nevals=len(population), **record)
-        if verbose:
-            print(logbook.stream)
-
-        ### update progress bar with current best loss
-        progress_bar.set_postfix_str(
-            f"best loss: {halloffame[0].fitness.values[0]:.5f}"
+        ### create the toolbox
+        toolbox = base.Toolbox()
+        ### function calculating losses from individuals (from whole population)
+        toolbox.register("evaluate", evaluate_function)
+        ### search strategy
+        strategy = cma.Strategy(
+            centroid=(lower + upper) / 2 if isinstance(p0, type(None)) else p0,
+            sigma=upper - lower,
+            **cma_params_dict,
         )
-    if early_stop:
-        print("Stopping because convergence is reached.")
+        strategy.ccov1 *= learn_rate_factor
+        strategy.ccovmu *= learn_rate_factor
+        strategy.damps *= damping_factor  # TODO what slows down?
+        if verbose:
+            print(
+                f"lambda (The number of children to produce at each generation): {strategy.lambda_}"
+            )
+            print(
+                f"mu (The number of parents to keep from the lambda children): {strategy.mu}"
+            )
+            print(f"weights: {strategy.weights}")
+            print(f"mueff: {strategy.mueff}")
+            print(f"ccum (Cumulation constant for covariance matrix.): {strategy.cc}")
+            print(f"cs (Cumulation constant for step-size): {strategy.cs}")
+            print(f"ccov1 (Learning rate for rank-one update): {strategy.ccov1}")
+            print(f"ccovmu (Learning rate for rank-mu update): {strategy.ccovmu}")
+            print(f"damps (Damping for step-size): {strategy.damps}")
+        ### function generating a population during optimization
+        toolbox.register("generate", strategy.generate, creator.Individual)
+        ### function updating the search strategy
+        toolbox.register("update", strategy.update)
+        ### hall of fame to track best individual i.e. parameters
+        hof = tools.HallOfFame(1)
+        ### statistics to track evolution of loss
+        stats = tools.Statistics(lambda ind: ind.fitness.values)
+        stats.register("avg", np.mean)
+        stats.register("std", np.std)
+        stats.register("min", np.min)
+        stats.register("max", np.max)
 
-    return population, logbook
+        return {
+            "toolbox": toolbox,
+            "hof": hof,
+            "stats": stats,
+            "lower": lower,
+            "upper": upper,
+            "param_names": param_names,
+            "inv_scaler": inv_scaler,
+            "strategy": strategy,
+        }
+
+    def run(
+        self,
+        max_evals: None | int = None,
+        verbose: None | bool = None,
+        plot_file: None | str = None,
+    ):
+        """
+        Runs the optimization with deap.
+
+        Args:
+            max_evals (int):
+                Number of runs (here generations) a single optimization performs. By
+                default None, i.e. the value from the initialization is used.
+            verbose (bool, optional):
+                Whether or not to print details. By default None, i.e. the value from
+                the initialization is used.
+            plot_file (str):
+                Path to save the logbook plot to. By default None, i.e. the value from
+                the initialization is used.
+
+        Returns:
+            best (dict):
+                Dictionary containing the best parameters, the logbook, the last population
+                of individuals and the best fitness.
+        """
+
+        ### get attributes
+        max_evals = self.max_evals if max_evals is None else max_evals
+        verbose = self.verbose if verbose is None else verbose
+        plot_file = self.plot_file if plot_file is None else plot_file
+        deap_dict = self.deap_dict
+
+        ### run the search algorithm with the prepared deap_dict
+        pop, logbook = self._deap_ea_generate_update(
+            deap_dict,
+            ngen=max_evals,
+            verbose=verbose,
+        )
+
+        ### scale parameters of hall of fame back into original range [lower,upper]
+        hof_final = deap_dict["inv_scaler"](deap_dict["hof"][0])
+        best_fitness = deap_dict["hof"][0].fitness.values[0]
+
+        ### get best parameters, last population of inidividuals and logbook
+        best = {}
+        for param_idx in range(len(deap_dict["lower"])):
+            if deap_dict["param_names"] is not None:
+                param_key = deap_dict["param_names"][param_idx]
+            else:
+                param_key = f"param{param_idx}"
+            best[param_key] = hof_final[param_idx]
+        best["logbook"] = logbook
+        best["deap_pop"] = pop
+        best["best_fitness"] = best_fitness
+
+        ### plot logbook with logaritmic y-axis
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.set_yscale("log")
+        ax.plot(logbook.select("gen"), logbook.select("min"), label="min")
+        ax.plot(logbook.select("gen"), logbook.select("avg"), label="avg")
+        ax.plot(logbook.select("gen"), logbook.select("max"), label="max")
+        ax.legend()
+        ax.set_xlabel("Generation")
+        ax.set_ylabel("Loss")
+        fig.tight_layout()
+        sf.create_dir("/".join(plot_file.split("/")[:-1]))
+        fig.savefig(plot_file, dpi=300)
+
+        return best
+
+    def _deap_ea_generate_update(
+        self,
+        deap_dict: dict,
+        ngen: int,
+        verbose: bool = False,
+    ):
+        """
+        This function is copied from deap.algorithms.eaGenerateUpdate and modified.
+        This is algorithm implements the ask-tell model proposed in
+        [Colette2010]_, where ask is called `generate` and tell is called `update`.
+
+        .. [Colette2010] Collette, Y., N. Hansen, G. Pujol, D. Salazar Aponte and
+        R. Le Riche (2010). On Object-Oriented Programming of Optimizers -
+        Examples in Scilab. In P. Breitkopf and R. F. Coelho, eds.:
+        Multidisciplinary Design Optimization in Computational Mechanics,
+        Wiley, pp. 527-565;
+
+        Args:
+            deap_dict (dict):
+                Dictionary containing the deap toolbox, hall of fame, statistics, lower
+                and upper bounds, parameter names, inverse scaler and strategy.
+            ngen (int):
+                number of runs (here generations) a single optimization performs
+            verbose (bool, optional):
+                Whether or not to print details. By default False.
+
+        Returns:
+            population:
+                A list of individuals.
+            logbook:
+                A Logbook() object that contains the evolution statistics.
+        """
+
+        ### get variables from deap_dict
+        toolbox = deap_dict["toolbox"]
+        lower = deap_dict["lower"]
+        upper = deap_dict["upper"]
+        inv_scaler = deap_dict["inv_scaler"]
+        stats = deap_dict["stats"]
+        halloffame = deap_dict["hof"]
+        strategy = deap_dict["strategy"]
+
+        ### init logbook
+        logbook = tools.Logbook()
+        logbook.header = ["gen", "nevals"] + (stats.fields if stats else [])
+
+        ### define progress bar
+        progress_bar = tqdm(range(ngen), total=ngen, unit="gen")
+        early_stop = False
+
+        ### loop over generations
+        for gen in progress_bar:
+            ### Generate a new population
+            population = toolbox.generate()
+            ### clip individuals of population to variable bounds
+            for ind in population:
+                for idx in range(len(ind)):
+                    if ind[idx] < lower[idx]:
+                        ind[idx] = lower[idx]
+                    elif ind[idx] > upper[idx]:
+                        ind[idx] = upper[idx]
+            ### Evaluate the individuals (here whole population at once)
+            ### scale parameters back into original range [lower,upper]
+            population_inv_scaled = [inv_scaler(ind) for ind in deepcopy(population)]
+            fitnesses = toolbox.evaluate(population_inv_scaled)
+
+            ### set fitnesses of individuals
+            for ind, fit in zip(population, fitnesses):
+                ind.fitness.values = fit
+
+            ### check if nan in population
+            for ind in population:
+                nan_in_pop = np.isnan(ind.fitness.values[0])
+
+            ### Update the hall of fame with the generated individuals
+            if halloffame is not None and not nan_in_pop:
+                halloffame.update(population)
+
+            ### Update the strategy with the evaluated individuals
+            toolbox.update(population)
+
+            ### Stop if diagD is too small
+            if np.min(strategy.diagD) < 1e-5:
+                early_stop = True
+                break
+
+            ### Append the current generation statistics to the logbook
+            record = stats.compile(population) if stats is not None else {}
+            logbook.record(gen=gen, nevals=len(population), **record)
+            if verbose:
+                print(logbook.stream)
+
+            ### update progress bar with current best loss
+            progress_bar.set_postfix_str(
+                f"best loss: {halloffame[0].fitness.values[0]:.5f}"
+            )
+        if early_stop and verbose:
+            print("Stopping because convergence is reached.")
+
+        return population, logbook
 
 
 class VClampParamSearch:
@@ -934,6 +1019,7 @@ class VClampParamSearch:
             The optimized parameters
     """
 
+    @check_types()
     def __init__(
         self,
         neuron_model: Neuron,
@@ -949,10 +1035,15 @@ class VClampParamSearch:
             "a": (0.01, 1),
             "b": (-5, 5),
         },
-        p0: None | dict[str, float] = None,
+        p0: None | dict[str, float | list] = None,
+        max_evals: int = 100,
         m: int = 20,
         n: int = 20,
         do_plot: bool = False,
+        results_file: str = "v_clamp_search_results",
+        plot_file: str = "v_clamp_search_plot.png",
+        cma_params_dict: dict = {"learn_rate_factor": 1, "damping_factor": 1},
+        verbose: bool = False,
     ):
         """
         Args:
@@ -966,7 +1057,15 @@ class VClampParamSearch:
                 The bounds for the parameters. For each parameter a bound should be
                 given! Default: Izhikevich 2007 neuron model
             p0 (dict, optional):
-                The initial guess for the parameters. Default: None
+                The initial guess for the parameters. Dict keys should be the same as
+                the keys of bounds. The values can be either a single number for each
+                parameter or a list of numbers. If lists are given, all have to have
+                the same length, which will be the number of initial guesses for the
+                parameters, i.e. how often the optimization is run. Default: None,
+                i.e. the mid of the bounds is used as a single initial guess.
+            max_evals (int, optional):
+                The maximum number of evaluations for a single optimization run.
+                Default: 100
             m (int, optional):
                 The number of initial voltages for the voltage step simulations.
                 Default: 20
@@ -975,7 +1074,20 @@ class VClampParamSearch:
                 Defaults: 20
             do_plot (bool, optional):
                 If True, plots are created. Default: False
+            results_file (str, optional):
+                The name of the file where the results are stored, without file ending.
+                Default: "v_clamp_search_results"
+            plot_file (str, optional):
+                The name of the file where the plot is stored, with file ending.
+                Default: "v_clamp_search_plot.png"
+            cma_params_dict (dict, optional):
+                Parameters for the deap cma strategy (deap.cma.Strategy). See [here](https://deap.readthedocs.io/en/master/api/algo.html#deap.cma.Strategy)
+                for more details. Additional parameters are learn_rate_factor and
+                damping_factor. Default: {"learn_rate_factor": 1, "damping_factor": 1}
+            verbose (bool, optional):
+                If True, print details. Default: False
         """
+        self.verbose = verbose
         ### store the given neuron model and a voltage clamp version of it
         self.neuron_model = neuron_model
         self._neuron_model = deepcopy(neuron_model)
@@ -986,13 +1098,25 @@ class VClampParamSearch:
         self.n = n
         self.equations = equations
         self.p0 = p0
+        ### check if p0 is correct and if lists are given, create also lists single
+        ### numbers which are given
+        self._p0 = self._get_p0()
+        self.max_evals = max_evals
         self.bounds = bounds
         self.do_plot = do_plot
+        self.results_file = results_file
+        self.plot_file = plot_file
+        self.cma_params_dict = cma_params_dict
+        ### check if file names are correct
+        if "." in self.results_file or "." not in self.plot_file:
+            raise ValueError(
+                "results_file should not contain file ending and plot_file should!"
+            )
         self._timestep = 0.001
 
         ### create folder for plots
         if self.do_plot:
-            sf.create_dir("ObtainIzh2007_plots")
+            sf.create_dir("/".join(plot_file.split("/")[:-1]))
 
         ### create the functions for v_clamp_inst and v_clamp_hold using the given
         ### izhikevich equations
@@ -1002,14 +1126,17 @@ class VClampParamSearch:
         self._v_0_arr, self._v_step_arr = self._create_voltage_step_arrays()
 
         ### for each neuron model create a population
-        print("Creating models...")
+        if self.verbose:
+            print("Creating models...")
+        mf.cnp_clear()
         self._model_normal, self._model_clamp = self._create_model()
 
         ### perform resting state and voltage step simulations to obtain v_clamp_inst,
         ### v_clamp_hold and v_rest
         self._v_clamp_inst_arr = None
         self._v_clamp_hold_arr = None
-        print("Performing simulations...")
+        if self.verbose:
+            print("Performing simulations...")
         (
             self._v_rest,
             self._v_clamp_inst_arr,
@@ -1020,22 +1147,58 @@ class VClampParamSearch:
 
         ### tune the free paramters of the functions for v_clamp_inst and v_clamp_hold
         ### to fit the data
-        print("Tuning parameters...")
+        if self.verbose:
+            print("Tuning parameters...")
         self._p_opt = self._tune_v_clamp_functions()
         self.p_opt = {
             param_name: self._p_opt.get(param_name, None)
             for param_name in self.bounds.keys()
         }
-        print(f"Optimized parameters: {self.p_opt}")
+
+        ### print and save optimized parameters
+        if self.verbose:
+            print(f"Optimized parameters: {self.p_opt}")
+        sf.save_variables(
+            [self.p_opt],
+            [results_file.split("/")[-1]],
+            results_file.split("/")[:-1] if "/" in results_file else "./",
+        )
 
         ### create a neuron model with the tuned parameters and the given equations
         ### then run the simulations again with this neuron model
-        print("Running simulations with tuned parameters...")
+        if self.verbose:
+            print("Running simulations with tuned parameters...")
         mf.cnp_clear()
         self._neuron_model = self._create_neuron_model_with_tuned_parameters()
         self._neuron_model_clamp = self._get_neuron_model_clamp()
         self._model_normal, self._model_clamp = self._create_model()
         self._simulations()
+
+    def _get_p0(self):
+        """
+        Check if p0 is correct and if lists are given, create also lists single numbers
+        which are given.
+
+        Returns:
+            _p0 (dict):
+                The corrected p0
+        """
+        _p0 = None
+        if self.p0 is not None:
+            ### collect lengths of lists
+            list_lengths = []
+            for key, val in self.p0.items():
+                if isinstance(val, list):
+                    list_lengths.append(len(val))
+            ### check if all lists have the same length
+            if len(set(list_lengths)) > 1:
+                raise ValueError("All lists in p0 should have the same length!")
+            ### create new p0 with lists for all parameters
+            _p0 = deepcopy(self.p0)
+            for key, val in _p0.items():
+                if not isinstance(val, list):
+                    _p0[key] = [val] * list_lengths[0] if list_lengths else [val]
+        return _p0
 
     def _create_neuron_model_with_tuned_parameters(self):
         """
@@ -1078,17 +1241,20 @@ class VClampParamSearch:
 
         ### create a function for the error
         def error_function(x):
-            # print(f"Current guess: {x}")
+            if self.verbose:
+                print(f"Current guess: {x}")
             ### set the free parameters of the functions
             p_dict = {
                 var_name: x[var_idx]
                 for var_idx, var_name in enumerate(sub_var_names_list)
             }
-            # print(f"Current guess dict: {p_dict}")
+            if self.verbose:
+                print(f"Current guess dict: {p_dict}")
             var_dict = {str(var): p_dict.get(str(var)) for var in self._f_variables}
             var_dict["v_r"] = self._v_rest
-            # print(f"var_dict: {var_dict}")
-            # print(f"f_variables: {self._f_variables}")
+            if self.verbose:
+                print(f"var_dict: {var_dict}")
+                print(f"f_variables: {self._f_variables}")
 
             ### calculate the voltage clamp values
             ### 1st f_inst, it depends on v_0 and v_step
@@ -1099,8 +1265,6 @@ class VClampParamSearch:
             var_dict["v_0"] = self._v_0_arr[int(len(self._v_0_arr) / 2)]
             var_dict["v_step"] = self._v_step_unique
             f_hold_arr = self._f_hold(*list(var_dict.values()))
-            # print(f"f_inst_arr: {f_inst_arr}")
-            # print(f"f_hold_arr: {f_hold_arr}")
 
             ### calculate the error
             error = af.rmse(target_arr, np.concatenate([f_inst_arr, f_hold_arr]))
@@ -1114,41 +1278,74 @@ class VClampParamSearch:
         ### set bounds
         bounds = np.array([self.bounds[var_name] for var_name in sub_var_names_list])
         ### set initial guess
-        if isinstance(self.p0, type(None)):
+        if isinstance(self._p0, type(None)):
             ### if no initial guess is given use the middle of the bounds
             initial_guess = np.array(
                 [sum(self.bounds[var_name]) / 2.0 for var_name in sub_var_names_list]
             )
         else:
+            ### initial guess is an array 1st dimension is the number of tuned parameters
+            ### 2nd dimension is the number of initial guesses
             initial_guess = np.array(
-                [self.p0[var_name] for var_name in sub_var_names_list]
+                [self._p0[var_name] for var_name in sub_var_names_list]
             )
-        # print(f"p0: {self.p0}")
-        # print(f"bounds: {self.bounds}")
-        # print(f"Initial guess: {initial_guess}")
-        # print(f"Bounds: {bounds}")
-        deap_dict, _ = _prepare_cma_deap(
-            lower=bounds[:, 0],
-            upper=bounds[:, 1],
-            evaluate_function=error_function_deap,
-            p0=initial_guess,
-            param_names=sub_var_names_list,
-        )
-        result = _cma_deap(
-            max_evals=10000,
-            deap_plot_file="ObtainIzh2007_plots/cma_deap.png",
-            deap_dict=deap_dict,
-        )
-        result_dict = {var_name: result[var_name] for var_name in sub_var_names_list}
+        if self.verbose:
+            print(f"p0: {self.p0}")
+            print(f"_p0: {self._p0}")
+            print(f"bounds: {self.bounds}")
+            print(f"Initial guess: {initial_guess}")
+            print(f"Bounds: {bounds}\n")
+
+        ### run the optimization multiple times with different initial guesses
+        print_results = []
+        best_fitness = np.inf
+        for initial_guess_idx in range(initial_guess.shape[1]):
+            deap_cma = DeapCma(
+                max_evals=self.max_evals,
+                lower=bounds[:, 0],
+                upper=bounds[:, 1],
+                evaluate_function=error_function_deap,
+                p0=initial_guess[:, initial_guess_idx],
+                param_names=sub_var_names_list,
+                learn_rate_factor=self.cma_params_dict["learn_rate_factor"],
+                damping_factor=self.cma_params_dict["damping_factor"],
+                verbose=False,
+                plot_file=self.plot_file.split(".")[0]
+                + f"_logbook_{initial_guess_idx}."
+                + self.plot_file.split(".")[-1],
+                cma_params_dict=self.cma_params_dict,
+            )
+            result = deap_cma.run()
+            print_results.append(
+                {var_name: result[var_name] for var_name in sub_var_names_list}
+            )
+            if result["best_fitness"] < best_fitness:
+                best_fitness = result["best_fitness"]
+                best_result = result
+        result_dict = {
+            var_name: best_result[var_name] for var_name in sub_var_names_list
+        }
         result_dict["v_r"] = self._v_rest
 
-        # print(f"Result: {result_dict}")
+        if self.verbose:
+            print("Results:")
+            print_df(pd.DataFrame(print_results))
+            print(f"Result: {result_dict}")
 
         return result_dict
 
     def _create_v_clamp_functions(self):
         """
-        TODO
+        Create the functions for v_clamp_inst and v_clamp_hold using the given
+        izhikevich equations.
+
+        Returns:
+            f_inst (Callable):
+                Function for v_clamp_inst
+            f_hold (Callable):
+                Function for v_clamp_hold
+            variables (list):
+                List of variables used for the functions
         """
         ### obtain all variables and parameters from the equation string
         variables_name_list = self._get_variables_from_eq(self.equations)
@@ -1251,8 +1448,9 @@ class VClampParamSearch:
         ### get the equations for v_clamp_inst and v_clamp_hold
         eq_v_clamp_inst = solution_inst[variables_sympy_dict["v_clamp"]]
         eq_v_clamp_hold = solution_hold[variables_sympy_dict["v_clamp"]]
-        print(f"Equation for v_clamp_inst: {factor(eq_v_clamp_inst)}")
-        print(f"Equation for v_clamp_hold: {factor(eq_v_clamp_hold)}")
+        if self.verbose:
+            print(f"Equation for v_clamp_inst: {factor(eq_v_clamp_inst)}")
+            print(f"Equation for v_clamp_hold: {factor(eq_v_clamp_hold)}")
 
         ### create functions for v_clamp_inst and v_clamp_hold
         ### 1st obtain all variables from the equations for v_clamp_inst and v_clamp_hold
@@ -1407,7 +1605,10 @@ class VClampParamSearch:
 
             plt.tight_layout()
 
-            plt.savefig("ObtainIzh2007_plots/v_clamp_values.png", dpi=300)
+            plt.savefig(
+                self.plot_file.split(".")[0] + "_data." + self.plot_file.split(".")[1],
+                dpi=300,
+            )
             plt.close()
 
         return (
@@ -1573,6 +1774,9 @@ class VClampParamSearch:
 
         ### create neuron model with new equations
         neuron_model_clamp = Neuron(**init_arguments_dict)
+
+        if self.verbose:
+            print(f"Neuron model with voltage clamp equations:\n{neuron_model_clamp}")
 
         return neuron_model_clamp
 
