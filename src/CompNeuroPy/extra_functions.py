@@ -1043,6 +1043,7 @@ class VClampParamSearch:
         results_file: str = "v_clamp_search_results",
         plot_file: str = "v_clamp_search_plot.png",
         cma_params_dict: dict = {"learn_rate_factor": 1, "damping_factor": 1},
+        compile_folder_name: str = "VClampParamSearch",
         verbose: bool = False,
     ):
         """
@@ -1084,10 +1085,14 @@ class VClampParamSearch:
                 Parameters for the deap cma strategy (deap.cma.Strategy). See [here](https://deap.readthedocs.io/en/master/api/algo.html#deap.cma.Strategy)
                 for more details. Additional parameters are learn_rate_factor and
                 damping_factor. Default: {"learn_rate_factor": 1, "damping_factor": 1}
+            compile_folder_name (str, optional):
+                The name of the folder within "annarchy_folders" where the ANNarchy
+                network is compiled to. Default: "VClampParamSearch"
             verbose (bool, optional):
                 If True, print details. Default: False
         """
         self.verbose = verbose
+        self._verbose_extreme = False
         ### store the given neuron model and a voltage clamp version of it
         self.neuron_model = neuron_model
         self._neuron_model = deepcopy(neuron_model)
@@ -1112,6 +1117,7 @@ class VClampParamSearch:
             raise ValueError(
                 "results_file should not contain file ending and plot_file should!"
             )
+        self.compile_folder_name = compile_folder_name
         self._timestep = 0.001
 
         ### create folder for plots
@@ -1154,6 +1160,7 @@ class VClampParamSearch:
             param_name: self._p_opt.get(param_name, None)
             for param_name in self.bounds.keys()
         }
+        self.p_opt["best_fitness"] = self._p_opt["best_fitness"]
 
         ### print and save optimized parameters
         if self.verbose:
@@ -1241,18 +1248,18 @@ class VClampParamSearch:
 
         ### create a function for the error
         def error_function(x):
-            if self.verbose:
+            if self._verbose_extreme:
                 print(f"Current guess: {x}")
             ### set the free parameters of the functions
             p_dict = {
                 var_name: x[var_idx]
                 for var_idx, var_name in enumerate(sub_var_names_list)
             }
-            if self.verbose:
+            if self._verbose_extreme:
                 print(f"Current guess dict: {p_dict}")
             var_dict = {str(var): p_dict.get(str(var)) for var in self._f_variables}
             var_dict["v_r"] = self._v_rest
-            if self.verbose:
+            if self._verbose_extreme:
                 print(f"var_dict: {var_dict}")
                 print(f"f_variables: {self._f_variables}")
 
@@ -1316,15 +1323,18 @@ class VClampParamSearch:
                 cma_params_dict=self.cma_params_dict,
             )
             result = deap_cma.run()
-            print_results.append(
-                {var_name: result[var_name] for var_name in sub_var_names_list}
-            )
+            print_results_dict = {
+                var_name: result[var_name] for var_name in sub_var_names_list
+            }
+            print_results_dict["best_fitness"] = result["best_fitness"]
+            print_results.append(print_results_dict)
             if result["best_fitness"] < best_fitness:
                 best_fitness = result["best_fitness"]
                 best_result = result
         result_dict = {
             var_name: best_result[var_name] for var_name in sub_var_names_list
         }
+        result_dict["best_fitness"] = best_result["best_fitness"]
         result_dict["v_r"] = self._v_rest
 
         if self.verbose:
@@ -1705,7 +1715,7 @@ class VClampParamSearch:
                 len(self._v_0_arr), self._neuron_model_clamp, name="pop_clamp"
             ),
             name="model_clamp",
-            compile_folder_name="ObtainIzh2007",
+            compile_folder_name=self.compile_folder_name,
         )
 
         return model_normal, model_clamp
