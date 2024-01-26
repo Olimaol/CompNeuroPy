@@ -351,8 +351,10 @@ _Izhikevich2007_Corbit11 = Neuron(
         a_n             = 1
         b_n             = 1
         ### sigmoid parameters
-        saturate        = 1
-        speed           = 1
+        saturate        = 0
+        speed           = 0
+        ### input current
+        I_app           = 0
     """,
     equations="""
         I = sigmoid(I_app,saturate,speed)

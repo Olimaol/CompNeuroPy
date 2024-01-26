@@ -2,6 +2,7 @@ from ANNarchy import reset
 from CompNeuroPy.monitors import RecordingTimes
 from CompNeuroPy import CompNeuroMonitors
 from CompNeuroPy import model_functions as mf
+from copy import deepcopy
 
 
 class CompNeuroExp:
@@ -49,7 +50,6 @@ class CompNeuroExp:
             monitors (CompNeuroMonitors):
                 CompNeuroMonitors object for recordings
         """
-        self.recordings = {}  # save dict for monitor recordings
         self.monitors = monitors
         self.data = {}  # dict for optional data
 
@@ -142,7 +142,10 @@ class CompNeuroExp:
             obj.recordings = []
             obj.recording_times = None
             obj.mon_dict = {}
-        obj.data = self.data
+        ### need deepcopy here because experiment can be run mutliple times and within
+        ### experiment the entries of self.data can be changed, and without deepcopy
+        ### the data of older results objects would also be changed
+        obj.data = deepcopy(self.data)
 
         return obj
 

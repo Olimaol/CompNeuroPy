@@ -1,8 +1,9 @@
-from ANNarchy import setup, Population, get_population, Neuron, clear
+from ANNarchy import setup, Population, get_population, Neuron
 import numpy as np
 import traceback
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy import extra_functions as ef
+from CompNeuroPy import model_functions as mf
 from CompNeuroPy.monitors import CompNeuroMonitors
 from CompNeuroPy.generate_model import CompNeuroModel
 from CompNeuroPy.experiment import CompNeuroExp
@@ -11,8 +12,7 @@ import sys
 from typing import Callable, Any, Type
 from typingchecker import check_types
 from copy import deepcopy
-
-# multiprocessing
+import pandas as pd
 from multiprocessing import Process
 import multiprocessing
 
@@ -59,6 +59,7 @@ class OptNeuron:
         fv_space: list = None,
         record: list[str] = [],
         cma_params_dict: dict = {},
+        verbose=False,
     ):
         """
         This prepares the optimization. To run the optimization call the run function.
@@ -116,6 +117,8 @@ class OptNeuron:
             cma_params_dict (dict, optional):
                 Dictionary with parameters for the deap.cma.Strategy. Default: {}.
                 See [here](https://deap.readthedocs.io/en/master/api/algo.html#deap.cma.Strategy) for more information.
+            verbose (bool, optional):
+                If True, print additional information. Default: False.
         """
 
         if len(self.opt_created) > 0:
@@ -129,6 +132,8 @@ class OptNeuron:
             )
 
             ### set object variables
+            self.verbose = verbose
+            self.verbose_run = False
             self.opt_created.append(1)
             self.record = record
             self.results_soll = results_soll
@@ -156,6 +161,8 @@ class OptNeuron:
                 self.popsize = self._deap_cma.deap_dict["strategy"].lambda_
             else:
                 self.popsize = 1
+            if self.verbose:
+                print("OptNeuron: popsize:", self.popsize)
 
             ### check target_neuron/results_soll
             self._check_target()
@@ -188,7 +195,7 @@ class OptNeuron:
             ### after checking neuron models, experiment, get_loss
             ### clear ANNarchy and create/compile again only
             ### standard model, thus recreate also monitors and experiment
-            clear()
+            mf.cnp_clear()
             model, _, monitors = self._generate_models(self.popsize)
             self.monitors = monitors
             self.experiment = experiment(monitors=monitors)
@@ -228,6 +235,15 @@ class OptNeuron:
         )
         return deap_cma
 
+    class _NullContextManager:
+        def __enter__(self):
+            # This method is called when entering the context
+            pass
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            # This method is called when exiting the context
+            pass
+
     def _generate_models(self, popsize=1):
         """
         Generates the tuned model and the target_model (only if results_soll is None).
@@ -248,11 +264,17 @@ class OptNeuron:
                 The monitors which are used to record the data. If no variables are
                 recorded, monitors is None.
         """
-        with ef.suppress_stdout():
+        with self._NullContextManager() if self.verbose else ef.suppress_stdout():
             model = None
             target_model = None
             monitors = None
             if self.results_soll is None:
+                if self.verbose:
+                    print(
+                        "OptNeuron: Create two models (optimized and target for obtaining results_soll)"
+                    )
+                    print("optimized neuron model:", self.neuron_model)
+                    print("target neuron model:", self.target_neuron)
                 ### create two models
                 model = CompNeuroModel(
                     model_creation_function=self._raw_neuron,
@@ -293,6 +315,11 @@ class OptNeuron:
                     )
 
             else:
+                if self.verbose:
+                    print(
+                        "OptNeuron: Create one model (optimized, results_soll is available)"
+                    )
+                    print("optimized neuron model:", self.neuron_model)
                 ### create one model
                 model = CompNeuroModel(
                     model_creation_function=self._raw_neuron,
@@ -381,6 +408,9 @@ class OptNeuron:
         for param_name, param_bounds in self.variables_bounds.items():
             if isinstance(param_bounds, list):
                 name_list.append(param_name)
+
+        if self.verbose:
+            print("OptNeuron: Fitting variables:", name_list)
         return name_list
 
     def _get_hyperopt_space(self):
@@ -411,6 +441,9 @@ class OptNeuron:
         for param_name, param_bounds in self.variables_bounds.items():
             if not (isinstance(param_bounds, list)):
                 const_params[param_name] = param_bounds
+
+        if self.verbose:
+            print("OptNeuron: Constant parameters:", const_params)
         return const_params
 
     def _check_get_loss_function(self):
@@ -427,6 +460,10 @@ class OptNeuron:
         for bounds in self.variables_bounds.values():
             if isinstance(bounds, list):
                 fitparams.append(bounds[0])
+        if self.verbose:
+            print(
+                f"fitparams selected for checking: {fitparams} ({self.fitting_variables_name_list})"
+            )
 
         if self.results_soll is not None:
             ### only generate results_ist with standard neuron model
@@ -739,6 +776,8 @@ class OptNeuron:
         loss_list_over_runs = []
         all_loss_list_over_runs = []
         return_results = True
+        if self.verbose:
+            print(f"OptNeuron: run simulator with results {self.num_rep_loss} times")
         for _ in range(self.num_rep_loss):
             ### initialize for each run a new rng (--> not always have same noise in
             ### case of noisy models/simulations)
@@ -847,6 +886,17 @@ class OptNeuron:
         ### optimized before the experiment, they should not be resetted by the
         ### experiment!
         self._set_fitting_parameters(fitparams, pop=pop)
+        if self.verbose_run:
+            param_dict = {
+                param_name: fitparams[param_name_idx]
+                if isinstance(fitparams[param_name_idx], list)
+                else [fitparams[param_name_idx]]
+                for param_name_idx, param_name in enumerate(
+                    self.fitting_variables_name_list
+                )
+            }
+            print("OptNeuron: run simulator with parameters:")
+            ef.print_df(pd.DataFrame(param_dict))
 
         ### conduct loaded experiment
         results = self.experiment.run(pop)
@@ -899,6 +949,10 @@ class OptNeuron:
 
         ### get all variables dict (combine fitting variables and const variables)
         all_variables_dict = self.const_params.copy()
+        if self.verbose:
+            print("OptNeuron: set fitting parameters:")
+            print(f"  fitparams: {fitparams} ({self.fitting_variables_name_list})")
+            print(f"  starting with const: {all_variables_dict}")
 
         ### multiply const params for number of neurons
         for const_param_key, const_param_val in all_variables_dict.items():
@@ -906,7 +960,10 @@ class OptNeuron:
                 all_variables_dict[const_param_key] = [
                     all_variables_dict[const_param_key]
                 ] * self.popsize
+        if self.verbose:
+            print(f"  adjusting for pop size: {all_variables_dict}")
 
+        ### add fitting variables
         for fitting_variable_idx, fitting_variable_name in enumerate(
             self.fitting_variables_name_list
         ):
@@ -915,6 +972,8 @@ class OptNeuron:
             else:
                 add_params = fitparams[fitting_variable_idx]
             all_variables_dict[fitting_variable_name] = add_params
+        if self.verbose:
+            print(f"  add fitting variables: {all_variables_dict}")
 
         ### evaluate variables defined by a str
         for key, val in all_variables_dict.items():
@@ -927,10 +986,15 @@ class OptNeuron:
                                 neuron_idx
                             ]
                             for all_variables_key in all_variables_dict.keys()
+                            if not (
+                                isinstance(all_variables_dict[all_variables_key], str)
+                            )
                         },
                     )
                     for neuron_idx in range(self.popsize)
                 ]
+        if self.verbose:
+            print(f"  add str variables: {all_variables_dict}")
 
         ### set parameters
         for param_name, param_val in all_variables_dict.items():
@@ -1057,6 +1121,7 @@ class OptNeuron:
         results_file_name: str = "opt_neuron_results/best",
         sbi_plot_file: str = "opt_neuron_plots/posterior.png",
         deap_plot_file: str = "opt_neuron_plots/logbook.png",
+        verbose: bool = False,
     ):
         """
         Runs the optimization.
@@ -1064,20 +1129,19 @@ class OptNeuron:
         Args:
             max_evals (int):
                 number of runs the optimization method performs
-
             results_file_name (str, optional):
                 name of the file which is saved. The file contains the optimized and
                 target results, the obtained parameters, the loss, and the SD of the
                 loss (in case of noisy models with multiple runs per loss calculation)
                 Default: "best".
-
             sbi_plot_file (str, optional):
                 If you use "sbi": the name of the figure which will be saved and shows
                 the posterior. Default: "posterior.png".
-
             deap_plot_file (str, optional):
                 If you use "deap": the name of the figure which will be saved and shows
                 the logbook. Default: "logbook.png".
+            verbose (bool, optional):
+                If True, detailed information is printed. Default: False.
 
         Returns:
             best (dict):
@@ -1090,6 +1154,8 @@ class OptNeuron:
                 - "results": the results generated by the experiment
                 - "results_soll": the target results
         """
+        self.verbose = False
+        self.verbose_run = verbose
         if self.method == "hyperopt":
             ### run optimization with hyperopt and return best dict
             best = fmin(
