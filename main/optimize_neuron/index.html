@@ -1439,7 +1439,14 @@
 
             <details class="quote">
               <summary>Source code in <code>src/CompNeuroPy/opt_neuron.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">  45</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">  38</span>
+<span class="normal">  39</span>
+<span class="normal">  40</span>
+<span class="normal">  41</span>
+<span class="normal">  42</span>
+<span class="normal">  43</span>
+<span class="normal">  44</span>
+<span class="normal">  45</span>
 <span class="normal">  46</span>
 <span class="normal">  47</span>
 <span class="normal">  48</span>
@@ -2530,7 +2537,81 @@
 <span class="normal">1133</span>
 <span class="normal">1134</span>
 <span class="normal">1135</span>
-<span class="normal">1136</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">OptNeuron</span><span class="p">:</span>
+<span class="normal">1136</span>
+<span class="normal">1137</span>
+<span class="normal">1138</span>
+<span class="normal">1139</span>
+<span class="normal">1140</span>
+<span class="normal">1141</span>
+<span class="normal">1142</span>
+<span class="normal">1143</span>
+<span class="normal">1144</span>
+<span class="normal">1145</span>
+<span class="normal">1146</span>
+<span class="normal">1147</span>
+<span class="normal">1148</span>
+<span class="normal">1149</span>
+<span class="normal">1150</span>
+<span class="normal">1151</span>
+<span class="normal">1152</span>
+<span class="normal">1153</span>
+<span class="normal">1154</span>
+<span class="normal">1155</span>
+<span class="normal">1156</span>
+<span class="normal">1157</span>
+<span class="normal">1158</span>
+<span class="normal">1159</span>
+<span class="normal">1160</span>
+<span class="normal">1161</span>
+<span class="normal">1162</span>
+<span class="normal">1163</span>
+<span class="normal">1164</span>
+<span class="normal">1165</span>
+<span class="normal">1166</span>
+<span class="normal">1167</span>
+<span class="normal">1168</span>
+<span class="normal">1169</span>
+<span class="normal">1170</span>
+<span class="normal">1171</span>
+<span class="normal">1172</span>
+<span class="normal">1173</span>
+<span class="normal">1174</span>
+<span class="normal">1175</span>
+<span class="normal">1176</span>
+<span class="normal">1177</span>
+<span class="normal">1178</span>
+<span class="normal">1179</span>
+<span class="normal">1180</span>
+<span class="normal">1181</span>
+<span class="normal">1182</span>
+<span class="normal">1183</span>
+<span class="normal">1184</span>
+<span class="normal">1185</span>
+<span class="normal">1186</span>
+<span class="normal">1187</span>
+<span class="normal">1188</span>
+<span class="normal">1189</span>
+<span class="normal">1190</span>
+<span class="normal">1191</span>
+<span class="normal">1192</span>
+<span class="normal">1193</span>
+<span class="normal">1194</span>
+<span class="normal">1195</span>
+<span class="normal">1196</span>
+<span class="normal">1197</span>
+<span class="normal">1198</span>
+<span class="normal">1199</span>
+<span class="normal">1200</span>
+<span class="normal">1201</span>
+<span class="normal">1202</span>
+<span class="normal">1203</span>
+<span class="normal">1204</span>
+<span class="normal">1205</span>
+<span class="normal">1206</span>
+<span class="normal">1207</span>
+<span class="normal">1208</span>
+<span class="normal">1209</span>
+<span class="normal">1210</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">OptNeuron</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    This class is used to optimize neuron models with ANNarchy.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -2542,7 +2623,7 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">experiment</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">CompNeuroExp</span><span class="p">],</span>
         <span class="n">get_loss_function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]],</span>
-        <span class="n">variables_bounds</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]],</span>
+        <span class="n">variables_bounds</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span> <span class="o">|</span> <span class="nb">str</span><span class="p">]],</span>
         <span class="n">neuron_model</span><span class="p">:</span> <span class="n">Neuron</span><span class="p">,</span>
         <span class="n">results_soll</span><span class="p">:</span> <span class="n">Any</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">target_neuron_model</span><span class="p">:</span> <span class="n">Neuron</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -2553,6 +2634,8 @@
         <span class="n">prior</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">fv_space</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">record</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[],</span>
+        <span class="n">cma_params_dict</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>
+        <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        This prepares the optimization. To run the optimization call the run function.</span>
@@ -2561,62 +2644,57 @@
 <span class="sd">            experiment (CompNeuroExp class):</span>
 <span class="sd">                CompNeuroExp class containing a &#39;run&#39; function which defines the</span>
 <span class="sd">                simulations and recordings</span>
-
 <span class="sd">            get_loss_function (function):</span>
 <span class="sd">                function which takes results_ist and results_soll as arguments and</span>
 <span class="sd">                calculates/returns the loss</span>
-
 <span class="sd">            variables_bounds (dict):</span>
 <span class="sd">                Dictionary with parameter names (keys) and their bounds (values). If</span>
 <span class="sd">                single values are given as values, the parameter is constant, i.e., not</span>
 <span class="sd">                optimized. If a list is given as value, the parameter is optimized and</span>
 <span class="sd">                the list contains the lower and upper bound of the parameter (order is</span>
-<span class="sd">                not important).</span>
-
+<span class="sd">                not important). If strings instead of numbers are given, the string is</span>
+<span class="sd">                interpreted as an mathematical expression which is evaluated with the</span>
+<span class="sd">                other parameter values (i.e. {&quot;x&quot;:[0,1],&quot;dxy&quot;:[-1,1],&quot;y&quot;:&quot;x+dxy&quot;,&quot;z&quot;:5}).</span>
 <span class="sd">            neuron_model (ANNarchy Neuron):</span>
 <span class="sd">                The neuron model whose parameters should be optimized.</span>
-
 <span class="sd">            results_soll (Any, optional):</span>
 <span class="sd">                Some variable which contains the target data and can be used by the</span>
 <span class="sd">                get_loss_function (second argument of get_loss_function)</span>
 <span class="sd">                !!! warning</span>
 <span class="sd">                    Either provide results_soll or a target_neuron_model not both!</span>
 <span class="sd">                Default: None.</span>
-
 <span class="sd">            target_neuron_model (ANNarchy Neuron, optional):</span>
 <span class="sd">                The neuron model which produces the target data by running the</span>
 <span class="sd">                experiment.</span>
 <span class="sd">                !!! warning</span>
 <span class="sd">                    Either provide results_soll or a target_neuron_model not both!</span>
 <span class="sd">                Default: None.</span>
-
 <span class="sd">            time_step (float, optional):</span>
 <span class="sd">                The time step for the simulation in ms. Default: 1.</span>
-
 <span class="sd">            compile_folder_name (string, optional):</span>
 <span class="sd">                The name of the annarchy compilation folder within annarchy_folders/.</span>
 <span class="sd">                Default: &#39;annarchy_OptNeuron&#39;.</span>
-
 <span class="sd">            num_rep_loss (int, optional):</span>
 <span class="sd">                Only interesting for noisy simulations/models. How often should the</span>
 <span class="sd">                simulaiton be run to calculate the loss (the defined number of losses</span>
 <span class="sd">                is obtained and averaged). Default: 1.</span>
-
 <span class="sd">            method (str, optional):</span>
 <span class="sd">                Either &#39;deap&#39;, &#39;sbi&#39;, or &#39;hyperopt&#39;. Defines the tool which is used for</span>
 <span class="sd">                optimization. Default: &#39;deap&#39;.</span>
-
 <span class="sd">            prior (distribution, optional):</span>
 <span class="sd">                The prior distribution used by sbi. Default: None, i.e., uniform</span>
 <span class="sd">                distributions between the variable bounds are assumed.</span>
-
 <span class="sd">            fv_space (list, optional):</span>
 <span class="sd">                The search space for hyperopt. Default: None, i.e., uniform</span>
 <span class="sd">                distributions between the variable bounds are assumed.</span>
-
 <span class="sd">            record (list, optional):</span>
 <span class="sd">                List of strings which define what variables of the tuned neuron should</span>
 <span class="sd">                be recorded. Default: [].</span>
+<span class="sd">            cma_params_dict (dict, optional):</span>
+<span class="sd">                Dictionary with parameters for the deap.cma.Strategy. Default: {}.</span>
+<span class="sd">                See [here](https://deap.readthedocs.io/en/master/api/algo.html#deap.cma.Strategy) for more information.</span>
+<span class="sd">            verbose (bool, optional):</span>
+<span class="sd">                If True, print additional information. Default: False.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">opt_created</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
@@ -2630,6 +2708,8 @@
             <span class="p">)</span>
 
             <span class="c1">### set object variables</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">verbose_run</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">opt_created</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">record</span> <span class="o">=</span> <span class="n">record</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">results_soll</span> <span class="o">=</span> <span class="n">results_soll</span>
@@ -2649,12 +2729,16 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">target_neuron</span> <span class="o">=</span> <span class="n">target_neuron_model</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">compile_folder_name</span> <span class="o">=</span> <span class="n">compile_folder_name</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_get_loss</span> <span class="o">=</span> <span class="n">get_loss_function</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cma_params_dict</span> <span class="o">=</span> <span class="n">cma_params_dict</span>
 
-            <span class="c1">### prepare deap and get popsize</span>
+            <span class="c1">### if using deap pop size is the number of individuals for the optimization</span>
             <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;deap&quot;</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">deap_dict</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">popsize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_deap_dict</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_deap_cma</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_deap_cma</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">popsize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deap_cma</span><span class="o">.</span><span class="n">deap_dict</span><span class="p">[</span><span class="s2">&quot;strategy&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lambda_</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">popsize</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;OptNeuron: popsize:&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">popsize</span><span class="p">)</span>
 
             <span class="c1">### check target_neuron/results_soll</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_check_target</span><span class="p">()</span>
@@ -2687,10 +2771,54 @@
             <span class="c1">### after checking neuron models, experiment, get_loss</span>
             <span class="c1">### clear ANNarchy and create/compile again only</span>
             <span class="c1">### standard model, thus recreate also monitors and experiment</span>
-            <span class="n">clear</span><span class="p">()</span>
+            <span class="n">mf</span><span class="o">.</span><span class="n">cnp_clear</span><span class="p">()</span>
             <span class="n">model</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">monitors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_models</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">popsize</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">monitors</span> <span class="o">=</span> <span class="n">monitors</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">experiment</span> <span class="o">=</span> <span class="n">experiment</span><span class="p">(</span><span class="n">monitors</span><span class="o">=</span><span class="n">monitors</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_prepare_deap_cma</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initializes the DeapCma class.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            deap_cma (DeapCma):</span>
+<span class="sd">                The initialized DeapCma object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">LOWER</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables_bounds</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+                <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fitting_variables_name_list</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">UPPER</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables_bounds</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+                <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fitting_variables_name_list</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">deap_cma</span> <span class="o">=</span> <span class="n">ef</span><span class="o">.</span><span class="n">DeapCma</span><span class="p">(</span>
+            <span class="n">max_evals</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">lower</span><span class="o">=</span><span class="n">LOWER</span><span class="p">,</span>
+            <span class="n">upper</span><span class="o">=</span><span class="n">UPPER</span><span class="p">,</span>
+            <span class="n">evaluate_function</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_deap_simulation_wrapper</span><span class="p">,</span>
+            <span class="n">p0</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">param_names</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fitting_variables_name_list</span><span class="p">,</span>
+            <span class="n">learn_rate_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">damping_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">plot_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">cma_params_dict</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cma_params_dict</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">deap_cma</span>
+
+    <span class="k">class</span> <span class="nc">_NullContextManager</span><span class="p">:</span>
+        <span class="k">def</span> <span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="c1"># This method is called when entering the context</span>
+            <span class="k">pass</span>
+
+        <span class="k">def</span> <span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exc_type</span><span class="p">,</span> <span class="n">exc_value</span><span class="p">,</span> <span class="n">traceback</span><span class="p">):</span>
+            <span class="c1"># This method is called when exiting the context</span>
+            <span class="k">pass</span>
 
     <span class="k">def</span> <span class="nf">_generate_models</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">popsize</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -2712,11 +2840,17 @@
 <span class="sd">                The monitors which are used to record the data. If no variables are</span>
 <span class="sd">                recorded, monitors is None.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">with</span> <span class="n">ef</span><span class="o">.</span><span class="n">suppress_stdout</span><span class="p">():</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_NullContextManager</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="k">else</span> <span class="n">ef</span><span class="o">.</span><span class="n">suppress_stdout</span><span class="p">():</span>
             <span class="n">model</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="n">target_model</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="n">monitors</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">results_soll</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span>
+                        <span class="s2">&quot;OptNeuron: Create two models (optimized and target for obtaining results_soll)&quot;</span>
+                    <span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;optimized neuron model:&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">neuron_model</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;target neuron model:&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_neuron</span><span class="p">)</span>
                 <span class="c1">### create two models</span>
                 <span class="n">model</span> <span class="o">=</span> <span class="n">CompNeuroModel</span><span class="p">(</span>
                     <span class="n">model_creation_function</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_raw_neuron</span><span class="p">,</span>
@@ -2757,6 +2891,11 @@
                     <span class="p">)</span>
 
             <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span>
+                        <span class="s2">&quot;OptNeuron: Create one model (optimized, results_soll is available)&quot;</span>
+                    <span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;optimized neuron model:&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">neuron_model</span><span class="p">)</span>
                 <span class="c1">### create one model</span>
                 <span class="n">model</span> <span class="o">=</span> <span class="n">CompNeuroModel</span><span class="p">(</span>
                     <span class="n">model_creation_function</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_raw_neuron</span><span class="p">,</span>
@@ -2845,6 +2984,9 @@
         <span class="k">for</span> <span class="n">param_name</span><span class="p">,</span> <span class="n">param_bounds</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables_bounds</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">param_bounds</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
                 <span class="n">name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">param_name</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;OptNeuron: Fitting variables:&quot;</span><span class="p">,</span> <span class="n">name_list</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">name_list</span>
 
     <span class="k">def</span> <span class="nf">_get_hyperopt_space</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -2875,6 +3017,9 @@
         <span class="k">for</span> <span class="n">param_name</span><span class="p">,</span> <span class="n">param_bounds</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables_bounds</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">param_bounds</span><span class="p">,</span> <span class="nb">list</span><span class="p">)):</span>
                 <span class="n">const_params</span><span class="p">[</span><span class="n">param_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">param_bounds</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;OptNeuron: Constant parameters:&quot;</span><span class="p">,</span> <span class="n">const_params</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">const_params</span>
 
     <span class="k">def</span> <span class="nf">_check_get_loss_function</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -2891,6 +3036,10 @@
         <span class="k">for</span> <span class="n">bounds</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables_bounds</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bounds</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
                 <span class="n">fitparams</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;fitparams selected for checking: </span><span class="si">{</span><span class="n">fitparams</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">fitting_variables_name_list</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="p">)</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">results_soll</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="c1">### only generate results_ist with standard neuron model</span>
@@ -3203,6 +3352,8 @@
         <span class="n">loss_list_over_runs</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">all_loss_list_over_runs</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">return_results</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;OptNeuron: run simulator with results </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">num_rep_loss</span><span class="si">}</span><span class="s2"> times&quot;</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_rep_loss</span><span class="p">):</span>
             <span class="c1">### initialize for each run a new rng (--&gt; not always have same noise in</span>
             <span class="c1">### case of noisy models/simulations)</span>
@@ -3311,6 +3462,17 @@
         <span class="c1">### optimized before the experiment, they should not be resetted by the</span>
         <span class="c1">### experiment!</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_set_fitting_parameters</span><span class="p">(</span><span class="n">fitparams</span><span class="p">,</span> <span class="n">pop</span><span class="o">=</span><span class="n">pop</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose_run</span><span class="p">:</span>
+            <span class="n">param_dict</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">param_name</span><span class="p">:</span> <span class="n">fitparams</span><span class="p">[</span><span class="n">param_name_idx</span><span class="p">]</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fitparams</span><span class="p">[</span><span class="n">param_name_idx</span><span class="p">],</span> <span class="nb">list</span><span class="p">)</span>
+                <span class="k">else</span> <span class="p">[</span><span class="n">fitparams</span><span class="p">[</span><span class="n">param_name_idx</span><span class="p">]]</span>
+                <span class="k">for</span> <span class="n">param_name_idx</span><span class="p">,</span> <span class="n">param_name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">fitting_variables_name_list</span>
+                <span class="p">)</span>
+            <span class="p">}</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;OptNeuron: run simulator with parameters:&quot;</span><span class="p">)</span>
+            <span class="n">ef</span><span class="o">.</span><span class="n">print_df</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">param_dict</span><span class="p">))</span>
 
         <span class="c1">### conduct loaded experiment</span>
         <span class="n">results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">experiment</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">pop</span><span class="p">)</span>
@@ -3363,6 +3525,10 @@
 
         <span class="c1">### get all variables dict (combine fitting variables and const variables)</span>
         <span class="n">all_variables_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">const_params</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;OptNeuron: set fitting parameters:&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  fitparams: </span><span class="si">{</span><span class="n">fitparams</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">fitting_variables_name_list</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  starting with const: </span><span class="si">{</span><span class="n">all_variables_dict</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
         <span class="c1">### multiply const params for number of neurons</span>
         <span class="k">for</span> <span class="n">const_param_key</span><span class="p">,</span> <span class="n">const_param_val</span> <span class="ow">in</span> <span class="n">all_variables_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -3370,7 +3536,10 @@
                 <span class="n">all_variables_dict</span><span class="p">[</span><span class="n">const_param_key</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
                     <span class="n">all_variables_dict</span><span class="p">[</span><span class="n">const_param_key</span><span class="p">]</span>
                 <span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">popsize</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  adjusting for pop size: </span><span class="si">{</span><span class="n">all_variables_dict</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
+        <span class="c1">### add fitting variables</span>
         <span class="k">for</span> <span class="n">fitting_variable_idx</span><span class="p">,</span> <span class="n">fitting_variable_name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">fitting_variables_name_list</span>
         <span class="p">):</span>
@@ -3379,6 +3548,8 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">add_params</span> <span class="o">=</span> <span class="n">fitparams</span><span class="p">[</span><span class="n">fitting_variable_idx</span><span class="p">]</span>
             <span class="n">all_variables_dict</span><span class="p">[</span><span class="n">fitting_variable_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">add_params</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  add fitting variables: </span><span class="si">{</span><span class="n">all_variables_dict</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
         <span class="c1">### evaluate variables defined by a str</span>
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">all_variables_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -3391,10 +3562,15 @@
                                 <span class="n">neuron_idx</span>
                             <span class="p">]</span>
                             <span class="k">for</span> <span class="n">all_variables_key</span> <span class="ow">in</span> <span class="n">all_variables_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+                            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span>
+                                <span class="nb">isinstance</span><span class="p">(</span><span class="n">all_variables_dict</span><span class="p">[</span><span class="n">all_variables_key</span><span class="p">],</span> <span class="nb">str</span><span class="p">)</span>
+                            <span class="p">)</span>
                         <span class="p">},</span>
                     <span class="p">)</span>
                     <span class="k">for</span> <span class="n">neuron_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">popsize</span><span class="p">)</span>
                 <span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  add str variables: </span><span class="si">{</span><span class="n">all_variables_dict</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
         <span class="c1">### set parameters</span>
         <span class="k">for</span> <span class="n">param_name</span><span class="p">,</span> <span class="n">param_val</span> <span class="ow">in</span> <span class="n">all_variables_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -3518,9 +3694,10 @@
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">max_evals</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-        <span class="n">results_file_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;best&quot;</span><span class="p">,</span>
-        <span class="n">sbi_plot_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;posterior.png&quot;</span><span class="p">,</span>
-        <span class="n">deap_plot_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;logbook.png&quot;</span><span class="p">,</span>
+        <span class="n">results_file_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;opt_neuron_results/best&quot;</span><span class="p">,</span>
+        <span class="n">sbi_plot_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;opt_neuron_plots/posterior.png&quot;</span><span class="p">,</span>
+        <span class="n">deap_plot_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;opt_neuron_plots/logbook.png&quot;</span><span class="p">,</span>
+        <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Runs the optimization.</span>
@@ -3528,20 +3705,19 @@
 <span class="sd">        Args:</span>
 <span class="sd">            max_evals (int):</span>
 <span class="sd">                number of runs the optimization method performs</span>
-
 <span class="sd">            results_file_name (str, optional):</span>
 <span class="sd">                name of the file which is saved. The file contains the optimized and</span>
 <span class="sd">                target results, the obtained parameters, the loss, and the SD of the</span>
 <span class="sd">                loss (in case of noisy models with multiple runs per loss calculation)</span>
 <span class="sd">                Default: &quot;best&quot;.</span>
-
 <span class="sd">            sbi_plot_file (str, optional):</span>
 <span class="sd">                If you use &quot;sbi&quot;: the name of the figure which will be saved and shows</span>
 <span class="sd">                the posterior. Default: &quot;posterior.png&quot;.</span>
-
 <span class="sd">            deap_plot_file (str, optional):</span>
 <span class="sd">                If you use &quot;deap&quot;: the name of the figure which will be saved and shows</span>
 <span class="sd">                the logbook. Default: &quot;logbook.png&quot;.</span>
+<span class="sd">            verbose (bool, optional):</span>
+<span class="sd">                If True, detailed information is printed. Default: False.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            best (dict):</span>
@@ -3554,6 +3730,8 @@
 <span class="sd">                - &quot;results&quot;: the results generated by the experiment</span>
 <span class="sd">                - &quot;results_soll&quot;: the target results</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose_run</span> <span class="o">=</span> <span class="n">verbose</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;hyperopt&quot;</span><span class="p">:</span>
             <span class="c1">### run optimization with hyperopt and return best dict</span>
             <span class="n">best</span> <span class="o">=</span> <span class="n">fmin</span><span class="p">(</span>
@@ -3580,35 +3758,15 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="n">best</span>
 
         <span class="c1">### SAVE OPTIMIZED PARAMS AND LOSS</span>
-        <span class="n">sf</span><span class="o">.</span><span class="n">save_variables</span><span class="p">([</span><span class="n">best</span><span class="p">],</span> <span class="p">[</span><span class="n">results_file_name</span><span class="p">],</span> <span class="s2">&quot;parameter_fit&quot;</span><span class="p">)</span>
+        <span class="n">sf</span><span class="o">.</span><span class="n">save_variables</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">best</span><span class="p">],</span>
+            <span class="p">[</span><span class="n">results_file_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]],</span>
+            <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_file_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">results_file_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">1</span>
+            <span class="k">else</span> <span class="s2">&quot;./&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
 
         <span class="k">return</span> <span class="n">best</span>
-
-    <span class="k">def</span> <span class="nf">_get_deap_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Prepares the deap optimization.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-
-        <span class="c1">### get lower and upper bounds</span>
-        <span class="n">LOWER</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
-            <span class="p">[</span>
-                <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables_bounds</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
-                <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fitting_variables_name_list</span>
-            <span class="p">]</span>
-        <span class="p">)</span>
-        <span class="n">UPPER</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
-            <span class="p">[</span>
-                <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables_bounds</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
-                <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fitting_variables_name_list</span>
-            <span class="p">]</span>
-        <span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">ef</span><span class="o">.</span><span class="n">_prepare_cma_deap</span><span class="p">(</span>
-            <span class="n">lower</span><span class="o">=</span><span class="n">LOWER</span><span class="p">,</span>
-            <span class="n">upper</span><span class="o">=</span><span class="n">UPPER</span><span class="p">,</span>
-            <span class="n">evaluate_function</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_deap_simulation_wrapper</span><span class="p">,</span>
-            <span class="n">param_names</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fitting_variables_name_list</span><span class="p">,</span>
-        <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_run_with_deap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_evals</span><span class="p">,</span> <span class="n">deap_plot_file</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -3621,7 +3779,11 @@
 <span class="sd">            deap_plot_file (str):</span>
 <span class="sd">                the name of the figure which will be saved and shows the logbook</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">ef</span><span class="o">.</span><span class="n">_cma_deap</span><span class="p">(</span><span class="n">max_evals</span><span class="p">,</span> <span class="n">deap_plot_file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">deap_dict</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deap_cma</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+            <span class="n">max_evals</span><span class="o">=</span><span class="n">max_evals</span><span class="p">,</span>
+            <span class="n">plot_file</span><span class="o">=</span><span class="n">deap_plot_file</span><span class="p">,</span>
+        <span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
 
@@ -3644,7 +3806,7 @@
 
 
 <h3 id="CompNeuroPy.opt_neuron.OptNeuron.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">experiment</span><span class="p">,</span> <span class="n">get_loss_function</span><span class="p">,</span> <span class="n">variables_bounds</span><span class="p">,</span> <span class="n">neuron_model</span><span class="p">,</span> <span class="n">results_soll</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">target_neuron_model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">time_step</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">compile_folder_name</span><span class="o">=</span><span class="s1">&#39;annarchy_OptNeuron&#39;</span><span class="p">,</span> <span class="n">num_rep_loss</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;deap&#39;</span><span class="p">,</span> <span class="n">prior</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fv_space</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">record</span><span class="o">=</span><span class="p">[])</span></code>
+          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">experiment</span><span class="p">,</span> <span class="n">get_loss_function</span><span class="p">,</span> <span class="n">variables_bounds</span><span class="p">,</span> <span class="n">neuron_model</span><span class="p">,</span> <span class="n">results_soll</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">target_neuron_model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">time_step</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">compile_folder_name</span><span class="o">=</span><span class="s1">&#39;annarchy_OptNeuron&#39;</span><span class="p">,</span> <span class="n">num_rep_loss</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;deap&#39;</span><span class="p">,</span> <span class="n">prior</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fv_space</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">record</span><span class="o">=</span><span class="p">[],</span> <span class="n">cma_params_dict</span><span class="o">=</span><span class="p">{},</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
 
 <a href="#CompNeuroPy.opt_neuron.OptNeuron.__init__" class="headerlink" title="Permanent link">#</a></h3>
 
@@ -3707,7 +3869,9 @@ calculates/returns the loss</p>
 single values are given as values, the parameter is constant, i.e., not
 optimized. If a list is given as value, the parameter is optimized and
 the list contains the lower and upper bound of the parameter (order is
-not important).</p>
+not important). If strings instead of numbers are given, the string is
+interpreted as an mathematical expression which is evaluated with the
+other parameter values (i.e. {"x":[0,1],"dxy":[-1,1],"y":"x+dxy","z":5}).</p>
             </div>
           </td>
           <td>
@@ -3873,12 +4037,48 @@ be recorded. Default: [].</p>
                 <code>[]</code>
           </td>
         </tr>
+        <tr>
+          <td><code>cma_params_dict</code></td>
+          <td>
+                <code>dict</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Dictionary with parameters for the deap.cma.Strategy. Default: {}.
+See <a href="https://deap.readthedocs.io/en/master/api/algo.html#deap.cma.Strategy">here</a> for more information.</p>
+            </div>
+          </td>
+          <td>
+                <code>{}</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>verbose</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>If True, print additional information. Default: False.</p>
+            </div>
+          </td>
+          <td>
+                <code>False</code>
+          </td>
+        </tr>
     </tbody>
   </table>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/opt_neuron.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 52</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 45</span>
+<span class="normal"> 46</span>
+<span class="normal"> 47</span>
+<span class="normal"> 48</span>
+<span class="normal"> 49</span>
+<span class="normal"> 50</span>
+<span class="normal"> 51</span>
+<span class="normal"> 52</span>
 <span class="normal"> 53</span>
 <span class="normal"> 54</span>
 <span class="normal"> 55</span>
@@ -4027,16 +4227,12 @@ be recorded. Default: [].</p>
 <span class="normal">198</span>
 <span class="normal">199</span>
 <span class="normal">200</span>
-<span class="normal">201</span>
-<span class="normal">202</span>
-<span class="normal">203</span>
-<span class="normal">204</span>
-<span class="normal">205</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@check_types</span><span class="p">(</span><span class="n">warnings</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="normal">201</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@check_types</span><span class="p">(</span><span class="n">warnings</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">experiment</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">CompNeuroExp</span><span class="p">],</span>
     <span class="n">get_loss_function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]],</span>
-    <span class="n">variables_bounds</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]],</span>
+    <span class="n">variables_bounds</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span> <span class="o">|</span> <span class="nb">str</span><span class="p">]],</span>
     <span class="n">neuron_model</span><span class="p">:</span> <span class="n">Neuron</span><span class="p">,</span>
     <span class="n">results_soll</span><span class="p">:</span> <span class="n">Any</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">target_neuron_model</span><span class="p">:</span> <span class="n">Neuron</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -4047,6 +4243,8 @@ be recorded. Default: [].</p>
     <span class="n">prior</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">fv_space</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">record</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[],</span>
+    <span class="n">cma_params_dict</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    This prepares the optimization. To run the optimization call the run function.</span>
@@ -4055,62 +4253,57 @@ be recorded. Default: [].</p>
 <span class="sd">        experiment (CompNeuroExp class):</span>
 <span class="sd">            CompNeuroExp class containing a &#39;run&#39; function which defines the</span>
 <span class="sd">            simulations and recordings</span>
-
 <span class="sd">        get_loss_function (function):</span>
 <span class="sd">            function which takes results_ist and results_soll as arguments and</span>
 <span class="sd">            calculates/returns the loss</span>
-
 <span class="sd">        variables_bounds (dict):</span>
 <span class="sd">            Dictionary with parameter names (keys) and their bounds (values). If</span>
 <span class="sd">            single values are given as values, the parameter is constant, i.e., not</span>
 <span class="sd">            optimized. If a list is given as value, the parameter is optimized and</span>
 <span class="sd">            the list contains the lower and upper bound of the parameter (order is</span>
-<span class="sd">            not important).</span>
-
+<span class="sd">            not important). If strings instead of numbers are given, the string is</span>
+<span class="sd">            interpreted as an mathematical expression which is evaluated with the</span>
+<span class="sd">            other parameter values (i.e. {&quot;x&quot;:[0,1],&quot;dxy&quot;:[-1,1],&quot;y&quot;:&quot;x+dxy&quot;,&quot;z&quot;:5}).</span>
 <span class="sd">        neuron_model (ANNarchy Neuron):</span>
 <span class="sd">            The neuron model whose parameters should be optimized.</span>
-
 <span class="sd">        results_soll (Any, optional):</span>
 <span class="sd">            Some variable which contains the target data and can be used by the</span>
 <span class="sd">            get_loss_function (second argument of get_loss_function)</span>
 <span class="sd">            !!! warning</span>
 <span class="sd">                Either provide results_soll or a target_neuron_model not both!</span>
 <span class="sd">            Default: None.</span>
-
 <span class="sd">        target_neuron_model (ANNarchy Neuron, optional):</span>
 <span class="sd">            The neuron model which produces the target data by running the</span>
 <span class="sd">            experiment.</span>
 <span class="sd">            !!! warning</span>
 <span class="sd">                Either provide results_soll or a target_neuron_model not both!</span>
 <span class="sd">            Default: None.</span>
-
 <span class="sd">        time_step (float, optional):</span>
 <span class="sd">            The time step for the simulation in ms. Default: 1.</span>
-
 <span class="sd">        compile_folder_name (string, optional):</span>
 <span class="sd">            The name of the annarchy compilation folder within annarchy_folders/.</span>
 <span class="sd">            Default: &#39;annarchy_OptNeuron&#39;.</span>
-
 <span class="sd">        num_rep_loss (int, optional):</span>
 <span class="sd">            Only interesting for noisy simulations/models. How often should the</span>
 <span class="sd">            simulaiton be run to calculate the loss (the defined number of losses</span>
 <span class="sd">            is obtained and averaged). Default: 1.</span>
-
 <span class="sd">        method (str, optional):</span>
 <span class="sd">            Either &#39;deap&#39;, &#39;sbi&#39;, or &#39;hyperopt&#39;. Defines the tool which is used for</span>
 <span class="sd">            optimization. Default: &#39;deap&#39;.</span>
-
 <span class="sd">        prior (distribution, optional):</span>
 <span class="sd">            The prior distribution used by sbi. Default: None, i.e., uniform</span>
 <span class="sd">            distributions between the variable bounds are assumed.</span>
-
 <span class="sd">        fv_space (list, optional):</span>
 <span class="sd">            The search space for hyperopt. Default: None, i.e., uniform</span>
 <span class="sd">            distributions between the variable bounds are assumed.</span>
-
 <span class="sd">        record (list, optional):</span>
 <span class="sd">            List of strings which define what variables of the tuned neuron should</span>
 <span class="sd">            be recorded. Default: [].</span>
+<span class="sd">        cma_params_dict (dict, optional):</span>
+<span class="sd">            Dictionary with parameters for the deap.cma.Strategy. Default: {}.</span>
+<span class="sd">            See [here](https://deap.readthedocs.io/en/master/api/algo.html#deap.cma.Strategy) for more information.</span>
+<span class="sd">        verbose (bool, optional):</span>
+<span class="sd">            If True, print additional information. Default: False.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">opt_created</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
@@ -4124,6 +4317,8 @@ be recorded. Default: [].</p>
         <span class="p">)</span>
 
         <span class="c1">### set object variables</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose_run</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">opt_created</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">record</span> <span class="o">=</span> <span class="n">record</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">results_soll</span> <span class="o">=</span> <span class="n">results_soll</span>
@@ -4143,12 +4338,16 @@ be recorded. Default: [].</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">target_neuron</span> <span class="o">=</span> <span class="n">target_neuron_model</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">compile_folder_name</span> <span class="o">=</span> <span class="n">compile_folder_name</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_get_loss</span> <span class="o">=</span> <span class="n">get_loss_function</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cma_params_dict</span> <span class="o">=</span> <span class="n">cma_params_dict</span>
 
-        <span class="c1">### prepare deap and get popsize</span>
+        <span class="c1">### if using deap pop size is the number of individuals for the optimization</span>
         <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;deap&quot;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">deap_dict</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">popsize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_deap_dict</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_deap_cma</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_deap_cma</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">popsize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deap_cma</span><span class="o">.</span><span class="n">deap_dict</span><span class="p">[</span><span class="s2">&quot;strategy&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lambda_</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">popsize</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;OptNeuron: popsize:&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">popsize</span><span class="p">)</span>
 
         <span class="c1">### check target_neuron/results_soll</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_check_target</span><span class="p">()</span>
@@ -4181,7 +4380,7 @@ be recorded. Default: [].</p>
         <span class="c1">### after checking neuron models, experiment, get_loss</span>
         <span class="c1">### clear ANNarchy and create/compile again only</span>
         <span class="c1">### standard model, thus recreate also monitors and experiment</span>
-        <span class="n">clear</span><span class="p">()</span>
+        <span class="n">mf</span><span class="o">.</span><span class="n">cnp_clear</span><span class="p">()</span>
         <span class="n">model</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">monitors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_models</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">popsize</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">monitors</span> <span class="o">=</span> <span class="n">monitors</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">experiment</span> <span class="o">=</span> <span class="n">experiment</span><span class="p">(</span><span class="n">monitors</span><span class="o">=</span><span class="n">monitors</span><span class="p">)</span>
@@ -4198,7 +4397,7 @@ be recorded. Default: [].</p>
 
 
 <h3 id="CompNeuroPy.opt_neuron.OptNeuron.run" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">run</span><span class="p">(</span><span class="n">max_evals</span><span class="p">,</span> <span class="n">results_file_name</span><span class="o">=</span><span class="s1">&#39;best&#39;</span><span class="p">,</span> <span class="n">sbi_plot_file</span><span class="o">=</span><span class="s1">&#39;posterior.png&#39;</span><span class="p">,</span> <span class="n">deap_plot_file</span><span class="o">=</span><span class="s1">&#39;logbook.png&#39;</span><span class="p">)</span></code>
+          <code class="highlight language-python"><span class="n">run</span><span class="p">(</span><span class="n">max_evals</span><span class="p">,</span> <span class="n">results_file_name</span><span class="o">=</span><span class="s1">&#39;opt_neuron_results/best&#39;</span><span class="p">,</span> <span class="n">sbi_plot_file</span><span class="o">=</span><span class="s1">&#39;opt_neuron_plots/posterior.png&#39;</span><span class="p">,</span> <span class="n">deap_plot_file</span><span class="o">=</span><span class="s1">&#39;opt_neuron_plots/logbook.png&#39;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
 
 <a href="#CompNeuroPy.opt_neuron.OptNeuron.run" class="headerlink" title="Permanent link">#</a></h3>
 
@@ -4248,7 +4447,7 @@ Default: "best".</p>
             </div>
           </td>
           <td>
-                <code>&#39;best&#39;</code>
+                <code>&#39;opt_neuron_results/best&#39;</code>
           </td>
         </tr>
         <tr>
@@ -4263,7 +4462,7 @@ the posterior. Default: "posterior.png".</p>
             </div>
           </td>
           <td>
-                <code>&#39;posterior.png&#39;</code>
+                <code>&#39;opt_neuron_plots/posterior.png&#39;</code>
           </td>
         </tr>
         <tr>
@@ -4278,7 +4477,21 @@ the logbook. Default: "logbook.png".</p>
             </div>
           </td>
           <td>
-                <code>&#39;logbook.png&#39;</code>
+                <code>&#39;opt_neuron_plots/logbook.png&#39;</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>verbose</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>If True, detailed information is printed. Default: False.</p>
+            </div>
+          </td>
+          <td>
+                <code>False</code>
           </td>
         </tr>
     </tbody>
@@ -4318,81 +4531,90 @@ the logbook. Default: "logbook.png".</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/opt_neuron.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1029</span>
-<span class="normal">1030</span>
-<span class="normal">1031</span>
-<span class="normal">1032</span>
-<span class="normal">1033</span>
-<span class="normal">1034</span>
-<span class="normal">1035</span>
-<span class="normal">1036</span>
-<span class="normal">1037</span>
-<span class="normal">1038</span>
-<span class="normal">1039</span>
-<span class="normal">1040</span>
-<span class="normal">1041</span>
-<span class="normal">1042</span>
-<span class="normal">1043</span>
-<span class="normal">1044</span>
-<span class="normal">1045</span>
-<span class="normal">1046</span>
-<span class="normal">1047</span>
-<span class="normal">1048</span>
-<span class="normal">1049</span>
-<span class="normal">1050</span>
-<span class="normal">1051</span>
-<span class="normal">1052</span>
-<span class="normal">1053</span>
-<span class="normal">1054</span>
-<span class="normal">1055</span>
-<span class="normal">1056</span>
-<span class="normal">1057</span>
-<span class="normal">1058</span>
-<span class="normal">1059</span>
-<span class="normal">1060</span>
-<span class="normal">1061</span>
-<span class="normal">1062</span>
-<span class="normal">1063</span>
-<span class="normal">1064</span>
-<span class="normal">1065</span>
-<span class="normal">1066</span>
-<span class="normal">1067</span>
-<span class="normal">1068</span>
-<span class="normal">1069</span>
-<span class="normal">1070</span>
-<span class="normal">1071</span>
-<span class="normal">1072</span>
-<span class="normal">1073</span>
-<span class="normal">1074</span>
-<span class="normal">1075</span>
-<span class="normal">1076</span>
-<span class="normal">1077</span>
-<span class="normal">1078</span>
-<span class="normal">1079</span>
-<span class="normal">1080</span>
-<span class="normal">1081</span>
-<span class="normal">1082</span>
-<span class="normal">1083</span>
-<span class="normal">1084</span>
-<span class="normal">1085</span>
-<span class="normal">1086</span>
-<span class="normal">1087</span>
-<span class="normal">1088</span>
-<span class="normal">1089</span>
-<span class="normal">1090</span>
-<span class="normal">1091</span>
-<span class="normal">1092</span>
-<span class="normal">1093</span>
-<span class="normal">1094</span>
-<span class="normal">1095</span>
-<span class="normal">1096</span>
-<span class="normal">1097</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@check_types</span><span class="p">()</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1117</span>
+<span class="normal">1118</span>
+<span class="normal">1119</span>
+<span class="normal">1120</span>
+<span class="normal">1121</span>
+<span class="normal">1122</span>
+<span class="normal">1123</span>
+<span class="normal">1124</span>
+<span class="normal">1125</span>
+<span class="normal">1126</span>
+<span class="normal">1127</span>
+<span class="normal">1128</span>
+<span class="normal">1129</span>
+<span class="normal">1130</span>
+<span class="normal">1131</span>
+<span class="normal">1132</span>
+<span class="normal">1133</span>
+<span class="normal">1134</span>
+<span class="normal">1135</span>
+<span class="normal">1136</span>
+<span class="normal">1137</span>
+<span class="normal">1138</span>
+<span class="normal">1139</span>
+<span class="normal">1140</span>
+<span class="normal">1141</span>
+<span class="normal">1142</span>
+<span class="normal">1143</span>
+<span class="normal">1144</span>
+<span class="normal">1145</span>
+<span class="normal">1146</span>
+<span class="normal">1147</span>
+<span class="normal">1148</span>
+<span class="normal">1149</span>
+<span class="normal">1150</span>
+<span class="normal">1151</span>
+<span class="normal">1152</span>
+<span class="normal">1153</span>
+<span class="normal">1154</span>
+<span class="normal">1155</span>
+<span class="normal">1156</span>
+<span class="normal">1157</span>
+<span class="normal">1158</span>
+<span class="normal">1159</span>
+<span class="normal">1160</span>
+<span class="normal">1161</span>
+<span class="normal">1162</span>
+<span class="normal">1163</span>
+<span class="normal">1164</span>
+<span class="normal">1165</span>
+<span class="normal">1166</span>
+<span class="normal">1167</span>
+<span class="normal">1168</span>
+<span class="normal">1169</span>
+<span class="normal">1170</span>
+<span class="normal">1171</span>
+<span class="normal">1172</span>
+<span class="normal">1173</span>
+<span class="normal">1174</span>
+<span class="normal">1175</span>
+<span class="normal">1176</span>
+<span class="normal">1177</span>
+<span class="normal">1178</span>
+<span class="normal">1179</span>
+<span class="normal">1180</span>
+<span class="normal">1181</span>
+<span class="normal">1182</span>
+<span class="normal">1183</span>
+<span class="normal">1184</span>
+<span class="normal">1185</span>
+<span class="normal">1186</span>
+<span class="normal">1187</span>
+<span class="normal">1188</span>
+<span class="normal">1189</span>
+<span class="normal">1190</span>
+<span class="normal">1191</span>
+<span class="normal">1192</span>
+<span class="normal">1193</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@check_types</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">run</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">max_evals</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">results_file_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;best&quot;</span><span class="p">,</span>
-    <span class="n">sbi_plot_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;posterior.png&quot;</span><span class="p">,</span>
-    <span class="n">deap_plot_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;logbook.png&quot;</span><span class="p">,</span>
+    <span class="n">results_file_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;opt_neuron_results/best&quot;</span><span class="p">,</span>
+    <span class="n">sbi_plot_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;opt_neuron_plots/posterior.png&quot;</span><span class="p">,</span>
+    <span class="n">deap_plot_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;opt_neuron_plots/logbook.png&quot;</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Runs the optimization.</span>
@@ -4400,20 +4622,19 @@ the logbook. Default: "logbook.png".</p>
 <span class="sd">    Args:</span>
 <span class="sd">        max_evals (int):</span>
 <span class="sd">            number of runs the optimization method performs</span>
-
 <span class="sd">        results_file_name (str, optional):</span>
 <span class="sd">            name of the file which is saved. The file contains the optimized and</span>
 <span class="sd">            target results, the obtained parameters, the loss, and the SD of the</span>
 <span class="sd">            loss (in case of noisy models with multiple runs per loss calculation)</span>
 <span class="sd">            Default: &quot;best&quot;.</span>
-
 <span class="sd">        sbi_plot_file (str, optional):</span>
 <span class="sd">            If you use &quot;sbi&quot;: the name of the figure which will be saved and shows</span>
 <span class="sd">            the posterior. Default: &quot;posterior.png&quot;.</span>
-
 <span class="sd">        deap_plot_file (str, optional):</span>
 <span class="sd">            If you use &quot;deap&quot;: the name of the figure which will be saved and shows</span>
 <span class="sd">            the logbook. Default: &quot;logbook.png&quot;.</span>
+<span class="sd">        verbose (bool, optional):</span>
+<span class="sd">            If True, detailed information is printed. Default: False.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        best (dict):</span>
@@ -4426,6 +4647,8 @@ the logbook. Default: "logbook.png".</p>
 <span class="sd">            - &quot;results&quot;: the results generated by the experiment</span>
 <span class="sd">            - &quot;results_soll&quot;: the target results</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">verbose_run</span> <span class="o">=</span> <span class="n">verbose</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;hyperopt&quot;</span><span class="p">:</span>
         <span class="c1">### run optimization with hyperopt and return best dict</span>
         <span class="n">best</span> <span class="o">=</span> <span class="n">fmin</span><span class="p">(</span>
@@ -4452,7 +4675,13 @@ the logbook. Default: "logbook.png".</p>
     <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="n">best</span>
 
     <span class="c1">### SAVE OPTIMIZED PARAMS AND LOSS</span>
-    <span class="n">sf</span><span class="o">.</span><span class="n">save_variables</span><span class="p">([</span><span class="n">best</span><span class="p">],</span> <span class="p">[</span><span class="n">results_file_name</span><span class="p">],</span> <span class="s2">&quot;parameter_fit&quot;</span><span class="p">)</span>
+    <span class="n">sf</span><span class="o">.</span><span class="n">save_variables</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">best</span><span class="p">],</span>
+        <span class="p">[</span><span class="n">results_file_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]],</span>
+        <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_file_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">results_file_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">1</span>
+        <span class="k">else</span> <span class="s2">&quot;./&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
 
     <span class="k">return</span> <span class="n">best</span>
 </code></pre></div></td></tr></table></div>
