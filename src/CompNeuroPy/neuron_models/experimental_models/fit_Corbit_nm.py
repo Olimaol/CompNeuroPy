@@ -355,9 +355,16 @@ _Izhikevich2007_Corbit11 = Neuron(
         speed           = 0
         ### input current
         I_app           = 0
+        ### synaptic current parameters
+        tau_ampa        = 1
+        tau_gaba        = 1
+        E_ampa          = 0
+        E_gaba          = -90
     """,
     equations="""
-        I = sigmoid(I_app,saturate,speed)
+        dg_ampa/dt = -g_ampa/tau_ampa
+        dg_gaba/dt = -g_gaba/tau_gaba
+        I = sigmoid(I_app - neg(g_ampa*(v - E_ampa)) - pos(g_gaba*(v - E_gaba)), saturate, speed)
       
         C * dv/dt = k*(v - v_r)*(v - v_t) - u - n + I
         du/dt     = a*(b*(v - v_r) - u)
