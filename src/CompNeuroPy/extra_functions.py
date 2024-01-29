@@ -25,6 +25,7 @@ from scipy.interpolate import griddata
 import re
 from typingchecker import check_types
 import warnings
+import json
 
 
 def print_df(df):
@@ -1165,10 +1166,20 @@ class VClampParamSearch:
         ### print and save optimized parameters
         if self.verbose:
             print(f"Optimized parameters: {self.p_opt}")
+        ### save as pkl file
         sf.save_variables(
             [self.p_opt],
             [results_file.split("/")[-1]],
             results_file.split("/")[:-1] if "/" in results_file else "./",
+        )
+        ### save human readable as json file
+        json.dump(
+            self.p_opt,
+            open(
+                f"{results_file}.json",
+                "w",
+            ),
+            indent=4,
         )
 
         ### create a neuron model with the tuned parameters and the given equations

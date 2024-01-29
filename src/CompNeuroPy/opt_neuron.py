@@ -15,6 +15,7 @@ from copy import deepcopy
 import pandas as pd
 from multiprocessing import Process
 import multiprocessing
+import json
 
 try:
     # hyperopt
@@ -1182,12 +1183,22 @@ class OptNeuron:
         self.results = best
 
         ### SAVE OPTIMIZED PARAMS AND LOSS
+        ### save as pkl file
         sf.save_variables(
             [best],
             [results_file_name.split("/")[-1]],
             "/".join(results_file_name.split("/")[:-1])
             if len(results_file_name.split("/")) > 1
             else "./",
+        )
+        ### save human readable as json file
+        json.dump(
+            {key: best[key] for key in self.fitting_variables_name_list + ["loss"]},
+            open(
+                f"{results_file_name}.json",
+                "w",
+            ),
+            indent=4,
         )
 
         return best
