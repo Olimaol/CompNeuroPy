@@ -2038,6 +2038,12 @@ def interactive_plot(
 
     ### initialize the sliders to their axes
     for slider_idx, slider_kwargs in enumerate(sliders):
+        ### if init out of min max, change min max
+        if "valinit" in slider_kwargs:
+            if slider_kwargs["valinit"] < slider_kwargs["valmin"]:
+                slider_kwargs["valmin"] = slider_kwargs["valinit"]
+            elif slider_kwargs["valinit"] > slider_kwargs["valmax"]:
+                slider_kwargs["valmax"] = slider_kwargs["valinit"]
         slider = Slider(**slider_kwargs)
         slider.on_changed(lambda val: update(axs, sliders))
         sliders[slider_idx]["slider"] = slider

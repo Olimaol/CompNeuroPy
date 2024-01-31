@@ -1,6 +1,161 @@
 from ANNarchy import simulate, get_population, dt
 
 
+def attr_sim(pop, attr_dict, t=500):
+    """
+    Simulates a period 't' setting the attributes of a given population to the values
+    specified in 'attr_list', after this simulation the attributes are reset to initial
+    values (before simulation).
+
+    Args:
+        pop (str):
+            population name of population whose attributes should be set
+        attr_dict (dict):
+            dictionary containing the attributes and their values
+        t (int):
+            duration in ms
+    """
+
+    ### save prev attr
+    v_prev_dict = {
+        attr: getattr(get_population(pop), attr) for attr in attr_dict.keys()
+    }
+
+    ### set attributes
+    for attr, v in attr_dict.items():
+        setattr(get_population(pop), attr, v)
+
+    ### simulate
+    simulate(t)
+
+    ### reset attributes to previous values
+    for attr, v in v_prev_dict.items():
+        setattr(get_population(pop), attr, v)
+
+
+def attribute_step(pop, attr, t1=500, t2=500, v1=0, v2=100):
+    """
+    Simulates an attribute step for a given population.
+
+    Args:
+        pop (str):
+            population name of population whose attribute should be changed
+        attr (str):
+            name of attribute which should be changed
+        t1 (int):
+            time in ms before step
+        t2 (int):
+            time in ms after step
+        v1 (int):
+            value of attribute for t1
+        v2 (int):
+            value of attribute for t2
+
+    Returns:
+        return_dict (dict):
+            dictionary containing:
+
+            - duration (int): duration of the simulation
+    """
+
+    ### first/pre step simulation
+    attr_sim(pop, {attr: v1}, t=t1)
+
+    ### second/post step simulation
+    attr_sim(pop, {attr: v2}, t=t2)
+
+    ### return duration of the simulation
+    return {"duration": t1 + t2}
+
+
+def attr_ramp(pop, attr, v0, v1, dur, n):
+    """
+    Simulating while constantly changing the attribute of a given population.
+    After this attr_ramp simulation the attribute value is reset to the initial
+    value (before simulation).
+
+    Args:
+        pop (str):
+            population name of population whose attribute should be changed
+        attr (str):
+            name of attribute which should be changed
+        v0 (int):
+            initial value of attribute (of first stimulation)
+        v1 (int):
+            final value of attribute (of last stimulation)
+        dur (int):
+            duration of the complete ramp simulation
+        n (int):
+            number of steps for changing the attribute
+
+    !!! warning
+        dur/n should be divisible by the simulation time step without remainder
+
+    Returns:
+        return_dict (dict):
+            dictionary containing:
+
+            - dv (int): step size of attribute
+            - dur_stim (int): duration of single steps
+
+    Raises:
+        ValueError: if resulting duration of one stimulation is not divisible by the
+            simulation time step without remainder
+    """
+
+    if (dur / n) / dt() % 1 != 0:
+        raise ValueError(
+            "ERROR current_ramp: dur/n should result in a duration (for a single stimulation) which is divisible by the simulation time step (without remainder)\ncurrent duration = "
+            + str(dur / n)
+            + ", timestep = "
+            + str(dt())
+            + "!\n"
+        )
+
+    dv = (v1 - v0) / (n - 1)  # for n stimulations only n-1 steps occur
+    dur_stim = dur / n
+    v = v0
+    for _ in range(n):
+        attr_sim(pop, attr_dict={attr: v}, t=dur_stim)
+        v = v + dv
+
+    return {"dv": dv, "dur_stim": dur_stim}
+
+
+def increasing_attr(pop, attr, v0, dv, nr_steps, dur_step):
+    """
+    Conducts multiple simulations while constantly increasing the attribute of a given
+    population. After this simulation the attribute value is reset to the initial value
+    (before simulation).
+
+    Args:
+        pop (str):
+            population name of population whose attribute should be changed
+        v0 (int):
+            initial attribute value (of first stimulation)
+        dv (int):
+            attribute step size
+        nr_steps (int):
+            number of simulations with different attribute values
+        dur_step (int):
+            duration of one step simulation
+
+    Returns:
+        return_dict (dict):
+            dictionary containing:
+
+            - attr_list (list): list of attribute values for each step simulation
+    """
+    attr_list = []
+    v = v0
+    for _ in range(nr_steps):
+        attr_list.append(v)
+        attr_sim(pop, {attr: v}, t=dur_step)
+        v += dv
+
+    return {"attr_list": attr_list}
+
+
 def current_step(pop, t1=500, t2=500, a1=0, a2=100):
     """
     Stimulates a given population in two periods with two input currents.
@@ -24,23 +179,7 @@ def current_step(pop, t1=500, t2=500, a1=0, a2=100):
 
             - duration (int): duration of the simulation
     """
-
-    ### save prev input current
-    I_prev = get_population(pop).I_app
-
-    ### first/pre current step simulation
-    get_population(pop).I_app = a1
-    simulate(t1)
-
-    ### second/post current step simulation
-    get_population(pop).I_app = a2
-    simulate(t2)
-
-    ### reset input current to previous value
-    get_population(pop).I_app = I_prev
-
-    ### return some additional information which could be usefull
-    return {"duration": t1 + t2}
+    return attribute_step(pop, "I_app", t1=t1, t2=t2, v1=a1, v2=a2)
 
 
 def current_stim(pop, t=500, a=100):
@@ -58,8 +197,7 @@ def current_stim(pop, t=500, a=100):
         a (int):
             current amplitude
     """
-
-    return current_step(pop, t1=t, t2=0, a1=a, a2=0)
+    attr_sim(pop, {"I_app": a}, t=t)
 
 
 def current_ramp(pop, a0, a1, dur, n):
@@ -93,26 +231,11 @@ def current_ramp(pop, a0, a1, dur, n):
             - dur_stim (int): duration of one stimulation
 
     Raises:
-        AssertionError: if resulting duration of one stimulation is not divisible by the
+        ValueError: if resulting duration of one stimulation is not divisible by the
             simulation time step without remainder
     """
-
-    assert (dur / n) / dt() % 1 == 0, (
-        "ERROR current_ramp: dur/n should result in a duration (for a single stimulation) which is divisible by the simulation time step (without remainder)\ncurrent duration = "
-        + str(dur / n)
-        + ", timestep = "
-        + str(dt())
-        + "!\n"
-    )
-
-    da = (a1 - a0) / (n - 1)  # for n stimulations only n-1 steps occur
-    dur_stim = dur / n
-    amp = a0
-    for _ in range(n):
-        current_stim(pop, t=dur_stim, a=amp)
-        amp = amp + da
-
-    return {"da": da, "dur_stim": dur_stim}
+    attr_ramp_return = attr_ramp(pop, "I_app", a0, a1, dur, n)
+    return {"da": attr_ramp_return["dv"], "dur_stim": attr_ramp_return["dur_stim"]}
 
 
 def increasing_current(pop, a0, da, nr_steps, dur_step):
@@ -140,11 +263,5 @@ def increasing_current(pop, a0, da, nr_steps, dur_step):
 
             - current_list (list): list of current amplitudes for each stimulation
     """
-    current_list = []
-    a = a0
-    for _ in range(nr_steps):
-        current_list.append(a)
-        current_stim(pop, t=dur_step, a=a)
-        a += da
-
-    return {"current_list": current_list}
+    increasing_attr_return = increasing_attr(pop, "I_app", a0, da, nr_steps, dur_step)
+    return {"current_list": increasing_attr_return["attr_list"]}
