@@ -26,6 +26,8 @@ dependencies = [
     "typingchecker",
     "pandas",
     "tabulate",
+    "deap",
+    "screeninfo",
 ]
 
 [project.urls]
