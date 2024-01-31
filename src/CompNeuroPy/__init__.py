@@ -30,6 +30,7 @@ from CompNeuroPy.extra_functions import (
     evaluate_expression_with_dict,
     VClampParamSearch,
     DeapCma,
+    interactive_plot,
     data_obj,  # TODO remove
     my_linear_cmap_obj,  # TODO remove
     decision_tree,  # TODO remove

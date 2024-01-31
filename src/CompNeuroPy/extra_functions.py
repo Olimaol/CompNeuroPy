@@ -26,6 +26,9 @@ import re
 from typingchecker import check_types
 import warnings
 import json
+from matplotlib.widgets import Slider
+from matplotlib.gridspec import GridSpec
+from screeninfo import get_monitors
 
 
 def print_df(df):
@@ -794,7 +797,7 @@ class DeapCma:
         ### search strategy
         strategy = cma.Strategy(
             centroid=(lower + upper) / 2 if isinstance(p0, type(None)) else p0,
-            sigma=upper - lower,
+            sigma=(upper - lower) / 4,
             **cma_params_dict,
         )
         strategy.ccov1 *= learn_rate_factor
@@ -965,10 +968,8 @@ class DeapCma:
             ### clip individuals of population to variable bounds
             for ind in population:
                 for idx in range(len(ind)):
-                    if ind[idx] < lower[idx]:
-                        ind[idx] = lower[idx]
-                    elif ind[idx] > upper[idx]:
-                        ind[idx] = upper[idx]
+                    if ind[idx] < lower[idx] or ind[idx] > upper[idx]:
+                        ind[idx] = np.random.uniform(lower[idx], upper[idx])
             ### Evaluate the individuals (here whole population at once)
             ### scale parameters back into original range [lower,upper]
             population_inv_scaled = [inv_scaler(ind) for ind in deepcopy(population)]
@@ -1968,3 +1969,96 @@ class VClampParamSearch:
             return True
 
         return False
+
+
+def interactive_plot(
+    nrows: int,
+    ncols: int,
+    sliders: list[dict],
+    create_plot: Callable,
+):
+    """
+    Create an interactive plot with sliders.
+
+    Args:
+        nrows (int):
+            number of rows of subplots
+        ncols (int):
+            number of columns of subplots
+        sliders (list):
+            list of dictionaries with slider parameters, at least the following keys
+            have to be present:
+                - label (str):
+                    label of the slider
+                - valmin (float):
+                    minimum value of the slider
+                - valmax (float):
+                    maximum value of the slider
+        create_plot (Callable):
+            function which fills the subplots, has to have the signature
+            create_plot(axs, sliders), where axs is a list of axes (for each subplot)
+            and sliders is the sliders list with newly added keys "ax" (axes of the
+            slider) and "slider" (the slider itself, so that you can access the slider
+            values in the create_plot function with sliders[<slider_idx>]["slider"].val)
+    """
+
+    def update(axs, sliders):
+        ### remove everything from all axes except the sliders axes
+        for ax in axs:
+            if ax not in [slider["ax"] for slider in sliders]:
+                ax.cla()
+        ### recreate the plot
+        create_plot(axs, sliders)
+        ### redraw the canvas
+        fig.canvas.draw_idle()
+
+    ### create the figure as large as the screen
+    screen_width, screen_height = get_monitors()[0].width, get_monitors()[0].height
+    figsize = (screen_width / 100, screen_height / 100)
+    fig = plt.figure(figsize=figsize)
+
+    ### create the axes filled with the create_plot function
+    grid = GridSpec((nrows + 1) * len(sliders), ncols * len(sliders), figure=fig)
+    axs = []
+    for row_idx in range(nrows):
+        for col_idx in range(ncols):
+            ax = fig.add_subplot(
+                grid[
+                    row_idx * len(sliders) : (row_idx + 1) * len(sliders),
+                    col_idx * len(sliders) : (col_idx + 1) * len(sliders),
+                ]
+            )
+            axs.append(ax)
+
+    ### create the sliders axes
+    for slider_idx, slider_kwargs in enumerate(sliders):
+        sliders[slider_idx]["ax"] = fig.add_subplot(
+            grid[nrows * len(sliders) + slider_idx, :]
+        )
+
+    ### initialize the sliders to their axes
+    for slider_idx, slider_kwargs in enumerate(sliders):
+        slider = Slider(**slider_kwargs)
+        slider.on_changed(lambda val: update(axs, sliders))
+        sliders[slider_idx]["slider"] = slider
+
+    ### create the plot
+    create_plot(axs, sliders)
+    ### arange subplots
+    plt.tight_layout()
+    new_right_border = 0.85
+    new_left_border = 0.15
+    for slider_idx, slider_kwargs in enumerate(sliders):
+        ax = sliders[slider_idx]["ax"]
+        ### set new borders
+        ax.set_position(
+            [
+                new_left_border,
+                ax.get_position().y0,
+                new_right_border - new_left_border,
+                ax.get_position().height,
+            ]
+        )
+
+    ### show the plot
+    plt.show()

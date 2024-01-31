@@ -221,12 +221,22 @@ class OptNeuron:
                 for name in self.fitting_variables_name_list
             ]
         )
+        p0 = np.array(
+            [
+                np.random.uniform(
+                    min(self.variables_bounds[key]),
+                    max(self.variables_bounds[key]),
+                )
+                for key in self.fitting_variables_name_list
+            ]
+        )
+
         deap_cma = ef.DeapCma(
             max_evals=0,
             lower=LOWER,
             upper=UPPER,
             evaluate_function=self._deap_simulation_wrapper,
-            p0=None,
+            p0=p0,
             param_names=self.fitting_variables_name_list,
             learn_rate_factor=1,
             damping_factor=1,
