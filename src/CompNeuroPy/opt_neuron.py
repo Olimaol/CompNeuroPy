@@ -31,7 +31,7 @@ try:
 
 except:
     print(
-        "OptNeuron: Error: You need to install hyperopt, torch, sbi, and deap to use OptNeuron (e.g. use pip install hyperopt torch sbi deap))"
+        "OptNeuron: Error: You need to install hyperopt, torch, and sbi to use OptNeuron (e.g. use pip install hyperopt torch sbi))"
     )
     sys.exit()
 
