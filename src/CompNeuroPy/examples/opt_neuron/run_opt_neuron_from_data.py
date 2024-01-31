@@ -190,7 +190,7 @@ def get_loss(results_ist: CompNeuroExp._ResultsCl, results_soll):
 
 
 ### now we need to define which variables should be optimized and between which bounds
-variables_bounds = {"a": [-10, 10], "b": [-10, 10]}
+variables_bounds = {"a": [-50, 100], "b": [-50, 150]}
 
 
 def main():

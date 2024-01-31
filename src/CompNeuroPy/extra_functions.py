@@ -31,18 +31,20 @@ from matplotlib.gridspec import GridSpec
 from screeninfo import get_monitors
 
 
-def print_df(df):
+def print_df(df: pd.DataFrame | dict, **kwargs):
     """
     Prints the complete dataframe df
 
     Args:
-        df (pandas dataframe):
+        df (pandas dataframe or dict):
             Dataframe to be printed
     """
+    if isinstance(df, dict):
+        df = pd.DataFrame.from_dict(df)
     with pd.option_context(
         "display.max_rows", None
     ):  # more options can be specified also
-        print(df)
+        print(df, **kwargs)
 
 
 def flatten_list(lst):
@@ -966,10 +968,10 @@ class DeapCma:
             ### Generate a new population
             population = toolbox.generate()
             ### clip individuals of population to variable bounds
+            ### TODO only if bounds are hard
             for ind in population:
-                for idx in range(len(ind)):
-                    if ind[idx] < lower[idx] or ind[idx] > upper[idx]:
-                        ind[idx] = np.random.uniform(lower[idx], upper[idx])
+                for idx, val in enumerate(ind):
+                    ind[idx] = np.clip(val, lower[idx], upper[idx])
             ### Evaluate the individuals (here whole population at once)
             ### scale parameters back into original range [lower,upper]
             population_inv_scaled = [inv_scaler(ind) for ind in deepcopy(population)]

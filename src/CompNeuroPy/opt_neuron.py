@@ -230,6 +230,7 @@ class OptNeuron:
                 for key in self.fitting_variables_name_list
             ]
         )
+        p0 = None
 
         deap_cma = ef.DeapCma(
             max_evals=0,
