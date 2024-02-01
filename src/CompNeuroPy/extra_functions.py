@@ -29,6 +29,7 @@ import json
 from matplotlib.widgets import Slider
 from matplotlib.gridspec import GridSpec
 from screeninfo import get_monitors
+import cmaes
 
 
 def print_df(df: pd.DataFrame | dict, **kwargs):
@@ -700,6 +701,7 @@ class DeapCma:
         verbose: bool = False,
         plot_file: None | str = "logbook.png",
         cma_params_dict: dict = {},
+        source_solutions: list[tuple[np.ndarray, float]] = [],
     ):
         """
 
@@ -731,6 +733,9 @@ class DeapCma:
             cma_params_dict (dict, optional):
                 Parameters for the deap cma strategy (deap.cma.Strategy). See [here](https://deap.readthedocs.io/en/master/api/algo.html#deap.cma.Strategy) for more
                 details
+            source_solutions (list[tuple[np.ndarray, float]], optional):
+                List of tuples with the parameters and losses of source solutions. These
+                solutions are used to initialize the covariance matrix. By default [].
         """
         ### store attributes
         self.max_evals = max_evals
@@ -744,6 +749,7 @@ class DeapCma:
         self.verbose = verbose
         self.plot_file = plot_file
         self.cma_params_dict = cma_params_dict
+        self.source_solutions = source_solutions
 
         ### prepare the optimization
         self.deap_dict = self._prepare()
@@ -797,11 +803,31 @@ class DeapCma:
         ### function calculating losses from individuals (from whole population)
         toolbox.register("evaluate", evaluate_function)
         ### search strategy
+        ### warm start with initial source solutions
+        if len(self.source_solutions) > 0:
+            ### scale source solutions
+            for source_solution_idx in range(len(self.source_solutions)):
+                self.source_solutions[source_solution_idx] = (
+                    scaler(self.source_solutions[source_solution_idx][0]),
+                    self.source_solutions[source_solution_idx][1],
+                )
+            centroid, sigma, cmatrix = cmaes.get_warm_start_mgd(
+                source_solutions=self.source_solutions,
+                gamma=1,
+            )
+            cma_params_dict["cmatrix"] = cmatrix
+        else:
+            centroid = (lower + upper) / 2 if isinstance(p0, type(None)) else scaler(p0)
+            sigma = (upper - lower) / 4
+
+        ### create the strategy
         strategy = cma.Strategy(
-            centroid=(lower + upper) / 2 if isinstance(p0, type(None)) else p0,
-            sigma=(upper - lower) / 4,
+            centroid=centroid,
+            sigma=sigma,
             **cma_params_dict,
         )
+
+        ### slow down the learning rate and increase the damping
         strategy.ccov1 *= learn_rate_factor
         strategy.ccovmu *= learn_rate_factor
         strategy.damps *= damping_factor  # TODO what slows down?

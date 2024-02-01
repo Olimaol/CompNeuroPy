@@ -16,6 +16,7 @@ import pandas as pd
 from multiprocessing import Process
 import multiprocessing
 import json
+from pybads.bads import BADS
 
 try:
     # hyperopt
@@ -60,6 +61,9 @@ class OptNeuron:
         fv_space: list = None,
         record: list[str] = [],
         cma_params_dict: dict = {},
+        bads_params_dict: dict = {},
+        source_solutions: list[tuple[np.ndarray, float]] = [],
+        variables_bounds_guess: None | dict[str, list[float]] = None,
         verbose=False,
     ):
         """
@@ -118,6 +122,17 @@ class OptNeuron:
             cma_params_dict (dict, optional):
                 Dictionary with parameters for the deap.cma.Strategy. Default: {}.
                 See [here](https://deap.readthedocs.io/en/master/api/algo.html#deap.cma.Strategy) for more information.
+            bads_params_dict (dict, optional):
+                Dictionary with parameters for the bads optimization. Default: {}.
+                See [here](https://acerbilab.github.io/pybads/api/options/bads_options.html) for more information.
+            source_solutions (list, optional):
+                List of tuples with the source solutions. Each tuple contains a numpy
+                array with the parameter values and the loss. Used for initialization of
+                cma optimization with deap. Default: [].
+            variables_bounds_guess (dict, optional):
+                Dictionary with parameter names (keys) and their bounds (values) as
+                list. These bounds define the region there the minimum is expected. Used
+                for the BADS optimization. Default: None.
             verbose (bool, optional):
                 If True, print additional information. Default: False.
         """
@@ -155,6 +170,9 @@ class OptNeuron:
             self.compile_folder_name = compile_folder_name
             self._get_loss = get_loss_function
             self.cma_params_dict = cma_params_dict
+            self.source_solutions = source_solutions
+            self.variables_bounds_guess = variables_bounds_guess
+            self.bads_params_dict = bads_params_dict
 
             ### if using deap pop size is the number of individuals for the optimization
             if method == "deap":
@@ -201,21 +219,27 @@ class OptNeuron:
             self.monitors = monitors
             self.experiment = experiment(monitors=monitors)
 
-    def _prepare_deap_cma(self):
+    def _get_lower_upper_p0(self):
         """
-        Initializes the DeapCma class.
+        Returns the lower and upper bounds and the initial values for the cma
+        optimization with deap.
 
         Returns:
-            deap_cma (DeapCma):
-                The initialized DeapCma object.
+            lower (np.array):
+                The lower bounds for the optimization.
+            upper (np.array):
+                The upper bounds for the optimization.
+            p0 (np.array):
+                The initial values for the optimization.
         """
-        LOWER = np.array(
+
+        lower = np.array(
             [
                 min(self.variables_bounds[name])
                 for name in self.fitting_variables_name_list
             ]
         )
-        UPPER = np.array(
+        upper = np.array(
             [
                 max(self.variables_bounds[name])
                 for name in self.fitting_variables_name_list
@@ -230,7 +254,56 @@ class OptNeuron:
                 for key in self.fitting_variables_name_list
             ]
         )
-        p0 = None
+        return lower, upper, p0
+
+    def _get_lower_upper_x0(self):
+        """
+        Returns the lower and upper bounds and the initial values for the optimization
+        with bads.
+
+        Returns:
+            lower (np.array):
+                The lower bounds for the optimization.
+            upper (np.array):
+                The upper bounds for the optimization.
+            x0 (np.array):
+                The initial values for the optimization.
+            lower_guess (np.array):
+                The lower bounds for the optimization where the minimum is expected.
+            upper_guess (np.array):
+                The upper bounds for the optimization where the minimum is expected.
+        """
+        lower, upper, x0 = self._get_lower_upper_p0()
+
+        if not isinstance(self.variables_bounds_guess, type(None)):
+            lower_guess = np.array(
+                [
+                    min(self.variables_bounds_guess[name])
+                    for name in self.fitting_variables_name_list
+                ]
+            )
+            upper_guess = np.array(
+                [
+                    max(self.variables_bounds_guess[name])
+                    for name in self.fitting_variables_name_list
+                ]
+            )
+        else:
+            lower_guess = deepcopy(lower)
+            upper_guess = deepcopy(upper)
+
+        return lower, upper, x0, lower_guess, upper_guess
+
+    def _prepare_deap_cma(self):
+        """
+        Initializes the DeapCma class.
+
+        Returns:
+            deap_cma (DeapCma):
+                The initialized DeapCma object.
+        """
+
+        LOWER, UPPER, p0 = self._get_lower_upper_p0()
 
         deap_cma = ef.DeapCma(
             max_evals=0,
@@ -244,6 +317,7 @@ class OptNeuron:
             verbose=False,
             plot_file=None,
             cma_params_dict=self.cma_params_dict,
+            source_solutions=self.source_solutions,
         )
         return deap_cma
 
@@ -753,6 +827,13 @@ class OptNeuron:
         ### return loss list as list of tuples (deap needs this format)
         return [(loss_list[neuron_idx],) for neuron_idx in range(len(population))]
 
+    def _bads_simulation_wrapper(self, fitparams: list):
+        """
+        This function is called by bads. It calls the simulator function and
+        returns the loss.
+        """
+        return self._run_simulator(fitparams)["loss"]
+
     def _run_simulator_with_results(self, fitparams, pop=None):
         """
         Runs the function simulator with the multiprocessing manager (if function is
@@ -1126,6 +1207,40 @@ class OptNeuron:
 
         return best
 
+    def _run_with_bads(self, max_evals):
+        """
+        TODO
+        """
+
+        ### prepare bads
+        target = self._bads_simulation_wrapper
+        lower, upper, x0, lower_guess, upper_guess = self._get_lower_upper_x0()
+
+        ### TODO bads can handle noisy functions, one can retunr two values, loss and std
+        self.bads_params_dict["uncertainty_handling"] = False
+        self.bads_params_dict["max_fun_evals"] = max_evals
+
+        ### run bads
+        bads = BADS(
+            fun=target,
+            x0=x0,
+            lower_bounds=lower,
+            upper_bounds=upper,
+            plausible_lower_bounds=lower_guess,
+            plausible_upper_bounds=upper_guess,
+            options=self.bads_params_dict,
+        )
+        optimize_result = bads.optimize()
+
+        ### create best dict with best parameters
+        best = {
+            fitting_variable_name: optimize_result["x"][idx]
+            for idx, fitting_variable_name in enumerate(
+                self.fitting_variables_name_list
+            )
+        }
+        return best
+
     @check_types()
     def run(
         self,
@@ -1181,8 +1296,10 @@ class OptNeuron:
             best = self._run_with_sbi(max_evals, sbi_plot_file)
         elif self.method == "deap":
             best = self._run_with_deap(max_evals, deap_plot_file)
+        elif self.method == "bads":
+            best = self._run_with_bads(max_evals)
         else:
-            print("ERROR run; method should be 'hyperopt' or 'sbi'")
+            print("ERROR run; method should be 'hyperopt', 'sbi', 'deap', or 'bads'")
             quit()
         ### obtain loss for the best parameters
         fit = self._test_fit(best)
