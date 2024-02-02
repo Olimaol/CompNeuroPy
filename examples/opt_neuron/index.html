@@ -1297,11 +1297,6 @@ model to some experimental data.</p>
 <span class="sd">                    data (dict):</span>
 <span class="sd">                        dict with optional data stored during the experiment</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1">### For OptNeuron you have to reset the model and monitors at the beginning of</span>
-        <span class="c1">### the run function! Do not reset the parameters, otherwise the optimization</span>
-        <span class="c1">### will not work!</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">parameters</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-
         <span class="c1">### you have to start monitors within the run function, otherwise nothing will</span>
         <span class="c1">### be recorded</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">monitors</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
@@ -1323,9 +1318,16 @@ model to some experimental data.</p>
             <span class="n">monitor_object</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">monitors</span><span class="p">,</span>
         <span class="p">)</span>
 
-        <span class="c1">### run the simulation, remember setting parameters=False in the reset function!</span>
+        <span class="c1">### run the simulation</span>
         <span class="n">sim_step</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">parameters</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="c1">### Here we reset the model and monitors, creating a new chunk for the next sim</span>
+        <span class="c1">### use the self.reset() function to reset the model and monitors!</span>
+        <span class="c1">### OptNeuron sets the parameters (defined in the variables_bounds dict) of the</span>
+        <span class="c1">### neuron model before each run.</span>
+        <span class="c1">### By using the reset function of the CompNeuroExp class you reset the model to</span>
+        <span class="c1">### this state (all varaiables/parameters not defined in variable bounds are</span>
+        <span class="c1">### reset to compile state)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
         <span class="n">sim_step</span><span class="o">.</span><span class="n">run</span><span class="p">({</span><span class="s2">&quot;a2&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">})</span>
 
         <span class="c1">### optional: store anything you want in the data dict. For example infomration</span>

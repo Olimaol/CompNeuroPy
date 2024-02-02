@@ -1165,6 +1165,8 @@ run it and how to get the results.</p>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1">### call reset at the beginning of the experiment to ensure that the model</span>
         <span class="c1">### is in the same state at the beginning of each experiment run</span>
+        <span class="c1">### we stored the state that the membrane potential is -90 before (see below)</span>
+        <span class="c1">### this can be seen in the results plots</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
 
         <span class="c1">### also always start the monitors, they are stopped automatically at the end</span>
@@ -1176,17 +1178,18 @@ run it and how to get the results.</p>
         <span class="n">get_population</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">E_L</span> <span class="o">=</span> <span class="n">E_L</span>
 
         <span class="c1">### SIMULATION START</span>
-        <span class="n">sim_step</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+        <span class="n">sim_ramp</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
         <span class="c1">### if you want to reset the model, you should use the objects reset()</span>
         <span class="c1">### it&#39;s the same as the ANNarchy reset + it resets the CompNeuroMonitors</span>
-        <span class="c1">### creating a new chunk, optionally not changing the parameters</span>
+        <span class="c1">### creating a new chunk, optionally not changing the parameters (but still the</span>
+        <span class="c1">### dynamic variables)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">parameters</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-        <span class="n">sim_ramp</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+        <span class="n">sim_step</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
         <span class="c1">### SIMULATION END</span>
 
         <span class="c1">### optional: store anything you want in the data dict, for example information</span>
         <span class="c1">### about the simulations</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;sim&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">sim_step</span><span class="o">.</span><span class="n">simulation_info</span><span class="p">(),</span> <span class="n">sim_ramp</span><span class="o">.</span><span class="n">simulation_info</span><span class="p">()]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;sim&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">sim_ramp</span><span class="o">.</span><span class="n">simulation_info</span><span class="p">(),</span> <span class="n">sim_step</span><span class="o">.</span><span class="n">simulation_info</span><span class="p">()]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;population_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;time_step&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dt</span><span class="p">()</span>
 
@@ -1203,16 +1206,7 @@ run it and how to get the results.</p>
     <span class="n">monitors</span> <span class="o">=</span> <span class="n">CompNeuroMonitors</span><span class="p">({</span><span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="p">[</span><span class="s2">&quot;v&quot;</span><span class="p">]})</span>
 
     <span class="c1">### define some simulations e.g. using CompNeuroSim</span>
-    <span class="n">sim_step</span> <span class="o">=</span> <span class="n">CompNeuroSim</span><span class="p">(</span>
-        <span class="n">simulation_function</span><span class="o">=</span><span class="n">current_step</span><span class="p">,</span>
-        <span class="n">simulation_kwargs</span><span class="o">=</span><span class="p">{</span>
-            <span class="s2">&quot;pop&quot;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-            <span class="s2">&quot;t1&quot;</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span>
-            <span class="s2">&quot;t2&quot;</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span>
-            <span class="s2">&quot;a1&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-            <span class="s2">&quot;a2&quot;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span>
-        <span class="p">},</span>
-    <span class="p">)</span>
+    <span class="c1">### in the experiment we 1st conduct a ramp simulation</span>
     <span class="n">sim_ramp</span> <span class="o">=</span> <span class="n">CompNeuroSim</span><span class="p">(</span>
         <span class="n">simulation_function</span><span class="o">=</span><span class="n">current_ramp</span><span class="p">,</span>
         <span class="n">simulation_kwargs</span><span class="o">=</span><span class="p">{</span>
@@ -1223,9 +1217,29 @@ run it and how to get the results.</p>
             <span class="s2">&quot;n&quot;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span>
         <span class="p">},</span>
     <span class="p">)</span>
+    <span class="c1">### and 2nd a step simulation</span>
+    <span class="n">sim_step</span> <span class="o">=</span> <span class="n">CompNeuroSim</span><span class="p">(</span>
+        <span class="n">simulation_function</span><span class="o">=</span><span class="n">current_step</span><span class="p">,</span>
+        <span class="n">simulation_kwargs</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;pop&quot;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="s2">&quot;t1&quot;</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span>
+            <span class="s2">&quot;t2&quot;</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span>
+            <span class="s2">&quot;a1&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s2">&quot;a2&quot;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span>
+        <span class="p">},</span>
+    <span class="p">)</span>
 
     <span class="c1">### init and run the experiment</span>
     <span class="n">my_exp</span> <span class="o">=</span> <span class="n">MyExp</span><span class="p">(</span><span class="n">monitors</span><span class="o">=</span><span class="n">monitors</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">sim_step</span><span class="o">=</span><span class="n">sim_step</span><span class="p">,</span> <span class="n">sim_ramp</span><span class="o">=</span><span class="n">sim_ramp</span><span class="p">)</span>
+
+    <span class="c1">### demonstration of the store_model_state function</span>
+    <span class="c1">### the current state of the model is the compilation state, e.g. v should be -68</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Compilation state v = </span><span class="si">{</span><span class="n">get_population</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1">### the reset function of CompNeuroExp resets to the compilation state by default</span>
+    <span class="c1">### but you can also store the state of model compartments and reset to this state</span>
+    <span class="c1">### here for example we store that the membrane potential is -90</span>
+    <span class="n">get_population</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">v</span> <span class="o">=</span> <span class="o">-</span><span class="mf">90.0</span>
+    <span class="n">my_exp</span><span class="o">.</span><span class="n">store_model_state</span><span class="p">(</span><span class="n">compartment_list</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">)</span>
 
     <span class="c1">### one use case is to run an experiment multiple times e.g. with different</span>
     <span class="c1">### parameters</span>
@@ -1235,7 +1249,7 @@ run it and how to get the results.</p>
     <span class="c1">### plot of the membrane potential from the first and second chunk using results</span>
     <span class="c1">### experiment run 1</span>
     <span class="n">PlotRecordings</span><span class="p">(</span>
-        <span class="n">figname</span><span class="o">=</span><span class="s2">&quot;example_experiment_sim_step.png&quot;</span><span class="p">,</span>
+        <span class="n">figname</span><span class="o">=</span><span class="s2">&quot;example_experiment_sim_ramp.png&quot;</span><span class="p">,</span>
         <span class="n">recordings</span><span class="o">=</span><span class="n">results_run1</span><span class="o">.</span><span class="n">recordings</span><span class="p">,</span>
         <span class="n">recording_times</span><span class="o">=</span><span class="n">results_run1</span><span class="o">.</span><span class="n">recording_times</span><span class="p">,</span>
         <span class="n">chunk</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
@@ -1248,7 +1262,7 @@ run it and how to get the results.</p>
         <span class="p">},</span>
     <span class="p">)</span>
     <span class="n">PlotRecordings</span><span class="p">(</span>
-        <span class="n">figname</span><span class="o">=</span><span class="s2">&quot;example_experiment_sim_ramp.png&quot;</span><span class="p">,</span>
+        <span class="n">figname</span><span class="o">=</span><span class="s2">&quot;example_experiment_sim_step.png&quot;</span><span class="p">,</span>
         <span class="n">recordings</span><span class="o">=</span><span class="n">results_run1</span><span class="o">.</span><span class="n">recordings</span><span class="p">,</span>
         <span class="n">recording_times</span><span class="o">=</span><span class="n">results_run1</span><span class="o">.</span><span class="n">recording_times</span><span class="p">,</span>
         <span class="n">chunk</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
@@ -1262,7 +1276,7 @@ run it and how to get the results.</p>
     <span class="p">)</span>
     <span class="c1">### experiment run 2</span>
     <span class="n">PlotRecordings</span><span class="p">(</span>
-        <span class="n">figname</span><span class="o">=</span><span class="s2">&quot;example_experiment2_sim_step.png&quot;</span><span class="p">,</span>
+        <span class="n">figname</span><span class="o">=</span><span class="s2">&quot;example_experiment2_sim_ramp.png&quot;</span><span class="p">,</span>
         <span class="n">recordings</span><span class="o">=</span><span class="n">results_run2</span><span class="o">.</span><span class="n">recordings</span><span class="p">,</span>
         <span class="n">recording_times</span><span class="o">=</span><span class="n">results_run2</span><span class="o">.</span><span class="n">recording_times</span><span class="p">,</span>
         <span class="n">chunk</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
@@ -1275,7 +1289,7 @@ run it and how to get the results.</p>
         <span class="p">},</span>
     <span class="p">)</span>
     <span class="n">PlotRecordings</span><span class="p">(</span>
-        <span class="n">figname</span><span class="o">=</span><span class="s2">&quot;example_experiment2_sim_ramp.png&quot;</span><span class="p">,</span>
+        <span class="n">figname</span><span class="o">=</span><span class="s2">&quot;example_experiment2_sim_step.png&quot;</span><span class="p">,</span>
         <span class="n">recordings</span><span class="o">=</span><span class="n">results_run2</span><span class="o">.</span><span class="n">recordings</span><span class="p">,</span>
         <span class="n">recording_times</span><span class="o">=</span><span class="n">results_run2</span><span class="o">.</span><span class="n">recording_times</span><span class="p">,</span>
         <span class="n">chunk</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
@@ -1307,19 +1321,19 @@ run it and how to get the results.</p>
 <h2 id="console-output">Console Output<a class="headerlink" href="#console-output" title="Permanent link">#</a></h2>
 <div class="highlight"><pre><span></span><code><span class="gp">$ </span>python<span class="w"> </span>experiment.py<span class="w"> </span>
 <span class="go">ANNarchy 4.7 (4.7.3b) on linux (posix).</span>
-<span class="go">Compiling ...  OK </span>
-<span class="go">Generate fig example_experiment_sim_step.png... Done</span>
-
+<span class="go">Compilation state v = [-68.]</span>
 <span class="go">Generate fig example_experiment_sim_ramp.png... Done</span>
 
-<span class="go">Generate fig example_experiment2_sim_step.png... Done</span>
+<span class="go">Generate fig example_experiment_sim_step.png... Done</span>
 
 <span class="go">Generate fig example_experiment2_sim_ramp.png... Done</span>
+
+<span class="go">Generate fig example_experiment2_sim_step.png... Done</span>
 
 
 <span class="go">run1:</span>
 <span class="go">    data:</span>
-<span class="go">        sim: [&lt;CompNeuroPy.generate_simulation.SimInfo object at 0x7f4798dfb700&gt;, &lt;CompNeuroPy.generate_simulation.SimInfo object at 0x7f4798dfad40&gt;]</span>
+<span class="go">        sim: [&lt;CompNeuroPy.generate_simulation.SimInfo object at 0x7f71f8cd1f00&gt;, &lt;CompNeuroPy.generate_simulation.SimInfo object at 0x7f71f8cd1fc0&gt;]</span>
 <span class="go">        population_name: HH_Bischop</span>
 <span class="go">        time_step: 0.01</span>
 <span class="go">    mon_dict:</span>
@@ -1327,7 +1341,7 @@ run it and how to get the results.</p>
 
 <span class="go">run2:</span>
 <span class="go">    data:</span>
-<span class="go">        sim: [&lt;CompNeuroPy.generate_simulation.SimInfo object at 0x7f4798dfb700&gt;, &lt;CompNeuroPy.generate_simulation.SimInfo object at 0x7f4798dfad40&gt;]</span>
+<span class="go">        sim: [&lt;CompNeuroPy.generate_simulation.SimInfo object at 0x7f71f9181570&gt;, &lt;CompNeuroPy.generate_simulation.SimInfo object at 0x7f71f8c5a8c0&gt;]</span>
 <span class="go">        population_name: HH_Bischop</span>
 <span class="go">        time_step: 0.01</span>
 <span class="go">    mon_dict:</span>
