@@ -82,42 +82,63 @@ def cnp_clear(functions=True, neurons=True, synapses=True, constants=True):
         CompNeuroModel._compiled_models[model_name] = False
 
 
-def _get_all_parameters():
+def _get_all_attributes(compartment_list: list[str]):
     """
-    Get the parameters of all populations and projections.
+    Get the attributes of specified populations and projections.
+
+    Args:
+        compartment_list (list[str]):
+            List of compartment names.
 
     Returns:
-        parameters (dict of dicts):
+        attributes (dict of dicts):
             Dictionary with keys "populations" and "projections" and values dicts of
-            parameters of populations and projections, respectively.
+            attributes of populations and projections, respectively.
     """
-    parameters = {
+    attributes = {
         "populations": {},
         "projections": {},
     }
+    ### check if compartments are in model
+    for compartment in compartment_list:
+        if (
+            compartment
+            not in get_full_model()["populations"] + get_full_model()["projections"]
+        ):
+            raise ValueError(f"Compartment {compartment} not found in model")
+    ### get attributes of populations
     for pop in populations():
-        parameters["populations"][pop.name] = {
-            param_name: getattr(pop, param_name) for param_name in pop.parameters
+        if pop.name not in compartment_list:
+            continue
+        attributes["populations"][pop.name] = {
+            param_name: getattr(pop, param_name) for param_name in pop.attributes
         }
+    ### get attributes of projections
     for proj in projections():
-        parameters["projections"][proj.name] = {
-            param_name: getattr(proj, param_name) for param_name in proj.parameters
+        if proj.name not in compartment_list:
+            continue
+        attributes["projections"][proj.name] = {
+            param_name: getattr(proj, param_name) for param_name in proj.attributes
         }
-    return parameters
+    return attributes
 
 
-def _set_all_parameters(parameters):
+def _set_all_attributes(attributes):
     """
-    Set the parameters of all populations and projections.
+    Set the attributes of all populations and projections given in attributes dict.
 
     Args:
-        parameters (dict of dicts):
+        attributes (dict of dicts):
             Dictionary with keys "populations" and "projections" and values dicts of
-            parameters of populations and projections, respectively.
+            attributes of populations and projections, respectively.
     """
     for pop in populations():
-        for param_name, param_value in parameters["populations"][pop.name].items():
+        if pop.name not in attributes["populations"].keys():
+            continue
+        for param_name, param_value in attributes["populations"][pop.name].items():
             setattr(pop, param_name, param_value)
     for proj in projections():
-        for param_name, param_value in parameters["projections"][proj.name].items():
+        if proj.name not in attributes["projections"].keys():
+            continue
+        for param_name, param_value in attributes["projections"][proj.name].items():
             setattr(proj, param_name, param_value)

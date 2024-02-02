@@ -16,7 +16,6 @@ import pandas as pd
 from multiprocessing import Process
 import multiprocessing
 import json
-from pybads.bads import BADS
 
 try:
     # hyperopt
@@ -30,9 +29,12 @@ try:
     from sbi import utils as utils
     from sbi.inference import SNPE, prepare_for_sbi, simulate_for_sbi
 
+    # pybads
+    from pybads.bads import BADS
+
 except:
     print(
-        "OptNeuron: Error: You need to install hyperopt, torch, and sbi to use OptNeuron (e.g. use pip install hyperopt torch sbi))"
+        "OptNeuron: Error: You need to install hyperopt, torch, bads, and sbi to use OptNeuron (e.g. use pip install hyperopt torch bads sbi))"
     )
     sys.exit()
 
@@ -640,12 +642,10 @@ class OptNeuron:
                     or "dt" in rec_key
                     or "target" in rec_key
                 ):
-                    results_neuron.recordings[chunk][
-                        rec_key
-                    ] = results_neuron.recordings[chunk][rec_key][
-                        :, neuron_idx
-                    ].reshape(
-                        -1, 1
+                    results_neuron.recordings[chunk][rec_key] = (
+                        results_neuron.recordings[chunk][rec_key][
+                            :, neuron_idx
+                        ].reshape(-1, 1)
                     )
                 ### adjust parameter_dict
                 elif "parameter_dict" in rec_key and not ("target" in rec_key):
@@ -981,9 +981,11 @@ class OptNeuron:
         self._set_fitting_parameters(fitparams, pop=pop)
         if self.verbose_run:
             param_dict = {
-                param_name: fitparams[param_name_idx]
-                if isinstance(fitparams[param_name_idx], list)
-                else [fitparams[param_name_idx]]
+                param_name: (
+                    fitparams[param_name_idx]
+                    if isinstance(fitparams[param_name_idx], list)
+                    else [fitparams[param_name_idx]]
+                )
                 for param_name_idx, param_name in enumerate(
                     self.fitting_variables_name_list
                 )
@@ -992,6 +994,7 @@ class OptNeuron:
             ef.print_df(pd.DataFrame(param_dict))
 
         ### conduct loaded experiment
+        self.experiment.store_model_state(compartment_list=[pop])
         results = self.experiment.run(pop)
 
         if self.results_soll is not None:
@@ -1315,9 +1318,11 @@ class OptNeuron:
         sf.save_variables(
             [best],
             [results_file_name.split("/")[-1]],
-            "/".join(results_file_name.split("/")[:-1])
-            if len(results_file_name.split("/")) > 1
-            else "./",
+            (
+                "/".join(results_file_name.split("/")[:-1])
+                if len(results_file_name.split("/")) > 1
+                else "./"
+            ),
         )
         ### save human readable as json file
         json.dump(

@@ -28,6 +28,7 @@ dependencies = [
     "tabulate",
     "deap",
     "screeninfo",
+    "cmaes",
 ]
 
 [project.urls]

@@ -1,4 +1,5 @@
 from ANNarchy import Neuron
+import re
 
 ### Izhikevich (2007)-like neuron model templates
 ### based on: Izhikevich, E. M. (2007). Dynamical Systems in Neuroscience. MIT Press.
@@ -34,6 +35,60 @@ def _get_equation_izhikevich_2007(
     """
 
 
+def _set_init(equations, init):
+    """
+    Set initial values for variables in the equations.
+
+    Args:
+        equations (str):
+            Equations of the neuron model.
+        init (dict):
+            Dictionary with variable names as keys and initial values as values.
+
+    Returns:
+        equations (str):
+            Equations of the neuron model with initial values set.
+    """
+    if len(init) == 0:
+        return equations
+    # go through each line of the equations and check if an initial value should be
+    # set
+    variable_name_list = []
+    equations_line_split = equations.split("\n")
+    for eqation_line_idx, equation_line in enumerate(equations_line_split):
+        # remove all whitespace
+        equation_line = equation_line.replace(" ", "")
+        # check which variable is left of the equation
+        if "/dt" in equation_line.split("=")[0]:
+            # it's a differential equation
+            # find the variable name using regular expression
+            # the syntax is: "*d<variable_name>/dt*=*"
+            variable_name = re.findall(".*?(d[_a-zA-Z]+)/dt.*=.*", equation_line)[0][1:]
+        else:
+            # it's not a differential equation
+            # variable name is left of the equal sign
+            variable_name = equation_line.split("=")[0]
+        # check if the variable name is in the init dict
+        if variable_name in init:
+            # set the initial value
+            equations_line_split[eqation_line_idx] = (
+                f"{equations_line_split[eqation_line_idx]} : init={init[variable_name]}"
+            )
+        # add the variable name to the list
+        variable_name_list.append(variable_name)
+    # join the lines back together
+    equations = "\n".join(equations_line_split)
+
+    # print a warning if a variable in the init dict is not in the equations
+    for key in init:
+        if key not in variable_name_list:
+            print(
+                f"Warning: Variable {key} in init dict is not in the equations of the Izhikevich2007 model. It will be ignored."
+            )
+
+    return equations
+
+
 ############################################################################################
 ############################################################################################
 
@@ -67,7 +122,8 @@ class Izhikevich2007(Neuron):
             External applied input current.
         params_for_pop (bool, optional):
             If True, the parameters are population-wide and not neuron-specific.
-
+        init (dict, optional):
+            Initial values for the variables.
 
     Variables to record:
         - I_v
@@ -92,6 +148,7 @@ class Izhikevich2007(Neuron):
         v_peak: float = 35.0,
         I_app: float = 0.0,
         params_for_pop: bool = False,
+        init: dict = {},
     ):
         # Create the arguments
         parameters = f"""
@@ -107,9 +164,16 @@ class Izhikevich2007(Neuron):
             I_app  = {I_app} # pA
         """
 
+        # get equations
+        equations = _get_equation_izhikevich_2007()
+
+        # set initial values
+        equations = _set_init(equations, init)
+
+        # create the neuron
         super().__init__(
             parameters=parameters,
-            equations=_get_equation_izhikevich_2007(),
+            equations=equations,
             spike="v >= v_peak",
             reset="""
                 v = c
@@ -153,6 +217,8 @@ class Izhikevich2007RecCur(Neuron):
             External applied input current.
         params_for_pop (bool, optional):
             If True, the parameters are population-wide and not neuron-specific.
+        init (dict, optional):
+            Initial values for the variables.
 
     Variables to record:
         - I_v
@@ -180,6 +246,7 @@ class Izhikevich2007RecCur(Neuron):
         v_peak: float = 35.0,
         I_app: float = 0.0,
         params_for_pop: bool = False,
+        init: dict = {},
     ):
         # Create the arguments
         parameters = f"""
@@ -201,9 +268,15 @@ class Izhikevich2007RecCur(Neuron):
             I_a = I_app
         """
 
+        # get equations
+        equations = _get_equation_izhikevich_2007(affix=affix)
+
+        # set initial values
+        equations = _set_init(equations, init)
+
         super().__init__(
             parameters=parameters,
-            equations=_get_equation_izhikevich_2007(affix=affix),
+            equations=equations,
             spike="v >= v_peak",
             reset="""
                 v = c
@@ -250,6 +323,8 @@ class Izhikevich2007VoltageClamp(Neuron):
             External applied input current.
         params_for_pop (bool, optional):
             If True, the parameters are population-wide and not neuron-specific.
+        init (dict, optional):
+            Initial values for the variables.
 
     Variables to record:
         - I_v
@@ -275,6 +350,7 @@ class Izhikevich2007VoltageClamp(Neuron):
         v_peak: float = 35.0,
         I_app: float = 0.0,
         params_for_pop: bool = False,
+        init: dict = {},
     ):
         # Create the arguments
         parameters = f"""
@@ -293,9 +369,15 @@ class Izhikevich2007VoltageClamp(Neuron):
         dv = "0"
         affix = f"I_inf = {_dv_default}"
 
+        # get equations
+        equations = _get_equation_izhikevich_2007(dv=dv, affix=affix)
+
+        # set initial values
+        equations = _set_init(equations, init)
+
         super().__init__(
             parameters=parameters,
-            equations=_get_equation_izhikevich_2007(dv=dv, affix=affix),
+            equations=equations,
             spike="v >= v_peak",
             reset="""
                 v = c
@@ -350,6 +432,8 @@ class Izhikevich2007Syn(Neuron):
             Reversal potential of the GABA synapse.
         params_for_pop (bool, optional):
             If True, the parameters are population-wide and not neuron-specific.
+        init (dict, optional):
+            Initial values for the variables.
 
     Variables to record:
         - g_ampa
@@ -380,6 +464,7 @@ class Izhikevich2007Syn(Neuron):
         E_ampa: float = 0.0,
         E_gaba: float = -90.0,
         params_for_pop: bool = False,
+        init: dict = {},
     ):
         # Create the arguments
         parameters = f"""
@@ -402,9 +487,15 @@ class Izhikevich2007Syn(Neuron):
         syn = _syn_default
         i_v = f"I_app {_I_syn}"
 
+        # get equations
+        equations = _get_equation_izhikevich_2007(syn=syn, i_v=i_v)
+
+        # set initial values
+        equations = _set_init(equations, init)
+
         super().__init__(
             parameters=parameters,
-            equations=_get_equation_izhikevich_2007(syn=syn, i_v=i_v),
+            equations=equations,
             spike="v >= v_peak",
             reset="""
                 v = c
@@ -464,6 +555,8 @@ class Izhikevich2007NoisyAmpa(Neuron):
             Rate of the noise in the AMPA conductance.
         params_for_pop (bool, optional):
             If True, the parameters are population-wide and not neuron-specific.
+        init (dict, optional):
+            Initial values for the variables.
 
     Variables to record:
         - g_ampa
@@ -496,6 +589,7 @@ class Izhikevich2007NoisyAmpa(Neuron):
         increase_noise: float = 0.0,
         rates_noise: float = 0.0,
         params_for_pop: bool = False,
+        init: dict = {},
     ):
         # Create the arguments
         parameters = f"""
@@ -520,9 +614,15 @@ class Izhikevich2007NoisyAmpa(Neuron):
         syn = _syn_noisy
         i_v = f"I_app {_I_syn}"
 
+        # get equations
+        equations = _get_equation_izhikevich_2007(syn=syn, i_v=i_v)
+
+        # set initial values
+        equations = _set_init(equations, init)
+
         super().__init__(
             parameters=parameters,
-            equations=_get_equation_izhikevich_2007(syn=syn, i_v=i_v),
+            equations=equations,
             spike="v >= v_peak",
             reset="""
                 v = c
@@ -584,6 +684,8 @@ class Izhikevich2007NoisyBase(Neuron):
             Rate of the noise update (Poisson distributed) in the baseline current.
         params_for_pop (bool, optional):
             If True, the parameters are population-wide and not neuron-specific.
+        init (dict, optional):
+            Initial values for the variables.
 
     Variables to record:
         - offset_base
@@ -619,6 +721,7 @@ class Izhikevich2007NoisyBase(Neuron):
         base_noise: float = 0.0,
         rate_base_noise: float = 0.0,
         params_for_pop: bool = False,
+        init: dict = {},
     ):
         # Create the arguments
         parameters = f"""
@@ -645,9 +748,15 @@ class Izhikevich2007NoisyBase(Neuron):
         i_v = f"I_app {_I_syn} + I_base"
         prefix = _I_base_noise
 
+        # get equations
+        equations = _get_equation_izhikevich_2007(syn=syn, i_v=i_v, prefix=prefix)
+
+        # set initial values
+        equations = _set_init(equations, init)
+
         super().__init__(
             parameters=parameters,
-            equations=_get_equation_izhikevich_2007(syn=syn, i_v=i_v, prefix=prefix),
+            equations=equations,
             spike="v >= v_peak",
             reset="""
                 v = c
@@ -711,6 +820,8 @@ class Izhikevich2007FsiNoisyAmpa(Neuron):
             Rate of the noise in the AMPA conductance.
         params_for_pop (bool, optional):
             If True, the parameters are population-wide and not neuron-specific.
+        init (dict, optional):
+            Initial values for the variables.
 
     Variables to record:
         - g_ampa
@@ -744,6 +855,7 @@ class Izhikevich2007FsiNoisyAmpa(Neuron):
         increase_noise: float = 0.0,
         rates_noise: float = 0.0,
         params_for_pop: bool = False,
+        init: dict = {},
     ):
         # Create the arguments
         parameters = f"""
@@ -770,9 +882,15 @@ class Izhikevich2007FsiNoisyAmpa(Neuron):
         i_v = f"I_app {_I_syn}"
         du = "if v<v_b: -a * u else: a * (b * (v - v_b)**3 - u)"
 
+        # get equations
+        equations = _get_equation_izhikevich_2007(syn=syn, i_v=i_v, du=du)
+
+        # set initial values
+        equations = _set_init(equations, init)
+
         super().__init__(
             parameters=parameters,
-            equations=_get_equation_izhikevich_2007(syn=syn, i_v=i_v, du=du),
+            equations=equations,
             spike="v >= v_peak",
             reset="""
                 v = c
@@ -845,6 +963,8 @@ class Izhikevich2007CorbitFsiNoisyAmpa(Neuron):
             Rate of the noise in the AMPA conductance.
         params_for_pop (bool, optional):
             If True, the parameters are population-wide and not neuron-specific.
+        init (dict, optional):
+            Initial values for the variables.
 
     Variables to record:
         - g_ampa
@@ -883,6 +1003,7 @@ class Izhikevich2007CorbitFsiNoisyAmpa(Neuron):
         increase_noise: float = 0.0,
         rates_noise: float = 0.0,
         params_for_pop: bool = False,
+        init: dict = {},
     ):
         # Create the arguments
         parameters = f"""
@@ -915,9 +1036,15 @@ class Izhikevich2007CorbitFsiNoisyAmpa(Neuron):
             dn/dt     = a_n*(b_n*(pos(u)**0.1-s) - n)
         """
 
+        # get equations
+        equations = _get_equation_izhikevich_2007(syn=syn, i_v=i_v, affix=affix)
+
+        # set initial values
+        equations = _set_init(equations, init)
+
         super().__init__(
             parameters=parameters,
-            equations=_get_equation_izhikevich_2007(syn=syn, i_v=i_v, affix=affix),
+            equations=equations,
             functions="""
                 root_func(x,y)=((abs(x))**(1/y))/((x+1e-20)/(abs(x)+ 1e-20))
             """,
@@ -995,6 +1122,8 @@ class Izhikevich2007CorbitFsiNoisyBase(Neuron):
             Rate of the noise update (Poisson distributed) in the baseline current.
         params_for_pop (bool, optional):
             If True, the parameters are population-wide and not neuron-specific.
+        init (dict, optional):
+            Initial values for the variables.
 
     Variables to record:
         - offset_base
@@ -1036,6 +1165,7 @@ class Izhikevich2007CorbitFsiNoisyBase(Neuron):
         base_noise: float = 0.0,
         rate_base_noise: float = 0.0,
         params_for_pop: bool = False,
+        init: dict = {},
     ):
         # Create the arguments
         parameters = f"""
@@ -1070,11 +1200,17 @@ class Izhikevich2007CorbitFsiNoisyBase(Neuron):
             dn/dt     = a_n*(b_n*(pos(u)**0.1-s) - n)
         """
 
+        # get equations
+        equations = _get_equation_izhikevich_2007(
+            syn=syn, i_v=i_v, prefix=prefix, affix=affix
+        )
+
+        # set initial values
+        equations = _set_init(equations, init)
+
         super().__init__(
             parameters=parameters,
-            equations=_get_equation_izhikevich_2007(
-                syn=syn, i_v=i_v, prefix=prefix, affix=affix
-            ),
+            equations=equations,
             functions="""
                 root_func(x,y)=((abs(x))**(1/y))/((x+1e-20)/(abs(x)+ 1e-20))
             """,
@@ -1144,6 +1280,8 @@ class Izhikevich2007NoisyAmpaOscillating(Neuron):
             Amplitude of the oscillating current.
         params_for_pop (bool, optional):
             If True, the parameters are population-wide and not neuron-specific.
+        init (dict, optional):
+            Initial values for the variables.
 
     Variables to record:
         - osc
@@ -1179,6 +1317,7 @@ class Izhikevich2007NoisyAmpaOscillating(Neuron):
         freq: float = 0.0,
         amp: float = 300.0,
         params_for_pop: bool = False,
+        init: dict = {},
     ):
         # Create the arguments
         parameters = f"""
@@ -1206,9 +1345,15 @@ class Izhikevich2007NoisyAmpaOscillating(Neuron):
         i_v = f"I_app {_I_syn} + osc"
         prefix = "osc = amp * sin(t * 2 * pi * (freq  /1000))"
 
+        # get equations
+        equations = _get_equation_izhikevich_2007(syn=syn, i_v=i_v, prefix=prefix)
+
+        # set initial values
+        equations = _set_init(equations, init)
+
         super().__init__(
             parameters=parameters,
-            equations=_get_equation_izhikevich_2007(syn=syn, i_v=i_v, prefix=prefix),
+            equations=equations,
             spike="v >= v_peak",
             reset="""
                 v = c

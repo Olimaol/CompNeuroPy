@@ -5,17 +5,18 @@ model to the dynamics of another ANNarchy neuron model in a specific experiment.
 The experiment and variable_bounds used are imported from the other example
 'run_opt_neuron_from_data.py'.
 """
+
 from CompNeuroPy import (
     CompNeuroExp,
     rmse,
-    current_ramp,
+    current_step,
     evaluate_expression_with_dict,
     print_df,
     PlotRecordings,
 )
 from CompNeuroPy.opt_neuron import OptNeuron
 from CompNeuroPy.neuron_models import Izhikevich2007
-from ANNarchy import dt, simulate
+from ANNarchy import dt
 
 
 class MyExp(CompNeuroExp):
@@ -44,10 +45,10 @@ class MyExp(CompNeuroExp):
                     data (dict):
                         dict with optional data stored during the experiment
         """
-        self.reset(parameters=False)
+        self.reset()
         self.monitors.start()
-        # current_ramp(pop_name, 0, 100, 100, 100)
-        simulate(100)
+        current_step(pop_name, 25, 25, 30, 80)
+        current_step(pop_name, 25, 25, 0, -30)
         self.data["pop_name"] = pop_name
         self.data["time_step"] = dt()
         return self.results()
@@ -77,7 +78,7 @@ variables_bounds = {
     "d": [0, 30],
     "v_peak": [-30, 30],
     "v": "v_r",
-    "u": "0",
+    "u": 0,
 }
 
 
@@ -91,10 +92,10 @@ variables_pick = {
     "c": -52.68028922214341,
     "d": 21.738698612715623,
     "v_peak": 7.746989077180672,
+    "init": {"v": -63.81566591506167, "u": 0},
 }
 
 
-### TODO results ist is not v_r what is happening?
 def main():
     ### define optimization
     opt = OptNeuron(
@@ -105,8 +106,8 @@ def main():
         target_neuron_model=Izhikevich2007(**variables_pick),
         time_step=0.1,
         compile_folder_name="benchmark_izhikevich",
-        method="deap",
-        record=["v", "I_v"],
+        method="hyperopt",
+        record=["v"],
     )
 
     ### run the optimization, define how often the experiment should be repeated
@@ -116,7 +117,7 @@ def main():
         deap_plot_file="benchmark_izhikevich/logbook.png",
     )
 
-    ### print optimized parameters, we should get around a=6 and b=0
+    ### print optimized parameters
     for key in variables_bounds.keys():
         if isinstance(variables_bounds[key], list):
             variables_bounds[key] = fit[key]
@@ -126,37 +127,38 @@ def main():
                 variables_bounds[key], variables_bounds
             )
     for key in variables_pick.keys():
+        if key == "init":
+            continue
         variables_pick[key] = [variables_pick[key], variables_bounds[key]]
+    variables_pick.pop("init")
     print_df(variables_pick)
 
     PlotRecordings(
         figname="benchmark_izhikevich/results_soll.png",
         recordings=fit["results_soll"].recordings,
         recording_times=fit["results_soll"].recording_times,
-        shape=(2, 1),
+        shape=(1, 1),
         plan={
-            "position": [1, 2],
+            "position": [1],
             "compartment": [
                 fit["results_soll"].data["pop_name"],
-                fit["results_soll"].data["pop_name"],
             ],
-            "variable": ["v", "I_v"],
-            "format": ["line", "line"],
+            "variable": ["v"],
+            "format": ["line"],
         },
     )
     PlotRecordings(
         figname="benchmark_izhikevich/results.png",
         recordings=fit["results"].recordings,
         recording_times=fit["results"].recording_times,
-        shape=(2, 1),
+        shape=(1, 1),
         plan={
-            "position": [1, 2],
+            "position": [1],
             "compartment": [
                 fit["results"].data["pop_name"],
-                fit["results"].data["pop_name"],
             ],
-            "variable": ["v", "I_v"],
-            "format": ["line", "line"],
+            "variable": ["v"],
+            "format": ["line"],
         },
     )
 

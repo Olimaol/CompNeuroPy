@@ -52,6 +52,24 @@ class CompNeuroExp:
         """
         self.monitors = monitors
         self.data = {}  # dict for optional data
+        self._model_state = None
+
+    def store_model_state(self, compartment_list: list[str]):
+        """
+        Store the state of the model. If this is called, reset does not reset the model
+        to compile state but to the state stored here.
+
+        Args:
+            compartment_list (list[str]):
+                list of compartments to store the state of
+        """
+        self._model_state = mf._get_all_attributes(compartment_list)
+
+    def reset_model_state(self):
+        """
+        Reset the stored model state.
+        """
+        self._model_state = None
 
     def reset(
         self,
@@ -59,7 +77,7 @@ class CompNeuroExp:
         projections=False,
         synapses=False,
         model=True,
-        parameters=True,
+        model_state=True,
     ):
         """
         Reset the ANNarchy model and monitors and the CompNeuroMonitors used for the
@@ -83,8 +101,10 @@ class CompNeuroExp:
                 If False, do ignore the arguments populations, projections, and
                 synapses (the network state doesn't change) and only reset the
                 CompNeuroMonitors Default: True.
-            parameters (bool, optional):
-                If False, do not reset the parameters of the model. Default: True.
+            model_state (bool, optional):
+                If True, reset the model to the stored model state instead of
+                compilation state (all compartments not stored in the model state will
+                still be resetted to compilation state). Default: True.
         """
         reset_kwargs = {}
         reset_kwargs["populations"] = populations
@@ -94,16 +114,18 @@ class CompNeuroExp:
 
         ### reset CompNeuroMonitors and ANNarchy model
         if self.monitors is not None:
-            self.monitors.reset(model=model, parameters=parameters, **reset_kwargs)
+            ### there are monitors, therefore use theri reset function
+            self.monitors.reset(model=model, **reset_kwargs)
+            ### after reset, set the state of the model to the stored state
+            if model_state and self._model_state is not None:
+                mf._set_all_attributes(self._model_state)
         elif model is True:
-            if parameters is False:
-                ### if parameters=False, get parameters before reset and set them after
-                ### reset
-                parameters = mf._get_all_parameters()
+            ### there are no monitors, but model should be resetted, therefore use
+            ### ANNarchy's reset function
             reset(**reset_kwargs)
-            if parameters is False:
-                ### if parameters=False, set parameters after reset
-                mf._set_all_parameters(parameters)
+            ### after reset, set the state of the model to the stored state
+            if model_state and self._model_state is not None:
+                mf._set_all_attributes(self._model_state)
 
     def results(self):
         """
