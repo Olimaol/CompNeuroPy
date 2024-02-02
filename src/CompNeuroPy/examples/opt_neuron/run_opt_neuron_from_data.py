@@ -2,6 +2,7 @@
 This example demonstrates how to use the OptNeuron class to fit an ANNarchy neuron
 model to some experimental data.
 """
+
 from CompNeuroPy import CompNeuroExp, CompNeuroSim, current_step, rmse
 from CompNeuroPy.opt_neuron import OptNeuron
 import numpy as np
@@ -105,11 +106,6 @@ class my_exp(CompNeuroExp):
                     data (dict):
                         dict with optional data stored during the experiment
         """
-        ### For OptNeuron you have to reset the model and monitors at the beginning of
-        ### the run function! Do not reset the parameters, otherwise the optimization
-        ### will not work!
-        self.reset(parameters=False)
-
         ### you have to start monitors within the run function, otherwise nothing will
         ### be recorded
         self.monitors.start()
@@ -131,9 +127,16 @@ class my_exp(CompNeuroExp):
             monitor_object=self.monitors,
         )
 
-        ### run the simulation, remember setting parameters=False in the reset function!
+        ### run the simulation
         sim_step.run()
-        self.reset(parameters=False)
+        ### Here we reset the model and monitors, creating a new chunk for the next sim
+        ### use the self.reset() function to reset the model and monitors!
+        ### OptNeuron sets the parameters (defined in the variables_bounds dict) of the
+        ### neuron model before each run.
+        ### By using the reset function of the CompNeuroExp class you reset the model to
+        ### this state (all varaiables/parameters not defined in variable bounds are
+        ### reset to compile state)
+        self.reset()
         sim_step.run({"a2": 10})
 
         ### optional: store anything you want in the data dict. For example infomration

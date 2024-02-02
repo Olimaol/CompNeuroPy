@@ -123,7 +123,7 @@ def _get_all_attributes(compartment_list: list[str]):
     return attributes
 
 
-def _set_all_attributes(attributes):
+def _set_all_attributes(attributes: dict, parameters: bool):
     """
     Set the attributes of all populations and projections given in attributes dict.
 
@@ -131,14 +131,67 @@ def _set_all_attributes(attributes):
         attributes (dict of dicts):
             Dictionary with keys "populations" and "projections" and values dicts of
             attributes of populations and projections, respectively.
+        parameters (bool):
+            If True, set parameters and variables, else only set variables.
     """
+    ### set attributes of populations
     for pop in populations():
+        ### skip populations which are not in attributes
         if pop.name not in attributes["populations"].keys():
             continue
         for param_name, param_value in attributes["populations"][pop.name].items():
+            ### skip parameters if parameters is False
+            if param_name in pop.parameters and not parameters:
+                continue
             setattr(pop, param_name, param_value)
+    ### set attributes of projections
     for proj in projections():
+        ### skip projections which are not in attributes
         if proj.name not in attributes["projections"].keys():
             continue
         for param_name, param_value in attributes["projections"][proj.name].items():
+            ### skip parameters if parameters is False
+            if param_name in proj.parameters and not parameters:
+                continue
+            setattr(proj, param_name, param_value)
+
+
+def _get_all_parameters():
+    """
+    Get the parameters of all populations and projections.
+
+    Returns:
+        parameters (dict of dicts):
+            Dictionary with keys "populations" and "projections" and values dicts of
+            parameters of populations and projections, respectively.
+    """
+    parameters = {
+        "populations": {},
+        "projections": {},
+    }
+    for pop in populations():
+        parameters["populations"][pop.name] = {
+            param_name: getattr(pop, param_name) for param_name in pop.parameters
+        }
+    for proj in projections():
+        parameters["projections"][proj.name] = {
+            param_name: getattr(proj, param_name) for param_name in proj.parameters
+        }
+    return parameters
+
+
+def _set_all_parameters(parameters):
+    """
+    Set the parameters of all populations and projections.
+
+    Args:
+        parameters (dict of dicts):
+            Dictionary with keys "populations" and "projections" and values dicts of
+            parameters of populations and projections, respectively.
+    """
+    for pop in populations():
+        for param_name, param_value in parameters["populations"][pop.name].items():
+            setattr(pop, param_name, param_value)
+    for proj in projections():
+        for param_name, param_value in parameters["projections"][proj.name].items():
             setattr(proj, param_name, param_value)

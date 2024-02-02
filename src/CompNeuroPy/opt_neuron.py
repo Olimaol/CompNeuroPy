@@ -996,6 +996,7 @@ class OptNeuron:
         ### conduct loaded experiment
         self.experiment.store_model_state(compartment_list=[pop])
         results = self.experiment.run(pop)
+        self.experiment.reset()
 
         if self.results_soll is not None:
             ### compute loss_list, loss for each neuron

@@ -2,21 +2,26 @@
 CompNeuroPy provides the [`OptNeuron`](#CompNeuroPy.opt_neuron.OptNeuron) class which can be used to define your optimization of an ANNarchy neuron model (tuning the parameters). You can either optimize your neuron model to some data or try to reproduce the dynamics of a different neuron model (for example to reduce a more complex model). In both cases, you have to define the experiment which generates the data of interest with your neuron model.
 
 !!! warning
-    OptNeuron has to be imported from "CompNeuroPy.opt_neuron" and you have to install torch, sbi and hyperopt (e.g. pip install torch sbi hyperopt)
+    OptNeuron has to be imported from "CompNeuroPy.opt_neuron" and you have to install torch, sbi, bads and hyperopt (e.g. pip install torch sbi bads hyperopt) separately.
 
 Used optimization methods:
 
-- [hyperopt](http://hyperopt.github.io/hyperopt/)
+- [hyperopt](http://hyperopt.github.io/hyperopt/) (using the [Tree of Parzen Estimators (TPE)](https://papers.nips.cc/paper/4443-algorithms-for-hyper-parameter-optimization.pdf))
 
-    Bergstra, J., Yamins, D., Cox, D. D. (2013) Making a Science of Model Search: Hyperparameter Optimization in Hundreds of Dimensions for Vision Architectures. TProc. of the 30th International Conference on Machine Learning (ICML 2013), June 2013, pp. I-115 to I-23.
+    * Bergstra, J., Yamins, D., Cox, D. D. (2013) Making a Science of Model Search: Hyperparameter Optimization in Hundreds of Dimensions for Vision Architectures. TProc. of the 30th International Conference on Machine Learning (ICML 2013), June 2013, pp. I-115 to I-23. [pdf](http://proceedings.mlr.press/v28/bergstra13.pdf)
 
 - [sbi](https://sbi-dev.github.io/sbi/)
 
-    Tejero-Cantero et al., (2020). sbi: A toolkit for simulation-based inference. Journal of Open Source Software, 5(52), 2505, [https://doi.org/10.21105/joss.02505](https://doi.org/10.21105/joss.02505)
+    * Tejero-Cantero et al., (2020). sbi: A toolkit for simulation-based inference. Journal of Open Source Software, 5(52), 2505, [https://doi.org/10.21105/joss.02505](https://doi.org/10.21105/joss.02505)
 
 - [deap](https://github.com/deap/deap) (using the [CMAES](https://deap.readthedocs.io/en/master/api/algo.html#module-deap.cma) strategy)
 
-    Fortin, F. A., De Rainville, F. M., Gardner, M. A. G., Parizeau, M., & Gagné, C. (2012). DEAP: Evolutionary algorithms made easy. The Journal of Machine Learning Research, 13(1), 2171-2175.
+    * Fortin, F. A., De Rainville, F. M., Gardner, M. A. G., Parizeau, M., & Gagné, C. (2012). DEAP: Evolutionary algorithms made easy. The Journal of Machine Learning Research, 13(1), 2171-2175. [pdf](https://www.jmlr.org/papers/volume13/fortin12a/fortin12a.pdf)
+
+- [bads](https://acerbilab.github.io/pybads/)
+
+    * Singh, G. S., & Acerbi, L. (2023). PyBADS: Fast and robust black-box optimization in Python. arXiv preprint [arXiv:2306.15576](https://arxiv.org/abs/2306.15576).
+    * Acerbi, L., & Ma, W. J. (2017). Practical Bayesian optimization for model fitting with Bayesian adaptive direct search. Advances in neural information processing systems, 30. [pdf](https://proceedings.neurips.cc/paper_files/paper/2017/file/df0aab058ce179e4f7ab135ed4e641a9-Paper.pdf)
 
 ### Example:
 ```python
@@ -46,9 +51,13 @@ You have to define a [`CompNeuroExp`](define_experiment.md#CompNeuroPy.experimen
 
 - the _run()_ function has to take a single argument (besides self) which contains the name of the population consiting of a single neuron or multiple neurons of the optimized neuron model (you can use this to access the population)
 - thus, the simulation has to be compatible with a population consisting of a single or multiple neurons
-- call _self.reset(parameters=False)_ at the beginning of the run function, thus the neuron will be in its compile state (except the paramters) at the beginning of each simulation run
-- always set _parameters=False_ while calling the _self.reset()_ function (otherwise the parameter optimization will not work)
-- besides the optimized parameters and the loss, the results of the experiment (using the optimized parameters) will be available after the optimization, you can store any additional data in the _self.data_ attribute
+- use the _self.reset()_ function within the _run()_ function to create new recording chunks and reset the model parameters/variables!
+- [`OptNeuron`](#CompNeuroPy.opt_neuron.OptNeuron) automatically sets the parameters/variables defined in the _variables_bounds_ before each run, _self.reset()_ will reset the model to this state (all parameters/variables not defined in _variables_bounds_ are reset to compile state)
+- be aware that the target neuron model is always resetted to compile state (this affects results_soll)!
+- using _self.reset(parameters=False)_ in the _run()_ function keeps all parameter changes you do during the experiment
+- start the monitors before you want to record something by calling _self.monitors.start()_
+- the best parameters, the corresponding loss, and the corresponding results of the experiment will be available after the optimization, you can store any additional data which should be available after optimiozation in the _self.data_ attribute
+- do not call the functions _store_model_state()_ and _reset_model_state()_ of the [`CompNeuroExp`](define_experiment.md#CompNeuroPy.experiment.CompNeuroExp) class within the _run()_ function!
 
 
 ### Example:
@@ -101,19 +110,15 @@ class my_exp(CompNeuroExp):
                     data (dict):
                         dict with optional data stored during the experiment
         """
-        ### For OptNeuron you have to reset the model and monitors at the beginning of
-        ### the run function! Do not reset the parameters, otherwise the optimization
-        ### will not work!
-        self.reset(parameters=False)
-
         ### you have to start monitors within the run function, otherwise nothing will
         ### be recorded
         self.monitors.start()
 
-        ### run the simulation, remember setting parameters=False in the reset function!
+        ### run the simulation, if you reset the monitors/model the model_state argument
+        ### has to be True (Default)
         ...
         simulate(100)
-        self.reset(parameters=False)
+        self.reset()
         ...
 
         ### optional: store anything you want in the data dict. For example infomration

@@ -16,7 +16,7 @@ from CompNeuroPy import (
 )
 from CompNeuroPy.opt_neuron import OptNeuron
 from CompNeuroPy.neuron_models import Izhikevich2007
-from ANNarchy import dt
+from ANNarchy import dt, get_population
 
 
 class MyExp(CompNeuroExp):
@@ -45,7 +45,8 @@ class MyExp(CompNeuroExp):
                     data (dict):
                         dict with optional data stored during the experiment
         """
-        self.reset()
+        for atr_name in get_population(pop_name).attributes:
+            print(f"{atr_name}: {getattr(get_population(pop_name), atr_name)}")
         self.monitors.start()
         current_step(pop_name, 25, 25, 30, 80)
         current_step(pop_name, 25, 25, 0, -30)
@@ -115,6 +116,7 @@ def main():
         max_evals=5,
         results_file_name="benchmark_izhikevich/result",
         deap_plot_file="benchmark_izhikevich/logbook.png",
+        verbose=True,
     )
 
     ### print optimized parameters
