@@ -13,10 +13,13 @@ from CompNeuroPy import (
     evaluate_expression_with_dict,
     print_df,
     PlotRecordings,
+    save_variables,
 )
 from CompNeuroPy.opt_neuron import OptNeuron
 from CompNeuroPy.neuron_models import Izhikevich2007
-from ANNarchy import dt, get_population
+import numpy as np
+from run_benchmark import METHOD, MAX_EVALS
+import sys
 
 
 class MyExp(CompNeuroExp):
@@ -45,13 +48,10 @@ class MyExp(CompNeuroExp):
                     data (dict):
                         dict with optional data stored during the experiment
         """
-        for atr_name in get_population(pop_name).attributes:
-            print(f"{atr_name}: {getattr(get_population(pop_name), atr_name)}")
         self.monitors.start()
         current_step(pop_name, 25, 25, 30, 80)
         current_step(pop_name, 25, 25, 0, -30)
         self.data["pop_name"] = pop_name
-        self.data["time_step"] = dt()
         return self.results()
 
 
@@ -98,6 +98,9 @@ variables_pick = {
 
 
 def main():
+    SIM_ID = int(sys.argv[1])
+    file_appendix = f"_{METHOD}_{SIM_ID}"
+
     ### define optimization
     opt = OptNeuron(
         experiment=MyExp,
@@ -106,20 +109,20 @@ def main():
         neuron_model=Izhikevich2007(),
         target_neuron_model=Izhikevich2007(**variables_pick),
         time_step=0.1,
-        compile_folder_name="benchmark_izhikevich",
-        method="hyperopt",
+        compile_folder_name=f"benchmark_izhikevich{file_appendix}",
+        method=METHOD,
         record=["v"],
     )
 
     ### run the optimization, define how often the experiment should be repeated
     fit = opt.run(
-        max_evals=5,
-        results_file_name="benchmark_izhikevich/result",
-        deap_plot_file="benchmark_izhikevich/logbook.png",
-        verbose=True,
+        max_evals=MAX_EVALS,
+        results_file_name=f"benchmark_izhikevich_results/result{file_appendix}",
+        deap_plot_file=f"benchmark_izhikevich_plots/logbook{file_appendix}.png",
+        verbose=False,
     )
 
-    ### print optimized parameters
+    ### compare target and optimized parameters
     for key in variables_bounds.keys():
         if isinstance(variables_bounds[key], list):
             variables_bounds[key] = fit[key]
@@ -133,10 +136,39 @@ def main():
             continue
         variables_pick[key] = [variables_pick[key], variables_bounds[key]]
     variables_pick.pop("init")
+    ###TODO remove this printing, this is just for testing
     print_df(variables_pick)
 
+    ### calculate the difference between the optimized and the target parameters
+    parameter_difference = np.linalg.norm(
+        np.array([variables_pick[key][0] for key in variables_pick.keys()])
+        - np.array([variables_pick[key][1] for key in variables_pick.keys()])
+    )
+
+    ### get best loss and when it was obtained
+    best_loss_idx = np.argmin(opt.loss_history[:, 0])
+    best_loss = opt.loss_history[best_loss_idx, 0]
+    best_loss_time = opt.loss_history[best_loss_idx, 1]
+    best_loss_evals = best_loss_idx + 1
+
+    ### get loss history
+    loss_history = opt.loss_history
+
+    ### save variables TODO
+    save_variables(
+        variable_list=[
+            {parameter_difference:parameter_difference,
+            best_loss,
+            best_loss_time,
+            best_loss_evals,
+            loss_history,}
+        ],
+        name_list=
+    )
+
+    ### plot recordings
     PlotRecordings(
-        figname="benchmark_izhikevich/results_soll.png",
+        figname=f"benchmark_izhikevich_plots/recordings_soll{file_appendix}.png",
         recordings=fit["results_soll"].recordings,
         recording_times=fit["results_soll"].recording_times,
         shape=(1, 1),
@@ -150,7 +182,7 @@ def main():
         },
     )
     PlotRecordings(
-        figname="benchmark_izhikevich/results.png",
+        figname=f"benchmark_izhikevich_plots/recordings_ist{file_appendix}.png",
         recordings=fit["results"].recordings,
         recording_times=fit["results"].recording_times,
         shape=(1, 1),

@@ -4,6 +4,7 @@ import traceback
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy import extra_functions as ef
 from CompNeuroPy import model_functions as mf
+from CompNeuroPy import analysis_functions as af
 from CompNeuroPy.monitors import CompNeuroMonitors
 from CompNeuroPy.generate_model import CompNeuroModel
 from CompNeuroPy.experiment import CompNeuroExp
@@ -16,6 +17,7 @@ import pandas as pd
 from multiprocessing import Process
 import multiprocessing
 import json
+from time import time
 
 try:
     # hyperopt
@@ -175,6 +177,8 @@ class OptNeuron:
             self.source_solutions = source_solutions
             self.variables_bounds_guess = variables_bounds_guess
             self.bads_params_dict = bads_params_dict
+            self.loss_history = []
+            self.start_time = time()
 
             ### if using deap pop size is the number of individuals for the optimization
             if method == "deap":
@@ -772,6 +776,9 @@ class OptNeuron:
             loss = loss_ret_arr
             std = std_ret_arr
 
+        ### append best loss and time since start to loss_history
+        self.loss_history.append([af.get_minimum(loss), time() - self.start_time])
+
         ### return loss and other things for optimization, if multiple neurons
         ### --> loss and std are arrays with loss/std for each neuron
         if self.num_rep_loss > 1:
@@ -1287,6 +1294,8 @@ class OptNeuron:
         """
         self.verbose = False
         self.verbose_run = verbose
+        self.loss_history = []
+        self.start_time = time()
         if self.method == "hyperopt":
             ### run optimization with hyperopt and return best dict
             best = fmin(
@@ -1313,6 +1322,9 @@ class OptNeuron:
         best["results"] = fit["results"]
         best["results_soll"] = self.results_soll
         self.results = best
+
+        ### create loss history array
+        self.loss_history = np.array(self.loss_history)
 
         ### SAVE OPTIMIZED PARAMS AND LOSS
         ### save as pkl file
