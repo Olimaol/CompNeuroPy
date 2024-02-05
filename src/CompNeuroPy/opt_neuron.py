@@ -36,7 +36,7 @@ try:
 
 except:
     print(
-        "OptNeuron: Error: You need to install hyperopt, torch, bads, and sbi to use OptNeuron (e.g. use pip install hyperopt torch bads sbi))"
+        "OptNeuron: Error: You need to install hyperopt, torch, pybads, and sbi to use OptNeuron (e.g. use pip install hyperopt torch pybads sbi))"
     )
     sys.exit()
 
