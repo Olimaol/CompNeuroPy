@@ -53,6 +53,7 @@ from CompNeuroPy.system_functions import (
     save_variables,
     load_variables,
     timing_decorator,
+    run_script_parallel,
 )
 from CompNeuroPy.simulation_requirements import req_pop_attr, ReqPopHasAttr
 

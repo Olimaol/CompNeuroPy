@@ -11,15 +11,16 @@ from CompNeuroPy import (
     rmse,
     current_step,
     evaluate_expression_with_dict,
-    print_df,
     PlotRecordings,
     save_variables,
 )
 from CompNeuroPy.opt_neuron import OptNeuron
 from CompNeuroPy.neuron_models import Izhikevich2007
 import numpy as np
-from run_benchmark import METHOD, MAX_EVALS
+from run_benchmark import MAX_EVALS, FILE_APPENDIX
 import sys
+from ANNarchy import dt
+from CompNeuroPy.extra_functions import efel_loss
 
 
 class MyExp(CompNeuroExp):
@@ -52,19 +53,87 @@ class MyExp(CompNeuroExp):
         current_step(pop_name, 25, 25, 30, 80)
         current_step(pop_name, 25, 25, 0, -30)
         self.data["pop_name"] = pop_name
+        self.data["time_step"] = dt()
         return self.results()
 
 
 def get_loss(
-    results_ist: CompNeuroExp._ResultsCl, results_soll: CompNeuroExp._ResultsCl
+    results_ist: CompNeuroExp._ResultsCl,
+    results_soll: CompNeuroExp._ResultsCl,
+    method="voltage",
 ):
     """
     Function which has to have the arguments results_ist and results_soll and should
     calculate and return the loss.
     """
-    v_ist = results_ist.recordings[0][f"{results_ist.data['pop_name']};v"][:, 0]
-    v_soll = results_soll.recordings[0][f"{results_soll.data['pop_name']};v"][:, 0]
-    return rmse(v_soll, v_ist)
+    verbose = True
+    if method == "voltage":
+        ### get voltage traces
+        v_ist = results_ist.recordings[0][f"{results_ist.data['pop_name']};v"][:, 0]
+        v_soll = results_soll.recordings[0][f"{results_soll.data['pop_name']};v"][:, 0]
+
+        ### catch "exploding" neurons
+        ### check if v_ist and v_soll are bewteen -200 and 100, if not return 400 as loss
+        if (
+            np.any(v_ist < -200)
+            or np.any(v_ist > 100)
+            or np.any(v_soll < -200)
+            or np.any(v_soll > 100)
+        ):
+            return 400
+
+        ### calculate and return root mean square error of the voltage traces
+        loss = rmse(v_soll, v_ist)
+        if verbose:
+            print(f"loss: {loss}")
+        return loss
+
+    elif method == "efel":
+        ### get voltage traces in the format efel expects
+        trace_ist = {
+            "T": np.arange(
+                results_ist.recording_times.time_lims()[0],
+                results_ist.recording_times.time_lims()[1]
+                + results_ist.data["time_step"] / 2,
+                results_ist.data["time_step"],
+            ),
+            "V": results_ist.recordings[0][f"{results_ist.data['pop_name']};v"][:, 0],
+            "stim_start": [25],
+            "stim_end": [50],
+        }
+        trace_soll = {
+            "T": np.arange(
+                results_soll.recording_times.time_lims()[0],
+                results_soll.recording_times.time_lims()[1]
+                + results_soll.data["time_step"] / 2,
+                results_soll.data["time_step"],
+            ),
+            "V": results_soll.recordings[0][f"{results_soll.data['pop_name']};v"][:, 0],
+            "stim_start": [25],
+            "stim_end": [50],
+        }
+
+        ### calculate and return efel loss
+        loss = efel_loss(
+            trace1=trace_ist,
+            trace2=trace_soll,
+            feature_list=[
+                "steady_state_voltage_stimend",
+                "steady_state_voltage",
+                "voltage_base",
+                "voltage_after_stim",
+                "minimum_voltage",
+                "time_to_first_spike",
+                "time_to_second_spike",
+                "time_to_last_spike",
+                "spike_count",
+                "spike_count_stimint",
+                "ISI_CV",
+            ],
+        )[0]
+        if verbose:
+            print(f"loss: {loss}")
+        return loss
 
 
 variables_bounds = {
@@ -99,12 +168,16 @@ variables_pick = {
 
 def main():
     SIM_ID = int(sys.argv[1])
-    file_appendix = f"_{METHOD}_{SIM_ID}"
+    METHOD = sys.argv[2]
+    FEATURES = sys.argv[3]
+    file_appendix = FILE_APPENDIX(METHOD, FEATURES, SIM_ID)
 
     ### define optimization
     opt = OptNeuron(
         experiment=MyExp,
-        get_loss_function=get_loss,
+        get_loss_function=lambda results_ist, results_soll: get_loss(
+            results_ist, results_soll, method=FEATURES
+        ),
         variables_bounds=variables_bounds,
         neuron_model=Izhikevich2007(),
         target_neuron_model=Izhikevich2007(**variables_pick),
@@ -136,8 +209,6 @@ def main():
             continue
         variables_pick[key] = [variables_pick[key], variables_bounds[key]]
     variables_pick.pop("init")
-    ###TODO remove this printing, this is just for testing
-    print_df(variables_pick)
 
     ### calculate the difference between the optimized and the target parameters
     parameter_difference = np.linalg.norm(
@@ -154,16 +225,19 @@ def main():
     ### get loss history
     loss_history = opt.loss_history
 
-    ### save variables TODO
+    ### save variables
     save_variables(
         variable_list=[
-            {parameter_difference:parameter_difference,
-            best_loss,
-            best_loss_time,
-            best_loss_evals,
-            loss_history,}
+            {
+                "parameter_difference": parameter_difference,
+                "best_loss": best_loss,
+                "best_loss_time": best_loss_time,
+                "best_loss_evals": best_loss_evals,
+                "loss_history": loss_history,
+            }
         ],
-        name_list=
+        name_list=[f"benchmark_variables{file_appendix}"],
+        path="benchmark_izhikevich_results/",
     )
 
     ### plot recordings

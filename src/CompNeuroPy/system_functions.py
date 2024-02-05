@@ -4,6 +4,7 @@ import shutil
 from time import time
 import pickle
 from functools import wraps
+from joblib import Parallel, delayed
 
 
 def clear_dir(path):
@@ -207,3 +208,36 @@ def timing_decorator(threshold=0.1):
         return wrapper
 
     return decorator
+
+
+def run_script_parallel(
+    script_path: str, n_jobs: int, args_list: list = [""], n_total: int = 1
+):
+    """
+    Run a script in parallel.
+
+    Args:
+        script_path (str):
+            Path to the script to run.
+        n_jobs (int):
+            Number of parallel jobs.
+        args_list (list, optional):
+            List of lists containing the arguments (string values) of each run to pass
+            to the script. Length of the list is the number of total runs. If a list
+            of strings is passed these arguments are passed to the script and it is run
+            n_total times. Default: [""], i.e. no arguments are passed to the script.
+        n_total (int, optional):
+            Number of total runs, only used if args_list is not a list of lists.
+            Default: 1.
+    """
+    if not isinstance(args_list[0], list):
+        args_list = [args_list] * n_total
+    elif n_total != 1:
+        print(
+            "run_script_parallel; Warning: n_total is ignored because args_list is a list of lists"
+        )
+
+    Parallel(n_jobs=n_jobs)(
+        delayed(os.system)(f"python {script_path} {' '.join(args)}")
+        for args in args_list
+    )

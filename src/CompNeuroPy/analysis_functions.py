@@ -390,9 +390,9 @@ def _get_pop_rate_old(spikes, duration, dt=1, t_start=0, t_smooth_ms=-1):
                 timeshift_start, timeshift_end, timeshift_step
             ).astype(int):
                 hist, edges = np.histogram(times, bins + timeshift)
-                rate[
-                    idx, np.clip(binsCenters + timeshift, 0, rate.shape[1] - 1)
-                ] = hist / (t_smooth_ms / 1000.0)
+                rate[idx, np.clip(binsCenters + timeshift, 0, rate.shape[1] - 1)] = (
+                    hist / (t_smooth_ms / 1000.0)
+                )
 
         poprate = get_nanmean(rate, 0)
         timesteps = np.arange(0, int(round(temp_duration / dt)), 1).astype(int)

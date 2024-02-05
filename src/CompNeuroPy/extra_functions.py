@@ -30,6 +30,7 @@ from matplotlib.widgets import Slider
 from matplotlib.gridspec import GridSpec
 from screeninfo import get_monitors
 import cmaes
+import efel
 
 
 def print_df(df: pd.DataFrame | dict, **kwargs):
@@ -2096,3 +2097,124 @@ def interactive_plot(
 
     ### show the plot
     plt.show()
+
+
+def efel_loss(trace1, trace2, feature_list):
+    """
+    Calculate the loss between two traces using the features from the feature_list.
+
+    Args:
+        trace1 (dict):
+            dictionary with the keys "T" (time), "V" (voltage), "stim_start" (start of
+            the stimulus), "stim_end" (end of the stimulus)
+        trace2 (dict):
+            dictionary with the keys "T" (time), "V" (voltage), "stim_start" (start of
+            the stimulus), "stim_end" (end of the stimulus)
+        feature_list (list):
+            list of feature names which should be used to calculate the loss
+
+    Returns:
+        loss (np.array):
+            array with the loss
+    """
+    verbose = False
+    ### set a plausible "maximum" absolute difference for each feature
+    diff_max = {
+        "steady_state_voltage_stimend": 200,
+        "steady_state_voltage": 200,
+        "voltage_base": 200,
+        "voltage_after_stim": 200,
+        "minimum_voltage": 200,
+        "time_to_first_spike": trace1["T"][-1] - trace1["stim_start"][0],
+        "time_to_second_spike": trace1["T"][-1] - trace1["stim_start"][0],
+        "time_to_last_spike": trace1["T"][-1] - trace1["stim_start"][0],
+        "spike_count": len(trace1["T"]),
+        "spike_count_stimint": len(
+            trace1["T"][
+                (
+                    (trace1["T"] >= trace1["stim_start"][0]).astype(int)
+                    * (trace1["T"] < trace1["stim_end"][0]).astype(int)
+                ).astype(bool)
+            ]
+        ),
+        "ISI_CV": 1,
+    }
+    if verbose:
+        print(f"\ndiff_max: {diff_max}")
+
+    ### set a plausible "close" absolute difference for each feature
+    diff_close = {
+        "steady_state_voltage_stimend": 10,
+        "steady_state_voltage": 10,
+        "voltage_base": 10,
+        "voltage_after_stim": 10,
+        "minimum_voltage": 10,
+        "time_to_first_spike": np.clip(
+            (trace1["T"][-1] - trace1["stim_start"][0]) * 0.1, 5, 50
+        ),
+        "time_to_second_spike": np.clip(
+            (trace1["T"][-1] - trace1["stim_start"][0]) * 0.1, 5, 50
+        ),
+        "time_to_last_spike": np.clip(
+            (trace1["T"][-1] - trace1["stim_start"][0]) * 0.1, 5, 50
+        ),
+        "spike_count": np.ceil((trace1["T"][-1] - trace1["T"][0]) / 200),
+        "spike_count_stimint": np.ceil((trace1["T"][-1] - trace1["T"][0]) / 200),
+        "ISI_CV": 0.1,
+    }
+    if verbose:
+        print(f"\ndiff_close: {diff_close}\n")
+
+    ### catch if features from feature_list are not supported
+    features_not_supported = [
+        feature for feature in feature_list if feature not in diff_max
+    ]
+    if features_not_supported:
+        raise ValueError(f"Features not supported: {features_not_supported}")
+
+    ### catch "exploding" neurons by returning max loss of features
+    if (
+        np.any(trace1["V"] < -200)
+        or np.any(trace1["V"] > 100)
+        or np.any(trace2["V"] < -200)
+        or np.any(trace2["V"] > 100)
+    ):
+        loss = 0
+        for feature in feature_list:
+            loss += diff_max[feature] / diff_close[feature]
+        loss /= len(feature_list)
+        loss = np.array([loss])
+        if verbose:
+            print(f"loss: {loss}")
+        return loss
+
+    ### calculate and return the mean of the differences of the features
+    features_1, features_2 = efel.getFeatureValues(
+        [trace1, trace2],
+        feature_list,
+        raise_warnings=False,
+    )
+    if verbose:
+        print(f"\nfeatures_1: {features_1}\n")
+        print(f"features_2: {features_2}\n")
+    loss = 0
+    for feature in feature_list:
+        ### if None values in features use diff_max
+        if features_1[feature] is None or features_2[feature] is None:
+            diff = diff_max[feature]
+        ### if features contain multiple values use the mean TODO not tested yet
+        elif len(features_1[feature]) > 1 or len(features_2[feature]) > 1:
+            if verbose:
+                print("features with multiple values not tested yet!")
+            diff = np.mean(
+                np.absolute(features_1[feature] - features_2[feature]), keepdims=True
+            )
+        else:
+            diff = np.absolute(features_1[feature] - features_2[feature])
+        ### scale the difference by diff_close and add to loss
+        loss += diff / diff_close[feature]
+    loss /= len(feature_list)
+
+    if verbose:
+        print(f"loss: {loss}")
+    return loss

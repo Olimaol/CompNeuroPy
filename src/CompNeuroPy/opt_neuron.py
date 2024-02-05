@@ -1310,6 +1310,8 @@ class OptNeuron:
         elif self.method == "deap":
             best = self._run_with_deap(max_evals, deap_plot_file)
         elif self.method == "bads":
+            if max_evals < 4:
+                raise ValueError("bads needs at least 4 evaluations")
             best = self._run_with_bads(max_evals)
         else:
             print("ERROR run; method should be 'hyperopt', 'sbi', 'deap', or 'bads'")

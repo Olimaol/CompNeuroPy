@@ -796,7 +796,7 @@ class RecordingTimes:
                 )
                 start_time = round(start_time, af.get_number_of_decimals(time_step))
                 end_time = round(end_time, af.get_number_of_decimals(time_step))
-                times = np.arange(start_time, end_time + period_time, period_time)
+                times = np.arange(start_time, end_time + period_time / 2, period_time)
                 time_list.append(times)
 
         ### flatten the two lists
