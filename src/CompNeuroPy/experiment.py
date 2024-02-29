@@ -87,11 +87,12 @@ class CompNeuroExp:
         !!! warning
             If you want the network to have the same state at the beginning of each
             experiment run, you should call this function at the beginning of the run
-            function of the CompNeuroExp class! If you only want to have the same time
-            for the network at the beginning of each experiment run, set populations,
-            projections, and synapses to False and model to True. If you want to set
-            parameters during the experiment and also reset the dynamic variables
-            without resetting the parameters, set parameters to False.
+            function of the CompNeuroExp class (except using OptNeuron)! If you only
+            want to have the same time for the network at the beginning of each
+            experiment run, set populations, projections, and synapses to False and
+            model to True. If you want to set parameters during the experiment and also
+            reset the dynamic variables without resetting the parameters, set parameters
+            to False.
 
         Args:
             populations (bool, optional):
@@ -101,9 +102,9 @@ class CompNeuroExp:
             synapses (bool, optional):
                 reset synapses. Defaults to False.
             model (bool, optional):
-                If False, do ignore the arguments populations, projections, and
-                synapses (the network state doesn't change) and only reset the
-                CompNeuroMonitors Default: True.
+                If False, do ignore all other arguments (the network state doesn't
+                change) and only reset the CompNeuroMonitors (creating new chunk)
+                Default: True.
             model_state (bool, optional):
                 If True, reset the model to the stored model state instead of
                 compilation state (all compartments not stored in the model state will
@@ -123,7 +124,7 @@ class CompNeuroExp:
             ### there are monitors, therefore use theri reset function
             self.monitors.reset(model=model, **reset_kwargs, parameters=parameters)
             ### after reset, set the state of the model to the stored state
-            if model_state and self._model_state is not None:
+            if model_state and self._model_state is not None and model is True:
                 ### if parameters=False, they are not set
                 mf._set_all_attributes(self._model_state, parameters=parameters)
         elif model is True:

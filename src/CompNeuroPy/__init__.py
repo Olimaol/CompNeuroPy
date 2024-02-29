@@ -35,6 +35,7 @@ from CompNeuroPy.extra_functions import (
     my_linear_cmap_obj,  # TODO remove
     decision_tree,  # TODO remove
     node_cl,  # TODO remove
+    efel_loss,
 )
 from CompNeuroPy.model_functions import (
     compile_in_folder,

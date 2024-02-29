@@ -1,7 +1,7 @@
 from ANNarchy import simulate, get_population, dt
 
 
-def attr_sim(pop, attr_dict, t=500):
+def attr_sim(pop: str, attr_dict, t=500):
     """
     Simulates a period 't' setting the attributes of a given population to the values
     specified in 'attr_list', after this simulation the attributes are reset to initial
@@ -33,7 +33,7 @@ def attr_sim(pop, attr_dict, t=500):
         setattr(get_population(pop), attr, v)
 
 
-def attribute_step(pop, attr, t1=500, t2=500, v1=0, v2=100):
+def attribute_step(pop: str, attr, t1=500, t2=500, v1=0, v2=100):
     """
     Simulates an attribute step for a given population.
 
@@ -68,7 +68,7 @@ def attribute_step(pop, attr, t1=500, t2=500, v1=0, v2=100):
     return {"duration": t1 + t2}
 
 
-def attr_ramp(pop, attr, v0, v1, dur, n):
+def attr_ramp(pop: str, attr, v0, v1, dur, n):
     """
     Simulating while constantly changing the attribute of a given population.
     After this attr_ramp simulation the attribute value is reset to the initial
@@ -122,7 +122,7 @@ def attr_ramp(pop, attr, v0, v1, dur, n):
     return {"dv": dv, "dur_stim": dur_stim}
 
 
-def increasing_attr(pop, attr, v0, dv, nr_steps, dur_step):
+def increasing_attr(pop: str, attr, v0, dv, nr_steps, dur_step):
     """
     Conducts multiple simulations while constantly increasing the attribute of a given
     population. After this simulation the attribute value is reset to the initial value
@@ -156,7 +156,7 @@ def increasing_attr(pop, attr, v0, dv, nr_steps, dur_step):
     return {"attr_list": attr_list}
 
 
-def current_step(pop, t1=500, t2=500, a1=0, a2=100):
+def current_step(pop: str, t1=500, t2=500, a1=0, a2=100):
     """
     Stimulates a given population in two periods with two input currents.
 
@@ -182,7 +182,7 @@ def current_step(pop, t1=500, t2=500, a1=0, a2=100):
     return attribute_step(pop, "I_app", t1=t1, t2=t2, v1=a1, v2=a2)
 
 
-def current_stim(pop, t=500, a=100):
+def current_stim(pop: str, t=500, a=100):
     """
     Stimulates a given population during specified period 't' with input current with
     amplitude 'a', after this stimulation the current is reset to initial value
@@ -200,7 +200,7 @@ def current_stim(pop, t=500, a=100):
     attr_sim(pop, {"I_app": a}, t=t)
 
 
-def current_ramp(pop, a0, a1, dur, n):
+def current_ramp(pop: str, a0, a1, dur, n):
     """
     Conducts multiple current stimulations with constantly changing current inputs.
     After this current_ramp stimulation the current amplitude is reset to the initial
@@ -238,7 +238,7 @@ def current_ramp(pop, a0, a1, dur, n):
     return {"da": attr_ramp_return["dv"], "dur_stim": attr_ramp_return["dur_stim"]}
 
 
-def increasing_current(pop, a0, da, nr_steps, dur_step):
+def increasing_current(pop: str, a0, da, nr_steps, dur_step):
     """
     Conducts multiple current stimulations with constantly increasing current inputs.
     After this increasing_current stimulation the current amplitude is reset to the
