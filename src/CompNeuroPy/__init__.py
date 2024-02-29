@@ -58,8 +58,10 @@ from CompNeuroPy.system_functions import (
     load_variables,
     timing_decorator,
     run_script_parallel,
+    create_data_raw_folder,
 )
 from CompNeuroPy.simulation_requirements import req_pop_attr, ReqPopHasAttr
+from CompNeuroPy.statistic_functions import anova_between_groups
 
 ### classes
 from CompNeuroPy.monitors import Monitors, CompNeuroMonitors

@@ -5,6 +5,8 @@ from time import time
 import pickle
 from functools import wraps
 from joblib import Parallel, delayed
+import inspect
+import subprocess
 
 
 def clear_dir(path):
@@ -241,3 +243,192 @@ def run_script_parallel(
         delayed(os.system)(f"python {script_path} {' '.join(args)}")
         for args in args_list
     )
+
+
+def create_data_raw_folder(
+    folder_name: str,
+    **kwargs,
+):
+    """
+    Create a folder for raw data of some kind of experiments/study etc.
+    All data raw should be created by RUNNING A SINGLE PYTHON script. This data should
+    be stored in the folder created here.
+    If the created raw data depends on some parameters, these parameters should also be
+    stored. They should be global in the corresponding python script to be able to easily
+    set them again (replicate the data raw creation process).
+    Best practice for the python script: define global parameters at the beginning, then
+    call this function.
+    This function stores the following information in a file called "__data_raw_meta__"
+    in the created folder:
+        - the name of the python script which created the data raw
+        - the global variables of the python script given as kwargs
+        - the conda environment
+        - the pip requirements
+        - the git log of ANNarchy and CompNeuroPy if they are installed locally
+
+    !!! warning
+        Only works in a conda environment.
+
+    Args:
+        folder_name (str):
+            Name of the folder to create.
+
+        **kwargs:
+            Global variables of the caller script.
+    """
+    ### check if folder already exists
+    if os.path.isdir(folder_name):
+        raise FileExistsError(f"{folder_name} already exists")
+    ### create folder
+    create_dir(folder_name)
+
+    ### get caller script
+    caller_frame = inspect.stack()[1]
+    caller_script = caller_frame.filename
+    current_path = os.getcwd()
+
+    ### now get info for annarchy and compneuropy
+    ### check with pip list if annarchy and compneuropy are editable (i.e. installed
+    ### from local path with "pip install -e .")
+    os.system("pip list > __pip_list__.txt")
+    with open("__pip_list__.txt", "r") as f:
+        pip_list = f.readlines()
+    os.remove("__pip_list__.txt")
+    annarchy_found = False
+    compneuropy_found = False
+    annarchy_found_path = ""
+    compneuropy_found_path = ""
+    for line in pip_list:
+        if "ANNarchy" in line:
+            if "/" in line:
+                annarchy_found = True
+                annarchy_found_path = line.split(" ")[-1]
+        if "CompNeuroPy" in line:
+            if "/" in line:
+                compneuropy_found = True
+                compneuropy_found_path = line.split(" ")[-1]
+
+    ### if both are editable we have the paths, else check pip freeze for "@ file" (i.e.
+    ### installed from local path with "pip install .")
+    if not annarchy_found or not compneuropy_found:
+        os.system("pip freeze > __pip_freeze__.txt")
+        with open("__pip_freeze__.txt", "r") as f:
+            pip_freeze = f.readlines()
+        os.remove("__pip_freeze__.txt")
+        for line in pip_freeze:
+            if "ANNarchy" in line and "@ file://" in line and not annarchy_found:
+                annarchy_found = True
+                annarchy_found_path = line.split("@ file://")[-1]
+            if "CompNeuroPy" in line and "@ file://" in line and not compneuropy_found:
+                compneuropy_found = True
+                compneuropy_found_path = line.split("@ file://")[-1]
+
+    ### remove "\n" from paths
+    annarchy_found_path = annarchy_found_path.replace("\n", "")
+    compneuropy_found_path = compneuropy_found_path.replace("\n", "")
+
+    ### if they were found get the git log of the found path
+    if annarchy_found:
+        ### run the following commands in the terminal, wait between the commands
+        command_list = [
+            "git log > __annarchy_git_log__.txt",
+            f"mv __annarchy_git_log__.txt {current_path}",
+        ]
+        os.chdir(annarchy_found_path)
+        for command in command_list:
+            process = subprocess.Popen(
+                command,
+                shell=True,
+            )
+            process.wait()
+        os.chdir(current_path)
+        ### read the git log
+        with open("__annarchy_git_log__.txt", "r") as f:
+            annarchy_git_log = f.readlines()
+        os.remove("__annarchy_git_log__.txt")
+    if compneuropy_found:
+        ### run the following commands in the terminal, wait between the commands
+        command_list = [
+            "git log > __compneuropy_git_log__.txt",
+            f"mv __compneuropy_git_log__.txt {current_path}",
+        ]
+        os.chdir(compneuropy_found_path)
+        for command in command_list:
+            process = subprocess.Popen(
+                command,
+                shell=True,
+            )
+            process.wait()
+        os.chdir(current_path)
+        ### read the git log
+        with open("__compneuropy_git_log__.txt", "r") as f:
+            compneuropy_git_log = f.readlines()
+        os.remove("__compneuropy_git_log__.txt")
+
+    ### now get conda env file and pip requirements file to be able to replicate the
+    ### environment
+    ### run "conda list --explicit > conda_env.txt"
+    os.system("conda list --explicit > __conda_env__.txt")
+    ### run "pip-chill --no-chill > requirements.txt"
+    os.system("pip-chill --no-chill > __requirements__.txt")
+
+    ### read conda env and requirements
+    with open("__conda_env__.txt", "r") as f:
+        conda_env = f.readlines()
+    os.remove("__conda_env__.txt")
+    with open("__requirements__.txt", "r") as f:
+        requirements = f.readlines()
+    os.remove("__requirements__.txt")
+
+    ### remove the line for annarchy and compneuropy from requirements if found earlier
+    ### in requirements they are written with small letters
+    if annarchy_found:
+        requirements = [line for line in requirements if "annarchy" not in line]
+    if compneuropy_found:
+        requirements = [line for line in requirements if "compneuropy" not in line]
+
+    ### store everything in a meta file
+    with open(f"{folder_name}/__data_raw_meta__", "w") as f:
+        f.write(
+            f"# Data created by runnning\n"
+            f"# {caller_script}\n"
+            f"# with the following global variables:\n"
+        )
+        for key, value in kwargs.items():
+            f.write(f"{key} = {value}\n")
+        f.write("\n")
+        f.write(
+            "# ##########################################################################\n"
+        )
+        f.write(
+            "# START OF CONDA ENV FILE ##################################################\n"
+        )
+        f.write(
+            "# COPY AND STORE IT AS TXT FILE ############################################\n"
+        )
+        for line in conda_env:
+            f.write(line)
+        f.write("\n")
+        f.write(
+            "# ##########################################################################\n"
+        )
+        f.write(
+            "# START OF PIP REQUIREMENTS FILE ###########################################\n"
+        )
+        f.write(
+            "# COPY AND STORE IT AS TXT FILE ############################################\n"
+        )
+        f.write("# This file may be used to install the python packages:\n")
+        f.write("# $ pip install -r <this file>\n")
+        for line in requirements:
+            f.write(line)
+        if annarchy_found:
+            f.write("\n")
+            f.write("# ANNarchy was installed locally with commit:\n")
+            annarchy_commit = annarchy_git_log[0].replace("\n", "")
+            f.write(f"# {annarchy_commit}")
+        if compneuropy_found:
+            f.write("\n")
+            f.write("# CompNeuroPy was installed locally with commit:\n")
+            compneuropy_commit = compneuropy_git_log[0].replace("\n", "")
+            f.write(f"# {compneuropy_commit}")
