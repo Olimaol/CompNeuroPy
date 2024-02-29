@@ -42,10 +42,14 @@ from CompNeuroPy.model_functions import (
     cnp_clear,
 )
 from CompNeuroPy.simulation_functions import (
-    current_step,
     current_stim,
+    current_step,
     current_ramp,
     increasing_current,
+    attr_sim,
+    attribute_step,
+    attr_ramp,
+    increasing_attr,
 )
 from CompNeuroPy.system_functions import (
     clear_dir,
