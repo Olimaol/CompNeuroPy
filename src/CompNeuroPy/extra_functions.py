@@ -2199,8 +2199,11 @@ def efel_loss(trace1, trace2, feature_list):
         print(f"features_2: {features_2}\n")
     loss = 0
     for feature in feature_list:
-        ### if None values in features use diff_max
-        if features_1[feature] is None or features_2[feature] is None:
+        ### if both features are None use 0
+        if features_1[feature] is None and features_2[feature] is None:
+            diff = 0
+        ### if single feature is None use diff_max
+        elif features_1[feature] is None or features_2[feature] is None:
             diff = diff_max[feature]
         ### if features contain multiple values use the mean TODO not tested yet
         elif len(features_1[feature]) > 1 or len(features_2[feature]) > 1:
