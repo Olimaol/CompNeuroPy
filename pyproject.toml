@@ -29,6 +29,7 @@ dependencies = [
     "deap",
     "screeninfo",
     "cmaes",
+    "pip-chill",
 ]
 
 [project.urls]

@@ -245,6 +245,17 @@ def run_script_parallel(
     )
 
 
+def _is_git_repo():
+    try:
+        # Check if the current directory is within a git repository
+        subprocess.check_output(
+            ["git", "rev-parse", "--is-inside-work-tree"], stderr=subprocess.STDOUT
+        )
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+
 def create_data_raw_folder(
     folder_name: str,
     **kwargs,
@@ -286,6 +297,35 @@ def create_data_raw_folder(
     caller_frame = inspect.stack()[1]
     caller_script = caller_frame.filename
     current_path = os.getcwd()
+
+    ### check if in current path there is a git repository, if yes, get the current
+    ### commit
+    if _is_git_repo():
+        ### get git log
+        os.system("git log > __git_log__.txt")
+        with open("__git_log__.txt", "r") as f:
+            git_log = f.readlines()
+        os.remove("__git_log__.txt")
+        if len(git_log) == 0:
+            git_log = None
+        ### get git top level
+        os.system("basename $(git rev-parse --show-toplevel) > __git_top__.txt")
+        with open("__git_top__.txt", "r") as f:
+            git_top = f.readlines()
+        os.remove("__git_top__.txt")
+        if len(git_top) == 0:
+            git_top = None
+        ### get git remote
+        os.system("git remote get-url origin > __git_remote__.txt")
+        with open("__git_remote__.txt", "r") as f:
+            git_remote = f.readlines()
+        os.remove("__git_remote__.txt")
+        if len(git_remote) == 0:
+            git_remote = None
+    else:
+        git_log = None
+        git_top = None
+        git_remote = None
 
     ### now get info for annarchy and compneuropy
     ### check with pip list if annarchy and compneuropy are editable (i.e. installed
@@ -389,13 +429,25 @@ def create_data_raw_folder(
 
     ### store everything in a meta file
     with open(f"{folder_name}/__data_raw_meta__", "w") as f:
+        git_strings = []
+        if git_top:
+            git_strings.append("#  " + git_top[0])
+        if git_remote:
+            git_strings.append("#  " + git_remote[0])
+        if git_log:
+            git_strings.append("#  " + git_log[0])
         f.write(
             f"# Data created by runnning\n"
-            f"# {caller_script}\n"
+            f"#  {caller_script}\n"
+            f"# part of git repo:\n"
+            f"{''.join(git_strings)}"
             f"# with the following global variables:\n"
         )
         for key, value in kwargs.items():
-            f.write(f"{key} = {value}\n")
+            if isinstance(value, str):
+                f.write(f"{key} = '{value}'\n")
+            else:
+                f.write(f"{key} = {value}\n")
         f.write("\n")
         f.write(
             "# ##########################################################################\n"

@@ -400,9 +400,9 @@ _Izhikevich2007_Corbit12 = Neuron(
         tau_uu          = 1
         dd              = 0
         ### slow currents parameters
-        a_s             = 1
-        a_n             = 1
-        b_n             = 1
+        a_s             = 0
+        a_n             = 0
+        b_n             = 0
         ### input current
         I_app           = 0
         ### synaptic current parameters
