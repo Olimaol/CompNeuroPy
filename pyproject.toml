@@ -30,6 +30,7 @@ dependencies = [
     "screeninfo",
     "cmaes",
     "pip-chill",
+    "pingouin",
 ]
 
 [project.urls]
