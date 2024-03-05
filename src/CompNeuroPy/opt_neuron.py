@@ -58,6 +58,7 @@ class OptNeuron:
         results_soll: Any | None = None,
         target_neuron_model: Neuron | None = None,
         time_step: float = 1.0,
+        recording_period: float | None = None,
         compile_folder_name: str = "annarchy_OptNeuron",
         num_rep_loss: int = 1,
         method: str = "deap",
@@ -104,6 +105,9 @@ class OptNeuron:
                 Default: None.
             time_step (float, optional):
                 The time step for the simulation in ms. Default: 1.
+            recording_period (float, optional):
+                The recording period for the simulation in ms. Default: None, i.e., the
+                time_step is used.
             compile_folder_name (string, optional):
                 The name of the annarchy compilation folder within annarchy_folders/.
                 Default: 'annarchy_OptNeuron'.
@@ -179,6 +183,7 @@ class OptNeuron:
             self.bads_params_dict = bads_params_dict
             self.loss_history = []
             self.start_time = time()
+            self.recording_period = recording_period
 
             ### if using deap pop size is the number of individuals for the optimization
             if method == "deap":
@@ -396,9 +401,15 @@ class OptNeuron:
 
                 ### create monitors
                 if len(self.record) > 0:
+                    recording_period_str = (
+                        f";{self.recording_period}"
+                        if self.recording_period is not None
+                        and ("spike" not in self.record or len(self.record) > 1)
+                        else ""
+                    )
                     monitors = CompNeuroMonitors(
                         {
-                            pop_name: self.record
+                            f"{pop_name}{recording_period_str}": self.record
                             for pop_name in [
                                 model.populations[0],
                                 target_model.populations[0],
@@ -427,7 +438,15 @@ class OptNeuron:
                 )
                 ### create monitors
                 if len(self.record) > 0:
-                    monitors = CompNeuroMonitors({model.populations[0]: self.record})
+                    recording_period_str = (
+                        f";{self.recording_period}"
+                        if self.recording_period is not None
+                        and ("spike" not in self.record or len(self.record) > 1)
+                        else ""
+                    )
+                    monitors = CompNeuroMonitors(
+                        {f"{model.populations[0]}{recording_period_str}": self.record}
+                    )
 
         return model, target_model, monitors
 
@@ -1318,7 +1337,7 @@ class OptNeuron:
             quit()
         ### obtain loss for the best parameters
         fit = self._test_fit(best)
-        best["loss"] = fit["loss"]
+        best["loss"] = float(fit["loss"])
         best["all_loss"] = fit["all_loss"]
         best["std"] = fit["std"]
         best["results"] = fit["results"]

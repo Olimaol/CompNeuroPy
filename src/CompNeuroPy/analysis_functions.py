@@ -1627,15 +1627,56 @@ def time_data_add_nan(time_arr, data_arr, fill_time_step=None, axis=0):
         data_arr (nD array):
             data array with gaps filled
     """
+    return time_data_fill_gaps(
+        time_arr,
+        data_arr,
+        fill_time_step=fill_time_step,
+        axis=axis,
+        fill="nan",
+    )
+
+
+def time_data_fill_gaps(
+    time_arr, data_arr, fill_time_step=None, axis=0, fill: str | float = "nan"
+):
+    """
+    If there are gaps in time_arr --> fill them with respective time values.
+    Fill the corresponding data_arr values depending on the fill argument.
+
+    By default it is tried to fill the time array with continuously increasing times
+    based on the smallest time difference found there can still be discontinuities after
+    filling the arrays (because existing time values are not changed).
+
+    But one can also give a fixed fill time step.
+
+    Args:
+        time_arr (1D array):
+            times of data_arr in ms
+        data_arr (nD array):
+            the size of the specified dimension of data array must have the same length
+            as time_arr
+        fill_time_step (number, optional, default=None):
+            if there are gaps they are filled with this time step
+        axis (int):
+            which dimension of the data_arr coresponds to the time_arr
+        fill (str or float):
+            how to fill the data array:
+                "nan" (default): fill gaps with nan
+                float: fill gaps with this value
+    """
+    if fill == "nan":
+        fill_value = np.nan
+    else:
+        fill_value = fill
+
     time_arr = time_arr.astype(float)
     data_arr = data_arr.astype(float)
     data_arr_shape = data_arr.shape
 
     if data_arr_shape[axis] != time_arr.size:
-        print(
-            "ERROR time_data_add_nan: time_arr must have same length as specified axis (default=0) of data_arr!"
+        raise ValueError(
+            "time_arr must have same length as specified axis (default=0) of data_arr!"
         )
-        quit()
 
     ### find gaps
     time_diff_arr = np.round(np.diff(time_arr), 6)
@@ -1664,7 +1705,7 @@ def time_data_add_nan(time_arr, data_arr, fill_time_step=None, axis=0):
             current_end + time_diff_min, next_start, time_diff_min
         )
         data_arr_append_shape[axis] = time_arr_append.size
-        data_arr_append = np.zeros(tuple(data_arr_append_shape)) * np.nan
+        data_arr_append = np.ones(tuple(data_arr_append_shape)) * fill_value
         ### append gap filling arrays to splitted arrays
         time_arr_split[split_arr_idx] = np.append(
             arr=time_arr_split[split_arr_idx],

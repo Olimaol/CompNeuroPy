@@ -1200,7 +1200,7 @@ class VClampParamSearch:
         sf.save_variables(
             [self.p_opt],
             [results_file.split("/")[-1]],
-            results_file.split("/")[:-1] if "/" in results_file else "./",
+            "/".join(results_file.split("/")[:-1]) if "/" in results_file else "./",
         )
         ### save human readable as json file
         json.dump(

@@ -232,6 +232,7 @@ def run_script_parallel(
             Number of total runs, only used if args_list is not a list of lists.
             Default: 1.
     """
+    ### check if args_list is a list of lists
     if not isinstance(args_list[0], list):
         args_list = [args_list] * n_total
     elif n_total != 1:
@@ -239,6 +240,10 @@ def run_script_parallel(
             "run_script_parallel; Warning: n_total is ignored because args_list is a list of lists"
         )
 
+    ### do not use more jobs than necessary
+    n_jobs = min(n_jobs, len(args_list))
+
+    ### run the script in parallel
     Parallel(n_jobs=n_jobs)(
         delayed(os.system)(f"python {script_path} {' '.join(args)}")
         for args in args_list
