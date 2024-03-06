@@ -35,6 +35,10 @@ class MyExp(CompNeuroExp):
             resets the model and monitors
         results():
             returns a results object
+        store_model_state():
+            stores the state of the model used for reset
+        reset_model_state():
+            resets the stored model state
     """
 
     def __init__(

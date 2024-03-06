@@ -1816,15 +1816,6 @@ def get_maximum(input_data: list | np.ndarray | tuple | float):
         return float(input_data)
 
 
-# plan = {
-#     "position": [1, 2, 3],
-#     "compartment": ["pop1", "pop2", "pop3"],
-#     "variable": ["v", "v", "v"],
-#     "format": ["line", "line", "line"],
-#     "color": ["k", "k", "k"],
-# }
-
-
 class PlotRecordings:
     """
     Plot recordings from CompNeuroMonitors.
