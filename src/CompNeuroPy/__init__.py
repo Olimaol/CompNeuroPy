@@ -28,10 +28,14 @@ from CompNeuroPy.extra_functions import (
     DecisionTree,
     DecisionTreeNode,
     evaluate_expression_with_dict,
+    VClampParamSearch,
+    DeapCma,
+    interactive_plot,
     data_obj,  # TODO remove
     my_linear_cmap_obj,  # TODO remove
     decision_tree,  # TODO remove
     node_cl,  # TODO remove
+    efel_loss,
 )
 from CompNeuroPy.model_functions import (
     compile_in_folder,
@@ -39,10 +43,14 @@ from CompNeuroPy.model_functions import (
     cnp_clear,
 )
 from CompNeuroPy.simulation_functions import (
-    current_step,
     current_stim,
+    current_step,
     current_ramp,
     increasing_current,
+    attr_sim,
+    attribute_step,
+    attr_ramp,
+    increasing_attr,
 )
 from CompNeuroPy.system_functions import (
     clear_dir,
@@ -50,8 +58,11 @@ from CompNeuroPy.system_functions import (
     save_variables,
     load_variables,
     timing_decorator,
+    run_script_parallel,
+    create_data_raw_folder,
 )
 from CompNeuroPy.simulation_requirements import req_pop_attr, ReqPopHasAttr
+from CompNeuroPy.statistic_functions import anova_between_groups
 
 ### classes
 from CompNeuroPy.monitors import Monitors, CompNeuroMonitors

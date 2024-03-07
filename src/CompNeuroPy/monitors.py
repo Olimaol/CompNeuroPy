@@ -12,6 +12,7 @@ from ANNarchy import (
 )
 import numpy as np
 from typingchecker import check_types
+from scipy.interpolate import interp1d
 
 
 class CompNeuroMonitors:
@@ -716,12 +717,92 @@ class RecordingTimes:
         compartment = self.__check_compartment__(compartment, chunk)
         return self._get_nr_periods(chunk, compartment)
 
+    def combine_periods(
+        self,
+        recordings: list,
+        recording_data_str: str,
+        chunk: int = 0,
+        fill: str | float = "none",
+    ):
+        """
+        Combines the data of all periods of a specified chunk/model compartment.
+
+        Args:
+            recordings (list):
+                List with recordings of all chunks.
+            recording_data_str (str):
+                String specifying the compartment name and the variable to combine.
+                Format: "compartment_name;variable_name"
+            chunk (int, optional):
+                Index of the chunk. Default: 0.
+            fill (str|float, optional):
+                How recording pauses should be filled. Can be "none" (no filling),
+                "nan" (fill with nan), "interpolate" (interpolate with nearest) or a
+                float (fill with this value). Default: "none".
+
+        Returns:
+            time_arr (np.array):
+                Array with time values in ms.
+            data_arr (np.array):
+                Array with the recorded variable.
+        """
+        compartment = recording_data_str.split(";")[0]
+        period_time = recordings[0][f"{compartment};period"]
+        nr_periods = self._get_nr_periods(chunk, compartment)
+        time_step = recordings[0]["dt"]
+        time_list = []
+
+        ### get data arr
+        data_arr = recordings[chunk][recording_data_str]
+
+        ### get time arr
+        for period in range(nr_periods):
+            start_time, end_time = self.time_lims(
+                chunk=chunk, compartment=compartment, period=period
+            )
+            start_time = round(start_time, af.get_number_of_decimals(time_step))
+            end_time = round(end_time, af.get_number_of_decimals(time_step))
+            times = np.arange(start_time, end_time + period_time / 2, period_time)
+            time_list.append(times)
+        time_arr = np.concatenate(time_list, 0)
+
+        ### fill gaps with nan or interpolate
+        if fill == "nan":
+            time_arr, data_arr = af.time_data_add_nan(
+                time_arr,
+                data_arr,
+                fill_time_step=period_time,
+            )
+        elif fill == "interpolate":
+            full_time_arr = np.arange(
+                time_arr[0], time_arr[-1] + period_time / 2, period_time
+            )
+            f = interp1d(time_arr, data_arr, kind="nearest", axis=0)
+            data_arr = f(full_time_arr)
+            time_arr = full_time_arr
+        elif isinstance(fill, (int, float)):
+            time_arr, data_arr = af.time_data_fill_gaps(
+                time_arr,
+                data_arr,
+                fill_time_step=period_time,
+                fill=fill,
+            )
+
+        return time_arr, data_arr
+
     def combine_chunks(
         self, recordings: list, recording_data_str: str, mode="sequential"
     ):
         """
-        Combines the data of all chunks of recordings, only possible if no pauses in
-        between.
+        Combines the data of all chunks of recordings. Time periods without recordings
+        AT THE BEGINNING OF chunks or WITHIN chunks (i.e. recording pauses) are
+        considered and filled with nan values.
+
+        !!! warning
+            If you use mode="consecutive": Missing recordings at the end of chunks
+            (simulated but not recorded) are not considered, this leads to times which
+            differ from the original simulation times (these time periods without
+            recording are simply ignored)!
 
         Args:
             recordings (list):
@@ -769,6 +850,10 @@ class RecordingTimes:
                 if chunk == 0:
                     chunk_start_time = 0
                 else:
+                    ### TODO this uses the wrong end time if there is a pause at the end
+                    ### of the last chunk but it is not possible to get the info how long
+                    ### nothing was recorded at the end of a chunk (all I save is from
+                    ### when to when something is recorded)
                     last_stop_time = self.recording_times_list[chunk - 1][compartment][
                         "stop"
                     ]["ms"][-1]
@@ -796,7 +881,7 @@ class RecordingTimes:
                 )
                 start_time = round(start_time, af.get_number_of_decimals(time_step))
                 end_time = round(end_time, af.get_number_of_decimals(time_step))
-                times = np.arange(start_time, end_time + period_time, period_time)
+                times = np.arange(start_time, end_time + period_time / 2, period_time)
                 time_list.append(times)
 
         ### flatten the two lists

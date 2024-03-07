@@ -334,3 +334,101 @@ _Izhikevich2007_Corbit10 = Neuron(
     name="_Izhikevich2007_Corbit10",
     description="Simple neuron model equations from Izhikevich (2007) adjusted version to fit the striatal FSI neuron model from Corbit et al. (2016) should be able to produce late spiking.",
 )
+_Izhikevich2007_Corbit11 = Neuron(
+    parameters="""
+        ### base parameters
+        C               = 0
+        k               = 0
+        v_r             = 0
+        v_t             = 0
+        a               = 0
+        b               = 0
+        c               = 0
+        d               = 0
+        v_peak          = 30
+        ### slow currents parameters
+        a_s             = 1
+        a_n             = 1
+        b_n             = 1
+        ### sigmoid parameters
+        saturate        = 0
+        speed           = 0
+        ### input current
+        I_app           = 0
+        ### synaptic current parameters
+        tau_ampa        = 1
+        tau_gaba        = 1
+        E_ampa          = 0
+        E_gaba          = -90
+    """,
+    equations="""
+        dg_ampa/dt = -g_ampa/tau_ampa
+        dg_gaba/dt = -g_gaba/tau_gaba
+        I = sigmoid(I_app - neg(g_ampa*(v - E_ampa)) - pos(g_gaba*(v - E_gaba)), saturate, speed)
+      
+        C * dv/dt = k*(v - v_r)*(v - v_t) - u - n + I
+        du/dt     = a*(b*(v - v_r) - u)
+
+        ds/dt     = a_s*(I - s)
+        dn/dt     = a_n*(b_n*(I - s) - n)
+    """,
+    spike="v >= v_peak",
+    reset="""
+        v = c
+        u = u + d
+    """,
+    functions="""
+        sigmoid(x,saturate,speed)=(2*saturate)/(1+exp(-speed*x))-saturate
+    """,
+    name="_Izhikevich2007_Corbit11",
+    description="Simple neuron model equations from Izhikevich (2007) adjusted version to fit the striatal FSI neuron model from Corbit et al. (2016) should be able to produce late spiking.",
+)
+
+_Izhikevich2007_Corbit12 = Neuron(
+    parameters="""
+        ### base parameters
+        C               = 0
+        k               = 0
+        v_r             = 0
+        v_t             = 0
+        a               = 0
+        b               = 0
+        c               = 0
+        d               = 0
+        v_peak          = 30
+        ### after spike current parameters
+        tau_uu          = 1
+        dd              = 0
+        ### slow currents parameters
+        a_s             = 0
+        a_n             = 0
+        b_n             = 0
+        ### input current
+        I_app           = 0
+        ### synaptic current parameters
+        tau_ampa        = 1
+        tau_gaba        = 1
+        E_ampa          = 0
+        E_gaba          = -90
+    """,
+    equations="""
+        dg_ampa/dt = -g_ampa/tau_ampa
+        dg_gaba/dt = -g_gaba/tau_gaba
+        I = I_app - neg(g_ampa*(v - E_ampa)) - pos(g_gaba*(v - E_gaba))
+      
+        C * dv/dt = k*(v - v_r)*(v - v_t) - u - pos(uu*(v - E_gaba)) - n + I
+        du/dt     = a*(b*(v - v_r) - u)
+        duu/dt    = -uu/tau_uu
+
+        ds/dt     = a_s*(I - s)
+        dn/dt     = a_n*(b_n*(I - s) - n)
+    """,
+    spike="v >= v_peak",
+    reset="""
+        v = c
+        u = u + d
+        uu = uu + dd
+    """,
+    name="_Izhikevich2007_Corbit12",
+    description="Simple neuron model equations from Izhikevich (2007) adjusted version to fit the striatal FSI neuron model from Corbit et al. (2016) should be able to produce late spiking.",
+)

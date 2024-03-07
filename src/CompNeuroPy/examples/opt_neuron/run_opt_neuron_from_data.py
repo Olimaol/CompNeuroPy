@@ -2,20 +2,21 @@
 This example demonstrates how to use the OptNeuron class to fit an ANNarchy neuron
 model to some experimental data.
 """
+
 from CompNeuroPy import CompNeuroExp, CompNeuroSim, current_step, rmse
 from CompNeuroPy.opt_neuron import OptNeuron
 import numpy as np
 from ANNarchy import Neuron, dt
 
-
 ### in this example we want to fit an ANNarchy neuron model to some data (which ca be
 ### somehow obtained by simulating the neuron and recording variables) for this example,
-### we have the following simple neuron model
+### we have the following simple neuron model, you must not use the :population flag
+### for the parameters!
 my_neuron = Neuron(
     parameters="""
         I_app = 0
-        a = 0 : population
-        b = 0 : population
+        a = 0
+        b = 0
     """,
     equations="""
         r = a*I_app + b
@@ -84,12 +85,14 @@ class my_exp(CompNeuroExp):
 
         For using the CompNeuroExp for OptNeuron, the run function should have
         one argument which is the name of the population which is automatically created
-        by OptNeuron, containing a single neuron of the model which should be optimized.
+        by OptNeuron, containing a single or multiple neurons of the neuron model which
+        should be optimized. Thus, the run function should be able to run the experiment
+        with a single or multiple neurons in the given population!
 
         Args:
             population_name (str):
-                name of the population which contains a single neuron, this will be
-                automatically provided by OptNeuron
+                name of the population with neurons of the tuned neuron model, this will
+                be automatically provided by OptNeuron
 
         Returns:
             results (CompNeuroExp._ResultsCl):
@@ -103,11 +106,6 @@ class my_exp(CompNeuroExp):
                     data (dict):
                         dict with optional data stored during the experiment
         """
-        ### For OptNeuron you have to reset the model and monitors at the beginning of
-        ### the run function! Do not reset the parameters, otherwise the optimization
-        ### will not work!
-        self.reset(parameters=False)
-
         ### you have to start monitors within the run function, otherwise nothing will
         ### be recorded
         self.monitors.start()
@@ -129,9 +127,16 @@ class my_exp(CompNeuroExp):
             monitor_object=self.monitors,
         )
 
-        ### run the simulation, remember setting parameters=False in the reset function!
+        ### run the simulation
         sim_step.run()
-        self.reset(parameters=False)
+        ### Here we reset the model and monitors, creating a new chunk for the next sim
+        ### use the self.reset() function to reset the model and monitors!
+        ### OptNeuron sets the parameters (defined in the variables_bounds dict) of the
+        ### neuron model before each run.
+        ### By using the reset function of the CompNeuroExp class you reset the model to
+        ### this state (all varaiables/parameters not defined in variable bounds are
+        ### reset to compile state)
+        self.reset()
         sim_step.run({"a2": 10})
 
         ### optional: store anything you want in the data dict. For example infomration
@@ -165,6 +170,8 @@ def get_loss(results_ist: CompNeuroExp._ResultsCl, results_soll):
     ### results_ist, we do not use all available information here, but you could
     rec_ist = results_ist.recordings
     pop_ist = results_ist.data["population_name"]
+
+    ### the get_loss function should always calculate the loss for neuron rank 0!
     neuron = 0
 
     ### get the data for calculating the loss from the results_soll
@@ -186,7 +193,7 @@ def get_loss(results_ist: CompNeuroExp._ResultsCl, results_soll):
 
 
 ### now we need to define which variables should be optimized and between which bounds
-variables_bounds = {"a": [-10, 10], "b": [-10, 10]}
+variables_bounds = {"a": [-50, 100], "b": [-50, 150]}
 
 
 def main():
@@ -202,12 +209,12 @@ def main():
         results_soll=experimental_data["results_soll"],
         time_step=experimental_data["time_step"],
         compile_folder_name="annarchy_opt_neuron_example_from_data",
-        method="hyperopt",
+        method="deap",
         record=["r"],
     )
 
     ### run the optimization, define how often the experiment should be repeated
-    fit = opt.run(max_evals=1000, results_file_name="best_from_data")
+    fit = opt.run(max_evals=100, results_file_name="best_from_data")
 
     ### print optimized parameters, we should get around a=0.8 and b=2
     print("a", fit["a"])

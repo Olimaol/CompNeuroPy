@@ -390,9 +390,9 @@ def _get_pop_rate_old(spikes, duration, dt=1, t_start=0, t_smooth_ms=-1):
                 timeshift_start, timeshift_end, timeshift_step
             ).astype(int):
                 hist, edges = np.histogram(times, bins + timeshift)
-                rate[
-                    idx, np.clip(binsCenters + timeshift, 0, rate.shape[1] - 1)
-                ] = hist / (t_smooth_ms / 1000.0)
+                rate[idx, np.clip(binsCenters + timeshift, 0, rate.shape[1] - 1)] = (
+                    hist / (t_smooth_ms / 1000.0)
+                )
 
         poprate = get_nanmean(rate, 0)
         timesteps = np.arange(0, int(round(temp_duration / dt)), 1).astype(int)
@@ -1627,15 +1627,56 @@ def time_data_add_nan(time_arr, data_arr, fill_time_step=None, axis=0):
         data_arr (nD array):
             data array with gaps filled
     """
+    return time_data_fill_gaps(
+        time_arr,
+        data_arr,
+        fill_time_step=fill_time_step,
+        axis=axis,
+        fill="nan",
+    )
+
+
+def time_data_fill_gaps(
+    time_arr, data_arr, fill_time_step=None, axis=0, fill: str | float = "nan"
+):
+    """
+    If there are gaps in time_arr --> fill them with respective time values.
+    Fill the corresponding data_arr values depending on the fill argument.
+
+    By default it is tried to fill the time array with continuously increasing times
+    based on the smallest time difference found there can still be discontinuities after
+    filling the arrays (because existing time values are not changed).
+
+    But one can also give a fixed fill time step.
+
+    Args:
+        time_arr (1D array):
+            times of data_arr in ms
+        data_arr (nD array):
+            the size of the specified dimension of data array must have the same length
+            as time_arr
+        fill_time_step (number, optional, default=None):
+            if there are gaps they are filled with this time step
+        axis (int):
+            which dimension of the data_arr coresponds to the time_arr
+        fill (str or float):
+            how to fill the data array:
+                "nan" (default): fill gaps with nan
+                float: fill gaps with this value
+    """
+    if fill == "nan":
+        fill_value = np.nan
+    else:
+        fill_value = fill
+
     time_arr = time_arr.astype(float)
     data_arr = data_arr.astype(float)
     data_arr_shape = data_arr.shape
 
     if data_arr_shape[axis] != time_arr.size:
-        print(
-            "ERROR time_data_add_nan: time_arr must have same length as specified axis (default=0) of data_arr!"
+        raise ValueError(
+            "time_arr must have same length as specified axis (default=0) of data_arr!"
         )
-        quit()
 
     ### find gaps
     time_diff_arr = np.round(np.diff(time_arr), 6)
@@ -1664,7 +1705,7 @@ def time_data_add_nan(time_arr, data_arr, fill_time_step=None, axis=0):
             current_end + time_diff_min, next_start, time_diff_min
         )
         data_arr_append_shape[axis] = time_arr_append.size
-        data_arr_append = np.zeros(tuple(data_arr_append_shape)) * np.nan
+        data_arr_append = np.ones(tuple(data_arr_append_shape)) * fill_value
         ### append gap filling arrays to splitted arrays
         time_arr_split[split_arr_idx] = np.append(
             arr=time_arr_split[split_arr_idx],
@@ -1741,7 +1782,7 @@ def get_minimum(input_data: list | np.ndarray | tuple | float):
                 sublist if isinstance(sublist, (list, np.ndarray, tuple)) else [sublist]
             )
         ]
-        return float(min(flattened_list))
+        return float(np.nanmin(flattened_list))
     else:
         # If the input is a single value, return it as the minimum
         return float(input_data)
@@ -1769,19 +1810,10 @@ def get_maximum(input_data: list | np.ndarray | tuple | float):
                 sublist if isinstance(sublist, (list, np.ndarray, tuple)) else [sublist]
             )
         ]
-        return float(max(flattened_list))
+        return float(np.nanmax(flattened_list))
     else:
         # If the input is a single value, return it as the maximum
         return float(input_data)
-
-
-# plan = {
-#     "position": [1, 2, 3],
-#     "compartment": ["pop1", "pop2", "pop3"],
-#     "variable": ["v", "v", "v"],
-#     "format": ["line", "line", "line"],
-#     "color": ["k", "k", "k"],
-# }
 
 
 class PlotRecordings:
@@ -2042,8 +2074,23 @@ class PlotRecordings:
         Raises:
             ValueError: If given time_lim is not within the chunk.
         """
-
-        chunk_time_lims = self.recording_times.time_lims(chunk=self.chunk)
+        ### get time limits of chunk of each compartment (use try because not all
+        ### compartments have to be recorded)
+        chunk_time_lims_list = []
+        for compartment in self._compartment_list:
+            try:
+                chunk_time_lims = self.recording_times.time_lims(
+                    chunk=self.chunk, compartment=compartment
+                )
+                chunk_time_lims_list.append(chunk_time_lims)
+            except:
+                continue
+        ### use the minimum and maximum of the time limits of the chunk as chunk time
+        ### limits
+        chunk_time_lims = (
+            get_minimum(np.array(chunk_time_lims_list)[:, 0]),
+            get_maximum(np.array(chunk_time_lims_list)[:, 1]),
+        )
         ### check if time_lim is given
         if isinstance(self.time_lim, type(None)):
             ### get start and end time from recording_times

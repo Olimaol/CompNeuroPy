@@ -26,6 +26,13 @@ dependencies = [
     "typingchecker",
     "pandas",
     "tabulate",
+    "deap",
+    "screeninfo",
+    "cmaes",
+    "pip-chill",
+    "pingouin",
+    "efel",
+    "tqdm",
 ]
 
 [project.urls]

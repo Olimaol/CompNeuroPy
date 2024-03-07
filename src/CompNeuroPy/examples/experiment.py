@@ -3,6 +3,7 @@ This example demonstrates how to use the CompNeuroExp class to combine simulatio
 model and recordings in an experiment. It is shown how to define an experiment, how to
 run it and how to get the results.
 """
+
 from CompNeuroPy import (
     CompNeuroExp,
     CompNeuroSim,
@@ -34,6 +35,10 @@ class MyExp(CompNeuroExp):
             resets the model and monitors
         results():
             returns a results object
+        store_model_state():
+            stores the state of the model used for reset
+        reset_model_state():
+            resets the stored model state
     """
 
     def __init__(
@@ -88,6 +93,7 @@ class MyExp(CompNeuroExp):
         """
         ### call reset at the beginning of the experiment to ensure that the model
         ### is in the same state at the beginning of each experiment run
+        ### we stored the state that the membrane potential is -90 before (see below)
         self.reset()
 
         ### also always start the monitors, they are stopped automatically at the end
@@ -99,17 +105,18 @@ class MyExp(CompNeuroExp):
         get_population(self.model.populations[0]).E_L = E_L
 
         ### SIMULATION START
-        sim_step.run()
+        sim_ramp.run()
         ### if you want to reset the model, you should use the objects reset()
         ### it's the same as the ANNarchy reset + it resets the CompNeuroMonitors
-        ### creating a new chunk, optionally not changing the parameters
+        ### creating a new chunk, optionally not changing the parameters (but still the
+        ### dynamic variables)
         self.reset(parameters=False)
-        sim_ramp.run()
+        sim_step.run()
         ### SIMULATION END
 
         ### optional: store anything you want in the data dict, for example information
         ### about the simulations
-        self.data["sim"] = [sim_step.simulation_info(), sim_ramp.simulation_info()]
+        self.data["sim"] = [sim_ramp.simulation_info(), sim_step.simulation_info()]
         self.data["population_name"] = self.model.populations[0]
         self.data["time_step"] = dt()
 
@@ -126,16 +133,7 @@ if __name__ == "__main__":
     monitors = CompNeuroMonitors({model.populations[0]: ["v"]})
 
     ### define some simulations e.g. using CompNeuroSim
-    sim_step = CompNeuroSim(
-        simulation_function=current_step,
-        simulation_kwargs={
-            "pop": model.populations[0],
-            "t1": 500,
-            "t2": 500,
-            "a1": 0,
-            "a2": 50,
-        },
-    )
+    ### in the experiment we 1st conduct a ramp simulation
     sim_ramp = CompNeuroSim(
         simulation_function=current_ramp,
         simulation_kwargs={
@@ -146,9 +144,29 @@ if __name__ == "__main__":
             "n": 50,
         },
     )
+    ### and 2nd a step simulation
+    sim_step = CompNeuroSim(
+        simulation_function=current_step,
+        simulation_kwargs={
+            "pop": model.populations[0],
+            "t1": 500,
+            "t2": 500,
+            "a1": 0,
+            "a2": 50,
+        },
+    )
 
     ### init and run the experiment
     my_exp = MyExp(monitors=monitors, model=model, sim_step=sim_step, sim_ramp=sim_ramp)
+
+    ### demonstration of the store_model_state function
+    ### the current state of the model is the compilation state, e.g. v shoul be -68
+    print(f"Compilation state v = {get_population(model.populations[0]).v}")
+    ### the reset funciton of CompNeuroExp resets to the compilation state by default
+    ### but you can also store the state of model compartments and reset to this state
+    ### here for example we store that the membrane potential is -90
+    get_population(model.populations[0]).v = -90.0
+    my_exp.store_model_state(compartment_list=model.populations)
 
     ### one use case is to run an experiment multiple times e.g. with different
     ### parameters
@@ -158,7 +176,7 @@ if __name__ == "__main__":
     ### plot of the membrane potential from the first and second chunk using results
     ### experiment run 1
     PlotRecordings(
-        figname="example_experiment_sim_step.png",
+        figname="example_experiment_sim_ramp.png",
         recordings=results_run1.recordings,
         recording_times=results_run1.recording_times,
         chunk=0,
@@ -171,7 +189,7 @@ if __name__ == "__main__":
         },
     )
     PlotRecordings(
-        figname="example_experiment_sim_ramp.png",
+        figname="example_experiment_sim_step.png",
         recordings=results_run1.recordings,
         recording_times=results_run1.recording_times,
         chunk=1,
@@ -185,7 +203,7 @@ if __name__ == "__main__":
     )
     ### experiment run 2
     PlotRecordings(
-        figname="example_experiment2_sim_step.png",
+        figname="example_experiment2_sim_ramp.png",
         recordings=results_run2.recordings,
         recording_times=results_run2.recording_times,
         chunk=0,
@@ -198,7 +216,7 @@ if __name__ == "__main__":
         },
     )
     PlotRecordings(
-        figname="example_experiment2_sim_ramp.png",
+        figname="example_experiment2_sim_step.png",
         recordings=results_run2.recordings,
         recording_times=results_run2.recording_times,
         chunk=1,

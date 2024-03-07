@@ -2,6 +2,7 @@ from ANNarchy import reset
 from CompNeuroPy.monitors import RecordingTimes
 from CompNeuroPy import CompNeuroMonitors
 from CompNeuroPy import model_functions as mf
+from copy import deepcopy
 
 
 class CompNeuroExp:
@@ -49,9 +50,26 @@ class CompNeuroExp:
             monitors (CompNeuroMonitors):
                 CompNeuroMonitors object for recordings
         """
-        self.recordings = {}  # save dict for monitor recordings
         self.monitors = monitors
         self.data = {}  # dict for optional data
+        self._model_state = None
+
+    def store_model_state(self, compartment_list: list[str]):
+        """
+        Store the state of the model. If this is called, reset does not reset the model
+        to compile state but to the state stored here.
+
+        Args:
+            compartment_list (list[str]):
+                list of compartments to store the state of
+        """
+        self._model_state = mf._get_all_attributes(compartment_list)
+
+    def reset_model_state(self):
+        """
+        Reset the stored model state.
+        """
+        self._model_state = None
 
     def reset(
         self,
@@ -59,6 +77,7 @@ class CompNeuroExp:
         projections=False,
         synapses=False,
         model=True,
+        model_state=True,
         parameters=True,
     ):
         """
@@ -68,9 +87,12 @@ class CompNeuroExp:
         !!! warning
             If you want the network to have the same state at the beginning of each
             experiment run, you should call this function at the beginning of the run
-            function of the CompNeuroExp class! If you only want to have the same time
-            for the network at the beginning of each experiment run, set populations,
-            projections, and synapses to False.
+            function of the CompNeuroExp class (except using OptNeuron)! If you only
+            want to have the same time for the network at the beginning of each
+            experiment run, set populations, projections, and synapses to False and
+            model to True. If you want to set parameters during the experiment and also
+            reset the dynamic variables without resetting the parameters, set parameters
+            to False.
 
         Args:
             populations (bool, optional):
@@ -80,11 +102,16 @@ class CompNeuroExp:
             synapses (bool, optional):
                 reset synapses. Defaults to False.
             model (bool, optional):
-                If False, do ignore the arguments populations, projections, and
-                synapses (the network state doesn't change) and only reset the
-                CompNeuroMonitors Default: True.
+                If False, do ignore all other arguments (the network state doesn't
+                change) and only reset the CompNeuroMonitors (creating new chunk)
+                Default: True.
+            model_state (bool, optional):
+                If True, reset the model to the stored model state instead of
+                compilation state (all compartments not stored in the model state will
+                still be resetted to compilation state). Default: True.
             parameters (bool, optional):
-                If False, do not reset the parameters of the model. Default: True.
+                If True, reset the parameters of the model (either to compile or stored
+                state). Default: True.
         """
         reset_kwargs = {}
         reset_kwargs["populations"] = populations
@@ -94,16 +121,27 @@ class CompNeuroExp:
 
         ### reset CompNeuroMonitors and ANNarchy model
         if self.monitors is not None:
-            self.monitors.reset(model=model, parameters=parameters, **reset_kwargs)
+            ### there are monitors, therefore use theri reset function
+            self.monitors.reset(model=model, **reset_kwargs, parameters=parameters)
+            ### after reset, set the state of the model to the stored state
+            if model_state and self._model_state is not None and model is True:
+                ### if parameters=False, they are not set
+                mf._set_all_attributes(self._model_state, parameters=parameters)
         elif model is True:
             if parameters is False:
                 ### if parameters=False, get parameters before reset and set them after
                 ### reset
-                parameters = mf._get_all_parameters()
+                parameters_dict = mf._get_all_parameters()
+            ### there are no monitors, but model should be resetted, therefore use
+            ### ANNarchy's reset function
             reset(**reset_kwargs)
             if parameters is False:
                 ### if parameters=False, set parameters after reset
-                mf._set_all_parameters(parameters)
+                mf._set_all_parameters(parameters_dict)
+            ### after reset, set the state of the model to the stored state
+            if model_state and self._model_state is not None:
+                ### if parameters=False, they are not set
+                mf._set_all_attributes(self._model_state, parameters=parameters)
 
     def results(self):
         """
@@ -142,7 +180,10 @@ class CompNeuroExp:
             obj.recordings = []
             obj.recording_times = None
             obj.mon_dict = {}
-        obj.data = self.data
+        ### need deepcopy here because experiment can be run mutliple times and within
+        ### experiment the entries of self.data can be changed, and without deepcopy
+        ### the data of older results objects would also be changed
+        obj.data = deepcopy(self.data)
 
         return obj
 

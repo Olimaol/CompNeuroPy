@@ -20,15 +20,15 @@ from run_opt_neuron_from_data import my_neuron as simple_neuron
 complex_neuron = Neuron(
     parameters="""
         I_app = 0
-        f = 6.0542364610842572e-002 : population
-        e = 3.7144041714209490e+000 : population
-        d = -4.9446336126026436e-001 : population
-        c = 9.0909599124334911e-002 : population
-        b = -4.4497411506061648e-003 : population
-        a = -6.2239117460540167e-005 : population
+        m0 = 1
+        m1 = 2
+        m2 = 3
+        n0 = 1
+        n1 = 0
+        n2 = -1
     """,
     equations="""
-        r = a*I_app**5 + b*I_app**4 + c*I_app**3 + d*I_app**2 + e*I_app**1 + f
+        r = m0*I_app + n0 + m1*I_app + n1 + m2*I_app + n2
     """,
 )
 
@@ -60,6 +60,9 @@ def get_loss(
     pop_ist = results_ist.data["population_name"]
     rec_soll = results_soll.recordings
     pop_soll = results_soll.data["population_name"]
+
+    ### the get_loss function should always calculate the loss for neuron rank 0! For
+    ### both, the target and the optimized neuron model.
     neuron = 0
 
     ### get the data for calculating the loss from the recordings of the
@@ -91,14 +94,14 @@ def main():
         target_neuron_model=complex_neuron,
         time_step=1,
         compile_folder_name="annarchy_opt_neuron_example_from_neuron",
-        method="hyperopt",
+        method="deap",
         record=["r"],
     )
 
     ### run the optimization, define how often the experiment should be repeated
-    fit = opt.run(max_evals=1000, results_file_name="best_from_neuron")
+    fit = opt.run(max_evals=100, results_file_name="best_from_neuron")
 
-    ### print optimized parameters, we should get around a=2.8 and b=0.28
+    ### print optimized parameters, we should get around a=6 and b=0
     print("a", fit["a"])
     print("b", fit["b"])
     print(list(fit.keys()))
