@@ -17,7 +17,7 @@ def anova_between_groups(
     Perform a N-way ANOVA with post-hoc tests.
     Besides creating the print_file, it also saves the ANOVA table and the post-hoc tests
     in the same folder as the print_file. (names:
-    anova_between_groups_equal_var_<group_name>.pkl, anova_between_groups_anova.pkl, and
+    anova_between_groups_equal_var_*group_name*.pkl, anova_between_groups_anova.pkl, and
     anova_between_groups_post_hoc.pkl)
 
     Args:

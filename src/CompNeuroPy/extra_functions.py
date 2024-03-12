@@ -1043,8 +1043,12 @@ class DeapCma:
 
 class VClampParamSearch:
     """
-    Class to obtain the parameters of a neuron model defined by equations from a given
-    neuron model by doing some voltage step simulations.
+    Class to obtain the parameters of some neuron model equations (describing the change
+    of the membrane potential v) by simulating voltage steps with a given neuron_model.
+    An voltage clamp version of the equations is used to calculate instantaneous and
+    holding "currents" for specific voltage steps. The parameters are then optimized
+    to fit the calculated "currents" to the measured currents from the simulated neuron
+    model.
 
     Attributes:
         p_opt (dict):
@@ -2016,8 +2020,8 @@ def interactive_plot(
         ncols (int):
             number of columns of subplots
         sliders (list):
-            list of dictionaries with slider parameters, at least the following keys
-            have to be present:
+            list of dictionaries with slider kwargs (see matplotlib.widgets.Slider), at
+            least the following keys have to be present:
                 - label (str):
                     label of the slider
                 - valmin (float):
@@ -2027,9 +2031,26 @@ def interactive_plot(
         create_plot (Callable):
             function which fills the subplots, has to have the signature
             create_plot(axs, sliders), where axs is a list of axes (for each subplot)
-            and sliders is the sliders list with newly added keys "ax" (axes of the
-            slider) and "slider" (the slider itself, so that you can access the slider
-            values in the create_plot function with sliders[<slider_idx>]["slider"].val)
+            and sliders is the given sliders list with newly added keys "ax" (axes of
+            the slider) and "slider" (the Slider object itself, so that you can access
+            the slider values in the create_plot function using the .val attribute)
+
+    Examples:
+        ```python
+        def create_plot(axs, sliders):
+            axs[0].axhline(sliders[0]["slider"].val, color="r")
+            axs[1].axvline(sliders[1]["slider"].val, color="r")
+
+        interactive_plot(
+            nrows=2,
+            ncols=1,
+            sliders=[
+                {"label": "a", "valmin": 0.0, "valmax": 1.0, "valinit": 0.3},
+                {"label": "b", "valmin": 0.0, "valmax": 1.0, "valinit": 0.7},
+            ],
+            create_plot=create_plot,
+        )
+        ```
     """
 
     def update(axs, sliders):
@@ -2112,7 +2133,9 @@ def efel_loss(trace1, trace2, feature_list):
             dictionary with the keys "T" (time), "V" (voltage), "stim_start" (start of
             the stimulus), "stim_end" (end of the stimulus)
         feature_list (list):
-            list of feature names which should be used to calculate the loss
+            list of feature names which should be used to calculate the loss (see
+            https://efel.readthedocs.io/en/latest/eFeatures.html, some of them are
+            available)
 
     Returns:
         loss (np.array):

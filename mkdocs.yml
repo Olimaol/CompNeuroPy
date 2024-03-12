@@ -65,6 +65,7 @@ nav:
     - Model Functions: 'additional/model_functions.md'
     - System Functions: 'additional/system_functions.md'
     - Extra Functions: 'additional/extra_functions.md'
+    - Statistic Functions: 'additional/statistic_functions.md'
   - 'Examples':
     - Generate Models: 'examples/generate_models.md'
     - Generate Simulations: 'examples/run_and_monitor_simulations.md'

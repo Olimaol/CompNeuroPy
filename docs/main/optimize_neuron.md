@@ -2,7 +2,7 @@
 CompNeuroPy provides the [`OptNeuron`](#CompNeuroPy.opt_neuron.OptNeuron) class which can be used to define your optimization of an ANNarchy neuron model (tuning the parameters). You can either optimize your neuron model to some data or try to reproduce the dynamics of a different neuron model (for example to reduce a more complex model). In both cases, you have to define the experiment which generates the data of interest with your neuron model.
 
 !!! warning
-    OptNeuron has to be imported from "CompNeuroPy.opt_neuron" and you have to install torch, sbi, bads and hyperopt (e.g. pip install torch sbi bads hyperopt) separately.
+    OptNeuron has to be imported from "CompNeuroPy.opt_neuron" and you have to install torch, sbi, pybads and hyperopt (e.g. pip install torch sbi pybads hyperopt) separately.
 
 Used optimization methods:
 
@@ -18,7 +18,7 @@ Used optimization methods:
 
     * Fortin, F. A., De Rainville, F. M., Gardner, M. A. G., Parizeau, M., & Gagné, C. (2012). DEAP: Evolutionary algorithms made easy. The Journal of Machine Learning Research, 13(1), 2171-2175. [pdf](https://www.jmlr.org/papers/volume13/fortin12a/fortin12a.pdf)
 
-- [bads](https://acerbilab.github.io/pybads/)
+- [pybads](https://acerbilab.github.io/pybads/)
 
     * Singh, G. S., & Acerbi, L. (2023). PyBADS: Fast and robust black-box optimization in Python. arXiv preprint [arXiv:2306.15576](https://arxiv.org/abs/2306.15576).
     * Acerbi, L., & Ma, W. J. (2017). Practical Bayesian optimization for model fitting with Bayesian adaptive direct search. Advances in neural information processing systems, 30. [pdf](https://proceedings.neurips.cc/paper_files/paper/2017/file/df0aab058ce179e4f7ab135ed4e641a9-Paper.pdf)

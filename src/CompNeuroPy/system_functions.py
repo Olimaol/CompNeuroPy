@@ -289,8 +289,26 @@ def create_data_raw_folder(
         folder_name (str):
             Name of the folder to create.
 
-        **kwargs:
+        **kwargs (Any, optional):
             Global variables of the caller script.
+
+    Examples:
+        ```python
+        from CompNeuroPy import create_data_raw_folder
+
+        ### define global variables
+        var1 = 1
+        var2 = "test"
+        var3 = [1, 2, 3]
+
+        ### call the function
+        create_data_raw_folder(
+            "my_data_raw_folder",
+            var1=var1,
+            var2=var2,
+            var3=var3,
+        )
+        ```
     """
     ### check if folder already exists
     if os.path.isdir(folder_name):
