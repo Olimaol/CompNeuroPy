@@ -1,6 +1,6 @@
 from ANNarchy import reset
 from CompNeuroPy.monitors import RecordingTimes
-from CompNeuroPy import CompNeuroMonitors
+from CompNeuroPy.monitors import CompNeuroMonitors
 from CompNeuroPy import model_functions as mf
 from copy import deepcopy
 

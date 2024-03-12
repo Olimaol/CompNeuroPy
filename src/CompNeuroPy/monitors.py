@@ -696,7 +696,7 @@ class RecordingTimes:
         """
         return self.recording_times_list
 
-    def nr_periods(self, chunk=None, compartment=None):
+    def nbr_periods(self, chunk=None, compartment=None):
         """
         Get the number of recording periods (start-pause) of a specified chunk/model
         compartment.
@@ -716,6 +716,8 @@ class RecordingTimes:
         chunk = self._check_chunk(chunk)
         compartment = self.__check_compartment__(compartment, chunk)
         return self._get_nr_periods(chunk, compartment)
+
+    nr_periods = nbr_periods
 
     def combine_periods(
         self,
