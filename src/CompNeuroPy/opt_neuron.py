@@ -183,7 +183,9 @@ class OptNeuron:
             self.bads_params_dict = bads_params_dict
             self.loss_history = []
             self.start_time = time()
-            self.recording_period = recording_period
+            self.recording_period_str = self._get_recording_period_string(
+                recording_period
+            )
 
             ### if using deap pop size is the number of individuals for the optimization
             if method == "deap":
@@ -229,6 +231,28 @@ class OptNeuron:
             model, _, monitors = self._generate_models(self.popsize)
             self.monitors = monitors
             self.experiment = experiment(monitors=monitors)
+
+    def _get_recording_period_string(self, recording_period: float | None):
+        """
+        Get the recording period string for the CompNeuroMonitors. If there is no
+        recording period or if there is only the variable "spike" recorded, the
+        recording period string is empty.
+
+        Args:
+            recording_period (float, optional):
+                The recording period for the simulation in ms. Default: None.
+
+        Returns:
+            recording_period_str (str):
+                The recording period string for the CompNeuroMonitors.
+        """
+        recording_period_str = (
+            f";{recording_period}"
+            if recording_period is not None
+            and ("spike" not in self.record or len(self.record) > 1)
+            else ""
+        )
+        return recording_period_str
 
     def _get_lower_upper_p0(self):
         """
@@ -401,15 +425,9 @@ class OptNeuron:
 
                 ### create monitors
                 if len(self.record) > 0:
-                    recording_period_str = (
-                        f";{self.recording_period}"
-                        if self.recording_period is not None
-                        and ("spike" not in self.record or len(self.record) > 1)
-                        else ""
-                    )
                     monitors = CompNeuroMonitors(
                         {
-                            f"{pop_name}{recording_period_str}": self.record
+                            f"{pop_name}{self.recording_period_str}": self.record
                             for pop_name in [
                                 model.populations[0],
                                 target_model.populations[0],
@@ -438,14 +456,10 @@ class OptNeuron:
                 )
                 ### create monitors
                 if len(self.record) > 0:
-                    recording_period_str = (
-                        f";{self.recording_period}"
-                        if self.recording_period is not None
-                        and ("spike" not in self.record or len(self.record) > 1)
-                        else ""
-                    )
                     monitors = CompNeuroMonitors(
-                        {f"{model.populations[0]}{recording_period_str}": self.record}
+                        {
+                            f"{model.populations[0]}{self.recording_period_str}": self.record
+                        }
                     )
 
         return model, target_model, monitors
