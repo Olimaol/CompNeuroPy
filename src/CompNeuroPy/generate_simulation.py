@@ -1,6 +1,6 @@
 from ANNarchy import get_time
 from CompNeuroPy import extra_functions as ef
-from CompNeuroPy import CompNeuroMonitors
+from CompNeuroPy.monitors import CompNeuroMonitors
 import numpy as np
 from typing import Callable
 
