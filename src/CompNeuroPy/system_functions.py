@@ -232,6 +232,7 @@ def run_script_parallel(
             Number of total runs, only used if args_list is not a list of lists.
             Default: 1.
     """
+    ### check if args_list is a list of lists
     if not isinstance(args_list[0], list):
         args_list = [args_list] * n_total
     elif n_total != 1:
@@ -239,6 +240,10 @@ def run_script_parallel(
             "run_script_parallel; Warning: n_total is ignored because args_list is a list of lists"
         )
 
+    ### do not use more jobs than necessary
+    n_jobs = min(n_jobs, len(args_list))
+
+    ### run the script in parallel
     Parallel(n_jobs=n_jobs)(
         delayed(os.system)(f"python {script_path} {' '.join(args)}")
         for args in args_list
@@ -284,8 +289,26 @@ def create_data_raw_folder(
         folder_name (str):
             Name of the folder to create.
 
-        **kwargs:
+        **kwargs (Any, optional):
             Global variables of the caller script.
+
+    Examples:
+        ```python
+        from CompNeuroPy import create_data_raw_folder
+
+        ### define global variables
+        var1 = 1
+        var2 = "test"
+        var3 = [1, 2, 3]
+
+        ### call the function
+        create_data_raw_folder(
+            "my_data_raw_folder",
+            var1=var1,
+            var2=var2,
+            var3=var3,
+        )
+        ```
     """
     ### check if folder already exists
     if os.path.isdir(folder_name):

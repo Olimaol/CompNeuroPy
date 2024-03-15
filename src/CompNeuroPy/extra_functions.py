@@ -6,6 +6,7 @@ from CompNeuroPy import analysis_functions as af
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy import model_functions as mf
 from CompNeuroPy.generate_model import CompNeuroModel
+from CompNeuroPy.experiment import CompNeuroExp
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -1042,8 +1043,12 @@ class DeapCma:
 
 class VClampParamSearch:
     """
-    Class to obtain the parameters of a neuron model defined by equations from a given
-    neuron model by doing some voltage step simulations.
+    Class to obtain the parameters of some neuron model equations (describing the change
+    of the membrane potential v) by simulating voltage steps with a given neuron_model.
+    An voltage clamp version of the equations is used to calculate instantaneous and
+    holding "currents" for specific voltage steps. The parameters are then optimized
+    to fit the calculated "currents" to the measured currents from the simulated neuron
+    model.
 
     Attributes:
         p_opt (dict):
@@ -1055,9 +1060,10 @@ class VClampParamSearch:
         self,
         neuron_model: Neuron,
         equations: str = """
-        C*dv/dt = k*(v - v_r)*(v - v_t) - u
+        C*dv/dt = k*(v - v_r)*(v - v_t) - u + I
         du/dt = a*(b*(v - v_r) - u)
         """,
+        external_current_var: str = "I",
         bounds: dict[str, tuple[float, float]] = {
             "C": (0.1, 100),
             "v_r": (-90, -40),
@@ -1085,9 +1091,14 @@ class VClampParamSearch:
             equations (str, optional):
                 The equations whose parameters should be obtained. Default: Izhikevich
                 2007 neuron model
+            external_current_var (str, optional):
+                The name of the variable in the neuron model which is used as the
+                external current. Has to be used in the neuron model and the given
+                equations Default: "I"
             bounds (dict, optional):
-                The bounds for the parameters. For each parameter a bound should be
-                given! Default: Izhikevich 2007 neuron model
+                The bounds for the parameters. For each parameter of the equation a
+                bound should be given (except for the external current variable)!
+                Default: Izhikevich 2007 neuron model
             p0 (dict, optional):
                 The initial guess for the parameters. Dict keys should be the same as
                 the keys of bounds. The values can be either a single number for each
@@ -1126,6 +1137,7 @@ class VClampParamSearch:
         self._verbose_extreme = False
         ### store the given neuron model and a voltage clamp version of it
         self.neuron_model = neuron_model
+        self.external_current_var = external_current_var
         self._neuron_model = deepcopy(neuron_model)
         self._neuron_model_clamp = self._get_neuron_model_clamp()
 
@@ -1155,9 +1167,9 @@ class VClampParamSearch:
         if self.do_plot:
             sf.create_dir("/".join(plot_file.split("/")[:-1]))
 
-        ### create the functions for v_clamp_inst and v_clamp_hold using the given
+        ### create the functions for I_clamp_inst and I_clamp_hold using the given
         ### izhikevich equations
-        self._f_inst, self._f_hold, self._f_variables = self._create_v_clamp_functions()
+        self._f_inst, self._f_hold, self._f_variables = self._create_I_clamp_functions()
 
         ### create the voltage step arrays
         self._v_0_arr, self._v_step_arr = self._create_voltage_step_arrays()
@@ -1168,25 +1180,25 @@ class VClampParamSearch:
         mf.cnp_clear()
         self._model_normal, self._model_clamp = self._create_model()
 
-        ### perform resting state and voltage step simulations to obtain v_clamp_inst,
-        ### v_clamp_hold and v_rest
-        self._v_clamp_inst_arr = None
-        self._v_clamp_hold_arr = None
+        ### perform resting state and voltage step simulations to obtain I_clamp_inst,
+        ### I_clamp_hold and v_rest
+        self._I_clamp_inst_arr = None
+        self._I_clamp_hold_arr = None
         if self.verbose:
             print("Performing simulations...")
         (
             self._v_rest,
-            self._v_clamp_inst_arr,
-            self._v_clamp_hold_arr,
+            self._I_clamp_inst_arr,
+            self._I_clamp_hold_arr,
             self._v_step_unique,
-            self._v_clamp_hold_unique,
+            self._I_clamp_hold_unique,
         ) = self._simulations()
 
-        ### tune the free paramters of the functions for v_clamp_inst and v_clamp_hold
+        ### tune the free paramters of the functions for I_clamp_inst and I_clamp_hold
         ### to fit the data
         if self.verbose:
             print("Tuning parameters...")
-        self._p_opt = self._tune_v_clamp_functions()
+        self._p_opt = self._tune_I_clamp_functions()
         self.p_opt = {
             param_name: self._p_opt.get(param_name, None)
             for param_name in self.bounds.keys()
@@ -1200,7 +1212,7 @@ class VClampParamSearch:
         sf.save_variables(
             [self.p_opt],
             [results_file.split("/")[-1]],
-            results_file.split("/")[:-1] if "/" in results_file else "./",
+            "/".join(results_file.split("/")[:-1]) if "/" in results_file else "./",
         )
         ### save human readable as json file
         json.dump(
@@ -1213,7 +1225,8 @@ class VClampParamSearch:
         )
 
         ### create a neuron model with the tuned parameters and the given equations
-        ### then run the simulations again with this neuron model
+        ### then run the simulations again with this neuron model to do the plots
+        ### with the tuned parameters
         if self.verbose:
             print("Running simulations with tuned parameters...")
         mf.cnp_clear()
@@ -1257,24 +1270,28 @@ class VClampParamSearch:
                 the neuron model with the tuned parameters and the given equations
         """
         ### create the neuron with the tuned parameters, if a parameter is not tuned
-        ### use the mid of the bounds (these parameters should not affect v_clamp_inst
-        ### and v_clamp_hold)
+        ### use the mid of the bounds (these parameters should not affect I_clamp_inst
+        ### and I_clamp_hold)
         parameters = "\n".join(
             [
                 f"{key} = {self._p_opt.get(key,sum(self.bounds[key])/2)}"
                 for key in self.bounds.keys()
             ]
         )
+        ### also add the external current variable
+        parameters = parameters + "\n" + f"{self.external_current_var} = 0"
         neuron_mondel = Neuron(
             parameters=parameters,
             equations=self.equations + "\nr=0",
         )
+        if self.verbose:
+            print(f"Neuron model with tuned parameters:\n{neuron_mondel}")
 
         return neuron_mondel
 
-    def _tune_v_clamp_functions(self):
+    def _tune_I_clamp_functions(self):
         """
-        Tune the free paramters of the functions for v_clamp_inst and v_clamp_hold
+        Tune the free paramters of the functions for I_clamp_inst and I_clamp_hold
         to fit the data.
         """
         ### get the names of the free parameters which will be tuned
@@ -1285,7 +1302,7 @@ class VClampParamSearch:
             sub_var_names_list.append(str(var))
 
         ### target array for the error function below
-        target_arr = np.concatenate([self._v_clamp_inst_arr, self._v_clamp_hold_unique])
+        target_arr = np.concatenate([self._I_clamp_inst_arr, self._I_clamp_hold_unique])
 
         ### create a function for the error
         def error_function(x):
@@ -1385,16 +1402,16 @@ class VClampParamSearch:
 
         return result_dict
 
-    def _create_v_clamp_functions(self):
+    def _create_I_clamp_functions(self):
         """
-        Create the functions for v_clamp_inst and v_clamp_hold using the given
+        Create the functions for I_clamp_inst and I_clamp_hold using the given
         izhikevich equations.
 
         Returns:
             f_inst (Callable):
-                Function for v_clamp_inst
+                Function for I_clamp_inst
             f_hold (Callable):
-                Function for v_clamp_hold
+                Function for I_clamp_hold
             variables (list):
                 List of variables used for the functions
         """
@@ -1411,8 +1428,7 @@ class VClampParamSearch:
         ### values
         variables_sympy_dict = {key: Symbol(key) for key in variables_name_list}
 
-        ### also create sympy symbols for v_clamp, v_0 and v_step
-        variables_sympy_dict["v_clamp"] = Symbol("v_clamp")
+        ### also create sympy symbols for v_0 and v_step
         variables_sympy_dict["v_0"] = Symbol("v_0")
         variables_sympy_dict["v_step"] = Symbol("v_step")
 
@@ -1423,11 +1439,11 @@ class VClampParamSearch:
         for line_idx, line in enumerate(eq_line_list):
             left_side = line.split("=")[0]
             right_side = line.split("=")[1]
-            ### check if line contains dv/dt, replace it with v_clamp and add v_clamp
-            ### to variables_to_solve_for_list, also set instant_update to True
+            ### check if line contains dv/dt, replace it with 0 and add external current
+            ### variable to variables_to_solve_for_list, also set instant_update to True
             if "dv/dt" in line:
-                variables_to_solve_for_list.append("v_clamp")
-                left_side = left_side.replace("dv/dt", "v_clamp")
+                variables_to_solve_for_list.append(self.external_current_var)
+                left_side = left_side.replace("dv/dt", "0")
                 instant_update_list.append(True)
             ### check if line contains any other derivative with syntax "d<var>/dt"
             ### using re, replace it with 0 and add the variable to
@@ -1460,8 +1476,8 @@ class VClampParamSearch:
             eq_sympy_list_hold_v_0, variables_to_solve_for_list, "holding v_0"
         )
 
-        ### 2nd for v_clamp_inst set v to v_step only in equaitons which are
-        ### updated instantaneously  (v_clamp and all non-derivatives), for all
+        ### 2nd for I_clamp_inst set v to v_step only in equations which are
+        ### updated instantaneously  (I_clamp and all non-derivatives), for all
         ### derivatives use the solution for holding v_0
         eq_sympy_list_inst = deepcopy(eq_sympy_list)
         for line_idx, line in enumerate(eq_sympy_list_inst):
@@ -1484,7 +1500,7 @@ class VClampParamSearch:
             eq_sympy_list_inst, variables_to_solve_for_list, "step from v_0 to v_step"
         )
 
-        ### 3rd for v_clamp_hold (i.e. holding v_step) set v to v_step in all
+        ### 3rd for I_clamp_hold (i.e. holding v_step) set v to v_step in all
         ### equations
         eq_sympy_list_hold = deepcopy(eq_sympy_list)
         for line_idx, line in enumerate(eq_sympy_list_hold):
@@ -1496,21 +1512,22 @@ class VClampParamSearch:
             eq_sympy_list_hold, variables_to_solve_for_list, "holding v_step"
         )
 
-        ### get the equations for v_clamp_inst and v_clamp_hold
-        eq_v_clamp_inst = solution_inst[variables_sympy_dict["v_clamp"]]
-        eq_v_clamp_hold = solution_hold[variables_sympy_dict["v_clamp"]]
+        ### get the equations for I_clamp_inst and I_clamp_hold (i.e. the external
+        ### current variable)
+        eq_I_clamp_inst = solution_inst[variables_sympy_dict[self.external_current_var]]
+        eq_I_clamp_hold = solution_hold[variables_sympy_dict[self.external_current_var]]
         if self.verbose:
-            print(f"Equation for v_clamp_inst: {factor(eq_v_clamp_inst)}")
-            print(f"Equation for v_clamp_hold: {factor(eq_v_clamp_hold)}")
+            print(f"Equation for I_clamp_inst: {factor(eq_I_clamp_inst)}")
+            print(f"Equation for I_clamp_hold: {factor(eq_I_clamp_hold)}")
 
-        ### create functions for v_clamp_inst and v_clamp_hold
-        ### 1st obtain all variables from the equations for v_clamp_inst and v_clamp_hold
+        ### create functions for I_clamp_inst and I_clamp_hold
+        ### 1st obtain all variables from the equations for I_clamp_inst and I_clamp_hold
         f_variables = list(
-            set(list(eq_v_clamp_inst.free_symbols) + list(eq_v_clamp_hold.free_symbols))
+            set(list(eq_I_clamp_inst.free_symbols) + list(eq_I_clamp_hold.free_symbols))
         )
         ### 2nd create a function for each equation
-        f_inst = lambdify(f_variables, eq_v_clamp_inst)
-        f_hold = lambdify(f_variables, eq_v_clamp_hold)
+        f_inst = lambdify(f_variables, eq_I_clamp_inst)
+        f_hold = lambdify(f_variables, eq_I_clamp_hold)
 
         return f_inst, f_hold, f_variables
 
@@ -1567,15 +1584,15 @@ class VClampParamSearch:
 
     def _simulations(self):
         """
-        Perform the resting state and voltage step simulations to obtain v_clamp_inst,
-        v_clamp_hold and v_rest.
+        Perform the resting state and voltage step simulations to obtain I_clamp_inst,
+        I_clamp_hold and v_rest.
 
         Returns:
             v_rest (float):
                 resting state voltage
-            v_clamp_inst (np.array):
+            I_clamp_inst (np.array):
                 array of the voltage clamp values directly after the voltage step
-            v_clamp_hold (np.array):
+            I_clamp_hold (np.array):
                 array of the voltage clamp values after the holding period
 
         """
@@ -1587,71 +1604,72 @@ class VClampParamSearch:
         simulate(duration)
         get_population("pop_clamp").v = self._v_step_arr
         simulate(self._timestep)
-        v_clamp_inst_arr = get_population("pop_clamp").v_clamp
+        I_clamp_inst_arr = get_population("pop_clamp").I_clamp
         simulate(duration - self._timestep)
-        v_clamp_hold_arr = get_population("pop_clamp").v_clamp
+        I_clamp_hold_arr = get_population("pop_clamp").I_clamp
         v_rest = get_population("pop_normal").v[0]
 
         ### get unique values of v_step and their indices
         v_step_unique, v_step_unique_idx = np.unique(
             self._v_step_arr, return_index=True
         )
-        ### get the corresponding values of v_clamp_hold (because it does only depend om
+        ### get the corresponding values of I_clamp_hold (because it does only depend on
         ### v_step)
-        v_clamp_hold_unique = v_clamp_hold_arr[v_step_unique_idx]
+        I_clamp_hold_unique = I_clamp_hold_arr[v_step_unique_idx]
 
-        if self.do_plot and not isinstance(self._v_clamp_inst_arr, type(None)):
+        if self.do_plot and not isinstance(self._I_clamp_inst_arr, type(None)):
+            plt.close("all")
             plt.figure(figsize=(6.4 * 3, 4.8 * 2))
-            ### create a 2D color-coded plot of the data for v_clamp_inst and v_clamp_hold
+            ### create a 2D color-coded plot of the data for I_clamp_inst and I_clamp_hold
             x = self._v_0_arr
             y = self._v_step_arr
 
-            ### create 2 subplots for original v_clamp_inst and v_clamp_hold
+            ### create 2 subplots for original I_clamp_inst and I_clamp_hold
             plt.subplot(231)
-            self._plot_v_clamp_subplot(
+            self._plot_I_clamp_subplot(
                 x,
                 y,
-                self._v_clamp_inst_arr,
-                "v_clamp_inst original",
+                self._I_clamp_inst_arr,
+                "I_clamp_inst original",
             )
             plt.subplot(234)
-            self._plot_v_clamp_subplot(
+            self._plot_I_clamp_subplot(
                 x,
                 y,
-                self._v_clamp_hold_arr,
-                "v_clamp_hold original",
+                self._I_clamp_hold_arr,
+                "I_clamp_hold original",
             )
 
-            ### create 2 subplots for tuned v_clamp_inst and v_clamp_hold
+            ### create 2 subplots for tuned I_clamp_inst and I_clamp_hold
             plt.subplot(232)
-            self._plot_v_clamp_subplot(
+            self._plot_I_clamp_subplot(
                 x,
                 y,
-                v_clamp_inst_arr,
-                "v_clamp_inst tuned",
+                I_clamp_inst_arr,
+                "I_clamp_inst tuned",
             )
             plt.subplot(235)
-            self._plot_v_clamp_subplot(
+            self._plot_I_clamp_subplot(
                 x,
                 y,
-                v_clamp_hold_arr,
-                "v_clamp_hold tuned",
+                I_clamp_hold_arr,
+                "I_clamp_hold tuned",
             )
 
             ### create 2 subplots for differences
             plt.subplot(233)
-            self._plot_v_clamp_subplot(
+            self._plot_I_clamp_subplot(
                 x,
                 y,
-                self._v_clamp_inst_arr - v_clamp_inst_arr,
-                "v_clamp_inst diff",
+                self._I_clamp_inst_arr - I_clamp_inst_arr,
+                "I_clamp_inst diff",
             )
             plt.subplot(236)
-            self._plot_v_clamp_subplot(
+            self._plot_I_clamp_subplot(
                 x,
                 y,
-                self._v_clamp_hold_arr - v_clamp_hold_arr,
-                "v_clamp_hold diff",
+                self._I_clamp_hold_arr - I_clamp_hold_arr,
+                "I_clamp_hold diff",
             )
 
             plt.tight_layout()
@@ -1660,17 +1678,17 @@ class VClampParamSearch:
                 self.plot_file.split(".")[0] + "_data." + self.plot_file.split(".")[1],
                 dpi=300,
             )
-            plt.close()
+            plt.close("all")
 
         return (
             v_rest,
-            v_clamp_inst_arr,
-            v_clamp_hold_arr,
+            I_clamp_inst_arr,
+            I_clamp_hold_arr,
             v_step_unique,
-            v_clamp_hold_unique,
+            I_clamp_hold_unique,
         )
 
-    def _plot_v_clamp_subplot(self, x, y, c, label):
+    def _plot_I_clamp_subplot(self, x, y, c, label):
         plt.title(label)
 
         ci = c
@@ -1833,9 +1851,9 @@ class VClampParamSearch:
 
     def _adjust_equations_for_voltage_clamp(self, eq_line_list: list):
         """
-        Replaces the 'dv/dt' or 'v+=' equation with a voltage clamp version in which the
-        new variable 'v_clamp' is calculated from the right side of the 'dv/dt' or 'v+='
-        equation.
+        Replaces the 'dv/dt' equation with a voltage clamp version (dv/dt=0) in which the
+        new variable 'I_clamp' is obtained by solving the 'dv/dt' equation for its
+        external current variable.
 
         Args:
             eq_line_list (list):
@@ -1861,81 +1879,46 @@ class VClampParamSearch:
         ### remove whitespaces
         eq_v = eq_v.replace(" ", "")
 
-        ### split eqatuion at ":" to separate flags
+        ### split eqatuion at ":" to ignore flags
         eq_v_split = eq_v.split(":")
         eq_v = eq_v_split[0]
-        ### check if flags are present
-        if len(eq_v_split) == 1:
-            flags = ""
-        else:
-            flags = ":" + eq_v_split[1]
         ### adjust the equation for voltage clamp
-        if "+=" in eq_v:
-            eq_v, eq_v_clamp = self._adjust_equation_for_voltage_clamp_plus(eq_v, flags)
-        else:
-            eq_v, eq_v_clamp = self._adjust_equation_for_voltage_clamp_dvdt(eq_v, flags)
+        eq_v, eq_I_clamp = self._adjust_equation_for_voltage_clamp_dvdt(eq_v)
         ### delete old equation from equation list using the index of the equation
         eq_line_list.pop(line_is_v_list.index(True))
         ### insert new equation at the same position
         eq_line_list.insert(line_is_v_list.index(True), eq_v)
-        ### insert new equation for "v_clamp" at the same position
-        eq_line_list.insert(line_is_v_list.index(True), eq_v_clamp)
+        ### insert new equation for "I_clamp" at the same position
+        eq_line_list.insert(line_is_v_list.index(True), eq_I_clamp)
 
         return eq_line_list
 
-    def _adjust_equation_for_voltage_clamp_plus(self, eq_v: str, flags: str):
-        """
-        Convert the v-update equation using "v+=" into a voltage clamp version.
-
-        Args:
-            eq_v (str):
-                the equation string for updating v (without flags)
-            flags (str):
-                the flags of the equation string
-
-        Returns:
-            eq_v (str):
-                the adjusted equation string for updating v (without flags)
-            eq_v_clamp (str):
-                the equation string for "v_clamp" (with flags)
-        """
-        ### split equations at "=" to separate left and right side
-        eq_v_left, eq_v_right = eq_v.split("=")
-        ### set right side to zero and combine equation again with "="
-        eq_v = eq_v_left + "=" + "0"
-        ### create new equation for "v_clamp" with right side of original equation
-        eq_v_clamp = "v_clamp=" + eq_v_right + flags
-
-        return eq_v, eq_v_clamp
-
-    def _adjust_equation_for_voltage_clamp_dvdt(self, eq_v: str, flags: str):
+    def _adjust_equation_for_voltage_clamp_dvdt(self, eq_v: str):
         """
         Convert the v-update equation using "dv/dt" into a voltage clamp version.
 
+        !!! warning
+            Equation needs to contain dv/dt and the external current variable.
+
         Args:
             eq_v (str):
-                the equation string for updating v (without flags)
-            flags (str):
-                the flags of the equation string
+                the equation string for updating v (without flags and whitespace)
 
         Returns:
             eq_v (str):
                 the adjusted equation string for updating v (without flags)
-            eq_v_clamp (str):
-                the equation string for "v_clamp" (with flags)
+            eq_I_clamp (str):
+                the equation string for "I_clamp"
         """
-        ### if equation starts with "dv/dt=" do the same as for "v+="
-        if eq_v.startswith("dv/dt="):
-            return self._adjust_equation_for_voltage_clamp_plus(eq_v, flags)
 
         ### if equation doesn't start with "dv/dt=" --> need to rearrange equation
-        ### i.e. solve the equation for dv/dt
-        eq_v = eq_v.replace("dv/dt", "delta_v")
+        ### set dv/dt to zero and solve the equation for the external current variable
+        ### (will be I_clamp)
+        eq_v = eq_v.replace("dv/dt", "0")
 
         ### split the equation at "=" and move everything on one side (other side = 0)
-        ### replace the whole right side with "right_side" making solving easier
         left_side, right_side = eq_v.split("=")
-        eq_v_one_side = f"(right_side) - {left_side}"
+        eq_v_one_side = f"{right_side} - {left_side}"
 
         ### prepare the sympy equation generation
         attributes_name_list = self._get_neuron_model_attributes(self._neuron_model)
@@ -1946,30 +1929,31 @@ class VClampParamSearch:
             key: attributes_tuple[attributes_name_list.index(key)]
             for key in attributes_name_list
         }
-        ### further create symbols for delta_v and right_side
-        attributes_sympy_dict["delta_v"] = Symbol("delta_v")
-        attributes_sympy_dict["right_side"] = Symbol("right_side")
 
         ### now creating the sympy equation
         eq_sympy = sympify(eq_v_one_side)
 
-        ### solve the equation for delta_v
-        result = solve(eq_sympy, attributes_sympy_dict["delta_v"], dict=True)
+        ### solve the equation for the external current variable
+        if self.verbose:
+            print(f"attributes_sympy_dict: {attributes_sympy_dict}")
+        result = solve(
+            eq_sympy, attributes_sympy_dict[self.external_current_var], dict=True
+        )
         if len(result) != 1:
-            raise ValueError("Could not solve equation of neuronmodel for dv/dt!")
+            raise ValueError(
+                f"Could not solve equation of neuronmodel for external current variable {self.external_current_var}!"
+            )
 
         ### convert result to string
-        result = str(result[0][attributes_sympy_dict["delta_v"]])
-
-        ### replace "right_side" by the actual right side in brackets
-        result = result.replace("right_side", f"({right_side})")
+        result = str(result[0][attributes_sympy_dict[self.external_current_var]])
 
         ### create new equation for dv/dt
         eq_v = "dv/dt = 0"
-        ### create new equation for "v_clamp" with the equation solved for dv/dt
-        eq_v_clamp = "v_clamp=" + result + flags
+        ### create new equation for "I_clamp" with the equation solved for the external
+        ### current variable
+        eq_I_clamp = "I_clamp=" + result
 
-        return eq_v, eq_v_clamp
+        return eq_v, eq_I_clamp
 
     def _get_line_is_v(self, line: str):
         """
@@ -2015,8 +1999,8 @@ def interactive_plot(
         ncols (int):
             number of columns of subplots
         sliders (list):
-            list of dictionaries with slider parameters, at least the following keys
-            have to be present:
+            list of dictionaries with slider kwargs (see matplotlib.widgets.Slider), at
+            least the following keys have to be present:
                 - label (str):
                     label of the slider
                 - valmin (float):
@@ -2026,9 +2010,26 @@ def interactive_plot(
         create_plot (Callable):
             function which fills the subplots, has to have the signature
             create_plot(axs, sliders), where axs is a list of axes (for each subplot)
-            and sliders is the sliders list with newly added keys "ax" (axes of the
-            slider) and "slider" (the slider itself, so that you can access the slider
-            values in the create_plot function with sliders[<slider_idx>]["slider"].val)
+            and sliders is the given sliders list with newly added keys "ax" (axes of
+            the slider) and "slider" (the Slider object itself, so that you can access
+            the slider values in the create_plot function using the .val attribute)
+
+    Examples:
+        ```python
+        def create_plot(axs, sliders):
+            axs[0].axhline(sliders[0]["slider"].val, color="r")
+            axs[1].axvline(sliders[1]["slider"].val, color="r")
+
+        interactive_plot(
+            nrows=2,
+            ncols=1,
+            sliders=[
+                {"label": "a", "valmin": 0.0, "valmax": 1.0, "valinit": 0.3},
+                {"label": "b", "valmin": 0.0, "valmax": 1.0, "valinit": 0.7},
+            ],
+            create_plot=create_plot,
+        )
+        ```
     """
 
     def update(axs, sliders):
@@ -2111,7 +2112,9 @@ def efel_loss(trace1, trace2, feature_list):
             dictionary with the keys "T" (time), "V" (voltage), "stim_start" (start of
             the stimulus), "stim_end" (end of the stimulus)
         feature_list (list):
-            list of feature names which should be used to calculate the loss
+            list of feature names which should be used to calculate the loss (see
+            https://efel.readthedocs.io/en/latest/eFeatures.html, some of them are
+            available)
 
     Returns:
         loss (np.array):
@@ -2189,7 +2192,7 @@ def efel_loss(trace1, trace2, feature_list):
         return loss
 
     ### calculate and return the mean of the differences of the features
-    features_1, features_2 = efel.getFeatureValues(
+    features_1, features_2 = efel.get_feature_values(
         [trace1, trace2],
         feature_list,
         raise_warnings=False,
@@ -2214,6 +2217,183 @@ def efel_loss(trace1, trace2, feature_list):
             )
         else:
             diff = np.absolute(features_1[feature] - features_2[feature])
+        ### scale the difference by diff_close and add to loss
+        loss += diff / diff_close[feature]
+    loss /= len(feature_list)
+
+    if verbose:
+        print(f"loss: {loss}")
+    return loss
+
+
+def get_spike_features_of_chunk(chunk: int, results: CompNeuroExp._ResultsCl):
+    """
+    Get the features of the spikes of a chunk of the results of a CompNeuroExp.
+
+    !!! warning
+        The results data dict has to contain the population name as key "pop_name".
+        The spikes have to be recorded.
+
+    Args:
+        chunk (int):
+            index of the chunk
+        results (CompNeuroExp._ResultsCl):
+            results of the experiment
+
+    Returns:
+        dict:
+            dictionary with the features of the spikes
+    """
+    ### get number of spikes
+    spike_dict = results.recordings[chunk][f"{results.data['pop_name']};spike"]
+    t, _ = af.my_raster_plot(spike_dict)
+    nbr_spikes = len(t)
+    ### get time of 1st, 2nd, 3rd spike
+    if nbr_spikes > 0:
+        time_1st_spike = t[0]
+        if nbr_spikes > 1:
+            time_2nd_spike = t[1]
+            if nbr_spikes > 2:
+                time_3rd_spike = t[2]
+            else:
+                time_3rd_spike = None
+        else:
+            time_2nd_spike = None
+            time_3rd_spike = None
+    else:
+        time_1st_spike = None
+        time_2nd_spike = None
+        time_3rd_spike = None
+    ### get time of last spike
+    if nbr_spikes > 0:
+        time_last_spike = t[-1]
+    else:
+        time_last_spike = None
+    ### get CV of ISI
+    if nbr_spikes > 1:
+        isi = np.diff(t)
+        cv_isi = np.std(isi) / np.mean(isi)
+    else:
+        cv_isi = None
+
+    return {
+        "spike_count": nbr_spikes,
+        "time_to_first_spike": time_1st_spike,
+        "time_to_second_spike": time_2nd_spike,
+        "time_to_third_spike": time_3rd_spike,
+        "time_to_last_spike": time_last_spike,
+        "ISI_CV": cv_isi,
+    }
+
+
+def get_spike_features_loss_of_chunk(
+    chunk: int,
+    results1: CompNeuroExp._ResultsCl,
+    results2: CompNeuroExp._ResultsCl,
+    chunk2: None | int = None,
+    feature_list: list[str] | None = None,
+):
+    """
+    Calculate the loss/difference between the spike features of two chunks of the
+    results of CompNeuroExp.
+
+    !!! warning
+        The results data dict has to contain the population name as key "pop_name".
+        The spikes have to be recorded.
+
+    Args:
+        chunk (int):
+            index of the chunk
+        results1 (CompNeuroExp._ResultsCl):
+            results of the first experiment
+        results2 (CompNeuroExp._ResultsCl):
+            results of the second experiment
+        chunk2 (None|int):
+            index of the chunk of the second results, if None the same as chunk
+        feature_list (list[str]|None):
+            list of feature names which should be used to calculate the loss, if None
+            the default list is used
+
+    Returns:
+        loss (float):
+            loss/difference between the spike features of the two chunks
+    """
+    verbose = False
+    if chunk2 is None:
+        chunk2 = chunk
+
+    ### get recording duration of chunk
+    nbr_periods = results1.recording_times.nbr_periods(
+        chunk=chunk, compartment=results1.data["pop_name"]
+    )
+    chunk_duration_ms = 0
+    chunk_duration_idx = 0
+    for period in range(nbr_periods):
+        chunk_duration_ms += np.abs(
+            np.diff(
+                results1.recording_times.time_lims(
+                    chunk=chunk, compartment=results1.data["pop_name"], period=period
+                )
+            )
+        )
+        chunk_duration_idx += np.abs(
+            np.diff(
+                results1.recording_times.idx_lims(
+                    chunk=chunk, compartment=results1.data["pop_name"], period=period
+                )
+            )
+        )
+
+    ### set a plausible "maximum" absolute difference for each feature
+    diff_max: dict[str, float] = {
+        "spike_count": chunk_duration_idx,
+        "time_to_first_spike": chunk_duration_ms,
+        "time_to_second_spike": chunk_duration_ms,
+        "time_to_third_spike": chunk_duration_ms,
+        "time_to_last_spike": chunk_duration_ms,
+        "ISI_CV": 1,
+    }
+    if verbose:
+        print(f"\ndiff_max: {diff_max}")
+
+    ### set a plausible "close" absolute difference for each feature
+    diff_close: dict[str, float] = {
+        "spike_count": np.ceil(chunk_duration_ms / 200),
+        "time_to_first_spike": np.clip(chunk_duration_ms * 0.1, 5, 50),
+        "time_to_second_spike": np.clip(chunk_duration_ms * 0.1, 5, 50),
+        "time_to_third_spike": np.clip(chunk_duration_ms * 0.1, 5, 50),
+        "time_to_last_spike": np.clip(chunk_duration_ms * 0.1, 5, 50),
+        "ISI_CV": 0.1,
+    }
+    if verbose:
+        print(f"\ndiff_close: {diff_close}\n")
+
+    ### catch if features from feature_list are not supported
+    if feature_list is None:
+        feature_list = list(diff_max.keys())
+    features_not_supported = [
+        feature for feature in feature_list if feature not in diff_max
+    ]
+    if features_not_supported:
+        raise ValueError(f"Features not supported: {features_not_supported}")
+
+    ### calculate and return the mean of the differences of the features
+    features_1 = get_spike_features_of_chunk(chunk, results1)
+    features_2 = get_spike_features_of_chunk(chunk2, results2)
+
+    if verbose:
+        print(f"\nfeatures_1: {features_1}\n")
+        print(f"features_2: {features_2}\n")
+    loss = 0.0
+    for feature in feature_list:
+        ### if both features are None use 0
+        if features_1[feature] is None and features_2[feature] is None:
+            diff = 0.0
+        ### if single feature is None use diff_max
+        elif features_1[feature] is None or features_2[feature] is None:
+            diff = diff_max[feature]
+        else:
+            diff = float(np.absolute(features_1[feature] - features_2[feature]))
         ### scale the difference by diff_close and add to loss
         loss += diff / diff_close[feature]
     loss /= len(feature_list)
