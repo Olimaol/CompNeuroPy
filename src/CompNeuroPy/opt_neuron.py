@@ -1323,6 +1323,7 @@ class OptNeuron:
         best["std"] = fit["std"]
         best["results"] = fit["results"]
         best["results_soll"] = self.results_soll
+        best["parameters"] = self._get_final_parameters(best)
         self.results = best
 
         ### create loss history array
@@ -1351,6 +1352,36 @@ class OptNeuron:
 
         return best
 
+    def _get_final_parameters(self, best):
+        """
+        Returns the final parameters as dictionary.
+
+        Args:
+            best (dict):
+                dictionary containing the optimized parameters (as keys) and other keys.
+
+        Returns:
+            final_parameters (dict):
+                dictionary containing all parameters of the variable bounds (as keys)
+                and their optimized values.
+        """
+        final_parameters = {}
+        ### first all optimized variables (bounds=list)
+        for param_name, param_bounds in self.variables_bounds.items():
+            if isinstance(param_bounds, list):
+                final_parameters[param_name] = best[param_name]
+            else:
+                final_parameters[param_name] = param_bounds
+
+        ### now all string variables (bounds=str)
+        for param_name, param_bounds in self.variables_bounds.items():
+            if isinstance(param_bounds, str):
+                final_parameters[param_name] = ef.evaluate_expression_with_dict(
+                    param_bounds, final_parameters
+                )
+
+        return final_parameters
+
     def _run_with_deap(self, max_evals, deap_plot_file):
         """
         Runs the optimization with deap.
@@ -1361,6 +1392,10 @@ class OptNeuron:
 
             deap_plot_file (str):
                 the name of the figure which will be saved and shows the logbook
+
+        Returns:
+                Dictionary containing the best parameters, the logbook, the last population
+                of individuals and the best fitness.
         """
 
         return self._deap_cma.run(
