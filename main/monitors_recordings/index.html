@@ -628,9 +628,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#CompNeuroPy.monitors.RecordingTimes.nr_periods" class="md-nav__link">
+  <a href="#CompNeuroPy.monitors.RecordingTimes.nbr_periods" class="md-nav__link">
     <span class="md-ellipsis">
-      nr_periods()
+      nbr_periods()
     </span>
   </a>
   
@@ -1241,6 +1241,27 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/deap_cma/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cma Optimization
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1531,9 +1552,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#CompNeuroPy.monitors.RecordingTimes.nr_periods" class="md-nav__link">
+  <a href="#CompNeuroPy.monitors.RecordingTimes.nbr_periods" class="md-nav__link">
     <span class="md-ellipsis">
-      nr_periods()
+      nbr_periods()
     </span>
   </a>
   
@@ -4283,7 +4304,9 @@ call start() again.</p>
 <span class="normal">1058</span>
 <span class="normal">1059</span>
 <span class="normal">1060</span>
-<span class="normal">1061</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">RecordingTimes</span><span class="p">:</span>
+<span class="normal">1061</span>
+<span class="normal">1062</span>
+<span class="normal">1063</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">RecordingTimes</span><span class="p">:</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">recording_times_list</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize RecordingTimes object.</span>
@@ -4357,7 +4380,7 @@ call start() again.</p>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">recording_times_list</span>
 
-    <span class="k">def</span> <span class="nf">nr_periods</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chunk</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compartment</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">nbr_periods</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chunk</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compartment</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get the number of recording periods (start-pause) of a specified chunk/model</span>
 <span class="sd">        compartment.</span>
@@ -4377,6 +4400,8 @@ call start() again.</p>
         <span class="n">chunk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_chunk</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
         <span class="n">compartment</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__check_compartment__</span><span class="p">(</span><span class="n">compartment</span><span class="p">,</span> <span class="n">chunk</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_nr_periods</span><span class="p">(</span><span class="n">chunk</span><span class="p">,</span> <span class="n">compartment</span><span class="p">)</span>
+
+    <span class="n">nr_periods</span> <span class="o">=</span> <span class="n">nbr_periods</span>
 
     <span class="k">def</span> <span class="nf">combine_periods</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -5088,10 +5113,10 @@ compartment.</p>
 
 
 
-<h3 id="CompNeuroPy.monitors.RecordingTimes.nr_periods" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">nr_periods</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compartment</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+<h3 id="CompNeuroPy.monitors.RecordingTimes.nbr_periods" class="doc doc-heading">
+          <code class="highlight language-python"><span class="n">nbr_periods</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compartment</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
-<a href="#CompNeuroPy.monitors.RecordingTimes.nr_periods" class="headerlink" title="Permanent link">#</a></h3>
+<a href="#CompNeuroPy.monitors.RecordingTimes.nbr_periods" class="headerlink" title="Permanent link">#</a></h3>
 
 
   <div class="doc doc-contents ">
@@ -5190,7 +5215,7 @@ compartment.</p>
 <span class="normal">715</span>
 <span class="normal">716</span>
 <span class="normal">717</span>
-<span class="normal">718</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">nr_periods</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chunk</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compartment</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="normal">718</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">nbr_periods</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chunk</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compartment</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get the number of recording periods (start-pause) of a specified chunk/model</span>
 <span class="sd">    compartment.</span>
@@ -5343,9 +5368,7 @@ float (fill with this value). Default: "none".</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/monitors.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">720</span>
-<span class="normal">721</span>
-<span class="normal">722</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">722</span>
 <span class="normal">723</span>
 <span class="normal">724</span>
 <span class="normal">725</span>
@@ -5414,7 +5437,9 @@ float (fill with this value). Default: "none".</p>
 <span class="normal">788</span>
 <span class="normal">789</span>
 <span class="normal">790</span>
-<span class="normal">791</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">combine_periods</span><span class="p">(</span>
+<span class="normal">791</span>
+<span class="normal">792</span>
+<span class="normal">793</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">combine_periods</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">recordings</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
     <span class="n">recording_data_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -5617,9 +5642,7 @@ Format: "compartment_name;variable_name"</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/monitors.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">793</span>
-<span class="normal">794</span>
-<span class="normal">795</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">795</span>
 <span class="normal">796</span>
 <span class="normal">797</span>
 <span class="normal">798</span>
@@ -5724,7 +5747,9 @@ Format: "compartment_name;variable_name"</p>
 <span class="normal">897</span>
 <span class="normal">898</span>
 <span class="normal">899</span>
-<span class="normal">900</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">combine_chunks</span><span class="p">(</span>
+<span class="normal">900</span>
+<span class="normal">901</span>
+<span class="normal">902</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">combine_chunks</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">recordings</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">recording_data_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;sequential&quot;</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
