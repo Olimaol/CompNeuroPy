@@ -41,7 +41,7 @@ opt = OptNeuron(
 A full example is available in the [Examples](../examples/opt_neuron.md).
 
 ## Run the optimization
-To run the optimization simply call the _run()_ function of the [`OptNeuron`](#CompNeuroPy.opt_neuron.OptNeuron) object.
+To run the optimization simply call the [_run()_](optimize_neuron.md#CompNeuroPy.opt_neuron.OptNeuron.run) function of the [`OptNeuron`](#CompNeuroPy.opt_neuron.OptNeuron) object. This returns the optimized parameters and more.
 
 ## Define the experiment
 You have to define a [`CompNeuroExp`](define_experiment.md#CompNeuroPy.experiment.CompNeuroExp) object containing a _run()_ function. In the _run()_ function simulations and recordings are performed.

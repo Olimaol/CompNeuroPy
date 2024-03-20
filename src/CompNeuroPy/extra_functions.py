@@ -683,13 +683,52 @@ class DeapCma:
     """
     Class to run the deap Covariance Matrix Adaptation Evolution Strategy optimization.
 
+    Using the [CMAES](https://deap.readthedocs.io/en/master/api/algo.html#module-deap.cma) algorithm from [deap](https://github.com/deap/deap)
+
+    * Fortin, F. A., De Rainville, F. M., Gardner, M. A. G., Parizeau, M., & Gagné, C. (2012). DEAP: Evolutionary algorithms made easy. The Journal of Machine Learning Research, 13(1), 2171-2175. [pdf](https://www.jmlr.org/papers/volume13/fortin12a/fortin12a.pdf)
+
     Attributes:
         deap_dict (dict):
             Dictionary containing the toolbox, the hall of fame, the statistics, the
             lower and upper bounds, the parameter names, the inverse scaler and the
             strategy.
+
+    Examples:
+    For complete example see [here](../examples/deap_cma.md)
+        ```python
+        from CompNeuroPy import DeapCma
+        import numpy as np
+
+
+        ### for DeapCma we need to define the evaluate_function
+        def evaluate_function(population):
+            loss_list = []
+            ### the population is a list of individuals which are lists of parameters
+            for individual in population:
+                loss_of_individual = float(individual[0] + individual[1] + individual[2])
+                loss_list.append((loss_of_individual,))
+            return loss_list
+
+
+        ### define lower bounds of paramters to optimize
+        lb = np.array([0, 0, 0])
+
+        ### define upper bounds of paramters to optimize
+        ub = np.array([10, 10, 10])
+
+        ### create an "minimal" instance of the DeapCma class
+        deap_cma = DeapCma(
+            lower=lb,
+            upper=ub,
+            evaluate_function=evaluate_function,
+        )
+
+        ### run the optimization
+        deap_cma_result = deap_cma.run(max_evals=1000)
+        ```
     """
 
+    @check_types()
     def __init__(
         self,
         lower: np.ndarray,
@@ -722,7 +761,8 @@ class DeapCma:
                 Initial guess for the parameters. By default the mean of lower and upper
                 bounds.
             param_names (None | list[str], optional):
-                Names of the parameters. By default None.
+                Names of the parameters. By default None, i.e. the parameters are named
+                "param0", "param1", ...
             learn_rate_factor (float, optional):
                 Learning rate factor (decrease -> slower). By default 1.
             damping_factor (float, optional):
@@ -737,7 +777,10 @@ class DeapCma:
                 details
             source_solutions (list[tuple[np.ndarray, float]], optional):
                 List of tuples with the parameters and losses of source solutions. These
-                solutions are used to initialize the covariance matrix. By default [].
+                solutions are used to initialize the covariance matrix. Using source
+                solutions ignores the initial guess p0 and sets the cma parameter
+                'cmatrix' (which will also be ignored if given in cma_params_dict). By
+                default [].
         """
         ### store attributes
         self.max_evals = max_evals
@@ -893,8 +936,10 @@ class DeapCma:
 
         Returns:
             best (dict):
-                Dictionary containing the best parameters, the logbook, the last population
-                of individuals and the best fitness.
+                Dictionary containing the best parameters (as key and value pairs),
+                the logbook of the optimization (key = 'logbook'), the last population
+                of individuals (key = 'deap_pop') and the best fitness (key =
+                'best_fitness').
         """
 
         ### get attributes
@@ -2241,7 +2286,7 @@ def get_spike_features_of_chunk(chunk: int, results: CompNeuroExp._ResultsCl):
             results of the experiment
 
     Returns:
-        dict:
+        spike_features (dict):
             dictionary with the features of the spikes
     """
     ### get number of spikes
