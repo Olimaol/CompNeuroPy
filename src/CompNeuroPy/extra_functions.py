@@ -2250,11 +2250,11 @@ def get_spike_features_of_chunk(chunk: int, results: CompNeuroExp._ResultsCl):
     nbr_spikes = len(t)
     ### get time of 1st, 2nd, 3rd spike
     if nbr_spikes > 0:
-        time_1st_spike = t[0]
+        time_1st_spike = t[0] * results.recordings[chunk]["dt"]
         if nbr_spikes > 1:
-            time_2nd_spike = t[1]
+            time_2nd_spike = t[1] * results.recordings[chunk]["dt"]
             if nbr_spikes > 2:
-                time_3rd_spike = t[2]
+                time_3rd_spike = t[2] * results.recordings[chunk]["dt"]
             else:
                 time_3rd_spike = None
         else:
@@ -2266,12 +2266,12 @@ def get_spike_features_of_chunk(chunk: int, results: CompNeuroExp._ResultsCl):
         time_3rd_spike = None
     ### get time of last spike
     if nbr_spikes > 0:
-        time_last_spike = t[-1]
+        time_last_spike = t[-1] * results.recordings[chunk]["dt"]
     else:
         time_last_spike = None
     ### get CV of ISI
     if nbr_spikes > 1:
-        isi = np.diff(t)
+        isi = np.diff(t * results.recordings[chunk]["dt"])
         cv_isi = np.std(isi) / np.mean(isi)
     else:
         cv_isi = None
