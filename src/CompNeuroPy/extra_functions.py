@@ -736,6 +736,7 @@ class DeapCma:
         evaluate_function: Callable,
         max_evals: None | int = None,
         p0: None | np.ndarray = None,
+        sig0: None | float = None,
         param_names: None | list[str] = None,
         learn_rate_factor: float = 1,
         damping_factor: float = 1,
@@ -743,6 +744,7 @@ class DeapCma:
         plot_file: None | str = "logbook.png",
         cma_params_dict: dict = {},
         source_solutions: list[tuple[np.ndarray, float]] = [],
+        hard_bounds: bool = False,
     ):
         """
 
@@ -760,6 +762,10 @@ class DeapCma:
             p0 (None | np.ndarray, optional):
                 Initial guess for the parameters. By default the mean of lower and upper
                 bounds.
+            sig0 (None | float, optional):
+                Initial guess for the standard deviation of the parameters. It will be
+                scaled by the range of the parameters. By default 0.25, i.e. 25% of the
+                range (for each parameter).
             param_names (None | list[str], optional):
                 Names of the parameters. By default None, i.e. the parameters are named
                 "param0", "param1", ...
@@ -781,6 +787,9 @@ class DeapCma:
                 solutions ignores the initial guess p0 and sets the cma parameter
                 'cmatrix' (which will also be ignored if given in cma_params_dict). By
                 default [].
+            hard_bounds (bool, optional):
+                Whether or not to use hard bounds (parmeters are clipped to lower and
+                upper bounds). By default False.
         """
         ### store attributes
         self.max_evals = max_evals
@@ -788,6 +797,7 @@ class DeapCma:
         self.upper = upper
         self.evaluate_function = evaluate_function
         self.p0 = p0
+        self.sig0 = sig0
         self.param_names = param_names
         self.learn_rate_factor = learn_rate_factor
         self.damping_factor = damping_factor
@@ -795,6 +805,7 @@ class DeapCma:
         self.plot_file = plot_file
         self.cma_params_dict = cma_params_dict
         self.source_solutions = source_solutions
+        self.hard_bounds = hard_bounds
 
         ### prepare the optimization
         self.deap_dict = self._prepare()
@@ -815,6 +826,7 @@ class DeapCma:
         upper = self.upper
         evaluate_function = self.evaluate_function
         p0 = self.p0
+        sig0 = self.sig0
         param_names = self.param_names
         learn_rate_factor = self.learn_rate_factor
         damping_factor = self.damping_factor
@@ -825,12 +837,18 @@ class DeapCma:
         upper_orig = deepcopy(upper)
         lower_orig = deepcopy(lower)
 
-        def scaler(x):
-            return (x - lower_orig) / (upper_orig - lower_orig)
+        def scaler(x, diff=False):
+            if not diff:
+                return (x - lower_orig) / (upper_orig - lower_orig)
+            else:
+                return x / (upper_orig - lower_orig)
 
         ### create inverse scaler to scale parameters back into original range [lower,upper]
-        def inv_scaler(x):
-            return x * (upper_orig - lower_orig) + lower_orig
+        def inv_scaler(x, diff=False):
+            if not diff:
+                return x * (upper_orig - lower_orig) + lower_orig
+            else:
+                return x * (upper_orig - lower_orig)
 
         ### scale upper and lower bounds
         lower = scaler(lower)
@@ -861,9 +879,22 @@ class DeapCma:
                 gamma=1,
             )
             cma_params_dict["cmatrix"] = cmatrix
+
+            if self.hard_bounds:
+                ### clip centroid to [0,1]
+                centroid = np.clip(centroid, 0, 1)
         else:
-            centroid = (lower + upper) / 2 if isinstance(p0, type(None)) else scaler(p0)
-            sigma = (upper - lower) / 4
+            ### lower + upper / 2 is always 0.5 since lower and upper are scaled
+            centroid = (
+                (lower + upper) / 2
+                if isinstance(p0, type(None))
+                else (
+                    scaler(np.clip(p0, lower, upper))
+                    if self.hard_bounds
+                    else scaler(p0)
+                )
+            )
+            sigma = 0.25 if isinstance(sig0, type(None)) else sig0
 
         ### create the strategy
         strategy = cma.Strategy(
@@ -871,6 +902,11 @@ class DeapCma:
             sigma=sigma,
             **cma_params_dict,
         )
+
+        if verbose:
+            print(
+                f"Starting optimization with:\ncentroid: {inv_scaler(strategy.centroid)}, (scaled: {strategy.centroid})\nsigma: {inv_scaler(strategy.sigma,diff=True)}, (scaled: {strategy.sigma})"
+            )
 
         ### slow down the learning rate and increase the damping
         strategy.ccov1 *= learn_rate_factor
@@ -912,6 +948,7 @@ class DeapCma:
             "param_names": param_names,
             "inv_scaler": inv_scaler,
             "strategy": strategy,
+            "hard_bounds": self.hard_bounds,
         }
 
     def run(
@@ -1027,13 +1064,17 @@ class DeapCma:
         stats = deap_dict["stats"]
         halloffame = deap_dict["hof"]
         strategy = deap_dict["strategy"]
+        hard_bounds = deap_dict["hard_bounds"]
 
         ### init logbook
         logbook = tools.Logbook()
         logbook.header = ["gen", "nevals"] + (stats.fields if stats else [])
 
         ### define progress bar
-        progress_bar = tqdm(range(ngen), total=ngen, unit="gen")
+        if verbose:
+            progress_bar = range(ngen)
+        else:
+            progress_bar = tqdm(range(ngen), total=ngen, unit="gen")
         early_stop = False
 
         ### loop over generations
@@ -1042,9 +1083,10 @@ class DeapCma:
             population = toolbox.generate()
             ### clip individuals of population to variable bounds
             ### TODO only if bounds are hard
-            for ind in population:
-                for idx, val in enumerate(ind):
-                    ind[idx] = np.clip(val, lower[idx], upper[idx])
+            if hard_bounds:
+                for ind in population:
+                    for idx, val in enumerate(ind):
+                        ind[idx] = np.clip(val, lower[idx], upper[idx])
             ### Evaluate the individuals (here whole population at once)
             ### scale parameters back into original range [lower,upper]
             population_inv_scaled = [inv_scaler(ind) for ind in deepcopy(population)]
@@ -1074,12 +1116,23 @@ class DeapCma:
             record = stats.compile(population) if stats is not None else {}
             logbook.record(gen=gen, nevals=len(population), **record)
             if verbose:
+                ### print logbook
                 print(logbook.stream)
+                ### print evaluated individuals and their fitnesses
+                print_dict = {
+                    f"ind_{idx}": list(ind)
+                    for idx, ind in enumerate(deepcopy(population_inv_scaled))
+                }
+                for idx, key in enumerate(print_dict):
+                    print_dict[key].append(fitnesses[idx][0])
+                print_df(print_dict)
+                print("")
 
             ### update progress bar with current best loss
-            progress_bar.set_postfix_str(
-                f"best loss: {halloffame[0].fitness.values[0]:.5f}"
-            )
+            if not verbose:
+                progress_bar.set_postfix_str(
+                    f"best loss: {halloffame[0].fitness.values[0]:.5f}"
+                )
         if early_stop and verbose:
             print("Stopping because convergence is reached.")
 
