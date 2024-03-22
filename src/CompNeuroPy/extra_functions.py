@@ -32,6 +32,7 @@ from matplotlib.gridspec import GridSpec
 from screeninfo import get_monitors
 import cmaes
 import efel
+from time import time
 
 
 def print_df(df: pd.DataFrame | dict, **kwargs):
@@ -2087,6 +2088,9 @@ def interactive_plot(
     ncols: int,
     sliders: list[dict],
     create_plot: Callable,
+    update_loop: Callable | None = None,
+    figure_frequency: float = 20.0,
+    update_frequency: float = np.inf,
 ):
     """
     Create an interactive plot with sliders.
@@ -2111,6 +2115,13 @@ def interactive_plot(
             and sliders is the given sliders list with newly added keys "ax" (axes of
             the slider) and "slider" (the Slider object itself, so that you can access
             the slider values in the create_plot function using the .val attribute)
+        update_loop (Callable, optional):
+            Function which is called periodically. After each call the plot is updated.
+            If None, the plot is only updated when a slider is changed. Default is None.
+        figure_frequency (float, optional):
+            Frequency of the figure update in Hz. Default is 20.0.
+        update_frequency (float, optional):
+            Frequency of the update loop in Hz. Default is np.inf.
 
     Examples:
         ```python
@@ -2137,8 +2148,6 @@ def interactive_plot(
                 ax.cla()
         ### recreate the plot
         create_plot(axs, sliders)
-        ### redraw the canvas
-        fig.canvas.draw_idle()
 
     ### create the figure as large as the screen
     screen_width, screen_height = get_monitors()[0].width, get_monitors()[0].height
@@ -2194,8 +2203,23 @@ def interactive_plot(
             ]
         )
 
-    ### show the plot
-    plt.show()
+    if update_loop is None:
+        ### show the plot
+        plt.show()
+    else:
+        ### run update loop until figure is closed
+        figure_pause = 1 / figure_frequency
+        max_updates_per_pause = update_frequency / figure_frequency
+        while plt.fignum_exists(fig.number):
+            ### update figure
+            update(axs, sliders)
+            plt.pause(figure_pause)
+            ### in between do the update loop multiple times
+            start = time()
+            nr_updates = 0
+            while time() - start < figure_pause and nr_updates < max_updates_per_pause:
+                update_loop()
+                nr_updates += 1
 
 
 def efel_loss(trace1, trace2, feature_list):
