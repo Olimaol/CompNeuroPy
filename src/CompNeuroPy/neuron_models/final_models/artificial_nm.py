@@ -27,7 +27,7 @@ class IntegratorNeuron(Neuron):
         threshold (float, optional):
             Threshold for the decision g_ampa has to reach. Default: 1.
 
-    Examples:
+    Example:
         ```python
         from ANNarchy import Population, simulate_until
         from CompNeuroPy.neuron_models import Integrator
@@ -116,7 +116,7 @@ class IntegratorNeuronSimple(Neuron):
         tau (float, optional):
             Time constant in ms of the neuron. Default: 1.
 
-    Examples:
+    Example:
         ```python
         from ANNarchy import Population, simulate_until
         from CompNeuroPy.neuron_models import Integrator

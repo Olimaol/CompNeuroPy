@@ -1,4 +1,14 @@
-from ANNarchy import simulate, get_population, dt
+from ANNarchy import (
+    simulate,
+    get_population,
+    dt,
+    simulate_until,
+    get_current_step,
+    get_time,
+)
+from CompNeuroPy import analysis_functions as af
+import numpy as np
+from copy import deepcopy
 
 
 def attr_sim(pop: str, attr_dict, t=500):
@@ -265,3 +275,489 @@ def increasing_current(pop: str, a0, da, nr_steps, dur_step):
     """
     increasing_attr_return = increasing_attr(pop, "I_app", a0, da, nr_steps, dur_step)
     return {"current_list": increasing_attr_return["attr_list"]}
+
+
+class SimulationEvents:
+    """
+    Class to create a Simulation consiting of multiple events. Add the effects
+    (functions) of the events in a class which inherits from SimulationEvents. Within
+    the effect functions you can use the attributes of the class which inherits from
+    SimulationEvents. Do never simulate within the effect functions of the events. The
+    simulation is done between the events.
+
+    Example:
+        ```python
+        from CompNeuroPy import SimulationEvents
+
+        ### define a class which inherits from SimulationEvents
+        ### define the effects of the events in the class
+        class MySim(SimulationEvents):
+
+            def __init__(
+                self,
+                p=0.8,
+                verbose=False,
+            ):
+                ### set attributes which should be used in the effect functions
+                self.p = p
+                super().__init__(verbose=verbose)
+
+            def effect1(self):
+                ### set the parameter of a population to the value of p
+                pop.parameter = self.p
+
+            def effect2(self):
+                ### set the parameter of a population to 0
+                pop.parameter = 0
+
+        ### create the simulation object
+        my_sim = MySim()
+
+        ### add events to the simulation
+        ### start event right at the beginning which triggers event1 after 100 ms
+        my_sim.add_event(name="start", trigger={"event1": 100})
+        ### event1 causes effect1 and triggers event2 after 200 ms
+        my_sim.add_event(name="event1", effect=my_sim.effect1, trigger={"event2": 200})
+        ### event2 causes effect2 and triggers end event after 300 ms
+        my_sim.add_event(name="event2", effect=my_sim.effect2, trigger={"end": 300})
+
+        ### run the simulation
+        my_sim.run()
+        ```
+    """
+
+    def __init__(self, verbose=False):
+        """
+        Args:
+            verbose (bool):
+                if True, additional information is printed during simulation
+        """
+        ### set verbose
+        self.verbose = verbose
+        ### initialize events
+        self._initialize()
+        ### list for storing added events, without changing them
+        self.stored_event_list = []
+        self.called_during_restore = False
+        ### add the end event
+        self.add_event(name="end", effect=self._end_sim)
+
+    def _initialize(self):
+        """
+        initialize locals
+        """
+        if self.verbose:
+            print("initialize locals")
+        ### list of events
+        self.event_list = []
+        self.event_name_list = []
+        ### as long as end == False simulation runs
+        self.end = False
+        ### if events occur depends on happened events
+        self.happened_event_list = []
+        ### initialize model triggers empty, before first simulation, there should not be model_trigger_events
+        ### model_trigger_list = name of populations of which the decision should be checked
+        self.model_trigger_list = []
+        self.past_model_trigger_list = []
+
+    def add_event(
+        self,
+        name: str,
+        onset: int = None,
+        model_trigger: str = None,
+        requirement_string: str = None,
+        effect=None,
+        trigger: dict[str, int] = None,
+    ):
+        """
+        Adds an event to the simulation. You always have to trigger the end event to end
+        the simulation.
+
+        Args:
+            name (str):
+                name of the event
+            onset (int):
+                time in simulation steps when the event should occur
+            model_trigger (str):
+                name of population which can trigger the event (by setting variable
+                decision to -1)
+            requirement_string (str):
+                string containing the requirements for the event to occur TODO: replace with function
+            effect (function):
+                Function which is executed during the event. Within the effect function
+                you can use the attributes of the class which inherits from
+                SimulationEvents.
+            trigger (dict):
+                dictionary containing the names of other events as keys and the
+                relative time in simulation steps to the onset of the current event as
+                values
+        """
+        self.event_list.append(
+            self._Event(
+                trial_procedure=self,
+                name=name,
+                onset=onset,
+                model_trigger=model_trigger,
+                requirement_string=requirement_string,
+                effect=effect,
+                trigger=trigger,
+            )
+        )
+        self.event_name_list.append(name)
+
+        if not self.called_during_restore:
+            self.stored_event_list.append(
+                {
+                    "name": name,
+                    "onset": onset,
+                    "model_trigger": model_trigger,
+                    "requirement_string": requirement_string,
+                    "effect": effect,
+                    "trigger": trigger,
+                }
+            )
+
+    def _restore_event_list(self):
+        """
+        Restore the event list after simulation to the state before the first call of
+        run. To be able to run the simulation multiple times.
+        """
+        self.called_during_restore = True
+        for event in self.stored_event_list:
+            self.add_event(**event)
+        self.called_during_restore = False
+
+    def run(self):
+        """
+        Run the simulation. The simulation runs until the end event is triggered. The
+        simulation can be run multiple times by calling this function multiple times.
+        """
+        ### check if there are events which have no onset and are not triggered by other
+        ### events and have no model_trigger --> they would never start
+        ### --> set their onset to current step --> they ar run directly after calling run
+        triggered_events = []
+        for event in self.event_list:
+            if event.trigger is not None:
+                triggered_events.extend(list(event.trigger.keys()))
+        for event in self.event_list:
+            if (
+                event.onset is None
+                and event.model_trigger is None
+                and event.name not in triggered_events
+            ):
+                event.onset = get_current_step()
+                if self.verbose:
+                    print(event.name, "set onset to start of run")
+
+        ### run simulation
+        while not (self.end):
+            ### check if model triggers were activated --> if yes run the corresponding events, model_trigger events can trigger other events (with onset) --> run current_step events after model trigger events
+            ### if that's the case --> model trigger event would run twice (because during first run it gets an onset) --> define here run_event_list which prevents events run twice
+            self.run_event_list = []
+            self._run_model_trigger_events()
+            ### run the events of the current time, based on mode and happened events
+            self._run_current_events()
+            ### if event triggered end --> end simulation / skip rest
+            if self.end:
+                if self.verbose:
+                    print("end event triggered --> end simulation")
+                continue
+            ### check then next events occur
+            next_events_time = self._get_next_events_time()
+            ### check if there are model triggers
+            self.model_trigger_list = self._get_model_trigger_list()
+            ### simulate until next event(s) or model triggers
+            if self.verbose:
+                print("check_triggers:", self.model_trigger_list)
+            if len(self.model_trigger_list) > 1:
+                ### multiple model triggers
+                simulate_until(
+                    max_duration=next_events_time,
+                    population=[
+                        get_population(pop_name) for pop_name in self.model_trigger_list
+                    ],
+                    operator="or",
+                )
+            elif len(self.model_trigger_list) > 0:
+                ### a single model trigger
+                simulate_until(
+                    max_duration=next_events_time,
+                    population=get_population(self.model_trigger_list[0]),
+                )
+            else:
+                ### no model_triggers
+                simulate(next_events_time)
+
+        ### after run finishes initialize again
+        self._initialize()
+
+        ### restore event_list
+        self._restore_event_list()
+
+    def _run_current_events(self):
+        """
+        Run all events with start == current step
+        """
+        ### run all events of the current step
+        ### repeat this until no event was run, because events can set the onset of other events to the current step
+        ### due to repeat --> prevent that same event is run twice
+        event_run = True
+        while event_run:
+            event_run = False
+            for event in self.event_list:
+                if (
+                    event.onset == get_current_step()
+                    and not (event.name in self.run_event_list)
+                    and event._check_requirements()
+                ):
+                    event.run()
+                    event_run = True
+                    self.run_event_list.append(event.name)
+
+    def _run_model_trigger_events(self):
+        """
+        check the current model triggers stored in self.model_trigger_list
+        if they are activated --> run corresponding events
+        prevent that these model triggers are stored again in self.model_trigger_list
+        """
+        ### loop to check if model trigger got active
+        for model_trigger in self.model_trigger_list:
+            if (
+                int(get_population(model_trigger).decision[0]) == -1
+            ):  ### TODO this is not generalized yet, only works if the model_trigger populations have the variable decision which is set to -1 if the model trigger is active
+                ### -1 means got active
+                ### find the events triggerd by the model_trigger and run them
+                for event in self.event_list:
+                    if event.model_trigger == model_trigger:
+                        event.run()
+                        self.run_event_list.append(event.name)
+                ### prevent that these model_triggers are used again
+                self.past_model_trigger_list.append(model_trigger)
+
+    def _get_next_events_time(self):
+        """
+        go through all events and get onsets
+        get onset which are > current_step
+        return smallest diff in ms (ms value = full timesteps!)
+
+        Returns:
+            time (float):
+                time in ms until the next event, rounded to full timesteps
+        """
+        next_event_time = np.inf
+        for event in self.event_list:
+            ### skip events without onset
+            if event.onset == None:
+                continue
+            ### check if onset in the future and nearest
+            if (
+                event.onset > get_current_step()
+                and (event.onset - get_current_step()) < next_event_time
+            ):
+                next_event_time = event.onset - get_current_step()
+        ### return difference (simulation duration until nearest next event) in ms, round to full timesteps
+        return round(next_event_time * dt(), af.get_number_of_decimals(dt()))
+
+    def _get_model_trigger_list(self):
+        """
+        check if there are events with model_triggers
+        check if these model triggers already happened
+        check if the requirements of the events are met
+        not happend + requirements met --> add model_trigger to model_trigger_list
+        returns the (new) model_trigger_list
+
+        Returns:
+            model_trigger_list (list):
+                list of model triggers which are not in past_model_trigger_list and
+                have their requirements met
+        """
+        ret = []
+        for event in self.event_list:
+            if event.model_trigger != None:
+                if (
+                    not (event.model_trigger in self.past_model_trigger_list)
+                    and event._check_requirements()
+                ):
+                    ret.append(event.model_trigger)
+        return ret
+
+    def _end_sim(self):
+        """
+        Event to end the simulation
+        """
+        self.end = True
+
+    class _Event:
+        """
+        Class for events in the simulation
+        """
+
+        def __init__(
+            self,
+            trial_procedure,
+            name,
+            onset=None,
+            model_trigger=None,
+            requirement_string=None,
+            effect=None,
+            trigger=None,
+        ):
+            """
+            Args:
+                trial_procedure (SimulationEvents):
+                    SimulationEvents object
+                name (str):
+                    name of the event
+                onset (int):
+                    time in simulation steps when the event should occur
+                model_trigger (str):
+                    name of population which can trigger the event (by setting variable
+                    decision to -1)
+                requirement_string (str):
+                    string containing the requirements for the event to occur TODO: replace with function
+                effect (function):
+                    function which is executed during the event
+                trigger (dict):
+                    dictionary containing the names of other events as keys and the
+                    relative time in simulation steps to the onset of the current event as
+                    values
+            """
+            self.trial_procedure = trial_procedure
+            self.name = name
+            self.onset = onset
+            self.model_trigger = model_trigger
+            self.requirement_string = requirement_string
+            self.effect = effect
+            self.trigger = trigger
+
+        def run(self):
+            """
+            Run the event i.e. execute the effect of the event and trigger other events
+            """
+            ### check requirements
+            if self._check_requirements():
+                ### run the event
+                if self.trial_procedure.verbose:
+                    print("run event:", self.name, get_time())
+                ### for events which are triggered by model --> set onset
+                if self.onset == None:
+                    self.onset = get_current_step()
+                ### run the effect
+                if self.effect is not None:
+                    self.effect()
+                ### trigger other events
+                if self.trigger is not None:
+                    ### loop over all triggered events
+                    for name, delay in self.trigger.items():
+                        ### get the other event
+                        event_idx = self.trial_procedure.event_name_list.index(name)
+                        ### set onset of other event
+                        self.trial_procedure.event_list[event_idx].onset = (
+                            self.onset + delay
+                        )
+                ### store event in happened events
+                self.trial_procedure.happened_event_list.append(self.name)
+
+        ### TODO replace requirement_string with a function (which has access to the
+        ### attributes) checking the requirements
+        def _check_requirements(self):
+            """
+            Check if the requirements for the event are met
+
+            Returns:
+                met (bool):
+                    True if requirements are met, False otherwise
+            """
+            if self.requirement_string != None:
+                ### check requirement with requirement string
+                return self._eval_requirement_string()
+            else:
+                ### no requirement
+                return True
+
+        def _eval_requirement_string(self):
+            """
+            evaluates a condition string in format like 'XXX==XXX and (XXX==XXX or
+            XXX==XXX)'
+
+            Returns:
+                met (bool):
+                    True if requirements are met, False otherwise
+            """
+            ### split condition string
+            string = self.requirement_string
+            string = string.split(" and ")
+            string = [sub_string.split(" or ") for sub_string in string]
+
+            ### loop over string splitted string parts
+            final_string = []
+            for sub_idx, sub_string in enumerate(string):
+                ### combine outer list eelemts with and
+                ### and combine inner list elements with or
+                if len(sub_string) == 1:
+                    if sub_idx < len(string) - 1:
+                        final_string.append(
+                            self._get_condition_part(sub_string[0]) + " and "
+                        )
+                    else:
+                        final_string.append(self._get_condition_part(sub_string[0]))
+                else:
+                    for sub_sub_idx, sub_sub_string in enumerate(sub_string):
+                        if sub_sub_idx < len(sub_string) - 1:
+                            final_string.append(
+                                self._get_condition_part(sub_sub_string) + " or "
+                            )
+                        elif sub_idx < len(string) - 1:
+                            final_string.append(
+                                self._get_condition_part(sub_sub_string) + " and "
+                            )
+                        else:
+                            final_string.append(
+                                self._get_condition_part(sub_sub_string)
+                            )
+            return eval("".join(final_string))
+
+        def _get_condition_part(self, string):
+            """
+            converts a string in format like '((XXX==XXX)' into '((True)'
+            """
+            ### remove spaces from string
+            string = string.strip()
+            string = string.split()
+            string = "".join(string)
+
+            ### recursively remove brackets
+            ### at the end evaluate term (without brackets) and then return the evaluated value with the former brackets
+            if string[0] == "(":
+                return "(" + self._get_condition_part(string[1:])
+            elif string[-1] == ")":
+                return self._get_condition_part(string[:-1]) + ")"
+            else:
+                return str(self._eval_condition_part(string))
+
+        def _eval_condition_part(self, string):
+            """
+            gets string in format 'XXX==XXX'
+
+            evaluates the term for mode and happened events
+
+            returns True/False
+            """
+
+            var = string.split("==")[0]
+            val = string.split("==")[1]
+            if var == "mode":
+                test = self.trial_procedure.mode == val
+            elif var == "happened_event_list":
+                ### remove brackets
+                val = val.strip("[]")
+                ### split entries
+                val = val.split(",")
+                ### remove spaces from entries
+                happened_event_list_from_string = [val_val.strip() for val_val in val]
+                ### check if all events are in happened_event_list, if not --> return False
+                test = True
+                for event in happened_event_list_from_string:
+                    if not (event in self.trial_procedure.happened_event_list):
+                        test = False
+            return test

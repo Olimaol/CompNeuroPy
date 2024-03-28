@@ -93,7 +93,7 @@ def save_variables(variable_list: list, name_list: list, path: str | list = "./"
             save path for all variables, or save path for each variable of the
             variable_list. Default: "./"
 
-    Examples:
+    Example:
         ```python
         import numpy as np
         from CompNeuroPy import save_variables, load_variables
@@ -146,7 +146,7 @@ def load_variables(name_list: list, path: str | list = "./"):
             dictionary with the loaded variables, keys are the names of the
             files, values are the loaded variables
 
-    Examples:
+    Example:
         ```python
         import numpy as np
         from CompNeuroPy import save_variables, load_variables
@@ -292,7 +292,7 @@ def create_data_raw_folder(
         **kwargs (Any, optional):
             Global variables of the caller script.
 
-    Examples:
+    Example:
         ```python
         from CompNeuroPy import create_data_raw_folder
 

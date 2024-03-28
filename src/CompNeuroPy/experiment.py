@@ -20,7 +20,7 @@ class CompNeuroExp:
         data (dict):
             dict for storing optional data
 
-    Examples:
+    Example:
         ```python
         from CompNeuroPy import CompNeuroExp
         from ANNarchy import simulate

@@ -30,7 +30,8 @@ from CompNeuroPy.extra_functions import (
     evaluate_expression_with_dict,
     VClampParamSearch,
     DeapCma,
-    interactive_plot,
+    interactive_plot,  # TODO remove
+    InteractivePlot,
     data_obj,  # TODO remove
     my_linear_cmap_obj,  # TODO remove
     decision_tree,  # TODO remove
@@ -51,6 +52,7 @@ from CompNeuroPy.simulation_functions import (
     attribute_step,
     attr_ramp,
     increasing_attr,
+    SimulationEvents,
 )
 from CompNeuroPy.system_functions import (
     clear_dir,

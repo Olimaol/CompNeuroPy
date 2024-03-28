@@ -32,7 +32,9 @@ from matplotlib.gridspec import GridSpec
 from screeninfo import get_monitors
 import cmaes
 import efel
-from time import time
+import time
+import threading
+from matplotlib.animation import FuncAnimation
 
 
 def print_df(df: pd.DataFrame | dict, **kwargs):
@@ -106,7 +108,7 @@ def suppress_stdout():
     """
     Suppresses the print output of a function
 
-    Examples:
+    Example:
         ```python
         with suppress_stdout():
             print("this will not be printed")
@@ -694,8 +696,8 @@ class DeapCma:
             lower and upper bounds, the parameter names, the inverse scaler and the
             strategy.
 
-    Examples:
-    For complete example see [here](../examples/deap_cma.md)
+    Example:
+        For complete example see [here](../examples/deap_cma.md)
         ```python
         from CompNeuroPy import DeapCma
         import numpy as np
@@ -2083,143 +2085,144 @@ class VClampParamSearch:
         return False
 
 
-def interactive_plot(
-    nrows: int,
-    ncols: int,
-    sliders: list[dict],
-    create_plot: Callable,
-    update_loop: Callable | None = None,
-    figure_frequency: float = 20.0,
-    update_frequency: float = np.inf,
-):
-    """
-    Create an interactive plot with sliders.
+class InteractivePlot:
 
-    Args:
-        nrows (int):
-            number of rows of subplots
-        ncols (int):
-            number of columns of subplots
-        sliders (list):
-            list of dictionaries with slider kwargs (see matplotlib.widgets.Slider), at
-            least the following keys have to be present:
-                - label (str):
-                    label of the slider
-                - valmin (float):
-                    minimum value of the slider
-                - valmax (float):
-                    maximum value of the slider
-        create_plot (Callable):
-            function which fills the subplots, has to have the signature
-            create_plot(axs, sliders), where axs is a list of axes (for each subplot)
-            and sliders is the given sliders list with newly added keys "ax" (axes of
-            the slider) and "slider" (the Slider object itself, so that you can access
-            the slider values in the create_plot function using the .val attribute)
-        update_loop (Callable, optional):
-            Function which is called periodically. After each call the plot is updated.
-            If None, the plot is only updated when a slider is changed. Default is None.
-        figure_frequency (float, optional):
-            Frequency of the figure update in Hz. Default is 20.0.
-        update_frequency (float, optional):
-            Frequency of the update loop in Hz. Default is np.inf.
+    def __init__(
+        self,
+        nrows: int,
+        ncols: int,
+        sliders: list[dict],
+        create_plot: Callable,
+        update_loop: Callable | None = None,
+        figure_frequency: float = 20.0,
+        update_frequency: float = np.inf,
+    ):
+        """
+        Create an interactive plot with sliders.
 
-    Examples:
-        ```python
-        def create_plot(axs, sliders):
-            axs[0].axhline(sliders[0]["slider"].val, color="r")
-            axs[1].axvline(sliders[1]["slider"].val, color="r")
+        Args:
+            nrows (int):
+                number of rows of subplots
+            ncols (int):
+                number of columns of subplots
+            sliders (list):
+                list of dictionaries with slider kwargs (see matplotlib.widgets.Slider), at
+                least the following keys have to be present:
+                    - label (str):
+                        label of the slider
+                    - valmin (float):
+                        minimum value of the slider
+                    - valmax (float):
+                        maximum value of the slider
+            create_plot (Callable):
+                function which fills the subplots, has to have the signature
+                create_plot(axs, sliders), where axs is a list of axes (for each subplot)
+                and sliders is the given sliders list with newly added keys "ax" (axes of
+                the slider) and "slider" (the Slider object itself, so that you can access
+                the slider values in the create_plot function using the .val attribute)
+            update_loop (Callable, optional):
+                Function which is called periodically. After each call the plot is updated.
+                If None, the plot is only updated when a slider is changed. Default is None.
+            figure_frequency (float, optional):
+                Frequency of the figure update in Hz. Default is 20.0.
+            update_frequency (float, optional):
+                Frequency of the update loop in Hz. Default is np.inf.
 
-        interactive_plot(
-            nrows=2,
-            ncols=1,
-            sliders=[
-                {"label": "a", "valmin": 0.0, "valmax": 1.0, "valinit": 0.3},
-                {"label": "b", "valmin": 0.0, "valmax": 1.0, "valinit": 0.7},
-            ],
-            create_plot=create_plot,
+        Example:
+            ```python
+            def create_plot(axs, sliders):
+                axs[0].axhline(sliders[0]["slider"].val, color="r")
+                axs[1].axvline(sliders[1]["slider"].val, color="r")
+
+            interactive_plot(
+                nrows=2,
+                ncols=1,
+                sliders=[
+                    {"label": "a", "valmin": 0.0, "valmax": 1.0, "valinit": 0.3},
+                    {"label": "b", "valmin": 0.0, "valmax": 1.0, "valinit": 0.7},
+                ],
+                create_plot=create_plot,
+            )
+            ```
+        """
+        self.create_plot = create_plot
+        self._waiter = _Waiter(duration=2.0, on_finish=self._recreate_plot)
+        plt.close("all")
+
+        ### create the figure as large as the screen
+        screen_width, screen_height = get_monitors()[0].width, get_monitors()[0].height
+        figsize = (screen_width / 100, screen_height / 100)
+        fig, axs = plt.subplots(nrows, ncols, figsize=figsize)
+        self.fig = fig
+        self.axs = axs
+
+        ### create the sliders figure, set the axes for the sliders
+        fig_sliders, axs_sliders = plt.subplots(
+            len(sliders), 1, figsize=(6.4, 4.8 * len(sliders))
         )
-        ```
-    """
+        if len(sliders) == 1:
+            axs_sliders = [axs_sliders]
+        for slider_idx in range(len(sliders)):
+            sliders[slider_idx]["ax"] = axs_sliders[slider_idx]
 
-    def update(axs, sliders):
-        ### remove everything from all axes except the sliders axes
-        for ax in axs:
-            if ax not in [slider["ax"] for slider in sliders]:
-                ax.cla()
-        ### recreate the plot
+        ### initialize the sliders
+        for slider_idx, slider_kwargs in enumerate(sliders):
+            ### if init out of min max, change min max
+            if "valinit" in slider_kwargs:
+                if slider_kwargs["valinit"] < slider_kwargs["valmin"]:
+                    slider_kwargs["valmin"] = slider_kwargs["valinit"]
+                elif slider_kwargs["valinit"] > slider_kwargs["valmax"]:
+                    slider_kwargs["valmax"] = slider_kwargs["valinit"]
+            slider = Slider(**slider_kwargs)
+            slider.on_changed(lambda val: self._waiter.start())
+            sliders[slider_idx]["slider"] = slider
+
+        self.sliders = sliders
+
+        ### create the plot
         create_plot(axs, sliders)
 
-    ### create the figure as large as the screen
-    screen_width, screen_height = get_monitors()[0].width, get_monitors()[0].height
-    figsize = (screen_width / 100, screen_height / 100)
-    fig = plt.figure(figsize=figsize)
-
-    ### create the axes filled with the create_plot function
-    grid = GridSpec((nrows + 1) * len(sliders), ncols * len(sliders), figure=fig)
-    axs = []
-    for row_idx in range(nrows):
-        for col_idx in range(ncols):
-            ax = fig.add_subplot(
-                grid[
-                    row_idx * len(sliders) : (row_idx + 1) * len(sliders),
-                    col_idx * len(sliders) : (col_idx + 1) * len(sliders),
-                ]
+        if update_loop is None:
+            ### show the plot
+            self.ani = FuncAnimation(
+                self.fig,
+                func=lambda frame: 0,
+                frames=10,
+                interval=(1.0 / figure_frequency) * 1000,
+                repeat=True,
             )
-            axs.append(ax)
+            plt.show()
+        else:
+            ### run update loop until figure is closed
+            figure_pause = 1 / figure_frequency
+            max_updates_per_pause = update_frequency / figure_frequency
+            while plt.fignum_exists(fig.number):
+                ### update figure
+                self._recreate_plot
+                plt.pause(figure_pause)
+                ### in between do the update loop multiple times
+                start = time.time()
+                nr_updates = 0
+                while (
+                    time.time() - start < figure_pause
+                    and nr_updates < max_updates_per_pause
+                ):
+                    update_loop()
+                    nr_updates += 1
 
-    ### create the sliders axes
-    for slider_idx, slider_kwargs in enumerate(sliders):
-        sliders[slider_idx]["ax"] = fig.add_subplot(
-            grid[nrows * len(sliders) + slider_idx, :]
-        )
+    def _recreate_plot(self):
+        ### pause the animation
+        self.ani.event_source.stop()
+        ### clear the axes
+        for ax in self.axs.flatten():
+            ax.cla()
+        ### recreate the plot
+        self.create_plot(self.axs, self.sliders)
+        ### restart the animation
+        self.ani.event_source.start()
 
-    ### initialize the sliders to their axes
-    for slider_idx, slider_kwargs in enumerate(sliders):
-        ### if init out of min max, change min max
-        if "valinit" in slider_kwargs:
-            if slider_kwargs["valinit"] < slider_kwargs["valmin"]:
-                slider_kwargs["valmin"] = slider_kwargs["valinit"]
-            elif slider_kwargs["valinit"] > slider_kwargs["valmax"]:
-                slider_kwargs["valmax"] = slider_kwargs["valinit"]
-        slider = Slider(**slider_kwargs)
-        slider.on_changed(lambda val: update(axs, sliders))
-        sliders[slider_idx]["slider"] = slider
 
-    ### create the plot
-    create_plot(axs, sliders)
-    ### arange subplots
-    plt.tight_layout()
-    new_right_border = 0.85
-    new_left_border = 0.15
-    for slider_idx, slider_kwargs in enumerate(sliders):
-        ax = sliders[slider_idx]["ax"]
-        ### set new borders
-        ax.set_position(
-            [
-                new_left_border,
-                ax.get_position().y0,
-                new_right_border - new_left_border,
-                ax.get_position().height,
-            ]
-        )
-
-    if update_loop is None:
-        ### show the plot
-        plt.show()
-    else:
-        ### run update loop until figure is closed
-        figure_pause = 1 / figure_frequency
-        max_updates_per_pause = update_frequency / figure_frequency
-        while plt.fignum_exists(fig.number):
-            ### update figure
-            update(axs, sliders)
-            plt.pause(figure_pause)
-            ### in between do the update loop multiple times
-            start = time()
-            nr_updates = 0
-            while time() - start < figure_pause and nr_updates < max_updates_per_pause:
-                update_loop()
-                nr_updates += 1
+interactive_plot = InteractivePlot
 
 
 def efel_loss(trace1, trace2, feature_list):
@@ -2523,3 +2526,76 @@ def get_spike_features_loss_of_chunk(
     if verbose:
         print(f"loss: {loss}")
     return loss
+
+
+class _Waiter:
+    """
+    Class that waits for a certain duration while the rest of the code continues to run.
+
+    Attributes:
+        finished (bool):
+            True if the waiting is finished, False otherwise.
+    """
+
+    def __init__(self, duration=5, on_finish=None):
+        """
+        Args:
+            duration (float):
+                The duration in seconds after which Waiter.finished will return True.
+            on_finish (callable):
+                A callable that will be called when the counter finishes.
+        """
+        self.duration = duration
+        self.on_finish = on_finish
+        self._finished = False
+        self._running = False
+        self._lock = threading.Lock()
+        self._threads = {}
+
+    def _start_waiting(self):
+        """
+        The function that will be run in a separate thread to wait for the duration. It
+        will set finished to True when the duration is reached. It will also call the
+        on_finish callable if it is not None.
+        """
+        ### at the beginning of the thread set the stop flags for all other threads
+        for thread_id, thread in self._threads.items():
+            if thread[0].ident != threading.get_ident():
+                thread[1].set()
+        ### wait duration
+        time.sleep(self.duration)
+        ### check if the current thread was already stopped, if not set finished to True
+        if not (self._threads[threading.get_ident()][1].is_set()):
+            with self._lock:
+                ### set finished to True
+                self._finished = True
+                ### remove the current thread from the threads dict
+                self._threads.pop(threading.get_ident())
+                ### call the on_finish callable in the main thread
+                if self.on_finish is not None:
+                    threading.Timer(0.01, self.on_finish).start()
+        else:
+            with self._lock:
+                ### do not set finished to True and remove the current thread from the
+                ### threads dict
+                self._threads.pop(threading.get_ident())
+
+    def start(self):
+        """
+        Start the waiting process in a separate thread. The waiting will last for the
+        duration specified in the constructor. If the waiting is already running, it
+        will be stopped and restarted.
+        """
+        ### start new waiting thread
+        thread = threading.Thread(target=self._start_waiting, daemon=True)
+        stop_flag = threading.Event()
+        ### start the thread
+        thread.start()
+        ### store the thread and the stop flag
+        with self._lock:
+            self._threads[thread.ident] = [thread, stop_flag]
+
+    @property
+    def finished(self):
+        with self._lock:
+            return self._finished
