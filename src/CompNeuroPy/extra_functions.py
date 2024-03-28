@@ -2599,3 +2599,30 @@ class _Waiter:
     def finished(self):
         with self._lock:
             return self._finished
+
+
+class RNG:
+    """
+    Resettable random number generator.
+
+    Attributes:
+        rng (np.random.Generator):
+            Random number generator.
+
+    Example:
+        ```python
+        rng = RNG(seed=1234)
+        print(rng.rng.integers(0, 10, 5))
+        rng.reset()
+        print(rng.rng.integers(0, 10, 5))
+        ```
+    """
+
+    def __init__(self, seed):
+        self.rng = np.random.default_rng(seed=seed)
+        self._original_seed = seed
+
+    def reset(self):
+        self.rng.bit_generator.state = np.random.default_rng(
+            seed=self._original_seed
+        ).bit_generator.state

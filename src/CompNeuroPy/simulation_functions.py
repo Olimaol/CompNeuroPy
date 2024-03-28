@@ -8,7 +8,7 @@ from ANNarchy import (
 )
 from CompNeuroPy import analysis_functions as af
 import numpy as np
-from copy import deepcopy
+from typing import Callable
 
 
 def attr_sim(pop: str, attr_dict, t=500):
@@ -366,8 +366,8 @@ class SimulationEvents:
         onset: int = None,
         model_trigger: str = None,
         requirement_string: str = None,
-        effect=None,
-        trigger: dict[str, int] = None,
+        effect: Callable = None,
+        trigger: dict[str, int | Callable[[], int]] = None,
     ):
         """
         Adds an event to the simulation. You always have to trigger the end event to end
@@ -390,7 +390,8 @@ class SimulationEvents:
             trigger (dict):
                 dictionary containing the names of other events as keys and the
                 relative time in simulation steps to the onset of the current event as
-                values
+                values. The values can also be callable functions which return the
+                time (without any aruments). They are called when this event is triggered.
         """
         self.event_list.append(
             self._Event(
@@ -620,7 +621,8 @@ class SimulationEvents:
                 trigger (dict):
                     dictionary containing the names of other events as keys and the
                     relative time in simulation steps to the onset of the current event as
-                    values
+                    values. The values can also be callable functions which return the
+                    time (without any aruments). They are called when this event is triggered.
             """
             self.trial_procedure = trial_procedure
             self.name = name
@@ -652,9 +654,15 @@ class SimulationEvents:
                         ### get the other event
                         event_idx = self.trial_procedure.event_name_list.index(name)
                         ### set onset of other event
-                        self.trial_procedure.event_list[event_idx].onset = (
-                            self.onset + delay
-                        )
+                        if callable(delay):
+                            add = delay()
+                            self.trial_procedure.event_list[event_idx].onset = (
+                                self.onset + add
+                            )
+                        else:
+                            self.trial_procedure.event_list[event_idx].onset = (
+                                self.onset + delay
+                            )
                 ### store event in happened events
                 self.trial_procedure.happened_event_list.append(self.name)
 

@@ -37,6 +37,7 @@ from CompNeuroPy.extra_functions import (
     decision_tree,  # TODO remove
     node_cl,  # TODO remove
     efel_loss,
+    RNG,
 )
 from CompNeuroPy.model_functions import (
     compile_in_folder,
