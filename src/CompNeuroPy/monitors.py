@@ -754,9 +754,6 @@ class RecordingTimes:
         time_step = recordings[0]["dt"]
         time_list = []
 
-        ### get data arr
-        data_arr = recordings[chunk][recording_data_str]
-
         ### get time arr
         for period in range(nr_periods):
             start_time, end_time = self.time_lims(
@@ -767,6 +764,13 @@ class RecordingTimes:
             times = np.arange(start_time, end_time + period_time / 2, period_time)
             time_list.append(times)
         time_arr = np.concatenate(time_list, 0)
+
+        ### get data arr
+        try:
+            data_arr = recordings[chunk][recording_data_str]
+        except:
+            ### create an nan array with the same length as time_arr
+            data_arr = np.full(time_arr.shape, np.nan)
 
         ### fill gaps with nan or interpolate
         if fill == "nan":

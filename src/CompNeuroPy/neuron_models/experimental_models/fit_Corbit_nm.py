@@ -467,7 +467,7 @@ _Izhikevich2007_Corbit13 = Neuron(
         dg_gaba/dt = -g_gaba/tau_gaba
         I = a_I*(I_app - neg(g_ampa*(v - E_ampa)) - pos(g_gaba*(v - E_gaba)))
       
-        C * dv/dt = k*(v - v_r)*(v - v_t) - u - pos(uu*(v - E_gaba)) - n + I
+        C * dv/dt = k*(v - v_r)*(v - v_t) - u - pos(uu*(v - E_gaba)) - pos(n) + I
         du/dt     = a*(b*(v - v_r) - u)
         duu/dt    = -a_uu*uu
 
