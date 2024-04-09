@@ -1372,6 +1372,141 @@ class Izhikevich2007NoisyAmpaOscillating(Neuron):
         self._instantiated.append(True)
 
 
+class IzhikevichGolomb(Neuron):
+    """
+    PREDEFINED
+
+    [Izhikevich (2007)](https://isbnsearch.org/isbn/9780262090438)-like neuron model
+    with conductance-based AMPA and GABA synapses, noise in the baseline current, a
+    separated after-spike hyperpolarization and an inductive-like current causing late
+    spiking. Mechanisms and parameters were adjusted to fit the striatal FSI neuron
+    model from [Golomb et al. (2007)](https://doi.org/10.1371/journal.pcbi.0030156)
+    also used by [Corbit et al. (2016)](https://doi.org/10.1523/JNEUROSCI.0339-16.2016)
+    as striatal FSI neuron.
+
+    Parameters:
+        I_app (float, optional):
+            External applied input current.
+        tau_ampa (float, optional):
+            Time constant of the AMPA synapse.
+        tau_gaba (float, optional):
+            Time constant of the GABA synapse.
+        E_ampa (float, optional):
+            Reversal potential of the AMPA synapse.
+        E_gaba (float, optional):
+            Reversal potential of the GABA synapse.
+        base_mean (float, optional):
+            Mean of the baseline current.
+        base_noise (float, optional):
+            Standard deviation of the baseline current noise.
+        rate_base_noise (float, optional):
+            Rate of the noise update (Poisson distributed) in the baseline current.
+        params_for_pop (bool, optional):
+            If True, the parameters are population-wide and not neuron-specific.
+        init (dict, optional):
+            Initial values for the variables.
+
+    Variables to record:
+        - offset_base
+        - I_base
+        - g_ampa
+        - g_gaba
+        - I_v
+        - v
+        - u
+        - uu
+        - s
+        - n
+    """
+
+    # For reporting
+    _instantiated = []
+
+    def __init__(
+        self,
+        I_app: float = 0.0,
+        tau_ampa: float = 10.0,
+        tau_gaba: float = 10.0,
+        E_ampa: float = 0.0,
+        E_gaba: float = -90.0,
+        base_mean: float = 0.0,
+        base_noise: float = 0.0,
+        rate_base_noise: float = 0.0,
+        params_for_pop: bool = False,
+        init: dict = {},
+    ):
+        # Create the arguments
+        parameters = f"""
+            ### base parameters
+            C               = 100
+            k               = 2.3422021975590845
+            v_r             = -70
+            v_t             = -50
+            a               = 0.4077132173988824
+            b               = 37.027824808742196
+            c               = -50
+            d               = 0
+            v_peak          = 0
+            ### after-spike current parameters
+            a_uu            = 0.4077132173988824
+            dd              = 819.0218598481788
+            ### slow currents parameters
+            a_s             = 0.19087175635342485
+            a_n             = 0.008987424013380247
+            b_n             = 2.9609600149723434
+            ### input current
+            I_app           = {I_app}
+            ### synaptic current parameters
+            tau_ampa        = {tau_ampa} {': population' if params_for_pop else ''}
+            tau_gaba        = {tau_gaba} {': population' if params_for_pop else ''}
+            E_ampa          = {E_ampa} {': population' if params_for_pop else ''}
+            E_gaba          = {E_gaba} {': population' if params_for_pop else ''}
+            ### input current scaling
+            a_I             = 223.0822501641062
+            ### baseline current parameters
+            base_mean       = {base_mean}
+            base_noise      = {base_noise}
+            rate_base_noise = {rate_base_noise}
+        """
+
+        prefix = _I_base_noise
+        syn = _syn_default
+        i_v = f"a_I*(I_app {_I_syn} + I_base)"
+        dv = f"{_dv_default} - pos(uu*(v - E_gaba)) - pos(n)"
+        affix = """
+            duu/dt    = -a_uu*uu
+            ds/dt     = a_s*(I_v - s)
+            dn/dt     = a_n*(b_n*(I_v - s) - n)
+        """
+
+        # get equations
+        equations = _get_equation_izhikevich_2007(
+            syn=syn, i_v=i_v, dv=dv, prefix=prefix, affix=affix
+        )
+
+        # set initial values
+        equations = _set_init(equations, init)
+
+        super().__init__(
+            parameters=parameters,
+            equations=equations,
+            spike="v >= v_peak",
+            reset="""
+                v = c
+                u = u + d
+                uu = uu + dd
+            """,
+            name="IzhikevichGolomb",
+            description="""
+                Izhikevich (2007)-like neuron model fitted to the FSI neuron model
+                from Golomb et al. (2007) and Corbit et al. (2016).
+            """,
+        )
+
+        # For reporting
+        self._instantiated.append(True)
+
+
 ### create objects for backwards compatibility
 Izhikevich2007_record_currents = Izhikevich2007RecCur()
 Izhikevich2007_voltage_clamp = Izhikevich2007VoltageClamp()
