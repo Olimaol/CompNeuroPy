@@ -28,7 +28,6 @@ from typingchecker import check_types
 import warnings
 import json
 from matplotlib.widgets import Slider
-from matplotlib.gridspec import GridSpec
 from screeninfo import get_monitors
 import cmaes
 import efel
