@@ -18,25 +18,30 @@ from CompNeuroPy.neuron_models import PoissonNeuron
 import numpy as np
 from sklearn.neighbors import KernelDensity
 import matplotlib.pyplot as plt
+from scipy.stats import binom
+from functools import wraps
+import time
 
 setup(dt=0.1)
 
 neuron_izh = Neuron(
     parameters="""
-        C = 100.0
-        k = 0.7
-        v_r = -60.0
-        v_t = -40.0
-        a = 0.03
-        b = -2.0
-        c = -50.0
-        d = 100.0
-        v_peak = 35.0
+        C = 100.0 : population
+        k = 0.7 : population
+        v_r = -60.0 : population
+        v_t = -40.0 : population
+        a = 0.03 : population
+        b = -2.0 : population
+        c = -50.0 : population
+        d = 100.0 : population
+        v_peak = 0.0 : population
         I_app = 0.0
-        E_ampa = 0.0
+        E_ampa = 0.0 : population
+        tau_ampa = 10.0 : population
     """,
     equations="""
         ### synaptic current
+        tau_ampa * dg_ampa/dt = -g_ampa
         I_ampa = -neg(g_ampa*(v - E_ampa))
         ### Izhikevich spiking
         I_v        = I_app + I_ampa
@@ -53,8 +58,10 @@ neuron_izh = Neuron(
 pop_pre = Population(100, neuron=PoissonNeuron(rates=10.0), name="pre")
 pop_post = Population(100, neuron=neuron_izh, name="post")
 
+CONNECTION_PROB = 0.1
+WEIGHTS = 1.0
 proj = Projection(pre=pop_pre, post=pop_post, target="ampa", name="proj")
-proj.connect_fixed_probability(weights=10, probability=0.1)
+proj.connect_fixed_probability(weights=WEIGHTS, probability=CONNECTION_PROB)
 
 
 monitors = CompNeuroMonitors(
@@ -66,7 +73,7 @@ compile()
 monitors.start()
 
 simulate(100.0)
-pop_pre.rates = 200.0
+pop_pre.rates = 1000.0
 simulate(100.0)
 
 recordings = monitors.get_recordings()
@@ -149,12 +156,22 @@ def get_binned_variable(var_array: np.ndarray, BIN_SIZE_STEPS: int):
     return averages
 
 
-BIN_SIZE_STEPS = int(round(5 / dt()))
+BIN_SIZE_MS = 5
+BIN_SIZE_STEPS = int(round(BIN_SIZE_MS / dt()))
 
 
 class DistPreSpikes:
 
     def __init__(self, spikes_dict, time_lims_steps):
+        """
+        Create a distribution object for the given spike dictionary.
+
+        Args:
+            spikes_dict (dict):
+                A dictionary of spike times for each neuron.
+            time_lims_steps (tuple[int, int]):
+                The time limits of the spike_dict in steps.
+        """
 
         self.spikes_binned = get_binned_spikes(
             spikes_dict=spikes_dict,
@@ -163,40 +180,86 @@ class DistPreSpikes:
         )
         self._pdf_dict = {}
 
-    @property
     def pdf(self, time_bin=0):
-        return self._pdf_dict.get(time_bin, self._get_pdf(time_bin))
+        """
+        Get the PDF of the spike counts over the population for the given time bin.
 
-    def _get_pdf(self, time_bin=0):
+        Args:
+            time_bin (int):
+                The time bin to get the PDF for.
+
+        Returns:
+            x (np.ndarray):
+                The spike count values of the PDF.
+            pdf (np.ndarray):
+                The PDF values for the corresponding spike count values.
+        """
+        ret = self._pdf_dict.get(time_bin)
+        if ret is not None:
+            return ret
+
         # Create the KDE object
         kde = KernelDensity()
-
         # Fit the data to the KDE
         kde.fit(self.spikes_binned[time_bin])
-
         # Create points for which to estimate the PDF
-        x = np.linspace(0, 10, 100).reshape(-1, 1)
-
+        x = np.linspace(-10, 10, 200).reshape(-1, 1)
         # Estimate the PDF for these points
         log_density = kde.score_samples(x)
         pdf = np.exp(log_density)
-
         # spikes can only be positive
         pdf[x[:, 0] >= 0] = pdf[x[:, 0] >= 0] * (
             1 + np.sum(pdf[x[:, 0] < 0]) / np.sum(pdf[x[:, 0] >= 0])
         )
-        pdf[x[:, 0] < 0] = 0
-
+        pdf = pdf[x[:, 0] >= 0]
+        x = x[x[:, 0] >= 0]
+        # spikes are discrete, sum values between 0 and 1, and between 1 and 2, etc.
+        pdf_discrete = np.zeros(10)
+        for i in range(10):
+            pdf_discrete[i] = np.sum(pdf[(x[:, 0] >= i) & (x[:, 0] < i + 1)])
+        # to keep the density, divide by 10 (before step size was 10/100, now 10/10)
+        pdf_discrete = pdf_discrete / 10
+        # sum is almost 1, but not exactly, so normalize
+        pdf_discrete = pdf_discrete / np.sum(pdf_discrete)
+        x_discrete = np.arange(0, 10)
         # store the pdf
-        self._pdf_dict[time_bin] = (x, pdf)
+        ret = (x_discrete, pdf_discrete)
+        self._pdf_dict[time_bin] = ret
+        # return the pdf
+        return ret
 
-        return x, pdf
+    def show_dist(self, time_bin=0):
+        """
+        Show the distribution of the spike counts over the population for the given time
+        bin.
+
+        Args:
+            time_bin (int):
+                The time bin to show the distribution for.
+        """
+        x, pdf = self.pdf(time_bin=time_bin)
+        plt.bar(x, pdf, alpha=0.5)
+        plt.xlabel("Spikes")
+        plt.ylabel("Density")
+        plt.title("Spikes Distribution")
+        plt.show()
 
 
 class DistPostSpikesAndVoltage:
 
     def __init__(self, spikes_dict, time_lims_steps, voltage_array):
+        """
+        Create a distribution object for the given spike dictionary and voltage array.
 
+        Args:
+            spikes_dict (dict):
+                A dictionary of spike times for each neuron of the post population.
+            time_lims_steps (tuple[int, int]):
+                The time limits of the spike_dict in steps.
+            voltage_array (np.ndarray):
+                The voltage array of the post population.
+        """
+        ### bin spikes and voltage over time
         self.spikes_post_binned = get_binned_spikes(
             spikes_dict=spikes_dict,
             time_lims_steps=time_lims_steps,
@@ -205,104 +268,344 @@ class DistPostSpikesAndVoltage:
         self.voltage_binned = get_binned_variable(
             voltage_array, BIN_SIZE_STEPS=BIN_SIZE_STEPS
         )
+        ### initial pdf dict
         self._pdf_dict = {}
 
-    @property
     def pdf(self, time_bin=0):
-        return self._pdf_dict.get(time_bin, self._get_pdf(time_bin))
+        """
+        Get the PDF of the spike counts and voltage values over the population for the
+        given time bin.
 
-    def _get_pdf(self, time_bin=0):
+        Args:
+            time_bin (int):
+                The time bin to get the PDF for.
+
+        Returns:
+            x (np.ndarray):
+                The spike and voltage values of the PDF. Array of shape (100**2, 2).
+                (:, 0) are the spike values and (:, 1) are the voltage values.
+            pdf (np.ndarray):
+                The PDF values for the corresponding spike and voltage value pairs.
+        """
+        ret = self._pdf_dict.get(time_bin)
+        if ret is not None:
+            return ret
+
         # Create the KDE object
         kde = KernelDensity()
-
+        # combine the spike and voltage data
+        data = np.concatenate(
+            [self.spikes_post_binned[time_bin], self.voltage_binned[time_bin]], axis=1
+        )
         # Fit the data to the KDE
-        kde.fit(self.spikes_binned[time_bin])
-
-        # Create points for which to estimate the PDF
-        x = np.linspace(0, 10, 100).reshape(-1, 1)
-
+        kde.fit(data)
+        # Create points for which to estimate the PDF, here, 2D for spike and voltage
+        # spike between -10 and 10 (will later be changed to 0-10), voltage between
+        # -100 and 0
+        x = np.mgrid[-10:10:200j, -100:0:100j].reshape(2, -1).T
         # Estimate the PDF for these points
         log_density = kde.score_samples(x)
         pdf = np.exp(log_density)
-
-        # spikes can only be positive
+        ### spikes can only be positive (only use positive side of distribution)
         pdf[x[:, 0] >= 0] = pdf[x[:, 0] >= 0] * (
             1 + np.sum(pdf[x[:, 0] < 0]) / np.sum(pdf[x[:, 0] >= 0])
         )
-        pdf[x[:, 0] < 0] = 0
-
+        pdf = pdf[x[:, 0] >= 0]
+        x = x[x[:, 0] >= 0]
         # store the pdf
         self._pdf_dict[time_bin] = (x, pdf)
-
+        # return the pdf
         return x, pdf
+
+    def show_dist(self, time_bin=0):
+        """
+        Show the distribution of the spike counts and voltage values over the population
+        for the given time bin.
+
+        Args:
+            time_bin (int):
+                The time bin to show the distribution for.
+        """
+        x, pdf = self.pdf(time_bin=time_bin)
+        pdf = pdf.reshape(100, 100)
+        extend = [x[:, 1].min(), x[:, 1].max(), x[:, 0].max(), x[:, 0].min()]
+        plt.imshow(pdf, extent=extend, aspect="auto")
+        plt.xlabel("Voltage")
+        plt.ylabel("Spikes")
+        plt.title("Voltage-Spikes Distribution")
+        plt.show()
+
+
+class DistSynapses:
+    def __init__(self, pre_pop_size, connection_probability):
+        """
+        Create a distribution object for the number of synapses of the post population
+        neurons.
+
+        Args:
+            pre_pop_size (int):
+                The size of the pre population.
+            connection_probability (float):
+                The probability of connection between the pre and post populations.
+        """
+        number_synapses = binom(pre_pop_size, connection_probability)
+        self._x = np.arange(
+            number_synapses.ppf(0.05), number_synapses.ppf(0.95) + 1
+        ).astype(int)
+        self._pdf = number_synapses.pmf(self._x)
+        ### normalize the pdf to sum to 1 (sum is already almost 1)
+        self._pdf = self._pdf / np.sum(self._pdf)
+
+    def pdf(self):
+        """
+        Get the PDF of the number of synapses of the post population neurons.
+
+        Returns:
+            x (np.ndarray):
+                The synapse count values of the PDF.
+            pdf (np.ndarray):
+                The PDF values for the corresponding synapse count values.
+        """
+        return self._x, self._pdf
+
+    def show_dist(self):
+        """
+        Show the distribution of the number of synapses of the post population neurons.
+        """
+        x, pdf = self.pdf()
+        plt.bar(x, pdf, alpha=0.5)
+        plt.xlabel("Synapses")
+        plt.ylabel("Density")
+        plt.title("Synapses Distribution")
+        plt.show()
+
+
+class DistIncomingSpikes:
+
+    def __init__(self, dist_pre_spikes: DistPreSpikes, dist_synapses: DistSynapses):
+        """
+        Create a distribution object for the incoming spike counts over the post
+        population for the given pre spike and synapse distributions.
+
+        Args:
+            dist_pre_spikes (DistPreSpikes):
+                The distribution of the pre spike counts.
+            dist_synapses (DistSynapses):
+                The distribution of the number of synapses of the post population neurons.
+        """
+        self.dist_pre_spikes = dist_pre_spikes
+        self.dist_synapses = dist_synapses
+        self._pdf_dict = {}
+
+    def pdf(self, time_bin=0):
+        """
+        Get the PDF of the incoming spike counts over the post population for the given
+        time bin.
+
+        Args:
+            time_bin (int):
+                The time bin to get the PDF for.
+
+        Returns:
+            x (np.ndarray):
+                The incoming spike count values of the PDF.
+            pdf (np.ndarray):
+                The PDF values for the corresponding incoming spike count values.
+        """
+        ret = self._pdf_dict.get(time_bin)
+        if ret is not None:
+            return ret
+
+        ### get pdfs of pre spikes and synapses
+        spike_count_arr, pdf_spike_count_arr = self.dist_pre_spikes.pdf(
+            time_bin=time_bin
+        )
+        synapse_count_arr, pdf_synapse_count_arr = self.dist_synapses.pdf()
+        ### calculate the incoming spike count array and the corresponding pdf values
+        incoming_spike_count_arr = np.outer(
+            spike_count_arr, synapse_count_arr
+        ).flatten()
+        pdf_incoming_spike_count_arr = np.outer(
+            pdf_spike_count_arr, pdf_synapse_count_arr
+        ).flatten()
+        ### sort the incoming spike count array (for later combining unique values)
+        sort_indices = np.argsort(incoming_spike_count_arr)
+        incoming_spike_count_arr = incoming_spike_count_arr[sort_indices]
+        pdf_incoming_spike_count_arr = pdf_incoming_spike_count_arr[sort_indices]
+        ### combine unique values of incoming spikes and sum the corresponding pdf values (slice
+        ### the pdf array at the unique indices and sum the values between the indices)
+        incoming_spike_count_arr, unique_indices = np.unique(
+            incoming_spike_count_arr, return_index=True
+        )
+        pdf_incoming_spike_count_arr = np.add.reduceat(
+            pdf_incoming_spike_count_arr, unique_indices
+        )
+        ### store the pdf
+        ret = (incoming_spike_count_arr, pdf_incoming_spike_count_arr)
+        self._pdf_dict[time_bin] = ret
+        ### return the pdf
+        return ret
+
+    def show_dist(self, time_bin=0):
+        """
+        Show the distribution of the incoming spike counts over the post population for
+        the given time bin.
+        """
+        x, pdf = self.pdf(time_bin=time_bin)
+        plt.bar(x, pdf, alpha=0.5)
+        plt.xlabel("Incoming Spikes")
+        plt.ylabel("Density")
+        plt.title("Incoming Spikes Distribution")
+        plt.show()
+
+
+class ConductanceCalc:
+
+    def __init__(self, tau, w):
+        """
+        Create a conductance calculator object with the given synaptic decay time
+        constant and weight.
+
+        Args:
+            tau (float):
+                The synaptic decay time constant.
+            w (float):
+                The synaptic weight.
+        """
+        self.tau = tau
+        self.w = w
+
+    def g_mean(self, nbr_spikes: int | np.ndarray, g_init: np.ndarray):
+        """
+        Calculate the mean conductance of the post population neurons for the given number
+        of incoming spikes and initial (prev) conductances.
+
+        Args:
+            nbr_spikes (int | np.ndarray):
+                The number of incoming spikes.
+            g_init (np.ndarray):
+                The initial (prev) conductances of the post population neurons.
+
+        Returns:
+            np.ndarray:
+                The mean conductance values for the given number of spikes and initial
+                (prev) conductances. First axis is the number of spikes and second axis
+                is the initial conductance values.
+        """
+
+        # initial (prev) conductance
+        self.g_init = g_init
+        # single number of spikes
+        if isinstance(nbr_spikes, int):
+            # isi duration in ms if spikes are evenly distributed
+            self.d = BIN_SIZE_MS / (nbr_spikes + 1)
+            # mean exp for calculating the mean conductance
+            self.mean_exp = np.mean(np.exp(-np.linspace(0, self.d, 100) / self.tau))
+            # calculate the mean conductance
+            g_mean_arr = np.zeros((1, g_init.size))
+            g_mean_arr[0] = self.mean_exp * np.mean(
+                np.stack(self._g_mean_recursive(lvl=nbr_spikes)), axis=0
+            )
+            return g_mean_arr
+        # multiple number of spikes
+        else:
+            g_mean_arr = np.zeros((nbr_spikes.size, g_init.size))
+            for lvl_idx, lvl in enumerate(nbr_spikes):
+                # isi duration in ms if spikes are evenly distributed
+                self.d = BIN_SIZE_MS / (lvl + 1)
+                # mean exp for calculating the mean conductance
+                self.mean_exp = np.mean(np.exp(-np.linspace(0, self.d, 100) / self.tau))
+                # calculate the mean conductance
+                g_mean_arr[lvl_idx] = self.mean_exp * np.mean(
+                    np.stack(self._g_mean_recursive(lvl=lvl)), axis=0
+                )
+                print(lvl, g_mean_arr[lvl_idx])
+            return g_mean_arr
+
+    def _foo(self, lvl):
+        if lvl == 0:
+            ret = self.g_init * np.exp(-self.d / self.tau) + self.w
+            return ret
+        return self._foo(lvl - 1) * np.exp(-self.d / self.tau) + self.w
+
+    def _g_mean_recursive(self, lvl):
+        if lvl == 0:
+            return [self.g_init]
+        ret_rec = self._g_mean_recursive(lvl - 1)
+        ret_rec.append(self._foo(lvl - 1))
+        return ret_rec
+
+    def show_conductance(self, nbr_spikes: int, g_init: np.ndarray):
+        """
+        Show the conductance of the post population neurons for the given number of spikes
+        and initial (prev) conductances.
+
+        Args:
+            nbr_spikes (int):
+                The number of incoming spikes.
+            g_init (np.ndarray):
+                The initial (prev) conductances of the post population neurons.
+        """
+        timestep = 0.0001
+        # time over bin
+        t_arr = np.arange(0, BIN_SIZE_MS, timestep)
+        # when spikes occur
+        spike_idx = np.arange(
+            t_arr.size // (nbr_spikes + 1),
+            t_arr.size - (t_arr.size // (nbr_spikes + 1)) / 2,
+            t_arr.size // (nbr_spikes + 1),
+        )
+        # loop over time and calculate conductance
+        g = g_init
+        g_list = []
+        for t_idx, t in enumerate(t_arr):
+            g = g - (g / self.tau) * timestep
+            if t_idx in spike_idx:
+                g = g + self.w
+            g_list.append(g)
+        # plot the conductance
+        g_mean = np.mean(np.stack(g_list), axis=0)
+        plt.title(g_mean)
+        plt.plot(t_arr, g_list)
+        plt.show()
 
 
 dist_pre_spikes = DistPreSpikes(
     spikes_dict=recordings[0]["pre;spike"], time_lims_steps=(0, 2000)
 )
 
-DistPostSpikesAndVoltage(
+dist_post = DistPostSpikesAndVoltage(
     spikes_dict=recordings[0]["post;spike"],
     time_lims_steps=(0, 2000),
     voltage_array=recordings[0]["post;v"],
 )
 
+dist_synapses = DistSynapses(
+    pre_pop_size=pop_pre.size, connection_probability=CONNECTION_PROB
+)
+
+dist_incoming_spikes = DistIncomingSpikes(
+    dist_pre_spikes=dist_pre_spikes, dist_synapses=dist_synapses
+)
+
 # Plot the results
-x, pdf_spikes_pre = dist_pre_spikes.pdf(time_bin=0)
-plt.fill_between(x[:, 0], pdf_spikes_pre, alpha=0.5)
-plt.xlabel("Value")
-plt.ylabel("Density")
-plt.title("Kernel Density Estimation")
-plt.show()
+dist_pre_spikes.show_dist(time_bin=10)
+dist_pre_spikes.show_dist(time_bin=-1)
+dist_post.show_dist(time_bin=10)
+dist_post.show_dist(time_bin=-1)
+dist_synapses.show_dist()
+dist_incoming_spikes.show_dist(time_bin=10)
+dist_incoming_spikes.show_dist(time_bin=-1)
 
 
-def get_pdf_post():
-    # Create the KDE object
-    kde = KernelDensity()
-
-    time_bin = -1
-    # combine the spike and voltage data
-    data = np.concatenate(
-        [spikes_post_binned[time_bin], voltage_binned[time_bin]], axis=1
+conductance_calc = ConductanceCalc(tau=pop_post.tau_ampa, w=WEIGHTS)
+print(
+    conductance_calc.g_mean(
+        nbr_spikes=np.array([5, 10]), g_init=np.array([0, 0.5, 1.0])
     )
-
-    print(data)
-    # Fit the data to the KDE
-    kde.fit(data)
-    # Create points for which to estimate the PDF, here, 2D for spike and voltage
-    # spike between 0 and 10, voltage between -100 and 100
-    x = np.mgrid[0:10:100j, -100:100:100j].reshape(2, -1).T
-
-    print(x)
-    print(x.shape)
-
-    # Estimate the PDF for these points
-    log_density = kde.score_samples(x)
-    pdf = np.exp(log_density)
-
-    ### spikes can only be positive
-    pdf[x[:, 0] >= 0] = pdf[x[:, 0] >= 0] * (
-        1 + np.sum(pdf[x[:, 0] < 0]) / np.sum(pdf[x[:, 0] >= 0])
-    )
-    pdf[x[:, 0] < 0] = 0
-    # print(x[18:22])
-    # print(pdf[18:22])
-    # print(x[118:122])
-    # print(pdf[118:122])
-    pdf = pdf.reshape(100, 100)
-
-    print(np.sum(pdf) * (20 / 100) * (200 / 100))
-
-    return x, pdf
-
-
-# plot the results
-x, pdf_post = get_pdf_post()
-plt.imshow(pdf_post, aspect="auto", extent=(-100, 100, 0, 10), origin="lower")
-plt.xlabel("voltages")
-plt.ylabel("spikes")
-plt.title("Kernel Density Estimation")
-plt.show()
+)
+conductance_calc.show_conductance(nbr_spikes=5, g_init=np.array([0, 0.5, 1.0]))
+conductance_calc.show_conductance(nbr_spikes=10, g_init=np.array([0, 0.5, 1.0]))
 
 
 # ### discrete because spikes are integers
