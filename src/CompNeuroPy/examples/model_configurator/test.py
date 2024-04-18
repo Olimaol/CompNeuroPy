@@ -66,7 +66,7 @@ proj.connect_fixed_probability(weights=WEIGHTS, probability=CONNECTION_PROB)
 
 
 monitors = CompNeuroMonitors(
-    mon_dict={"pre": ["spike"], "post": ["v", "spike", "I_ampa"]}
+    mon_dict={"pre": ["spike"], "post": ["v", "spike", "I_ampa", "g_ampa"]}
 )
 
 compile()
@@ -89,7 +89,7 @@ PlotRecordings(
         "position": [1, 3, 4],
         "compartment": ["pre", "post", "post"],
         "variable": ["spike", "spike", "v"],
-        "format": ["hybrid", "hybrid", "line"],
+        "format": ["hybrid", "hybrid", "line_mean"],
     },
 )
 
@@ -223,13 +223,13 @@ class DistPreSpikes:
         log_density = kde.score_samples(scale * x)
         pdf = np.exp(log_density)
         # spikes are discrete, sum values between 0 and 1, and between 1 and 2, etc.
-        pdf_discrete_size = int(round(pdf_max - pdf_min))
+        pdf_discrete_size = int(round(pdf_max - pdf_min) + 1)
         pdf_discrete = np.zeros(pdf_discrete_size)
         for i in range(pdf_discrete_size):
             pdf_discrete[i] = np.sum(pdf[(x[:, 0] >= i) & (x[:, 0] < i + 1)])
         # stepsize is now 1 --> normalize to sum to 1
         pdf_discrete = pdf_discrete / np.sum(pdf_discrete)
-        x_discrete = np.arange(pdf_min, pdf_max).astype(int)
+        x_discrete = np.arange(pdf_min, pdf_max + 0.5).astype(int)
         # store the pdf
         ret = (x_discrete, pdf_discrete)
         self._pdf_dict[time_bin] = ret
@@ -341,13 +341,13 @@ class DistPostSpikesAndVoltage:
         # spikes are discrete, sum values between 0 and 1, and between 1 and 2, etc.
         pdf = pdf.reshape(100, 100)
         x = x.reshape(100, 100, 2)
-        pdf_discrete_size = int(round(pdf_spikes_max - pdf_spikes_min))
+        pdf_discrete_size = int(round(pdf_spikes_max - pdf_spikes_min) + 1)
         pdf_discrete = np.zeros((pdf_discrete_size, 100))
         for i in range(pdf_discrete_size):
             pdf_discrete[i] = np.sum(
                 pdf[(x[:, 0, 0] >= i) & (x[:, 0, 0] < i + 1)], axis=0
             )
-        x_discrete_spikes = np.arange(pdf_spikes_min, pdf_spikes_max).astype(int)
+        x_discrete_spikes = np.arange(pdf_spikes_min, pdf_spikes_max + 0.5).astype(int)
         x_discrete_voltage = np.linspace(-100, 0, 100)
         # x_discrete are all combinations of x_discrete_spikes and x_discrete_voltage
         x_discrete = np.zeros((pdf_discrete_size * 100, 2))
@@ -358,6 +358,12 @@ class DistPostSpikesAndVoltage:
         ### normalize so that sum*stepsize = 1 (stepsize of spikes is 1)
         stepsize = 1 * (x_discrete[0, 1, 1] - x_discrete[0, 0, 1])
         pdf_discrete = pdf_discrete / np.sum(pdf_discrete) / stepsize
+        # get indices of rows and columns where sum of pdf is not 0
+        row_indices = np.where(np.sum(pdf_discrete, axis=1) > 0)[0]
+        col_indices = np.where(np.sum(pdf_discrete, axis=0) > 0)[0]
+        # get the pdf values and corresponding x values for the non-zero values
+        pdf_discrete = pdf_discrete[row_indices][:, col_indices]
+        x_discrete = x_discrete[row_indices][:, col_indices]
         # store the pdf
         ret = (x_discrete, pdf_discrete)
         self._pdf_dict[time_bin] = ret
@@ -374,11 +380,92 @@ class DistPostSpikesAndVoltage:
                 The time bin to show the distribution for.
         """
         x, pdf = self.pdf(time_bin=time_bin)
-        extend = [x[0, 0, 1], x[0, -1, 1], x[-1, 0, 0] + 0.5, x[0, 0, 0] - 0.5]
-        plt.imshow(pdf, extent=extend, aspect="auto")
-        plt.xlabel("Voltage")
-        plt.ylabel("Spikes")
-        plt.title("Voltage-Spikes Distribution")
+        if x.shape[0] == 1:
+            plt.bar(x[0, :, 1], pdf[0, :])
+            plt.xlabel("Voltage")
+            plt.ylabel("Density")
+            plt.title(f"Voltage Distribution, Spikes={x[0, 0, 0]}")
+            plt.show()
+        else:
+            plt.pcolormesh(x[:, :, 0], x[:, :, 1], pdf)
+            plt.xlabel("Spikes")
+            plt.ylabel("Voltage")
+            plt.title("Voltage-Spikes Distribution")
+        plt.show()
+
+
+class DistPostConductance:
+
+    def __init__(self, conductance_array):
+        """
+        Create a distribution object for the given conductance array.
+
+        Args:
+            conductance_array (np.ndarray):
+                The voltage array of the post population.
+        """
+        ### bin conductance over time
+        self.g_binned = get_binned_variable(
+            conductance_array, BIN_SIZE_STEPS=BIN_SIZE_STEPS
+        )
+        ### initial pdf dict
+        self._pdf_dict = {}
+
+    def pdf(self, time_bin=0):
+        """
+        Get the PDF of the conductance values over the population for the given time bin.
+
+        Args:
+            time_bin (int):
+                The time bin to get the PDF for.
+
+        Returns:
+            x (np.ndarray):
+                The conductance values of the PDF. Array of shape (100,).
+            pdf (np.ndarray):
+                The PDF values for the corresponding conductance values.
+        """
+        ret = self._pdf_dict.get(time_bin)
+        if ret is not None:
+            return ret
+
+        # Create the KDE object
+        kde = KernelDensity(kernel="linear")
+        # scale data to have standard deviation of 1
+        # if all values are the same, return this value with pdf 1
+        if np.std(self.g_binned[time_bin]) == 0:
+            return (np.array([self.g_binned[time_bin][0]]), np.array([1]))
+        else:
+            scale = 1 / np.std(self.g_binned[time_bin])
+        # Fit the data to the KDE
+        kde.fit(scale * self.g_binned[time_bin].reshape(-1, 1))
+        # Create points for which to estimate the PDF, values can only be between 0 and max
+        pdf_max = self.g_binned[time_bin].max() + np.std(self.g_binned[time_bin])
+        x = np.linspace(0, pdf_max, 100).reshape(-1, 1)
+        # Estimate the PDF for these points
+        log_density = kde.score_samples(x * scale)
+        pdf = np.exp(log_density)
+        ### normalize so that sum*stepsize = 1
+        stepsize = x[1, 0] - x[0, 0]
+        pdf = pdf / np.sum(pdf) / stepsize
+        ret = (x[:, 0], pdf)
+
+        return ret
+
+    def show_dist(self, time_bin=0):
+        """
+        Show the distribution of the conductances over the population for the given time
+        bin.
+
+        Args:
+            time_bin (int):
+                The time bin to show the distribution for.
+        """
+        x, pdf = self.pdf(time_bin=time_bin)
+        plt.bar(x, pdf, alpha=0.5, width=x[1] - x[0])
+        plt.xlabel("Conductance")
+        plt.ylabel("Density")
+        plt.title("Conductance Distribution")
         plt.show()
 
 
@@ -538,8 +625,12 @@ class ConductanceCalc:
                 The initial (prev) conductances of the post population neurons.
 
         Returns:
-            np.ndarray:
+            g_mean_arr (np.ndarray):
                 The mean conductance values for the given number of spikes and initial
+                (prev) conductances. First axis is the number of spikes and second axis
+                is the initial conductance values.
+            g_end_arr (np.ndarray):
+                The end conductance values for the given number of spikes and initial
                 (prev) conductances. First axis is the number of spikes and second axis
                 is the initial conductance values.
         """
@@ -554,13 +645,16 @@ class ConductanceCalc:
             self.mean_exp = np.mean(np.exp(-np.linspace(0, self.d, 100) / self.tau))
             # calculate the mean conductance
             g_mean_arr = np.zeros((1, g_init.size))
+            g_end_arr = np.zeros((1, g_init.size))
             g_mean_arr[0] = self.mean_exp * np.mean(
                 np.stack(self._g_mean_recursive(lvl=int(nbr_spikes))), axis=0
             )
-            return g_mean_arr
+            g_end_arr[0] = self._foo(lvl=int(nbr_spikes)) - self.w
+            return g_mean_arr, g_end_arr
         # multiple number of spikes
         else:
             g_mean_arr = np.zeros((nbr_spikes.size, g_init.size))
+            g_end_arr = np.zeros((nbr_spikes.size, g_init.size))
             for lvl_idx, lvl in enumerate(nbr_spikes):
                 # isi duration in ms if spikes are evenly distributed
                 self.d = BIN_SIZE_MS / (int(lvl) + 1)
@@ -570,7 +664,8 @@ class ConductanceCalc:
                 g_mean_arr[lvl_idx] = self.mean_exp * np.mean(
                     np.stack(self._g_mean_recursive(lvl=int(lvl))), axis=0
                 )
-            return g_mean_arr
+                g_end_arr[lvl_idx] = self._foo(lvl=int(lvl)) - self.w
+            return g_mean_arr, g_end_arr
 
     def _foo(self, lvl):
         if lvl == 0:
@@ -664,25 +759,35 @@ class DistCurrentConductance:
         """
         ### get the pdf by combining the pdfs of the incoming spikes and previous conductances
         pdf_current_g_arr = np.outer(pdf_incoming_spikes_count_arr, pdf_prev_g_arr)
-        print(pdf_current_g_arr)
 
         current_g_arr = np.empty((incoming_spikes_count_arr.size, prev_g_arr.size))
+        current_g_end_arr = np.empty((incoming_spikes_count_arr.size, prev_g_arr.size))
         for incoming_spikes_count_idx, incoming_spikes_count in enumerate(
             incoming_spikes_count_arr
         ):
-            current_g_arr[incoming_spikes_count_idx] = conductance_calc.g_mean(
+            (
+                current_g_arr[incoming_spikes_count_idx],
+                current_g_end_arr[incoming_spikes_count_idx],
+            ) = conductance_calc.g_mean(
                 nbr_spikes=incoming_spikes_count, g_init=prev_g_arr
             )
-        print(current_g_arr)
+
+        ### get distribution for g_mean and g_end
+        ret_g_mean = self._get_pdf_of_g_arr(pdf_current_g_arr, current_g_arr)
+        ret_g_end = self._get_pdf_of_g_arr(pdf_current_g_arr, current_g_end_arr)
+
+        return ret_g_mean, ret_g_end
+
+    def _get_pdf_of_g_arr(self, pdf_current_g_arr, current_g_arr):
 
         ### use the conductance and corresponding pdf samples to estimate the density
         pdf_current_g_arr = pdf_current_g_arr.flatten()
         current_g_arr = current_g_arr.flatten()
 
         # scale the current_g_arr so that the standard deviation is 1
-        # if all values are the same, scale is 1
+        # if all values are the same, return this value with pdf 1
         if np.std(current_g_arr) == 0:
-            scale = 1
+            return (np.array([current_g_arr[0]]), np.array([1]))
         else:
             scale = 1 / np.std(current_g_arr)
         # Create the KDE object
@@ -693,17 +798,13 @@ class DistCurrentConductance:
             sample_weight=pdf_current_g_arr[pdf_current_g_arr > 0],
         )
         # Create points for which to estimate the PDF, values can only be between 0 and max
-        x = np.linspace(0, current_g_arr.max(), 200).reshape(-1, 1)
+        x = np.linspace(0, current_g_arr.max(), 100).reshape(-1, 1)
         # Estimate the PDF for these points
         log_density = kde.score_samples(x * scale)
         pdf = np.exp(log_density)
-
-        print(np.sum(pdf))
         ### normalize so that sum*stepsize = 1
         stepsize = x[1, 0] - x[0, 0]
         pdf = pdf / np.sum(pdf) / stepsize
-        print(np.sum(pdf) * stepsize)
-        print(stepsize)
         ret = (x[:, 0], pdf)
 
         return ret
@@ -720,14 +821,14 @@ class DistCurrentConductance:
         given incoming spikes distribution and previous conductances distribution.
         """
 
-        x, pdf = self.pdf(
+        dist_mean, dist_end = self.pdf(
             incoming_spikes_count_arr=incoming_spikes_count_arr,
             pdf_incoming_spikes_count_arr=pdf_incoming_spikes_count_arr,
             prev_g_arr=prev_g_arr,
             pdf_prev_g_arr=pdf_prev_g_arr,
         )
-
-        plt.subplot(311)
+        x, pdf = dist_mean
+        plt.subplot(411)
         plt.bar(
             incoming_spikes_count_arr, pdf_incoming_spikes_count_arr, alpha=0.5, width=1
         )
@@ -735,7 +836,7 @@ class DistCurrentConductance:
         plt.ylabel("Density")
         plt.title("Incoming Spikes Distribution")
 
-        plt.subplot(312)
+        plt.subplot(412)
         if len(prev_g_arr) > 1:
             width = prev_g_arr[1] - prev_g_arr[0]
         else:
@@ -745,11 +846,24 @@ class DistCurrentConductance:
         plt.ylabel("Density")
         plt.title("Previous Conductance Distribution")
 
-        plt.subplot(313)
-        plt.bar(x, pdf, alpha=0.5, width=x[1] - x[0])
-        plt.xlabel("Conductance")
+        plt.subplot(413)
+        plt.bar(
+            dist_mean[0],
+            dist_mean[1],
+            alpha=0.5,
+            width=dist_mean[0][1] - dist_mean[0][0],
+        )
+        plt.xlabel("Conductance Mean")
         plt.ylabel("Density")
-        plt.title("Conductance Distribution")
+        plt.title("Conductance Mean Distribution")
+
+        plt.subplot(414)
+        plt.bar(
+            dist_end[0], dist_end[1], alpha=0.5, width=dist_end[0][1] - dist_end[0][0]
+        )
+        plt.xlabel("Conductance End")
+        plt.ylabel("Density")
+        plt.title("Conductance End Distribution")
         plt.tight_layout()
         plt.show()
 
@@ -776,16 +890,20 @@ conductance_calc = ConductanceCalc(tau=pop_post.tau_ampa, w=WEIGHTS)
 
 dist_current_conductance = DistCurrentConductance(tau=pop_post.tau_ampa, w=WEIGHTS)
 
+dist_post_conductance = DistPostConductance(
+    conductance_array=recordings[0]["post;g_ampa"]
+)
+
 # Plot the results
 PLOT_EXAMPLES = True
 if PLOT_EXAMPLES:
-    # dist_pre_spikes.show_dist(time_bin=10)
-    # dist_pre_spikes.show_dist(time_bin=-1)
-    # dist_post.show_dist(time_bin=10)
-    # dist_post.show_dist(time_bin=-1)
-    # dist_synapses.show_dist()
-    # dist_incoming_spikes.show_dist(time_bin=10)
-    # dist_incoming_spikes.show_dist(time_bin=-1)
+    dist_pre_spikes.show_dist(time_bin=10)
+    dist_pre_spikes.show_dist(time_bin=-1)
+    dist_post.show_dist(time_bin=10)
+    dist_post.show_dist(time_bin=-1)
+    dist_synapses.show_dist()
+    dist_incoming_spikes.show_dist(time_bin=10)
+    dist_incoming_spikes.show_dist(time_bin=-1)
     # conductance_calc.show_conductance(nbr_spikes=5, g_init=np.array([0, 0.5, 1.0, 8.0]))
     incoming_spikes_count_arr, pdf_incoming_spikes_count_arr = dist_incoming_spikes.pdf(
         time_bin=-1
@@ -796,3 +914,62 @@ if PLOT_EXAMPLES:
         prev_g_arr=np.array([0, 80.0]),
         pdf_prev_g_arr=np.array([0.5, 0.5]),
     )
+    dist_post_conductance.show_dist(time_bin=10)
+    dist_post_conductance.show_dist(time_bin=-1)
+
+
+nbr_bins = dist_pre_spikes.spikes_binned.shape[0]
+g_end_dist = (np.array([0.0]), np.array([1.0]))
+g_arr_list = []
+pdf_g_arr_list = []
+g_model_arr_list = []
+pdf_g_model_arr_list = []
+start = time.time()
+for bin in range(nbr_bins):
+    ### get incoming spikes distribution
+    incoming_spikes_count_arr, pdf_incoming_spikes_count_arr = dist_incoming_spikes.pdf(
+        time_bin=bin
+    )
+    ### get current conductance distribution
+    g_mean_dist, g_end_dist = dist_current_conductance.pdf(
+        incoming_spikes_count_arr=incoming_spikes_count_arr,
+        pdf_incoming_spikes_count_arr=pdf_incoming_spikes_count_arr,
+        prev_g_arr=g_end_dist[0],
+        pdf_prev_g_arr=g_end_dist[1],
+    )
+    ### get current conductance distribution from model
+    g_model_arr, pdf_g_model_arr = dist_post_conductance.pdf(time_bin=bin)
+    ### store the conductance distribution
+    g_arr_list.append(g_mean_dist[0])
+    pdf_g_arr_list.append(g_mean_dist[1])
+    g_model_arr_list.append(g_model_arr)
+    pdf_g_model_arr_list.append(pdf_g_model_arr)
+print("loop time:", time.time() - start)
+
+start = time.time()
+# Plotting
+plt.subplot(211)
+for x, y, z in zip(range(len(g_arr_list)), g_arr_list, pdf_g_arr_list):
+    norm = plt.Normalize(z.min(), z.max())
+    cmap = plt.get_cmap("viridis")
+    colors = cmap(norm(z))
+    plt.hlines(y=y, xmin=x - norm(z) * 0.5, xmax=x + norm(z) * 0.5, color=colors)
+plt.ylim(0, 200)
+plt.xlabel("Time Bins")
+plt.ylabel("Conductance")
+plt.title("Conductance Distribution over Time Bins")
+plt.subplot(212)
+for x, y, z in zip(
+    range(len(g_model_arr_list)), g_model_arr_list, pdf_g_model_arr_list
+):
+    norm = plt.Normalize(z.min(), z.max())
+    cmap = plt.get_cmap("viridis")
+    colors = cmap(norm(z))
+    plt.hlines(y=y, xmin=x - norm(z) * 0.5, xmax=x + norm(z) * 0.5, color=colors)
+plt.ylim(0, 200)
+plt.xlabel("Time Bins")
+plt.ylabel("Conductance")
+plt.title("Model Conductance Distribution over Time Bins")
+plt.tight_layout()
+print("plot time:", time.time() - start)
+plt.show()
