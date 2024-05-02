@@ -57,7 +57,7 @@ neuron_izh = Neuron(
 )
 
 pop_pre = Population(100, neuron=PoissonNeuron(rates=10.0), name="pre")
-pop_post = Population(100, neuron=neuron_izh, name="post")
+pop_post = Population(1000, neuron=neuron_izh, name="post")
 
 CONNECTION_PROB = 0.1
 WEIGHTS = 1.0
@@ -206,35 +206,122 @@ class DistPreSpikes:
         if np.std(self.spikes_binned[time_bin]) == 0:
             return (np.array([self.spikes_binned[time_bin][0]]), np.array([1]))
         else:
-            scale = 1 / np.std(self.spikes_binned[time_bin])
-        # Fit the data to the KDE
-        kde.fit(scale * self.spikes_binned[time_bin])
-        # Create points for which to estimate the PDF
-        # spikes can only be positive
-        pdf_min = 0
-        pdf_max = int(
-            round(
-                np.max(self.spikes_binned[time_bin])
-                + np.std(self.spikes_binned[time_bin])
+            # create histogram from 0 to pdf_max with stepsize 1
+            pdf_max = (
+                int(
+                    round(
+                        np.max(self.spikes_binned[time_bin])
+                        + np.std(self.spikes_binned[time_bin])
+                    )
+                )
+                + 1
             )
+            ret = np.histogram(
+                self.spikes_binned[time_bin],
+                range=(0, pdf_max),
+                bins=np.arange(pdf_max + 1),
+                density=True,
+            )
+            return (ret[1][:-1], ret[0])
+
+    def show_dist(self, time_bin=0):
+        """
+        Show the distribution of the spike counts over the population for the given time
+        bin.
+
+        Args:
+            time_bin (int):
+                The time bin to show the distribution for.
+        """
+        x, pdf = self.pdf(time_bin=time_bin)
+        plt.bar(x, pdf, alpha=0.5, width=1)
+        plt.xlabel("Spikes")
+        plt.ylabel("Density")
+        plt.title("Spikes Distribution")
+        plt.show()
+
+
+class DistIncomingSpikesFromModel:
+
+    def __init__(self, pre_spikes_dict, proj, time_lims_steps):
+        """
+        Create a distribution object for the incoming spikes.
+
+        Args:
+            pre_spikes_dict (dict):
+                A dictionary of spike times for each neuron of the pre population.
+            proj (Projection):
+                The projection object from the pre to the post population.
+            time_lims_steps (tuple[int, int]):
+                The time limits of the pre_spikes_dict in steps.
+        """
+        ### TODO check if calculated incoming spikes distribution (calculated using pre spikes distribution + synapse distribution) is correct
+        ### obtain this distribution from the model
+        ### use the spike dictionary of the pre pop and then transform it into incoming spikee dict for the post pop and then create a distribution
+        ### to transform the spike dict into an incoming spikes dict, wee need to know for each post neuron, to which pre neurons it is connected
+
+        incoming_spikes_dict = {}
+        ### loop over each post neuron
+        for post_neuron_idx, post_neuron in enumerate(proj):
+            incoming_spikes_dict[post_neuron_idx] = []
+            if post_neuron is not None:
+                ### loop over each pre neuron connected to the post neuron
+                for pre_neuron in post_neuron.pre_ranks:
+                    ### store the spikes emitted by the pre neuron as incoming spikes for the post neuron
+                    incoming_spikes_dict[post_neuron_idx].extend(
+                        pre_spikes_dict[pre_neuron]
+                    )
+                ### sort the incoming spikes
+                incoming_spikes_dict[post_neuron_idx].sort()
+
+        ### bin the incoming spikes
+        self.incoming_spikes_binned = get_binned_spikes(
+            spikes_dict=incoming_spikes_dict,
+            time_lims_steps=time_lims_steps,
+            BIN_SIZE_STEPS=BIN_SIZE_STEPS,
         )
-        x = np.linspace(pdf_min, pdf_max, 100).reshape(-1, 1)
-        # Estimate the PDF for these points
-        log_density = kde.score_samples(scale * x)
-        pdf = np.exp(log_density)
-        # spikes are discrete, sum values between 0 and 1, and between 1 and 2, etc.
-        pdf_discrete_size = int(round(pdf_max - pdf_min) + 1)
-        pdf_discrete = np.zeros(pdf_discrete_size)
-        for i in range(pdf_discrete_size):
-            pdf_discrete[i] = np.sum(pdf[(x[:, 0] >= i) & (x[:, 0] < i + 1)])
-        # stepsize is now 1 --> normalize to sum to 1
-        pdf_discrete = pdf_discrete / np.sum(pdf_discrete)
-        x_discrete = np.arange(pdf_min, pdf_max + 0.5).astype(int)
-        # store the pdf
-        ret = (x_discrete, pdf_discrete)
-        self._pdf_dict[time_bin] = ret
-        # return the pdf
-        return ret
+        self._pdf_dict = {}
+
+    def pdf(self, time_bin=0):
+        """
+        Get the PDF of the incoming spike counts over the (post) population for the
+        given time bin.
+
+        Args:
+            time_bin (int):
+                The time bin to get the PDF for.
+
+        Returns:
+            x (np.ndarray):
+                The incoming spike count values of the PDF.
+            pdf (np.ndarray):
+                The PDF values for the corresponding incoming spike count values.
+        """
+        ret = self._pdf_dict.get(time_bin)
+        if ret is not None:
+            return ret
+
+        # if all values are the same return pdf with 1
+        if np.std(self.incoming_spikes_binned[time_bin]) == 0:
+            return (np.array([self.incoming_spikes_binned[time_bin][0]]), np.array([1]))
+        else:
+            # create histogram from 0 to pdf_max with stepsize 1
+            pdf_max = (
+                int(
+                    round(
+                        np.max(self.incoming_spikes_binned[time_bin])
+                        + np.std(self.incoming_spikes_binned[time_bin])
+                    )
+                )
+                + 1
+            )
+            ret = np.histogram(
+                self.incoming_spikes_binned[time_bin],
+                range=(0, pdf_max),
+                bins=np.arange(pdf_max + 1),
+                density=True,
+            )
+            return (ret[1][:-1], ret[0])
 
     def show_dist(self, time_bin=0):
         """
@@ -554,14 +641,24 @@ class DistIncomingSpikes:
             time_bin=time_bin
         )
         synapse_count_arr, pdf_synapse_count_arr = self.dist_synapses.pdf()
-        ### calculate the incoming spike count array and the corresponding pdf values
-        incoming_spike_count_arr = np.outer(
-            spike_count_arr, synapse_count_arr
-        ).flatten()
-        pdf_incoming_spike_count_arr = np.outer(
-            pdf_spike_count_arr, pdf_synapse_count_arr
-        ).flatten()
-        ### sort the incoming spike count array (for later combining unique values)
+        ### for each possible number of synapses, calculate the pdf of the sum of
+        ### incoming spikes and weight it with the probability of the corresponding
+        ### number of synapses
+        incoming_spike_count_list = []
+        pdf_incoming_spike_count_list = []
+        for synapse_count, pdf_synapse_count in zip(
+            synapse_count_arr, pdf_synapse_count_arr
+        ):
+            incoming_spike_count, pdf_incoming_spike_count = self.pdf_of_sum(
+                spike_count_arr, pdf_spike_count_arr, n=synapse_count
+            )
+            incoming_spike_count_list.extend(incoming_spike_count)
+            pdf_incoming_spike_count_list.extend(
+                pdf_incoming_spike_count * pdf_synapse_count
+            )
+        ### combine the pdf of unique values in incoming_spike_count_list
+        incoming_spike_count_arr = np.array(incoming_spike_count_list)
+        pdf_incoming_spike_count_arr = np.array(pdf_incoming_spike_count_list)
         sort_indices = np.argsort(incoming_spike_count_arr)
         incoming_spike_count_arr = incoming_spike_count_arr[sort_indices]
         pdf_incoming_spike_count_arr = pdf_incoming_spike_count_arr[sort_indices]
@@ -573,8 +670,13 @@ class DistIncomingSpikes:
         pdf_incoming_spike_count_arr = np.add.reduceat(
             pdf_incoming_spike_count_arr, unique_indices
         )
+        ### sort pdf and values based on pdf
+        sort_indices = np.argsort(pdf_incoming_spike_count_arr)
+        incoming_spike_count_arr = incoming_spike_count_arr[sort_indices]
+        pdf_incoming_spike_count_arr = pdf_incoming_spike_count_arr[sort_indices]
+        ### get cu
         ### normalize the pdf to sum to 1 (since stepsize is 1) (it is already
-        ### normalized but maybe rounding errors)
+        ### normalized but to not accumulate errors, normalize it again)
         pdf_incoming_spike_count_arr = pdf_incoming_spike_count_arr / np.sum(
             pdf_incoming_spike_count_arr
         )
@@ -595,6 +697,35 @@ class DistIncomingSpikes:
         plt.ylabel("Density")
         plt.title("Incoming Spikes Distribution")
         plt.show()
+
+    def pdf_of_sum(self, x_values, pdf_values, n):
+        """
+        Calculate the PDF of the n-th sum of a random variable X, where X has the PDF given by
+        x_values and pdf_values.
+
+        Args:
+            x_values(np.ndarray):
+                The values of the random variable X.
+            pdf_values(np.ndarray):
+                The PDF values for the corresponding values of the random variable X.
+        """
+        result_x = x_values.copy()
+        result_pdf = pdf_values.copy()
+        for _ in range(n - 1):
+            result_x_new = []
+            result_pdf_new = []
+            # multiply combinations for pdf_values and add combinations for x_values
+            result_x_new = np.add.outer(result_x, x_values).flatten()
+            result_pdf_new = np.outer(result_pdf, pdf_values).flatten()
+            # sort based on x values
+            sort_indices = np.argsort(result_x_new)
+            result_x_new = result_x_new[sort_indices]
+            result_pdf_new = result_pdf_new[sort_indices]
+            # sum the pdf_values for each unique value in x_sum
+            result_x, unique_indices = np.unique(result_x_new, return_index=True)
+            result_pdf = np.add.reduceat(result_pdf_new, unique_indices)
+
+        return result_x, result_pdf
 
 
 class ConductanceCalc:
@@ -691,6 +822,10 @@ class ConductanceCalc:
             g_init (np.ndarray):
                 The initial (prev) conductances of the post population neurons.
         """
+        # calculate g_mean and g_end and print values
+        g_mean, g_end = self.g_mean(nbr_spikes=nbr_spikes, g_init=g_init)
+        print(f"Mean Conductance: {g_mean}\nEnd Conductance: {g_end}")
+        # generate conductance over time
         timestep = 0.0001
         # time over bin
         t_arr = np.arange(0, BIN_SIZE_MS, timestep)
@@ -710,8 +845,14 @@ class ConductanceCalc:
             g_list.append(g)
         # plot the conductance
         g_mean = np.mean(np.stack(g_list), axis=0)
-        plt.title(g_mean)
+        g_end = g_list[-1]
+        for g_value in g_end:
+            plt.axhline(y=g_value, color="r", linestyle="--")
+        plt.title(f"Mean Conductance: {g_mean}\nEnd Conductance: {g_end}")
         plt.plot(t_arr, g_list)
+        plt.xlabel("Time (ms)")
+        plt.ylabel("Conductance")
+        plt.tight_layout()
         plt.show()
 
 
@@ -894,82 +1035,178 @@ dist_post_conductance = DistPostConductance(
     conductance_array=recordings[0]["post;g_ampa"]
 )
 
+dist_incoming_spikes_from_model = DistIncomingSpikesFromModel(
+    pre_spikes_dict=recordings[0]["pre;spike"],
+    proj=proj,
+    time_lims_steps=(0, 2000),
+)
+
 # Plot the results
 PLOT_EXAMPLES = True
 if PLOT_EXAMPLES:
-    dist_pre_spikes.show_dist(time_bin=10)
-    dist_pre_spikes.show_dist(time_bin=-1)
-    dist_post.show_dist(time_bin=10)
-    dist_post.show_dist(time_bin=-1)
-    dist_synapses.show_dist()
-    dist_incoming_spikes.show_dist(time_bin=10)
-    dist_incoming_spikes.show_dist(time_bin=-1)
+    # dist_pre_spikes.show_dist(time_bin=10)
+    # dist_pre_spikes.show_dist(time_bin=-1)
+    # dist_post.show_dist(time_bin=10)
+    # dist_post.show_dist(time_bin=-1)
+    # dist_synapses.show_dist()
+    dist_incoming_start = dist_incoming_spikes.pdf(time_bin=10)
+    dist_incoming_end = dist_incoming_spikes.pdf(time_bin=-1)
+    print(dist_incoming_end)
+    dist_incoming_from_model_start = dist_incoming_spikes_from_model.pdf(time_bin=10)
+    dist_incoming_from_model_end = dist_incoming_spikes_from_model.pdf(time_bin=-1)
+    plt.subplot(211)
+    plt.bar(
+        dist_incoming_start[0],
+        dist_incoming_start[1],
+        alpha=0.5,
+        width=1,
+        color="b",
+        label="calculated",
+    )
+    plt.bar(
+        dist_incoming_from_model_start[0],
+        dist_incoming_from_model_start[1],
+        alpha=0.5,
+        width=1,
+        color="r",
+        label="model",
+    )
+    plt.legend()
+    plt.xlabel("Incoming Spikes")
+    plt.ylabel("Density")
+    plt.title("Incoming Spikes Distribution Start")
+    plt.subplot(212)
+    plt.bar(
+        dist_incoming_end[0],
+        dist_incoming_end[1],
+        alpha=0.5,
+        width=1,
+        color="b",
+        label="calculated",
+    )
+    plt.bar(
+        dist_incoming_from_model_end[0],
+        dist_incoming_from_model_end[1],
+        alpha=0.5,
+        width=1,
+        color="r",
+        label="model",
+    )
+    plt.legend()
+    plt.xlabel("Incoming Spikes")
+    plt.ylabel("Density")
+    plt.title("Incoming Spikes Distribution End")
+    plt.tight_layout()
+    plt.show()
     # conductance_calc.show_conductance(nbr_spikes=5, g_init=np.array([0, 0.5, 1.0, 8.0]))
-    incoming_spikes_count_arr, pdf_incoming_spikes_count_arr = dist_incoming_spikes.pdf(
-        time_bin=-1
-    )
-    dist_current_conductance.show_dist(
-        incoming_spikes_count_arr=incoming_spikes_count_arr,
-        pdf_incoming_spikes_count_arr=pdf_incoming_spikes_count_arr,
-        prev_g_arr=np.array([0, 80.0]),
-        pdf_prev_g_arr=np.array([0.5, 0.5]),
-    )
-    dist_post_conductance.show_dist(time_bin=10)
-    dist_post_conductance.show_dist(time_bin=-1)
+    # incoming_spikes_count_arr, pdf_incoming_spikes_count_arr = dist_incoming_spikes.pdf(
+    #     time_bin=-1
+    # )
+    # dist_current_conductance.show_dist(
+    #     incoming_spikes_count_arr=incoming_spikes_count_arr,
+    #     pdf_incoming_spikes_count_arr=pdf_incoming_spikes_count_arr,
+    #     prev_g_arr=np.array([0, 180.0]),
+    #     pdf_prev_g_arr=np.array([0.5, 0.5]),
+    # )
+    # dist_post_conductance.show_dist(time_bin=10)
+    # dist_post_conductance.show_dist(time_bin=-1)
 
-
-nbr_bins = dist_pre_spikes.spikes_binned.shape[0]
-g_end_dist = (np.array([0.0]), np.array([1.0]))
-g_arr_list = []
-pdf_g_arr_list = []
-g_model_arr_list = []
-pdf_g_model_arr_list = []
-start = time.time()
-for bin in range(nbr_bins):
-    ### get incoming spikes distribution
-    incoming_spikes_count_arr, pdf_incoming_spikes_count_arr = dist_incoming_spikes.pdf(
-        time_bin=bin
+CONDUCTANCE_LOOP = False
+if CONDUCTANCE_LOOP:
+    nbr_bins = dist_pre_spikes.spikes_binned.shape[0]
+    g_end_dist = (np.array([0.0]), np.array([1.0]))
+    g_arr_list = []
+    pdf_g_arr_list = []
+    g_model_arr_list = []
+    pdf_g_model_arr_list = []
+    incoming_spikes_count_arr_list, pdf_incoming_spikes_count_arr_list = [], []
+    incoming_spikes_count_arr_model_list, pdf_incoming_spikes_count_arr_model_list = (
+        [],
+        [],
     )
-    ### get current conductance distribution
-    g_mean_dist, g_end_dist = dist_current_conductance.pdf(
-        incoming_spikes_count_arr=incoming_spikes_count_arr,
-        pdf_incoming_spikes_count_arr=pdf_incoming_spikes_count_arr,
-        prev_g_arr=g_end_dist[0],
-        pdf_prev_g_arr=g_end_dist[1],
-    )
-    ### get current conductance distribution from model
-    g_model_arr, pdf_g_model_arr = dist_post_conductance.pdf(time_bin=bin)
-    ### store the conductance distribution
-    g_arr_list.append(g_mean_dist[0])
-    pdf_g_arr_list.append(g_mean_dist[1])
-    g_model_arr_list.append(g_model_arr)
-    pdf_g_model_arr_list.append(pdf_g_model_arr)
-print("loop time:", time.time() - start)
+    start = time.time()
+    for bin in range(nbr_bins):
+        ### get incoming spikes distribution from pre spikes and synapse distribution
+        incoming_spikes_count_arr, pdf_incoming_spikes_count_arr = (
+            dist_incoming_spikes.pdf(time_bin=bin)
+        )
+        ### get incoming spikes distribution directly from model
+        incoming_spikes_count_arr_model, pdf_incoming_spikes_count_arr_model = (
+            dist_incoming_spikes_from_model.pdf(time_bin=bin)
+        )
+        ### get current conductance distribution
+        g_mean_dist, g_end_dist = dist_current_conductance.pdf(
+            incoming_spikes_count_arr=incoming_spikes_count_arr,
+            pdf_incoming_spikes_count_arr=pdf_incoming_spikes_count_arr,
+            prev_g_arr=g_end_dist[0],
+            pdf_prev_g_arr=g_end_dist[1],
+        )
+        ### get current conductance distribution from model
+        g_model_arr, pdf_g_model_arr = dist_post_conductance.pdf(time_bin=bin)
+        ### store the conductance distribution
+        g_arr_list.append(g_mean_dist[0])
+        pdf_g_arr_list.append(g_mean_dist[1])
+        g_model_arr_list.append(g_model_arr)
+        pdf_g_model_arr_list.append(pdf_g_model_arr)
+        ### store the incoming spikes distribution
+        incoming_spikes_count_arr_list.append(incoming_spikes_count_arr)
+        pdf_incoming_spikes_count_arr_list.append(pdf_incoming_spikes_count_arr)
+        incoming_spikes_count_arr_model_list.append(incoming_spikes_count_arr_model)
+        pdf_incoming_spikes_count_arr_model_list.append(
+            pdf_incoming_spikes_count_arr_model
+        )
+    print("loop time:", time.time() - start)
 
-start = time.time()
-# Plotting
-plt.subplot(211)
-for x, y, z in zip(range(len(g_arr_list)), g_arr_list, pdf_g_arr_list):
-    norm = plt.Normalize(z.min(), z.max())
-    cmap = plt.get_cmap("viridis")
-    colors = cmap(norm(z))
-    plt.hlines(y=y, xmin=x - norm(z) * 0.5, xmax=x + norm(z) * 0.5, color=colors)
-plt.ylim(0, 200)
-plt.xlabel("Time Bins")
-plt.ylabel("Conductance")
-plt.title("Conductance Distribution over Time Bins")
-plt.subplot(212)
-for x, y, z in zip(
-    range(len(g_model_arr_list)), g_model_arr_list, pdf_g_model_arr_list
-):
-    norm = plt.Normalize(z.min(), z.max())
-    cmap = plt.get_cmap("viridis")
-    colors = cmap(norm(z))
-    plt.hlines(y=y, xmin=x - norm(z) * 0.5, xmax=x + norm(z) * 0.5, color=colors)
-plt.ylim(0, 200)
-plt.xlabel("Time Bins")
-plt.ylabel("Conductance")
-plt.title("Model Conductance Distribution over Time Bins")
-plt.tight_layout()
-print("plot time:", time.time() - start)
-plt.show()
+    start = time.time()
+    # Plotting
+    plt.subplot(411)
+    for x, y, z in zip(range(len(g_arr_list)), g_arr_list, pdf_g_arr_list):
+        norm = plt.Normalize(z.min(), z.max())
+        cmap = plt.get_cmap("viridis")
+        colors = cmap(norm(z))
+        plt.hlines(y=y, xmin=x - norm(z) * 0.5, xmax=x + norm(z) * 0.5, color=colors)
+    plt.ylim(0, 200)
+    plt.xlabel("Time Bins")
+    plt.ylabel("Conductance")
+    plt.title("Conductance Distribution over Time Bins")
+    plt.subplot(412)
+    for x, y, z in zip(
+        range(len(g_model_arr_list)), g_model_arr_list, pdf_g_model_arr_list
+    ):
+        norm = plt.Normalize(z.min(), z.max())
+        cmap = plt.get_cmap("viridis")
+        colors = cmap(norm(z))
+        plt.hlines(y=y, xmin=x - norm(z) * 0.5, xmax=x + norm(z) * 0.5, color=colors)
+    plt.ylim(0, 200)
+    plt.xlabel("Time Bins")
+    plt.ylabel("Conductance")
+    plt.title("Model Conductance Distribution over Time Bins")
+    plt.subplot(413)
+    for x, y, z in zip(
+        range(len(incoming_spikes_count_arr_list)),
+        incoming_spikes_count_arr_list,
+        pdf_incoming_spikes_count_arr_list,
+    ):
+        norm = plt.Normalize(z.min(), z.max())
+        cmap = plt.get_cmap("viridis")
+        colors = cmap(norm(z))
+        plt.hlines(y=y, xmin=x - norm(z) * 0.5, xmax=x + norm(z) * 0.5, color=colors)
+    plt.xlabel("Time Bins")
+    plt.ylabel("Incoming Spikes")
+    plt.title("Incoming Spikes Distribution over Time Bins")
+    plt.subplot(414)
+    for x, y, z in zip(
+        range(len(incoming_spikes_count_arr_model_list)),
+        incoming_spikes_count_arr_model_list,
+        pdf_incoming_spikes_count_arr_model_list,
+    ):
+        norm = plt.Normalize(z.min(), z.max())
+        cmap = plt.get_cmap("viridis")
+        colors = cmap(norm(z))
+        plt.hlines(y=y, xmin=x - norm(z) * 0.5, xmax=x + norm(z) * 0.5, color=colors)
+    plt.xlabel("Time Bins")
+    plt.ylabel("Incoming Spikes")
+    plt.title("Model Incoming Spikes Distribution over Time Bins")
+    plt.tight_layout()
+    print("plot time:", time.time() - start)
+    plt.show()
