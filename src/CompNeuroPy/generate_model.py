@@ -145,7 +145,7 @@ class CompNeuroModel:
             )
         self._attribute_df_compiled = True
 
-    def compile(self, compile_folder_name=None):
+    def compile(self, compile_folder_name=None, warn=True):
         """
         Compiles a created model.
 
@@ -153,6 +153,9 @@ class CompNeuroModel:
             compile_folder_name (str, optional):
                 Name of the folder in which the model is compiled. Default: value from
                 initialization.
+            warn (bool, optional):
+                If True a warning is printed if other models are initialized but not
+                created (they will not be compiled). Default: True.
         """
         ### check if this model is created
         if self.created:
@@ -160,15 +163,16 @@ class CompNeuroModel:
                 compile_folder_name = self.compile_folder_name
 
             ### check if other models were initialized but not created --> warn that they are not compiled
-            not_created_model_list = self._check_if_models_created()
-            if len(not_created_model_list) > 0:
-                print(
-                    "\nWARNING during compile of model "
-                    + self.name
-                    + ": There are initialized models which are not created, thus not compiled! models:\n"
-                    + "\n".join(not_created_model_list)
-                    + "\n"
-                )
+            if warn:
+                not_created_model_list = self._check_if_models_created()
+                if len(not_created_model_list) > 0:
+                    print(
+                        "\nWARNING during compile of model "
+                        + self.name
+                        + ": There are initialized models which are not created, thus not compiled! models:\n"
+                        + "\n".join(not_created_model_list)
+                        + "\n"
+                    )
             mf.compile_in_folder(compile_folder_name, silent=True)
             self.compiled = True
 
@@ -183,7 +187,7 @@ class CompNeuroModel:
                 + ": Only compile the model after it has been created!"
             )
 
-    def create(self, do_compile=True, compile_folder_name=None):
+    def create(self, do_compile=True, compile_folder_name=None, warn=True):
         """
         Creates a model and optionally compiles it directly.
 
@@ -193,6 +197,9 @@ class CompNeuroModel:
             compile_folder_name (str, optional):
                 Name of the folder in which the model is compiled. Default: value from
                 initialization.
+            warn (bool, optional):
+                If True a warning is printed during compilation if other models are
+                initialized but not created (they will not be compiled). Default: True.
         """
         if self.created:
             print("model", self.name, "already created!")
@@ -222,7 +229,7 @@ class CompNeuroModel:
             self._attribute_df = self._get_attribute_df()
 
             if do_compile:
-                self.compile(compile_folder_name)
+                self.compile(compile_folder_name, warn)
 
     def _check_if_models_created(self):
         """
