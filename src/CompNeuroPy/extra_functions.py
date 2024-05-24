@@ -125,7 +125,7 @@ def suppress_stdout():
 def sci(nr):
     """
     Rounds a number to a single decimal.
-    If number is smaller than 0 it is converted to scientific notation with 1 decimal.
+    If number is smaller than 1 it is converted to scientific notation with 1 decimal.
 
     Args:
         nr (float or int):
@@ -145,10 +145,10 @@ def sci(nr):
         >>> sci(177.22)
         '177.2'
     """
-    if af.get_number_of_zero_decimals(nr) == 0:
+    if nr >= 1:
         return str(round(nr, 1))
     else:
-        return f"{nr*10**af.get_number_of_zero_decimals(nr):.1f}e-{af.get_number_of_zero_decimals(nr)}"
+        return f"{nr:.1e}"
 
 
 class Cmap:
@@ -2190,6 +2190,7 @@ class InteractivePlot:
                 interval=(1.0 / figure_frequency) * 1000,
                 repeat=True,
             )
+            self.fig.tight_layout()
             plt.show()
         else:
             ### run update loop until figure is closed
