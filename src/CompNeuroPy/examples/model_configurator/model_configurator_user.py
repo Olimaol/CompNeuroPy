@@ -12,7 +12,9 @@ from CompNeuroPy.neuron_models import (
     Izhikevich2003_flexible_noisy_I,
 )
 from CompNeuroPy import generate_model, Monitors, plot_recordings, my_raster_plot
-from model_configurator_cnp import model_configurator
+from CompNeuroPy.examples.model_configurator.model_configurator_cnp import (
+    model_configurator,
+)
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -332,12 +334,12 @@ if __name__ == "__main__":
     ### do a test simulation
     mon = Monitors(
         {
-            "pop;cor_exc": ["spike"],
-            "pop;cor_inh": ["spike"],
-            "pop;stn": ["spike", "g_ampa", "g_gaba"],
-            "pop;gpe": ["spike", "g_ampa", "g_gaba"],
-            "pop;snr": ["spike", "g_ampa", "g_gaba"],
-            "pop;thal": ["spike", "g_ampa", "g_gaba"],
+            "cor_exc": ["spike"],
+            "cor_inh": ["spike"],
+            "stn": ["spike", "g_ampa", "g_gaba"],
+            "gpe": ["spike", "g_ampa", "g_gaba"],
+            "snr": ["spike", "g_ampa", "g_gaba"],
+            "thal": ["spike", "g_ampa", "g_gaba"],
         }
     )
     get_population("cor_exc").rates = target_firing_rate_dict["cor_exc"]
