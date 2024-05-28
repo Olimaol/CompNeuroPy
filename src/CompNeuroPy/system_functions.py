@@ -507,3 +507,32 @@ def create_data_raw_folder(
             f.write("# CompNeuroPy was installed locally with commit:\n")
             compneuropy_commit = compneuropy_git_log[0].replace("\n", "")
             f.write(f"# {compneuropy_commit}")
+
+
+def _find_folder_with_prefix(base_path, prefix):
+    """
+    Find a folder with a specified prefix in the given base path.
+
+    Args:
+        base_path (str):
+            Path to the base directory to search in.
+        prefix (str):
+            Prefix of the folder to find.
+
+    Returns:
+        str or None:
+            Name of the folder with the specified prefix if found, otherwise None.
+    """
+    # List all items (files and directories) in the base_path
+    items = os.listdir(base_path)
+
+    # Iterate through the items to find a folder with the specified prefix
+    for item in items:
+        item_path = os.path.join(base_path, item)
+
+        # Check if the item is a directory and its name starts with the given prefix
+        if os.path.isdir(item_path) and item.startswith(prefix):
+            return item
+
+    # If no folder with the specified prefix is found, return None
+    return None

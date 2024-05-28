@@ -1,15 +1,15 @@
 from CompNeuroPy import (
     cnp_clear,
     compile_in_folder,
-    find_folder_with_prefix,
     data_obj,
-    replace_names_with_dict,
+    evaluate_expression_with_dict,
     timing_decorator,
     print_df,
     save_variables,
     load_variables,
     clear_dir,
 )
+from CompNeuroPy.system_functions import _find_folder_with_prefix
 from CompNeuroPy.neuron_models import poisson_neuron
 from ANNarchy import (
     Population,
@@ -211,13 +211,13 @@ class model_configurator:
                 self.syn_contr_dict[pop_name] = {}
                 for target_type in ["ampa", "gaba"]:
                     self.log(f"get synaptic contributions for {pop_name} {target_type}")
-                    self.syn_contr_dict[pop_name][
-                        target_type
-                    ] = self.get_syn_contr_dict(
-                        pop_name=pop_name,
-                        target_type=target_type,
-                        use_max_weights=True,
-                        normalize=True,
+                    self.syn_contr_dict[pop_name][target_type] = (
+                        self.get_syn_contr_dict(
+                            pop_name=pop_name,
+                            target_type=target_type,
+                            use_max_weights=True,
+                            normalize=True,
+                        )
                     )
 
             ### create the synaptic load template dict
@@ -350,9 +350,9 @@ class model_configurator:
 
             ### the network with the voltage clamp version neuron
             if single_net_v_clamp:
-                self.net_single_v_clamp_dict[
-                    pop_name
-                ] = self.create_net_single_voltage_clamp(pop_name=pop_name)
+                self.net_single_v_clamp_dict[pop_name] = (
+                    self.create_net_single_voltage_clamp(pop_name=pop_name)
+                )
             else:
                 ### dummy network for the pop
                 net_single_v_clamp_dummy = Network()
@@ -1311,9 +1311,9 @@ class model_configurator:
 
         ### with interpolation get the firing rates for all extreme values of I_app, g_ampa, g_gaba
         for pop_name in self.pop_name_list:
-            self.extreme_firing_rates_df_dict[
-                pop_name
-            ] = self.get_extreme_firing_rates_df(pop_name)
+            self.extreme_firing_rates_df_dict[pop_name] = (
+                self.get_extreme_firing_rates_df(pop_name)
+            )
 
     def get_extreme_firing_rates_df(self, pop_name):
         """
@@ -2204,7 +2204,7 @@ class model_configurator:
             ### get the name of the run folder of the network
             ### search for a folder which starts with run_
             ### there should only be 1 --> get run_folder_name as str
-            run_folder_name = find_folder_with_prefix(
+            run_folder_name = _find_folder_with_prefix(
                 base_path=f"annarchy_folders/many_net_{net_idx}", prefix="run_"
             )
             run_folder_name = f"/scratch/olmai/Projects/PhD/CompNeuroPy/CompNeuroPy/examples/model_configurator/annarchy_folders/many_net_{net_idx}//{run_folder_name}"
@@ -3304,15 +3304,10 @@ class model_configurator:
         attributes_sympy_dict["delta_v"] = Symbol("delta_v")
         attributes_sympy_dict["right_side"] = Symbol("right_side")
 
-        ### now replace the symbolds in the eq_v string with the dictionary items
-        eq_v_replaced = replace_names_with_dict(
-            expression=eq_v_one_side,
-            name_of_dict="attributes_sympy_dict",
-            dictionary=attributes_sympy_dict,
+        ### get the sympy equation expression by evaluating the string
+        eq_sympy = evaluate_expression_with_dict(
+            expression=eq_v_one_side, value_dict=attributes_sympy_dict
         )
-
-        ### from this string get the sympy equation expression
-        eq_sympy = eval(eq_v_replaced)
 
         ### solve the equation to delta_v
         result = solve(eq_sympy, attributes_sympy_dict["delta_v"], dict=True)
