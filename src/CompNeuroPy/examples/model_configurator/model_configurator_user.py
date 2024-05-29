@@ -257,7 +257,7 @@ if __name__ == "__main__":
     params["snr__snr.probability"] = 0.6
 
     ### create model which should be configurated
-    ### if you create or compile has no effect
+    ### create or compile have no effect
     setup(dt=0.1)
     model = generate_model(
         model_creation_function=BGM_part_function,
@@ -278,6 +278,9 @@ if __name__ == "__main__":
         "thal": 5,
     }
     do_not_config_list = ["cor_exc", "cor_inh"]
+
+    ### TODO for the do not config populations: check if the populations have the
+    ### given rates, if not, maybe print warning
 
     ### initialize model_configurator
     model_conf = model_configurator(
