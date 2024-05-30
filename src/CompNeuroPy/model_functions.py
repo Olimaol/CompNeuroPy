@@ -4,10 +4,15 @@ from ANNarchy import (
     projections,
     clear,
 )
+from ANNarchy import __version__ as ANNarchy_version
 import os
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy.generate_model import CompNeuroModel
-from ANNarchy.core import Global
+
+if ANNarchy_version >= "4.8":
+    from ANNarchy.intern.NetworkManager import NetworkManager
+else:
+    from ANNarchy.core import Global
 
 
 def compile_in_folder(folder_name, net=None, clean=False, silent=False):
@@ -43,7 +48,10 @@ def annarchy_compiled(net_id=0):
         net_id (int, optional):
             Network ID. Default: 0.
     """
-    return Global._network[net_id]["compiled"]
+    if ANNarchy_version >= "4.8":
+        return NetworkManager().is_compiled(net_id)
+    else:
+        return Global._network[net_id]["compiled"]
 
 
 def get_full_model():

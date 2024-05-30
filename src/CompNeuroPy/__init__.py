@@ -41,6 +41,7 @@ from CompNeuroPy.extra_functions import (
 )
 from CompNeuroPy.model_functions import (
     compile_in_folder,
+    annarchy_compiled,
     get_full_model,
     cnp_clear,
 )
