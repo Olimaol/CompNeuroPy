@@ -8,6 +8,7 @@ from CompNeuroPy import (
     save_variables,
     load_variables,
     clear_dir,
+    CompNeuroModel,
 )
 from CompNeuroPy.system_functions import _find_folder_with_prefix
 from CompNeuroPy.neuron_models import poisson_neuron
@@ -46,12 +47,13 @@ import pandas as pd
 from scipy.stats import poisson
 from ANNarchy.extensions.bold import BoldMonitor
 from sklearn.linear_model import LinearRegression
+from CompNeuroPy.examples.model_configurator.reduce_model import ReduceModel
 
 
 class model_configurator:
     def __init__(
         self,
-        model,
+        model: CompNeuroModel,
         target_firing_rate_dict,
         interpolation_grid_points=10,
         max_psp=10,
@@ -816,25 +818,30 @@ class model_configurator:
             I_base_dict, dict
                 Dictionary with baseline curretns for all configured populations.
         """
+        self._set_weights_of_model()
+        print("afferent_projection_dict")
+        print_df(self.afferent_projection_dict)
+        quit()
 
-        ### create many neuron network
-        net_many_dict = self.create_many_neuron_network()
+        self.model_reduced = ReduceModel(self.model_reduced).reduce()
 
-        ### use voltage clamp networks and many neuron networks to get baseline currents
-        I_base_dict = {}
-        target_firing_rate_changed = True
-        nr_max_iter = 1
-        nr_iter = 0
-        while target_firing_rate_changed and nr_iter < nr_max_iter:
-            ### get baseline current values, if target firing rates could not
-            ### be reached, try again with new target firing rates
-            (
-                target_firing_rate_changed,
-                I_base_dict,
-            ) = self.find_base_current(net_many_dict)
-            nr_iter += 1
+    def _set_weights_of_model(self):
+        """
+        Set the weights of the original model to the current weights from the
+        afferent_projection_dict.
+        """
+        ### clear ANNarchy
+        cnp_clear()
 
-        return I_base_dict
+        ### create the original model
+        self.model.create()
+
+        for pop_name in self.pop_name_list:
+            for proj_name in self.afferent_projection_dict[pop_name][
+                "projection_names"
+            ]:
+                proj_dict = self.get_proj_dict(proj_name)
+                get_projection(proj_name).w = proj_dict["proj_weight"]
 
     def find_base_current(self, net_many_dict):
         """

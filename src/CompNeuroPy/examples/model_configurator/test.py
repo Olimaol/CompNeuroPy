@@ -108,6 +108,20 @@ neuron_aux1 = Neuron(
     """,
 )
 
+
+class SpikeProbCalcNeuron(Neuron):
+    def __init__(self, pre_size=1):
+        parameters = f"""
+            pre_size = {pre_size} : population
+            tau= 1.0 : population
+        """
+        equations = """
+            tau*dr/dt = g_ampa/pre_size - r
+            g_ampa = 0
+        """
+        super().__init__(parameters=parameters, equations=equations)
+
+
 neuron_aux2 = Neuron(
     parameters="""
         number_synapses = 0
@@ -118,6 +132,43 @@ neuron_aux2 = Neuron(
         r = incoming_spikes * weights
     """,
 )
+
+
+class InputCalcNeuron(Neuron):
+    def __init__(self, projection_dict, size):
+        """
+        Args:
+            projection_dict (dict):
+                keys: names of afferent projections
+                values: dict with keys "pre_size", "connection_prob", "weights"
+            size (int):
+                size of the population
+        """
+        ### calculate number of synapses for all projections
+        number_synapses = {
+            proj_name: Binomial(
+                n=vals["pre_size"], p=vals["connection_prob"]
+            ).get_values(size)
+            for proj_name, vals in projection_dict.items()
+        }
+
+        ### create parameters
+        parameters = [
+            f"""
+            number_synapses_{proj_name} = {number_synapses[proj_name]}
+            weights_{proj_name} = {vals["weights"]}
+        """
+            for proj_name, vals in projection_dict.items()
+        ]
+        parameters = "\n".join(parameters)
+
+        ### create equations
+        ### TODO sum spikes of different afferent projections, r is the increase in conductance
+        equations = """
+            incoming_spikes = number_synapses * sum(spikeprob) + Normal(0, 1)*sqrt(number_synapses * sum(spikeprob) * (1 - sum(spikeprob))) : min=0, max=number_synapses
+            r = incoming_spikes * weights
+        """
+        super().__init__(parameters=parameters, equations=equations)
 
 
 CONNECTION_PROB = 0.1
