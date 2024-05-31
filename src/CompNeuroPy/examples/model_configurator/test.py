@@ -12,6 +12,8 @@ from ANNarchy import (
     get_population,
     CurrentInjection,
     simulate,
+    projections,
+    populations,
 )
 from CompNeuroPy import (
     CompNeuroMonitors,
@@ -83,7 +85,7 @@ neuron_izh_aux = Neuron(
     """,
     equations="""
         ### synaptic current
-        tau_ampa * dg_ampa/dt = -g_ampa + tau_ampa*g_exc/dt
+        tau_ampa * dg_ampa/dt = -g_ampa + tau_ampa*g_ampaaux/dt
         I_ampa = -neg(g_ampa*(v - E_ampa))
         ### Izhikevich spiking
         I_v        = I_app + I_ampa
@@ -97,77 +99,63 @@ neuron_izh_aux = Neuron(
     """,
 )
 
-neuron_aux1 = Neuron(
-    parameters="""
-        pre_size = 1 : population
-        tau= 1.0 : population
-    """,
-    equations="""
-        tau*dr/dt = g_ampa/pre_size - r
-        g_ampa = 0
-    """,
-)
-
 
 class SpikeProbCalcNeuron(Neuron):
-    def __init__(self, pre_size=1):
+    def __init__(self, reduced_size=1):
         parameters = f"""
-            pre_size = {pre_size} : population
+            reduced_size = {reduced_size} : population
             tau= 1.0 : population
         """
         equations = """
-            tau*dr/dt = g_ampa/pre_size - r
+            tau*dr/dt = g_ampa/reduced_size - r
             g_ampa = 0
         """
         super().__init__(parameters=parameters, equations=equations)
 
 
-neuron_aux2 = Neuron(
-    parameters="""
-        number_synapses = 0
-        weights = 0.0
-    """,
-    equations="""
-        incoming_spikes = number_synapses * sum(spikeprob) + Normal(0, 1)*sqrt(number_synapses * sum(spikeprob) * (1 - sum(spikeprob))) : min=0, max=number_synapses
-        r = incoming_spikes * weights
-    """,
-)
-
-
 class InputCalcNeuron(Neuron):
-    def __init__(self, projection_dict, size):
+    def __init__(self, projection_dict):
         """
+        This neurons get the spike probabilities of the pre neurons and calculates the
+        incoming spikes for each projection. It accumulates the incoming spikes of all
+        projections (of the same target type) and calculates the conductance increase
+        for the post neuron.
+
         Args:
             projection_dict (dict):
-                keys: names of afferent projections
-                values: dict with keys "pre_size", "connection_prob", "weights"
-            size (int):
-                size of the population
+                keys: names of afferent projections (of the same target type)
+                values: dict with keys "weights", "pre_name"
         """
-        ### calculate number of synapses for all projections
-        number_synapses = {
-            proj_name: Binomial(
-                n=vals["pre_size"], p=vals["connection_prob"]
-            ).get_values(size)
-            for proj_name, vals in projection_dict.items()
-        }
 
         ### create parameters
         parameters = [
             f"""
-            number_synapses_{proj_name} = {number_synapses[proj_name]}
-            weights_{proj_name} = {vals["weights"]}
+            number_synapses_{proj_name} = 0
+            weights_{proj_name} = {vals['weights']}
         """
             for proj_name, vals in projection_dict.items()
         ]
         parameters = "\n".join(parameters)
 
         ### create equations
-        ### TODO sum spikes of different afferent projections, r is the increase in conductance
-        equations = """
-            incoming_spikes = number_synapses * sum(spikeprob) + Normal(0, 1)*sqrt(number_synapses * sum(spikeprob) * (1 - sum(spikeprob))) : min=0, max=number_synapses
-            r = incoming_spikes * weights
+        equations = [
+            f"""
+            incoming_spikes_{proj_name} = number_synapses_{proj_name} * sum(spikeprob_{vals['pre_name']}) + Normal(0, 1)*sqrt(number_synapses_{proj_name} * sum(spikeprob_{vals['pre_name']}) * (1 - sum(spikeprob_{vals['pre_name']}))) : min=0, max=number_synapses_{proj_name}
         """
+            for proj_name, vals in projection_dict.items()
+        ]
+        equations = "\n".join(equations)
+        sum_of_conductance_increase = (
+            "r = "
+            + "".join(
+                [
+                    f"incoming_spikes_{proj_name} * weights_{proj_name} + "
+                    for proj_name in projection_dict.keys()
+                ]
+            )[:-3]
+        )
+        equations = equations + "\n" + sum_of_conductance_increase
+
         super().__init__(parameters=parameters, equations=equations)
 
 
@@ -176,77 +164,168 @@ WEIGHTS = 0.1
 POP_PRE_SIZE = 50
 POP_POST_SIZE = 50
 POP_REDUCED_SIZE = 100
-NORMAL_MODEL = True
 REDUCED_MODEL = True
 
-if NORMAL_MODEL:
-    ### create not reduced model
-    ### pre
-    pop_pre = Population(POP_PRE_SIZE, neuron=PoissonNeuron(rates=10.0), name="pre")
-    ### post
-    pop_post = Population(POP_POST_SIZE, neuron=neuron_izh, name="post")
-    ### pre to post
-    proj = Projection(pre=pop_pre, post=pop_post, target="ampa", name="proj")
-    proj.connect_fixed_probability(weights=WEIGHTS, probability=CONNECTION_PROB)
+
+### create not reduced model
+### pre
+pop_pre1 = Population(POP_PRE_SIZE, neuron=PoissonNeuron(rates=10.0), name="pop_pre1")
+pop_pre2 = Population(POP_PRE_SIZE, neuron=PoissonNeuron(rates=10.0), name="pop_pre2")
+### post
+pop_post = Population(POP_POST_SIZE, neuron=neuron_izh, name="pop_post")
+### pre to post
+proj_pre1__post = Projection(
+    pre=pop_pre1, post=pop_post, target="ampa", name="proj_pre1__post"
+)
+proj_pre1__post.connect_fixed_probability(weights=WEIGHTS, probability=CONNECTION_PROB)
+proj_pre2__post = Projection(
+    pre=pop_pre2, post=pop_post, target="ampa", name="proj_pre2__post"
+)
+proj_pre2__post.connect_fixed_probability(weights=WEIGHTS, probability=CONNECTION_PROB)
+
+
+def create_reduced_pop(pop: Population):
+    ### TODO in ReduceModel class the initial arguments of the populaitons can be
+    ### obtained with the population names, here just use size, neuron and name
+    print(f"create_reduced_pop for {pop.name}")
+    if pop.name == "pop_post":
+        Population(
+            min([POP_REDUCED_SIZE, pop.size]),
+            neuron=neuron_izh_aux,
+            name=pop.name + "_reduced",
+        )
+    else:
+        Population(
+            min([POP_REDUCED_SIZE, pop.size]),
+            neuron=pop.neuron_type,  # TODO neuron type in reuced model has to be different
+            name=pop.name + "_reduced",
+        )
+
+
+def create_spike_collecting_aux_pop(pop: Population, projection_list: list[Projection]):
+    ### get all efferent projections
+    efferent_projection_list = [proj for proj in projection_list if proj.pre == pop]
+    ### check if pop has efferent projections
+    if len(efferent_projection_list) == 0:
+        return
+    print(f"create_spike_collecting_aux_pop for {pop.name}")
+    ### create the spike collecting population
+    pop_aux = Population(
+        1,
+        neuron=SpikeProbCalcNeuron(reduced_size=min([POP_REDUCED_SIZE, pop.size])),
+        name=f"{pop.name}_spike_collecting_aux",
+    )
+    ### create the projection from reduced pop to spike collecting aux pop
+    proj = Projection(
+        pre=get_population(pop.name + "_reduced"),
+        post=pop_aux,
+        target="ampa",
+        name=f"proj_{pop.name}_spike_collecting_aux",
+    )
+    proj.connect_all_to_all(weights=1)
+
+
+def create_conductance_aux_pop(
+    pop: Population, projection_list: list[Projection], target: str
+):
+    ### get all afferent projections
+    afferent_projection_list = [proj for proj in projection_list if proj.post == pop]
+    ### check if pop has afferent projections
+    if len(afferent_projection_list) == 0:
+        return
+    ### get all afferent projections with target type
+    afferent_target_projection_list = [
+        proj for proj in afferent_projection_list if proj.target == target
+    ]
+    ### check if there are afferent projections with target type
+    if len(afferent_target_projection_list) == 0:
+        return
+    print(f"create_conductance_aux_pop for {pop.name} target {target}")
+    ### get projection informations TODO in ReduceModel class weights and probs not global constants
+    projection_dict = {
+        proj.name: {
+            "pre_size": proj.pre.size,
+            "connection_prob": CONNECTION_PROB,
+            "weights": WEIGHTS,
+            "pre_name": proj.pre.name,
+        }
+        for proj in afferent_target_projection_list
+    }
+    ### create the conductance calculating population
+    pop_aux = Population(
+        pop.size,
+        neuron=InputCalcNeuron(projection_dict=projection_dict),
+        name=f"{pop.name}_{target}_aux",
+    )
+    ### set number of synapses parameter for each projection
+    for proj_name, vals in projection_dict.items():
+        number_synapses = Binomial(
+            n=vals["pre_size"], p=vals["connection_prob"]
+        ).get_values(pop.size)
+        setattr(pop_aux, f"number_synapses_{proj_name}", number_synapses)
+    ### create the "current injection" projection from conductance calculating
+    ### population to the reduced post population
+    proj = CurrentInjection(
+        pre=pop_aux,
+        post=get_population(f"{pop.name}_reduced"),
+        target=f"{target}aux",
+        name=f"proj_{pop.name}_{target}_aux",
+    )
+    proj.connect_current()
+    ### create projection from spike_prob calculating aux neurons of presynaptic
+    ### populations to conductance calculating aux population
+    for proj in afferent_target_projection_list:
+        pre_pop = proj.pre
+        pre_pop_spike_collecting_aux = get_population(
+            f"{pre_pop.name}_spike_collecting_aux"
+        )
+        proj = Projection(
+            pre=pre_pop_spike_collecting_aux,
+            post=pop_aux,
+            target=f"spikeprob_{pre_pop.name}",
+            name=f"{proj.name}_spike_collecting_to_conductance",
+        )
+        proj.connect_all_to_all(weights=1)
+
 
 if REDUCED_MODEL:
     ### create reduced model
-    ### pre
-    pop_pre2 = Population(
-        min([POP_REDUCED_SIZE, POP_PRE_SIZE]),
-        neuron=PoissonNeuron(rates=10.0),
-        name="pre2",
-    )
-    ### post
-    pop_post2 = Population(
-        min([POP_REDUCED_SIZE, POP_POST_SIZE]), neuron=neuron_izh_aux, name="post2"
-    )
-    ### aux
-    pop_aux1 = Population(1, neuron=neuron_aux1, name="aux1")
-    pop_aux1.pre_size = pop_pre2.size
-    pop_aux2 = Population(
-        pop_post2.size,
-        neuron=neuron_aux2,
-        name="aux2",
-    )
-    pop_aux2.number_synapses = Binomial(n=POP_PRE_SIZE, p=CONNECTION_PROB).get_values(
-        pop_post2.size
-    )
-    pop_aux2.weights = WEIGHTS
-    ### pre to aux
-    proj_pre__aux = Projection(
-        pre=pop_pre2, post=pop_aux1, target="ampa", name="proj_pre__aux"
-    )
-    proj_pre__aux.connect_all_to_all(weights=1)
-    ### aux2 to aux2
-    proj_aux__aux = Projection(
-        pre=pop_aux1, post=pop_aux2, target="spikeprob", name="proj_aux__aux"
-    )
-    proj_aux__aux.connect_all_to_all(weights=1)
-    ### aux to post
-    proj_aux__pre = CurrentInjection(pop_aux2, pop_post2, "exc")
-    proj_aux__pre.connect_current()
+    population_list = populations().copy()
+    projection_list = projections().copy()
+    ### for each population create a reduced population
+    for pop in population_list:
+        create_reduced_pop(pop)
+    ### for each population which is a presynaptic population, create a spikes collecting aux population
+    for pop in population_list:
+        create_spike_collecting_aux_pop(pop, projection_list)
+    ## for each population which has afferents create a population for incoming spikes for each target type
+    for pop in population_list:
+        create_conductance_aux_pop(pop, projection_list, target="ampa")
+        create_conductance_aux_pop(pop, projection_list, target="gaba")
 
-if NORMAL_MODEL and REDUCED_MODEL:
+if REDUCED_MODEL:
     mon_dict = {
-        "pre": ["spike"],
-        "post": ["v", "spike", "I_ampa", "g_ampa"],
-        "pre2": ["spike"],
-        "post2": ["v", "spike", "I_ampa", "g_ampa", "g_exc"],
-        "aux1": ["r"],
-        "aux2": ["incoming_spikes"],
+        pop_pre1.name: ["spike"],
+        pop_pre2.name: ["spike"],
+        pop_post.name: ["spike", "g_ampa"],
+        f"{pop_pre1.name}_reduced": ["spike"],
+        f"{pop_pre2.name}_reduced": ["spike"],
+        f"{pop_post.name}_reduced": ["spike", "g_ampa"],
+        f"{pop_pre1.name}_spike_collecting_aux": ["r"],
+        f"{pop_pre2.name}_spike_collecting_aux": ["r"],
+        f"{pop_post.name}_ampa_aux": [
+            "incoming_spikes_proj_pre1__post",
+            "incoming_spikes_proj_pre2__post",
+            "r",
+        ],
     }
-elif NORMAL_MODEL:
+else:
     mon_dict = {
-        "pre": ["spike"],
-        "post": ["v", "spike", "I_ampa", "g_ampa"],
+        pop_pre1.name: ["spike"],
+        pop_pre2.name: ["spike"],
+        pop_post.name: ["spike", "g_ampa"],
     }
-elif REDUCED_MODEL:
-    mon_dict = {
-        "pre2": ["spike"],
-        "post2": ["v", "spike", "I_ampa", "g_ampa", "g_exc"],
-        "aux1": ["r"],
-    }
+
 monitors = CompNeuroMonitors(
     mon_dict=mon_dict,
 )
@@ -256,109 +335,97 @@ compile()
 monitors.start()
 
 start = time.time()
-simulate(100.0)
-if NORMAL_MODEL:
-    pop_pre.rates = 1000.0
+simulate(50.0)
+pop_pre1.rates = 1000.0
 if REDUCED_MODEL:
-    pop_pre2.rates = 1000.0
+    get_population(f"{pop_pre1.name}_reduced").rates = 1000.0
+simulate(50.0)
+pop_pre2.rates = 1000.0
+if REDUCED_MODEL:
+    get_population(f"{pop_pre2.name}_reduced").rates = 1000.0
 simulate(100.0)
 print("simulate time:", time.time() - start)
 
 recordings = monitors.get_recordings()
 recording_times = monitors.get_recording_times()
 
-if NORMAL_MODEL and REDUCED_MODEL:
+if REDUCED_MODEL:
     PlotRecordings(
         figname="test.png",
         recordings=recordings,
         recording_times=recording_times,
-        shape=(4, 2),
+        shape=(4, 3),
         plan={
-            "position": [1, 3, 5, 2, 4, 6, 8],
-            "compartment": ["pre", "post", "post", "pre2", "post2", "post2", "aux1"],
-            "variable": ["spike", "spike", "g_ampa", "spike", "spike", "g_ampa", "r"],
+            "position": [1, 4, 7, 10, 2, 5, 8, 11, 3, 6, 9, 12],
+            "compartment": [
+                pop_pre1.name,
+                pop_pre2.name,
+                pop_post.name,
+                pop_post.name,
+                f"{pop_pre1.name}_reduced",
+                f"{pop_pre2.name}_reduced",
+                f"{pop_post.name}_reduced",
+                f"{pop_post.name}_reduced",
+                f"{pop_pre1.name}_spike_collecting_aux",
+                f"{pop_pre2.name}_spike_collecting_aux",
+                f"{pop_post.name}_ampa_aux",
+                f"{pop_post.name}_ampa_aux",
+            ],
+            "variable": [
+                "spike",
+                "spike",
+                "spike",
+                "g_ampa",
+                "spike",
+                "spike",
+                "spike",
+                "g_ampa",
+                "r",
+                "r",
+                "incoming_spikes_proj_pre1__post",
+                "incoming_spikes_proj_pre2__post",
+            ],
             "format": [
                 "hybrid",
                 "hybrid",
+                "hybrid",
                 "line_mean",
                 "hybrid",
                 "hybrid",
+                "hybrid",
                 "line_mean",
-                "line",
+                "line_mean",
+                "line_mean",
+                "line_mean",
+                "line_mean",
             ],
         },
     )
-elif NORMAL_MODEL:
+else:
     PlotRecordings(
         figname="test.png",
         recordings=recordings,
         recording_times=recording_times,
         shape=(4, 2),
         plan={
-            "position": [1, 3, 5],
-            "compartment": ["pre", "post", "post"],
-            "variable": ["spike", "spike", "g_ampa"],
-            "format": ["hybrid", "hybrid", "line_mean"],
+            "position": [1, 3, 5, 7],
+            "compartment": [
+                pop_pre1.name,
+                pop_pre2.name,
+                pop_post.name,
+                pop_post.name,
+            ],
+            "variable": [
+                "spike",
+                "spike",
+                "spike",
+                "g_ampa",
+            ],
+            "format": [
+                "hybrid",
+                "hybrid",
+                "hybrid",
+                "line_mean",
+            ],
         },
     )
-elif REDUCED_MODEL:
-    PlotRecordings(
-        figname="test.png",
-        recordings=recordings,
-        recording_times=recording_times,
-        shape=(4, 2),
-        plan={
-            "position": [2, 4, 6, 8],
-            "compartment": ["pre2", "post2", "post2", "aux1"],
-            "variable": ["spike", "spike", "g_ampa", "r"],
-            "format": ["hybrid", "hybrid", "line_mean", "line"],
-        },
-    )
-
-if NORMAL_MODEL and REDUCED_MODEL:
-    ### compare incoming spikes, i.e. the r of aux 2 and the incoming spikes of post
-    ### idx: [neuron][nr_spikes]
-    pre_spikes = recordings[0]["pre;spike"]
-    incoming_spikes_dict = {}
-
-    ### loop over post neuron dendrites (only first post neuron)
-    n = 0
-    for post_dendrite in proj:
-        incoming_spikes_dict[post_dendrite.post_rank] = []
-        if post_dendrite is None:
-            continue
-        ### if post neuron has incoming synapses, loop over pre neurons
-        for pre_neuron in post_dendrite:
-            incoming_spikes_dict[post_dendrite.post_rank].extend(
-                pre_spikes[pre_neuron.rank]
-            )
-        ### sort incoming spikes
-        incoming_spikes_dict[post_dendrite.post_rank] = np.sort(
-            incoming_spikes_dict[post_dendrite.post_rank]
-        )
-        n += 1
-        if n == 5:
-            break
-
-    plt.figure(figsize=(6.4, 4.8 * 5))
-    for idx in range(5):
-        plt.subplot(5, 1, idx + 1)
-        ### get histogram of incoming spikes to get the sum of incoming spikes for each timestep
-        incoming_spikes_sum, time_step_arr = np.histogram(
-            incoming_spikes_dict[idx], bins=np.arange(0, 2000, 1)
-        )
-        plt.plot(
-            time_step_arr[:-1],
-            incoming_spikes_sum,
-            label="incoming spikes real",
-            alpha=0.5,
-        )
-        plt.plot(
-            time_step_arr,
-            recordings[0]["aux2;incoming_spikes"][:, idx],
-            label="incoming spikes aux2",
-            alpha=0.5,
-        )
-        plt.legend()
-    plt.tight_layout()
-    plt.show()
