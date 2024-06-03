@@ -294,22 +294,38 @@ if __name__ == "__main__":
 
     ### obtain the maximum synaptic loads for the populations and the
     ### maximum weights of their afferent projections
-    model_conf.get_max_syn(clear=False)
+    model_conf.get_max_syn(cache=True)
 
     ### now either set weights directly
-    ### or define synaptic load of populations
-    synaptic_load_dict = {
-        "stn": [0.3, 0.3],
-        "gpe": [0.4],
-        "snr": [0.5, 0.3],
-        "thal": [0.1],
+    weights = {
+        "stn": {
+            "cor_exc__stn": 0.1420716334652917 * 0,
+            "cor_inh__stn": 0.3210113100293368 * 0,
+        },
+        "gpe": {"stn__gpe": 0.14456939170522481 * 0},
+        "snr": {
+            "stn__snr": 0.14456939170522481 * 0,
+            "gpe__snr": 0.3258095138891384 * 0,
+            "snr__snr": 0.3258095138891384 * 0,
+        },
+        "thal": {"snr__thal": 0.33855115254020435 * 0},
     }
-    ### and define the contributions of their afferent projections
-    synaptic_contribution_dict = {"snr": {"gaba": {"gpe__snr": 0.7, "snr__snr": 0.3}}}
-    synaptic_contribution_dict = model_conf.set_syn_load(
-        synaptic_load_dict,
-        synaptic_contribution_dict,
-    )
+
+    model_conf.set_weights(weights)
+
+    ### or define synaptic load of populations
+    # synaptic_load_dict = {
+    #     "stn": [0.3, 0.3],
+    #     "gpe": [0.4],
+    #     "snr": [0.5, 0.3],
+    #     "thal": [0.1],
+    # }
+    # ### and define the contributions of their afferent projections
+    # synaptic_contribution_dict = {"snr": {"gaba": {"gpe__snr": 0.7, "snr__snr": 0.3}}}
+    # synaptic_contribution_dict = model_conf.set_syn_load(
+    #     synaptic_load_dict,
+    #     synaptic_contribution_dict,
+    # )
 
     ### after setting the weights i.e. the synaptic load/contributions
     ### get the baseline currents

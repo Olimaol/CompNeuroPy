@@ -10,6 +10,8 @@ from ANNarchy import (
     projections,
     populations,
     get_projection,
+    Binomial,
+    CurrentInjection,
 )
 from ANNarchy.core import ConnectorMethods
 import numpy as np
@@ -18,6 +20,7 @@ from CompNeuroPy.generate_model import generate_model
 from typingchecker import check_types
 import inspect
 from CompNeuroPy import CompNeuroModel
+import sympy as sp
 
 _connector_methods_dict = {
     "One-to-One": ConnectorMethods.connect_one_to_one,
@@ -37,12 +40,24 @@ _connector_methods_dict = {
 
 class _CreateReducedModel:
     """
-    Class to create a reduced model from the original model.
+    Class to create a reduced model from the original model. It is accessable via the
+    attribute model_reduced.
+
+    Attributes:
+        model_reduced (CompNeuroModel):
+            Reduced model, created but not compiled
     """
 
-    def __init__(self, model: CompNeuroModel, reduced_size: int) -> None:
+    def __init__(
+        self,
+        model: CompNeuroModel,
+        reduced_size: int,
+        do_create: bool = False,
+        do_compile: bool = False,
+        verbose: bool = False,
+    ) -> None:
         """
-        Prepare model for DBS stimulation
+        Prepare model for reduction.
 
         Args:
             model (CompNeuroModel):
@@ -51,6 +66,7 @@ class _CreateReducedModel:
                 Size of the reduced populations
         """
         self.reduced_size = reduced_size
+        self.verbose = verbose
         ### check if model is already created but not compiled, if not clear annarchy
         ### and create it
         if not model.created or model.compiled:
@@ -64,7 +80,14 @@ class _CreateReducedModel:
         mf.cnp_clear(functions=False, neurons=True, synapses=True, constants=False)
 
         ### recreate model with reduced populations and projections
-        self.recreate_model()
+        self.model_reduced = CompNeuroModel(
+            model_creation_function=self.recreate_model,
+            name=f"{model.name}_reduced",
+            description=f"{model.description}\nWith reduced populations and projections.",
+            do_create=do_create,
+            do_compile=do_compile,
+            compile_folder_name=f"{model.compile_folder_name}_reduced",
+        )
 
     def analyze_model(
         self,
@@ -317,12 +340,170 @@ class _CreateReducedModel:
         """
         Recreates the model with reduced populations and projections.
         """
-        ### recreate populations
+        ### 1st for each population create a reduced population
         for pop_name in self.population_name_list:
-            self.recreate_population(pop_name)
-        ### recreate projections
-        for proj_name in self.projection_name_list:
-            self.recreate_projection(proj_name)
+            self.create_reduced_pop(pop_name)
+        ### 2nd for each population which is a presynaptic population, create a spikes collecting aux population
+        for pop_name in self.population_name_list:
+            self.create_spike_collecting_aux_pop(pop_name)
+        ## 3rd for each population which has afferents create a population for incoming spikes for each target type
+        for pop_name in self.population_name_list:
+            self.create_conductance_aux_pop(pop_name, target="ampa")
+            self.create_conductance_aux_pop(pop_name, target="gaba")
+
+    def create_reduced_pop(self, pop_name: str):
+        """ """
+        if self.verbose:
+            print(f"create_reduced_pop for {pop_name}")
+        ### 1st check how the population is connected
+        is_presynaptic, is_postsynaptic, ampa, gaba = self.how_pop_is_connected(
+            pop_name
+        )
+
+        ### 2nd recreate neuron model
+        ### get the stored parameters of the __init__ function of the Neuron
+        neuron_model_init_parameter_dict = self.neuron_model_init_parameter_dict[
+            pop_name
+        ].copy()
+        ### if the population is a postsynaptic population adjust the synaptic
+        ### conductance equations
+        if is_postsynaptic:
+            neuron_model_init_parameter_dict = self.adjust_neuron_model(
+                neuron_model_init_parameter_dict, ampa=ampa, gaba=gaba
+            )
+        ### create the new neuron model
+        neuron_model_new = Neuron(**neuron_model_init_parameter_dict)
+
+        ### 3rd recreate the population
+        ### get the stored parameters of the __init__ function of the Population
+        pop_init_parameter_dict = self.pop_init_parameter_dict[pop_name].copy()
+        ### replace the neuron model with the new neuron model
+        pop_init_parameter_dict["neuron"] = neuron_model_new
+        ### replace the size with the reduced size (if reduced size is smaller than the
+        ### original size)
+        ### TODO add model requirements somewhere, here requirements = geometry = int
+        pop_init_parameter_dict["geometry"] = min(
+            [pop_init_parameter_dict["geometry"][0], self.reduced_size]
+        )
+        ### append _reduce to the name
+        pop_init_parameter_dict["name"] = f"{pop_name}_reduced"
+        ### create the new population
+        pop_new = Population(**pop_init_parameter_dict)
+
+        ### 4th set the parameters and variables of the population's neurons
+        ### get the stored parameters and variables
+        neuron_model_attr_dict = self.neuron_model_attr_dict[pop_name]
+        ### set the parameters and variables
+        for attr_name, attr_val in neuron_model_attr_dict.items():
+            setattr(pop_new, attr_name, attr_val)
+
+    def create_spike_collecting_aux_pop(self, pop_name: str):
+        """ """
+        ### get all efferent projections
+        efferent_projection_list = [
+            proj_name
+            for proj_name, pre_post_pop_name_dict in self.pre_post_pop_name_dict.items()
+            if pre_post_pop_name_dict[0] == pop_name
+        ]
+        ### check if pop has efferent projections
+        if len(efferent_projection_list) == 0:
+            return
+        if self.verbose:
+            print(f"create_spike_collecting_aux_pop for {pop_name}")
+        ### create the spike collecting population
+        pop_aux = Population(
+            1,
+            neuron=self.SpikeProbCalcNeuron(
+                reduced_size=min(
+                    [
+                        self.pop_init_parameter_dict[pop_name]["geometry"][0],
+                        self.reduced_size,
+                    ]
+                )
+            ),
+            name=f"{pop_name}_spike_collecting_aux",
+        )
+        ### create the projection from reduced pop to spike collecting aux pop
+        proj = Projection(
+            pre=get_population(pop_name + "_reduced"),
+            post=pop_aux,
+            target="ampa",
+            name=f"proj_{pop_name}_spike_collecting_aux",
+        )
+        proj.connect_all_to_all(weights=1)
+
+    def create_conductance_aux_pop(self, pop_name: str, target: str):
+        """ """
+        ### get all afferent projections
+        afferent_projection_list = [
+            proj_name
+            for proj_name, pre_post_pop_name_dict in self.pre_post_pop_name_dict.items()
+            if pre_post_pop_name_dict[1] == pop_name
+        ]
+        ### check if pop has afferent projections
+        if len(afferent_projection_list) == 0:
+            return
+        ### get all afferent projections with target type
+        afferent_target_projection_list = [
+            proj_name
+            for proj_name in afferent_projection_list
+            if self.proj_init_parameter_dict[proj_name]["target"] == target
+        ]
+        ### check if there are afferent projections with target type
+        if len(afferent_target_projection_list) == 0:
+            return
+        if self.verbose:
+            print(f"create_conductance_aux_pop for {pop_name} target {target}")
+        ### get projection informations TODO in ReduceModel class weights and probs not global constants
+        ### TODO somewhere add model requirements, here requirements = geometry = int and connection = fixed_probability i.e. random (with weights and probability)
+        projection_dict = {
+            proj_name: {
+                "pre_size": self.pop_init_parameter_dict[
+                    self.pre_post_pop_name_dict[proj_name][0]
+                ]["geometry"][0],
+                "connection_prob": self.connector_function_parameter_dict[proj_name][
+                    "probability"
+                ],
+                "weights": self.connector_function_parameter_dict[proj_name]["weights"],
+                "pre_name": self.pre_post_pop_name_dict[proj_name][0],
+            }
+            for proj_name in afferent_target_projection_list
+        }
+        ### create the conductance calculating population
+        pop_aux = Population(
+            self.pop_init_parameter_dict[pop_name]["geometry"][0],
+            neuron=self.InputCalcNeuron(projection_dict=projection_dict),
+            name=f"{pop_name}_{target}_aux",
+        )
+        ### set number of synapses parameter for each projection
+        for proj_name, vals in projection_dict.items():
+            number_synapses = Binomial(
+                n=vals["pre_size"], p=vals["connection_prob"]
+            ).get_values(self.pop_init_parameter_dict[pop_name]["geometry"][0])
+            setattr(pop_aux, f"number_synapses_{proj_name}", number_synapses)
+        ### create the "current injection" projection from conductance calculating
+        ### population to the reduced post population
+        proj = CurrentInjection(
+            pre=pop_aux,
+            post=get_population(f"{pop_name}_reduced"),
+            target=f"incomingaux{target}",
+            name=f"proj_{pop_name}_{target}_aux",
+        )
+        proj.connect_current()
+        ### create projection from spike_prob calculating aux neurons of presynaptic
+        ### populations to conductance calculating aux population
+        for proj_name, vals in projection_dict.items():
+            pre_pop_name = vals["pre_name"]
+            pre_pop_spike_collecting_aux = get_population(
+                f"{pre_pop_name}_spike_collecting_aux"
+            )
+            proj = Projection(
+                pre=pre_pop_spike_collecting_aux,
+                post=pop_aux,
+                target=f"spikeprob_{pre_pop_name}",
+                name=f"{proj_name}_spike_collecting_to_conductance",
+            )
+            proj.connect_all_to_all(weights=1)
 
     def how_pop_is_connected(self, pop_name):
         """
@@ -363,77 +544,6 @@ class _CreateReducedModel:
 
         return is_presynaptic, is_postsynaptic, ampa, gaba
 
-    def recreate_population(self, pop_name):
-        """
-        Recreate a population with the same neuron model and parameters.
-
-        Args:
-            pop_name (str):
-                Name of the population to recreate
-        """
-        ### 1st check how the population is connected
-        is_presynaptic, is_postsynaptic, ampa, gaba = self.how_pop_is_connected(
-            pop_name
-        )
-
-        ### 2nd recreate neuron model
-        ### get the stored parameters of the __init__ function of the Neuron
-        neuron_model_init_parameter_dict = self.neuron_model_init_parameter_dict[
-            pop_name
-        ]
-        ### if the population is a postsynaptic population adjust the synaptic
-        ### conductance equations
-        if is_postsynaptic:
-            neuron_model_init_parameter_dict = self.adjust_neuron_model(
-                neuron_model_init_parameter_dict, ampa=ampa, gaba=gaba
-            )
-        ### create the new neuron model
-        neuron_model_new = Neuron(**neuron_model_init_parameter_dict)
-
-        ### 3rd recreate the population
-        ### get the stored parameters of the __init__ function of the Population
-        pop_init_parameter_dict = self.pop_init_parameter_dict[pop_name]
-        ### replace the neuron model with the new neuron model
-        pop_init_parameter_dict["neuron"] = neuron_model_new
-        ### replace the size with the reduced size (if reduced size is smaller than the
-        ### original size)
-        ### TODO add model requirements somewhere, here requirements = geometry = int
-        pop_init_parameter_dict["geometry"] = min(
-            [pop_init_parameter_dict["geometry"], self.reduced_size]
-        )
-        ### create the new population
-        pop_new = Population(**pop_init_parameter_dict)
-
-        ### 4th set the parameters and variables of the population's neurons
-        ### get the stored parameters and variables
-        neuron_model_attr_dict = self.neuron_model_attr_dict[pop_name]
-        ### set the parameters and variables
-        for attr_name, attr_val in neuron_model_attr_dict.items():
-            setattr(pop_new, attr_name, attr_val)
-
-        ### 5th if the population is a presynaptic population create an auxiliary
-        ### population to calculate the spike probability
-        if is_presynaptic:
-            Population(
-                1,
-                neuron=self.SpikeProbCalcNeuron(
-                    pre_size=pop_init_parameter_dict["geometry"]
-                ),
-                name=f"{pop_name}_auxspikeprob",
-            )
-
-        ### 6th if the population is a postsynaptic population create an auxiliary
-        ### population to calculate the incoming auxillary population input
-        ### for the ampa and gaba conductance
-        if ampa:
-            Population(
-                pop_init_parameter_dict["geometry"],
-                neuron=self.SpikeProbCalcNeuron(
-                    pre_size=pop_init_parameter_dict["geometry"]
-                ),
-                name=f"{pop_name}_auxinputexc",
-            )
-
     def adjust_neuron_model(
         self, neuron_model_init_parameter_dict, ampa=True, gaba=True
     ):
@@ -463,325 +573,138 @@ class _CreateReducedModel:
         ).splitlines()
         ### search for equation with dg_ampa/dt and dg_gaba/dt
         for line_idx, line in enumerate(equations_line_split_list):
-            if self.get_line_is_dvardt(line, "g_ampa") and ampa:
-                ### add " + tau_ampa*g_incomingauxexc/dt"
+            if (
+                self.get_line_is_dvardt(line, var_name="g_ampa", tau_name="tau_ampa")
+                and ampa
+            ):
+                ### add " + tau_ampa*g_incomingauxampa/dt"
                 ### TODO add model requirements somewhere, here requirements = tau_ampa * dg_ampa/dt = -g_ampa
-                equations_line_split_list[line_idx] = self.add_term_to_eq_line(
-                    line=equations_line_split_list[line_idx],
-                    term=" + tau_ampa*g_incomingauxexc/dt",
+                equations_line_split_list[line_idx] = (
+                    "tau_ampa*dg_ampa/dt = -g_ampa + tau_ampa*g_incomingauxampa/dt"
                 )
-            if self.get_line_is_dvardt(line, "g_gaba") and gaba:
-                ### add " + tau_gaba*g_incomingauxinh/dt"
+            if (
+                self.get_line_is_dvardt(line, var_name="g_gaba", tau_name="tau_gaba")
+                and gaba
+            ):
+                ### add " + tau_gaba*g_incomingauxgaba/dt"
                 ### TODO add model requirements somewhere, here requirements = tau_gaba * dg_gaba/dt = -g_gaba
-                equations_line_split_list[line_idx] = self.add_term_to_eq_line(
-                    line=equations_line_split_list[line_idx],
-                    term=" + tau_gaba*g_incomingauxinh/dt",
+                equations_line_split_list[line_idx] = (
+                    "tau_gaba*dg_gaba/dt = -g_gaba + tau_gaba*g_incomingauxgaba/dt"
                 )
         ### join list to a string
         neuron_model_init_parameter_dict["equations"] = "\n".join(
             equations_line_split_list
         )
 
-        ### 3rd extend description
+        ### 2nd extend description
         neuron_model_init_parameter_dict["description"] = (
             f"{neuron_model_init_parameter_dict['description']}\nWith incoming auxillary population input implemented."
         )
 
         return neuron_model_init_parameter_dict
 
-    def add_term_to_eq_line(self, line: str, term: str):
+    def get_line_is_dvardt(self, line: str, var_name: str, tau_name: str):
         """
-        Add a term to an equation string.
+        Check if a equation string has the form "tau*dvar/dt = -var".
 
         Args:
             line (str):
                 Equation string
-            term (str):
-                Term to add
+            var_name (str):
+                Name of the variable
+            tau_name (str):
+                Name of the time constant
 
         Returns:
-            line_new (str):
-                Equation string with added term
+            is_solution_correct (bool):
+                True if the equation is as expected, False otherwise
         """
-        ### check if colon is in line
-        if ":" not in line:
-            ### add term
-            line_new = line + term
-        else:
-            ### split line at colon
-            line_split = line.split(":")
-            ### add term
-            line_split[0] = line_split[0] + term
-            ### join line again
-            line_new = ":".join(line_split)
-        ### return new line
-        return line_new
-
-    def get_line_is_dvardt(self, line: str, var_name: str):
-        """
-        Check if a equation string contains dvar/dt.
-
-        Args:
-            line (str):
-                Equation string
-        """
-        if "var_name" not in line:
+        if var_name not in line:
             return False
 
-        ### remove whitespaces
-        line = line.replace(" ", "")
+        # Define the variables
+        var, _, _, _ = sp.symbols(f"{var_name} d{var_name} dt {tau_name}")
 
-        ### check if dvar/dt is in line and before "="
-        if f"d{var_name}/dt" in line and line.find(f"d{var_name}/dt") < line.find("="):
-            return True
+        # Given equation as a string
+        equation_str = line
 
-        return False
+        # Parse the equation string
+        lhs, rhs = equation_str.split("=")
+        lhs = sp.sympify(lhs)
+        rhs = sp.sympify(rhs)
 
-    def add_DBS_to_rate_coded_neuron_model(self, neuron_model_init_parameter_dict):
-        """
-        Add DBS mechanisms to the rate-coded neuron model
+        # Form the equation
+        equation = sp.Eq(lhs, rhs)
 
-        Args:
-            neuron_model_init_parameter_dict (dict):
-                Dictionary with the parameters of the __init__ function of the Neuron
+        # Solve the equation for var
+        try:
+            solution = sp.solve(equation, var)
+        except:
+            ### equation is not solvable with variables means it is not as expected
+            return False
 
-        Returns:
-            neuron_model_init_parameter_dict (dict):
-                Dictionary with the parameters of the __init__ function of the Neuron
-                with DBS mechanisms added
-        """
+        # Given solution to compare
+        expected_solution_str = f"-{tau_name}*d{var_name}/dt"
+        expected_solution = sp.sympify(expected_solution_str)
 
-        ### 1st add new DBS parameters
-        ### get the parameters as a list of strings
-        parameters_line_split_list = str(
-            neuron_model_init_parameter_dict["parameters"]
-        ).splitlines()
-        ### append list with new parameters
-        parameters_line_split_list.append("dbs_depolarization = 0 : population")
-        parameters_line_split_list.append("dbs_on = 0")
-        parameters_line_split_list.append(
-            "axon_rate_amp = 1.0 : population # equivalent to prob_axon_spike in spiking model"
-        )
-        ### join list to a string
-        neuron_model_init_parameter_dict["parameters"] = "\n".join(
-            parameters_line_split_list
-        )
+        # Check if the solution is as expected
+        is_solution_correct = solution[0] == expected_solution
 
-        ### 2nd add new equations
-        ### get the equations of the neuron model as a list of strings
-        equations_line_split_list = str(
-            neuron_model_init_parameter_dict["equations"]
-        ).splitlines()
-        ### append axon_rate
-        equations_line_split_list.append(
-            "axon_rate = axon_rate_amp*dbs_on # equivalent to axon_spike in spiking model"
-        )
-        ### search for equation with dmp/dt
-        lines_with_mp_count = 0
-        for line_idx, line in enumerate(equations_line_split_list):
-            if self.get_line_is_dmpdt(line):
-                ### add depolarization term
-                equations_line_split_list[line_idx] = self.add_term_to_eq_line(
-                    line=equations_line_split_list[line_idx],
-                    term=" + pulse(t)*dbs_on*dbs_depolarization*neg(-1 - mp)",
-                )
-                lines_with_mp_count += 1
-        if lines_with_mp_count == 0:
-            raise ValueError(
-                "No line with dmp/dt found, only rate-coded models with mp as 'membrane potential' supported yet"
-            )
-        ### join list to a string
-        neuron_model_init_parameter_dict["equations"] = "\n".join(
-            equations_line_split_list
-        )
-
-        ### 3rd extend description
-        neuron_model_init_parameter_dict["description"] = (
-            f"{neuron_model_init_parameter_dict['description']}\nWith DBS mechanisms implemented."
-        )
-
-        return neuron_model_init_parameter_dict
-
-    def recreate_projection(self, proj_name):
-        """
-        Recreate a projection with the same synapse model and parameters and connector
-        function.
-
-        Args:
-            proj_name (str):
-                Name of the projection to recreate
-        """
-
-        ### 1st recreate synapse model
-        ### get the stored parameters of the __init__ function of the Synapse
-        synapse_init_parameter_dict = self.synapse_init_parameter_dict[proj_name]
-        ### get the stored parameters of the __init__ function of the Projection
-        proj_init_parameter_dict = self.proj_init_parameter_dict[proj_name]
-        ### adjust the equations and paramters of the synapse model to implement DBS
-        synapse_init_parameter_dict = self.add_DBS_to_synapse_model(
-            synapse_init_parameter_dict,
-        )
-        ### create the new synapse model
-        synapse_new = Synapse(**synapse_init_parameter_dict)
-
-        ### 2nd recreate projection
-        ### replace the synapse model with the new synapse model
-        proj_init_parameter_dict["synapse"] = synapse_new
-        ### replace pre and post to new populations
-        proj_init_parameter_dict["pre"] = get_population(
-            self.pre_post_pop_name_dict[proj_name][0]
-        )
-        proj_init_parameter_dict["post"] = get_population(
-            self.pre_post_pop_name_dict[proj_name][1]
-        )
-        ### create the new projection
-        proj_new = Projection(**proj_init_parameter_dict)
-
-        ### 3rd connect the projection with the connector function
-        ### get the connector function
-        connector_function = self.connector_function_dict[proj_name]
-        ### get the parameters of the connector function
-        connector_function_parameter_dict = self.connector_function_parameter_dict[
-            proj_name
-        ]
-        ### connect the projection
-        connector_function(proj_new, **connector_function_parameter_dict)
-
-        ### 4th set the parameters and variables of the synapse
-        ### get the stored parameters and variables
-        synapse_model_attr_dict = self.synapse_model_attr_dict[proj_name]
-        ### set the parameters and variables
-        for attr_name, attr_val in synapse_model_attr_dict.items():
-            setattr(proj_new, attr_name, attr_val)
-
-    def add_DBS_to_synapse_model(self, synapse_init_parameter_dict):
-        """
-        Add DBS mechanisms to the synapse model.
-
-        Args:
-            synapse_init_parameter_dict (dict):
-                Dictionary with the parameters of the __init__ function of the Synapse
-
-        Returns:
-            synapse_init_parameter_dict (dict):
-                Dictionary with the parameters of the __init__ function of the Synapse
-                with DBS mechanisms added
-        """
-
-        ### check if projection is spiking
-        spiking = not (isinstance(synapse_init_parameter_dict["pre_spike"], type(None)))
-
-        ### add DBS mechanisms
-        if spiking:
-            return self.add_DBS_to_spiking_synapse_model(synapse_init_parameter_dict)
-        else:
-            return self.add_DBS_to_rate_coded_synapse_model(synapse_init_parameter_dict)
-
-    def add_DBS_to_spiking_synapse_model(self, synapse_init_parameter_dict):
-        """
-        Add DBS mechanisms to the spiking synapse model.
-
-        Args:
-            synapse_init_parameter_dict (dict):
-                Dictionary with the parameters of the __init__ function of the Synapse
-
-        Returns:
-            synapse_init_parameter_dict (dict):
-                Dictionary with the parameters of the __init__ function of the Synapse
-                with DBS mechanisms added
-        """
-
-        ### 1st add new DBS parameters
-        ### get the parameters as a list of strings
-        parameters_line_split_list = str(
-            synapse_init_parameter_dict["parameters"]
-        ).splitlines()
-        ### append list with new parameters
-        parameters_line_split_list.append("p_axon_spike_trans=0 : projection")
-        ### join list to a string
-        synapse_init_parameter_dict["parameters"] = "\n".join(
-            parameters_line_split_list
-        )
-
-        ### 2nd add new equation for uniform variable
-        ### get the equations of the synapse model as a list of strings
-        equations_line_split_list = str(
-            synapse_init_parameter_dict["equations"]
-        ).splitlines()
-        ### prepend uniform variable
-        equations_line_split_list.insert(0, "unif_var_dbs = Uniform(0., 1.)")
-        ### join list to a string
-        synapse_init_parameter_dict["equations"] = "\n".join(equations_line_split_list)
-
-        ### 3rd add pre_axon_spike
-        synapse_init_parameter_dict["pre_axon_spike"] = (
-            "g_target+=ite(unif_var_dbs<p_axon_spike_trans,w*post.dbs_on,0)"
-        )
-
-        ### 4th extend description
-        synapse_init_parameter_dict["description"] = (
-            f"{synapse_init_parameter_dict['description']}\nWith DBS mechanisms implemented."
-        )
-
-        return synapse_init_parameter_dict
-
-    def add_DBS_to_rate_coded_synapse_model(self, synapse_init_parameter_dict):
-        """
-        Add DBS mechanisms to the rate-coded synapse model.
-
-        Args:
-            synapse_init_parameter_dict (dict):
-                Dictionary with the parameters of the __init__ function of the Synapse
-
-        Returns:
-            synapse_init_parameter_dict (dict):
-                Dictionary with the parameters of the __init__ function of the Synapse
-                with DBS mechanisms added
-        """
-
-        ### 1st add new DBS parameters
-        ### get the parameters as a list of strings
-        parameters_line_split_list = str(
-            synapse_init_parameter_dict["parameters"]
-        ).splitlines()
-        ### append list with new parameters
-        parameters_line_split_list.append("p_axon_spike_trans=0 : projection")
-        ### join list to a string
-        synapse_init_parameter_dict["parameters"] = "\n".join(
-            parameters_line_split_list
-        )
-
-        ### 2nd add new equations and replace pre.r
-        ### get the equations of the synapse model as a list of strings
-        equations_line_split_list = str(
-            synapse_init_parameter_dict["equations"]
-        ).splitlines()
-        ### replace pre.r with pre_rate everywhere
-        for key, val in synapse_init_parameter_dict.items():
-            if isinstance(val, str):
-                synapse_init_parameter_dict[key] = val.replace("pre.r", "pre_rate")
-        ### prepend pre_rate definition
-        equations_line_split_list.insert(
-            0, "pre_rate = pre.r + p_axon_spike_trans*pre.axon_rate*post.dbs_on"
-        )
-        ### join list to a string
-        synapse_init_parameter_dict["equations"] = "\n".join(equations_line_split_list)
-
-        ### 3rd extend description
-        synapse_init_parameter_dict["description"] = (
-            f"{synapse_init_parameter_dict['description']}\nWith DBS mechanisms implemented."
-        )
-
-        return synapse_init_parameter_dict
+        return is_solution_correct
 
     class SpikeProbCalcNeuron(Neuron):
-        def __init__(self, pre_size=1):
+        def __init__(self, reduced_size=1):
             parameters = f"""
-                pre_size = {pre_size} : population
+                reduced_size = {reduced_size} : population
                 tau= 1.0 : population
             """
             equations = """
-                tau*dr/dt = g_ampa/pre_size - r
+                tau*dr/dt = g_ampa/reduced_size - r
                 g_ampa = 0
             """
+            super().__init__(parameters=parameters, equations=equations)
+
+    class InputCalcNeuron(Neuron):
+        def __init__(self, projection_dict):
+            """
+            This neurons get the spike probabilities of the pre neurons and calculates the
+            incoming spikes for each projection. It accumulates the incoming spikes of all
+            projections (of the same target type) and calculates the conductance increase
+            for the post neuron.
+
+            Args:
+                projection_dict (dict):
+                    keys: names of afferent projections (of the same target type)
+                    values: dict with keys "weights", "pre_name"
+            """
+
+            ### create parameters
+            parameters = [
+                f"""
+                number_synapses_{proj_name} = 0
+                weights_{proj_name} = {vals['weights']}
+            """
+                for proj_name, vals in projection_dict.items()
+            ]
+            parameters = "\n".join(parameters)
+
+            ### create equations
+            equations = [
+                f"""
+                incoming_spikes_{proj_name} = number_synapses_{proj_name} * sum(spikeprob_{vals['pre_name']}) + Normal(0, 1)*sqrt(number_synapses_{proj_name} * sum(spikeprob_{vals['pre_name']}) * (1 - sum(spikeprob_{vals['pre_name']}))) : min=0, max=number_synapses_{proj_name}
+            """
+                for proj_name, vals in projection_dict.items()
+            ]
+            equations = "\n".join(equations)
+            sum_of_conductance_increase = (
+                "r = "
+                + "".join(
+                    [
+                        f"incoming_spikes_{proj_name} * weights_{proj_name} + "
+                        for proj_name in projection_dict.keys()
+                    ]
+                )[:-3]
+            )
+            equations = equations + "\n" + sum_of_conductance_increase
+
             super().__init__(parameters=parameters, equations=equations)

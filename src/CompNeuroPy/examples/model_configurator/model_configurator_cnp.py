@@ -9,6 +9,8 @@ from CompNeuroPy import (
     load_variables,
     clear_dir,
     CompNeuroModel,
+    CompNeuroMonitors,
+    PlotRecordings,
 )
 from CompNeuroPy.system_functions import _find_folder_with_prefix
 from CompNeuroPy.neuron_models import poisson_neuron
@@ -26,8 +28,11 @@ from ANNarchy import (
     simulate_until,
     Uniform,
     get_current_step,
+    projections,
+    populations,
 )
-from ANNarchy.core.Global import _network
+
+# from ANNarchy.core.Global import _network
 import numpy as np
 from scipy.interpolate import interp1d, interpn
 from scipy.signal import find_peaks, argrelmin
@@ -47,7 +52,7 @@ import pandas as pd
 from scipy.stats import poisson
 from ANNarchy.extensions.bold import BoldMonitor
 from sklearn.linear_model import LinearRegression
-from CompNeuroPy.examples.model_configurator.reduce_model import ReduceModel
+from CompNeuroPy.examples.model_configurator.reduce_model import _CreateReducedModel
 
 
 class model_configurator:
@@ -141,6 +146,15 @@ class model_configurator:
 
         ### do things for which the model needs to be created (it will not be available later)
         self.analyze_model()
+
+        ### get reduced model
+        self.model_reduced = _CreateReducedModel(
+            model=self.model,
+            reduced_size=100,
+            do_create=False,
+            do_compile=False,
+            verbose=True,
+        ).model_reduced
 
         ### print guide
         self._p_g(_p_g_1)
@@ -334,6 +348,7 @@ class model_configurator:
             txt = f"create network_single for {pop_name}"
             print(txt)
             self.log(txt)
+
             ### the network with the standard neuron
             if single_net:
                 self.net_single_dict[pop_name] = self.create_net_single(
@@ -367,6 +382,7 @@ class model_configurator:
                 net_single_v_clamp_dummy.add(
                     [pop_single_v_clamp_dummy, mon_single_v_clamp_dummy]
                 )
+
             ### get v_rest and correspodning I_app_hold
             if prepare_psp:
                 self.prepare_psp_dict[pop_name] = self.find_v_rest_for_psp(
@@ -713,7 +729,7 @@ class model_configurator:
         """
         use single_net to simulate 2000 ms and return v
         """
-        net = self.net_single_dict[pop_name]["net"]
+        net: Network = self.net_single_dict[pop_name]["net"]
         pop = self.net_single_dict[pop_name]["population"]
         monitor = self.net_single_dict[pop_name]["monitor"]
         net.reset()
@@ -818,30 +834,98 @@ class model_configurator:
             I_base_dict, dict
                 Dictionary with baseline curretns for all configured populations.
         """
-        self._set_weights_of_model()
-        print("afferent_projection_dict")
-        print_df(self.afferent_projection_dict)
+        ### TODO: current problem: model is without noise... but how large and for what is noise???
+        ### neurons all behave equally (e.g. spike at same time), this changes due to different inputs ("noise" in input)
+        ### this could also be prevented by initializing all neurons differently (along there periodic u-v curve)
+        ### or by adding noise to conductances or baseline current
+        ### thenthe question is, how is the relation between added noise and the noise in the input
+        for pop_name in self.pop_name_list:
+            for proj_name in self.afferent_projection_dict[pop_name][
+                "projection_names"
+            ]:
+                proj_dict = self.get_proj_dict(proj_name)
+                print(f"set weight of {proj_name} to {proj_dict['proj_weight']}")
+
+        ### set the weights of the normal model
+        model = self._set_weights_of_model(mode=0)
+
+        mon_dict = {pop_name: ["spike"] for pop_name in model.populations}
+        mon = CompNeuroMonitors(mon_dict=mon_dict)
+        mon.start()
+        simulate(1000)
+        recordings = mon.get_recordings()
+        recording_times = mon.get_recording_times()
+        plan = {
+            "position": list(range(1, len(model.populations) + 1)),
+            "compartment": model.populations,
+            "variable": ["spike"] * len(model.populations),
+            "format": ["hybrid"] * len(model.populations),
+        }
+        PlotRecordings(
+            figname="model_conf_normal_model.png",
+            recordings=recordings,
+            recording_times=recording_times,
+            shape=(len(plan["position"]), 1),
+            plan=plan,
+        )
+
+        ### set the weights of the reduced model
+        model = self._set_weights_of_model(mode=1)
+
+        mon_dict = {f"{pop_name}_reduced": ["spike"] for pop_name in mon_dict.keys()}
+        mon = CompNeuroMonitors(mon_dict=mon_dict)
+        mon.start()
+        simulate(1000)
+        recordings = mon.get_recordings()
+        recording_times = mon.get_recording_times()
+        plan["compartment"] = [
+            f"{pop_name}_reduced" for pop_name in plan["compartment"]
+        ]
+        PlotRecordings(
+            figname="model_conf_reduced_model.png",
+            recordings=recordings,
+            recording_times=recording_times,
+            shape=(len(plan["position"]), 1),
+            plan=plan,
+        )
+        ### TODO get base with reduced model
         quit()
 
-        self.model_reduced = ReduceModel(self.model_reduced).reduce()
-
-    def _set_weights_of_model(self):
+    def _set_weights_of_model(self, mode=0):
         """
-        Set the weights of the original model to the current weights from the
+        Set the weights of the model to the current weights from the
         afferent_projection_dict.
         """
         ### clear ANNarchy
         cnp_clear()
 
         ### create the original model
-        self.model.create()
+        if mode == 0:
+            model = self.model
+        elif mode == 1:
+            model = self.model_reduced
+        model.create()
 
         for pop_name in self.pop_name_list:
             for proj_name in self.afferent_projection_dict[pop_name][
                 "projection_names"
             ]:
-                proj_dict = self.get_proj_dict(proj_name)
-                get_projection(proj_name).w = proj_dict["proj_weight"]
+                if mode == 0:
+                    ### set weght of projection
+                    proj_dict = self.get_proj_dict(proj_name)
+                    get_projection(proj_name).w = proj_dict["proj_weight"]
+                elif mode == 1:
+                    ### set weight of the projection in the conductance-calculating
+                    ### input current population
+                    proj_dict = self.get_proj_dict(proj_name)
+                    proj_weight = proj_dict["proj_weight"]
+                    proj_target_type = proj_dict["proj_target_type"]
+                    setattr(
+                        get_population(f"{pop_name}_{proj_target_type}_aux"),
+                        f"weights_{proj_name}",
+                        proj_weight,
+                    )
+        return model
 
     def find_base_current(self, net_many_dict):
         """
@@ -2046,6 +2130,16 @@ class model_configurator:
 
         ### print guide
         self._p_g(_p_g_after_set_syn_load)
+
+    def set_weights(self, weights):
+        for pop_name in self.pop_name_list:
+            self.afferent_projection_dict[pop_name]["weights"] = []
+            for proj_name in self.afferent_projection_dict[pop_name][
+                "projection_names"
+            ]:
+                self.afferent_projection_dict[pop_name]["weights"].append(
+                    weights[pop_name][proj_name]
+                )
 
     def get_syn_load(self, pop_name: str, target_type: str) -> float:
         """
