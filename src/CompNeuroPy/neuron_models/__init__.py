@@ -23,6 +23,7 @@ from .final_models.izhikevich_2003_like_nm import (
     Izhikevich2003NoisyAmpaOscillating,
     Izhikevich2003NoisyBase,
     Izhikevich2003NoisyBaseNonlin,
+    Izhikevich2003NoisyBaseSNR,
 )
 from .final_models.izhikevich_2007_like_nm import (
     Izhikevich2007,

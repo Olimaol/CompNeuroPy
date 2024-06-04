@@ -159,6 +159,113 @@ class model_configurator:
         ### print guide
         self._p_g(_p_g_1)
 
+    def analyze_model(self):
+        """
+        prepares the creation of the single neuron and many neuron networks
+        """
+
+        ### clear ANNarchy and create the model
+        cnp_clear()
+        self.model.create(do_compile=False)
+
+        ### get the neuron models from the model
+        for pop_name in self.pop_name_list:
+            self.neuron_model_dict[pop_name] = get_population(pop_name).neuron_type
+            self.neuron_model_parameters_dict[pop_name] = get_population(
+                pop_name
+            ).init.items()
+            self.neuron_model_attributes_dict[pop_name] = get_population(
+                pop_name
+            ).attributes
+
+        ### do further things for which the model needs to be created
+        ### get the afferent projection dict for the populations (model needed!)
+        for pop_name in self.pop_name_list:
+            ### get afferent projection dict
+            self.log(f"get the afferent_projection_dict for {pop_name}")
+            self.afferent_projection_dict[pop_name] = self.get_afferent_projection_dict(
+                pop_name=pop_name
+            )
+
+        ### create dictionary with timeconstants of g_ampa and g_gaba of the populations
+        for pop_name in self.pop_name_list:
+            self.tau_dict[pop_name] = {
+                "ampa": get_population(pop_name).tau_ampa,
+                "gaba": get_population(pop_name).tau_gaba,
+            }
+
+        ### get the post_pop_name_dict
+        self.post_pop_name_dict = {}
+        for proj_name in self.model.projections:
+            self.post_pop_name_dict[proj_name] = get_projection(proj_name).post.name
+
+        ### get the pre_pop_name_dict
+        self.pre_pop_name_dict = {}
+        for proj_name in self.model.projections:
+            self.pre_pop_name_dict[proj_name] = get_projection(proj_name).pre.name
+
+        ### get the pre_pop_size_dict
+        self.pre_pop_size_dict = {}
+        for proj_name in self.model.projections:
+            self.pre_pop_size_dict[proj_name] = get_projection(proj_name).pre.size
+
+        ### clear ANNarchy --> the model is not available anymore
+        cnp_clear()
+
+    def get_afferent_projection_dict(self, pop_name):
+        """
+        creates a dictionary containing
+            projection_names
+            target firing rate
+            probability
+            size
+            target
+        for each afferent projection (=first level of keys) of the specified population
+
+        Args:
+            pop_name: str
+                populaiton name
+
+        return: dict of dicts
+        """
+        ### check if model is available
+        if not self.model.created:
+            error_msg = "ERROR model_configurator get_afferent_projection_dict: the model has to be created!"
+            self.log(error_msg)
+            raise AssertionError(error_msg)
+        ### get projection names
+        afferent_projection_dict = {}
+        afferent_projection_dict["projection_names"] = []
+        for projection in self.model.projections:
+            if get_projection(projection).post.name == pop_name:
+                afferent_projection_dict["projection_names"].append(projection)
+
+        self.nr_afferent_proj_dict[pop_name] = len(
+            afferent_projection_dict["projection_names"]
+        )
+
+        ### get target firing rates resting-state for afferent projections
+        afferent_projection_dict["target firing rate"] = []
+        afferent_projection_dict["probability"] = []
+        afferent_projection_dict["size"] = []
+        afferent_projection_dict["target"] = []
+        for projection in afferent_projection_dict["projection_names"]:
+            pre_pop_name = get_projection(projection).pre.name
+            ### target firing rate
+            afferent_projection_dict["target firing rate"].append(
+                self.target_firing_rate_dict[pre_pop_name]
+            )
+            ### probability, _connection_args only if connect_fixed_prob (i.e. connector_name==Random)
+            afferent_projection_dict["probability"].append(
+                get_projection(projection)._connection_args[0]
+            )
+            ### size
+            afferent_projection_dict["size"].append(len(get_projection(projection).pre))
+            ### target type
+            afferent_projection_dict["target"].append(get_projection(projection).target)
+
+        return afferent_projection_dict
+
     def get_max_syn(self, cache=True, clear=False):
         """
         get the weight dictionary for all populations given in target_firing_rate_dict
@@ -839,6 +946,10 @@ class model_configurator:
         ### this could also be prevented by initializing all neurons differently (along there periodic u-v curve)
         ### or by adding noise to conductances or baseline current
         ### thenthe question is, how is the relation between added noise and the noise in the input
+        ### TODO: I've decided for noise depending on the input current (scaled by specified SNR)
+        ### without input there is no noise, decorrelate neurons by random initial values
+        ### TODO: current idea is: to find max syn things the noise has to be deactivated and to find baseline currents the noise has to be activated
+        ### so single neuron networks should be without noise, an then here noise should be activated, maybe requirement for model conf will be a variable called noise to turn on and off noise
         for pop_name in self.pop_name_list:
             for proj_name in self.afferent_projection_dict[pop_name][
                 "projection_names"
@@ -849,6 +960,15 @@ class model_configurator:
         ### set the weights of the normal model
         model = self._set_weights_of_model(mode=0)
 
+        ### set initial variables of populations (do not initialize all neurons the same)
+        for pop_name in self.pop_name_list:
+            population = get_population(pop_name)
+            variable_init_sampler = self.net_single_dict[pop_name][
+                "variable_init_sampler"
+            ]
+            self.set_init_variables(population, variable_init_sampler)
+
+        ### record and simulate
         mon_dict = {pop_name: ["spike"] for pop_name in model.populations}
         mon = CompNeuroMonitors(mon_dict=mon_dict)
         mon.start()
@@ -872,6 +992,15 @@ class model_configurator:
         ### set the weights of the reduced model
         model = self._set_weights_of_model(mode=1)
 
+        ### set initial variables of populations (do not initialize all neurons the same)
+        for pop_name in self.pop_name_list:
+            population = get_population(f"{pop_name}_reduced")
+            variable_init_sampler = self.net_single_dict[pop_name][
+                "variable_init_sampler"
+            ]
+            self.set_init_variables(population, variable_init_sampler)
+
+        ### record and simulate
         mon_dict = {f"{pop_name}_reduced": ["spike"] for pop_name in mon_dict.keys()}
         mon = CompNeuroMonitors(mon_dict=mon_dict)
         mon.start()
@@ -888,6 +1017,8 @@ class model_configurator:
             shape=(len(plan["position"]), 1),
             plan=plan,
         )
+        ### next check if populations which should not be tuned have the correct firing rates, if not warning that the populations are tuned but if the rate of the not tuned populations changes this might also change the tuned populations' rates
+        ### next activate noise and then performe search algorithm ith reduced model with input varaibles = I_app of populations and output variables = firing rates of populations
         ### TODO get base with reduced model
         quit()
 
@@ -2223,59 +2354,6 @@ class model_configurator:
 
         return result
 
-    def analyze_model(self):
-        """
-        prepares the creation of the single neuron and many neuron networks
-        """
-
-        ### clear ANNarchy and create the model
-        cnp_clear()
-        self.model.create(do_compile=False)
-
-        ### get the neuron models from the model
-        for pop_name in self.pop_name_list:
-            self.neuron_model_dict[pop_name] = get_population(pop_name).neuron_type
-            self.neuron_model_parameters_dict[pop_name] = get_population(
-                pop_name
-            ).init.items()
-            self.neuron_model_attributes_dict[pop_name] = get_population(
-                pop_name
-            ).attributes
-
-        ### do further things for which the model needs to be created
-        ### get the afferent projection dict for the populations (model needed!)
-        for pop_name in self.pop_name_list:
-            ### get afferent projection dict
-            self.log(f"get the afferent_projection_dict for {pop_name}")
-            self.afferent_projection_dict[pop_name] = self.get_afferent_projection_dict(
-                pop_name=pop_name
-            )
-
-        ### create dictionary with timeconstants of g_ampa and g_gaba of the populations
-        for pop_name in self.pop_name_list:
-            self.tau_dict[pop_name] = {
-                "ampa": get_population(pop_name).tau_ampa,
-                "gaba": get_population(pop_name).tau_gaba,
-            }
-
-        ### get the post_pop_name_dict
-        self.post_pop_name_dict = {}
-        for proj_name in self.model.projections:
-            self.post_pop_name_dict[proj_name] = get_projection(proj_name).post.name
-
-        ### get the pre_pop_name_dict
-        self.pre_pop_name_dict = {}
-        for proj_name in self.model.projections:
-            self.pre_pop_name_dict[proj_name] = get_projection(proj_name).pre.name
-
-        ### get the pre_pop_size_dict
-        self.pre_pop_size_dict = {}
-        for proj_name in self.model.projections:
-            self.pre_pop_size_dict[proj_name] = get_projection(proj_name).pre.size
-
-        ### clear ANNarchy --> the model is not available anymore
-        cnp_clear()
-
     def compile_net_many_sequential(self):
         network_list = [
             net_many_dict["net"]
@@ -2322,60 +2400,6 @@ class model_configurator:
             _network[net_idx]["instance"] = foo
             _network[net_idx]["compiled"] = True
             _network[net_idx]["directory"] = run_folder_name
-
-    def get_afferent_projection_dict(self, pop_name):
-        """
-        creates a dictionary containing
-            projection_names
-            target firing rate
-            probability
-            size
-            target
-        for each afferent projection (=first level of keys) of the specified population
-
-        Args:
-            pop_name: str
-                populaiton name
-
-        return: dict of dicts
-        """
-        ### check if model is available
-        if not self.model.created:
-            error_msg = "ERROR model_configurator get_afferent_projection_dict: the model has to be created!"
-            self.log(error_msg)
-            raise AssertionError(error_msg)
-        ### get projection names
-        afferent_projection_dict = {}
-        afferent_projection_dict["projection_names"] = []
-        for projection in self.model.projections:
-            if get_projection(projection).post.name == pop_name:
-                afferent_projection_dict["projection_names"].append(projection)
-
-        self.nr_afferent_proj_dict[pop_name] = len(
-            afferent_projection_dict["projection_names"]
-        )
-
-        ### get target firing rates resting-state for afferent projections
-        afferent_projection_dict["target firing rate"] = []
-        afferent_projection_dict["probability"] = []
-        afferent_projection_dict["size"] = []
-        afferent_projection_dict["target"] = []
-        for projection in afferent_projection_dict["projection_names"]:
-            pre_pop_name = get_projection(projection).pre.name
-            ### target firing rate
-            afferent_projection_dict["target firing rate"].append(
-                self.target_firing_rate_dict[pre_pop_name]
-            )
-            ### probability, _connection_args only if connect_fixed_prob (i.e. connector_name==Random)
-            afferent_projection_dict["probability"].append(
-                get_projection(projection)._connection_args[0]
-            )
-            ### size
-            afferent_projection_dict["size"].append(len(get_projection(projection).pre))
-            ### target type
-            afferent_projection_dict["target"].append(get_projection(projection).target)
-
-        return afferent_projection_dict
 
     def get_max_syn_currents(self, pop_name: str) -> list:
         """
