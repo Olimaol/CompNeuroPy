@@ -20,7 +20,7 @@ from CompNeuroPy import (
     PlotRecordings,
 )
 from CompNeuroPy.examples.model_configurator.model_configurator_cnp import (
-    model_configurator,
+    ModelConfigurator,
 )
 import matplotlib.pyplot as plt
 import numpy as np
@@ -360,13 +360,12 @@ if __name__ == "__main__":
     ### given rates, if not, maybe print warning
 
     ### initialize model_configurator
-    model_conf = model_configurator(
+    model_conf = ModelConfigurator(
         model,
         target_firing_rate_dict,
         do_not_config_list=do_not_config_list,
         print_guide=True,
         I_app_variable="I_app",
-        interpolation_grid_points=36,
     )
 
     ### obtain the maximum synaptic loads for the populations and the
