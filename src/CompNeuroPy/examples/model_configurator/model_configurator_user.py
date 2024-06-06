@@ -366,6 +366,7 @@ if __name__ == "__main__":
         do_not_config_list=do_not_config_list,
         print_guide=True,
         I_app_variable="I_app",
+        log_file="model_configurator.log",
     )
 
     ### obtain the maximum synaptic loads for the populations and the

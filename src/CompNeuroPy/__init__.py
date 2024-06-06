@@ -38,6 +38,7 @@ from CompNeuroPy.extra_functions import (
     node_cl,  # TODO remove
     efel_loss,
     RNG,
+    find_x_bound,
 )
 from CompNeuroPy.model_functions import (
     compile_in_folder,
@@ -64,6 +65,7 @@ from CompNeuroPy.system_functions import (
     timing_decorator,
     run_script_parallel,
     create_data_raw_folder,
+    Logger,
 )
 from CompNeuroPy.simulation_requirements import req_pop_attr, ReqPopHasAttr
 from CompNeuroPy.statistic_functions import anova_between_groups

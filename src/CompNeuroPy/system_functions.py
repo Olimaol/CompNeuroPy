@@ -7,6 +7,7 @@ from functools import wraps
 from joblib import Parallel, delayed
 import inspect
 import subprocess
+import textwrap
 
 
 def clear_dir(path):
@@ -536,3 +537,51 @@ def _find_folder_with_prefix(base_path, prefix):
 
     # If no folder with the specified prefix is found, return None
     return None
+
+
+class Logger:
+    """
+    Logger singleton class to log the progress of the model configuration. Has to be
+    initialized with the path to the log file once."""
+
+    _instance = None
+    _log_file: str | None
+    _caller_name = ""
+
+    def __new__(cls, log_file: str | None = None):
+        """
+        Args:
+            log_file (str):
+                Path to the log file
+        """
+        if cls._instance is None:
+            cls._instance = super(Logger, cls).__new__(cls)
+            cls._log_file = log_file
+            if log_file is not None:
+                with open(log_file, "w") as f:
+                    print("Logger file:", file=f)
+        return cls._instance
+
+    def log(self, txt):
+        """
+        Log the given text to the log file. Only if the log file was given during
+        the first initialization.
+
+        Args:
+            txt (str):
+                Text to be logged
+        """
+        if self._log_file is None:
+            return
+        caller_frame = inspect.currentframe().f_back
+        caller_name = caller_frame.f_code.co_name
+
+        if caller_name == self._caller_name:
+            txt = f"{textwrap.indent(str(txt), '    ')}"
+        else:
+            txt = f"[{caller_name}]:\n{textwrap.indent(str(txt), '    ')}"
+
+        self._caller_name = caller_name
+
+        with open(self._log_file, "a") as f:
+            print(txt, file=f)

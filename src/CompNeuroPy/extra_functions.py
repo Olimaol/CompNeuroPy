@@ -23,6 +23,7 @@ from deap import cma
 from ANNarchy import Neuron, Population, simulate, setup, get_population
 from sympy import symbols, Symbol, solve, sympify, Eq, lambdify, factor
 from scipy.interpolate import griddata
+from scipy.optimize import brentq, minimize_scalar
 import re
 from typingchecker import check_types
 import warnings
@@ -2626,3 +2627,123 @@ class RNG:
         self.rng.bit_generator.state = np.random.default_rng(
             seed=self._original_seed
         ).bit_generator.state
+
+
+def find_x_bound(
+    y_: Callable[[float], float],
+    x0: float,
+    y_bound: float,
+    tolerance: float = 1e-5,
+    bound_type: str = "equal",
+) -> float:
+    """
+    Find the x value such that y(x) is closest to y_bound within a given tolerance. The
+    value y_bound should be reachable by y(x) by increasing x from the initial value x0.
+
+    Args:
+        y (Callable[[float], float]):
+            A function that takes a single float argument and returns a single float
+            value.
+        x0 (float):
+            The initial value of x to start the search.
+        y_bound (float):
+            The target value of y.
+        tolerance (float, optional):
+            The tolerance for the difference between y(x) and y_bound. Defaults to 1e-5.
+        bound_type (str, optional):
+            The type of bound to find. Can be 'equal'(y(x) should be close to y_bound),
+            'greater'(y(x) should be close to y_bound and greater), or 'less'(y(x) should
+            be close to y_bound and less). Defaults to 'equal'.
+
+    Returns:
+        x_bound (float):
+            The x value such that y(x) is closest to y_bound within the tolerance.
+    """
+
+    def y(x):
+        x_y = y_(x)
+        sf.Logger().log(f"x: {x}; y: {x_y}")
+        return x_y
+
+    # Catch invalid bound type
+    if bound_type not in ["equal", "greater", "less"]:
+        raise ValueError("bound_type should be 'equal', 'greater', or 'less'.")
+
+    # Check if the initial value y(x0) is already y_bound
+    y0 = y(x0)
+    if np.isclose(y0, y_bound, atol=tolerance):
+        print("Warning: The initial value is already equal to y_bound.")
+        return x0, x0
+
+    sf.Logger().log(f"x0: {x0}, y0: {y0}, y_bound: {y_bound}")
+
+    # Define a helper function to find x such that y(x) - y_bound = 0
+    def func(x):
+        return y(x) - y_bound
+
+    # Exponential search to find an interval [a, b] where y(a) < y_bound < y(b)
+    a = x0
+    b = x0 + 1
+    while y(b) < y_bound:
+        a = b
+        b *= 2
+        if b > 1e6:  # Avoid infinite loop in case y_bound is not reachable
+            break
+    if b > 1e6:
+        raise ValueError(
+            "y_bound cannot be reached, the function saturates below y_bound."
+        )
+    sf.Logger().log(f"a: {a}, b: {b}")
+
+    # Check if the maximum value is less than y_bound
+    res = minimize_scalar(lambda x: -y(x), bounds=(x0, b), method="bounded")
+    y_max = -res.fun
+    if y_max < y_bound:
+        raise ValueError(
+            "y_bound cannot be reached, the function saturates below y_bound."
+        )
+    sf.Logger().log(f"y_max: {y_max}")
+
+    # Use brentq to find the root within the interval [a, b]
+    x_root: float = brentq(func, a, b, xtol=tolerance, full_output=False)
+    sf.Logger().log(f"x_root: {x_root}")
+
+    if bound_type == "equal":
+        # Return the x value such that y(x) = y_bound
+        return x_root
+
+    # Calculate the gradient at x_root
+    dx = np.abs(x_root - x0) * 1e-3
+    grad_y = (y(x_root + dx) - y(x_root - dx)) / (2 * dx)
+
+    # Define epsilon based on the gradient
+    epsilon = tolerance / np.abs(grad_y) if grad_y != 0 else tolerance
+
+    if bound_type == "greater":
+        # Find the x value such that y(x) > y_bound (thus maybe increase x)
+        # do this by incrementaly increasing x by epsilon until y(x) is greater than
+        # y_bound
+        # if y(x+epsilon)-y(x) is less than the tolerance, increase epsilon
+        x = x_root
+        y_val = y(x)
+        while y_val < y_bound:
+            y_val_prev = y_val
+            x += epsilon
+            y_val = y(x)
+            if y_val - y_val_prev < tolerance / 10:
+                epsilon *= 2
+        return x
+    elif bound_type == "less":
+        # Find the x value such that y(x) < y_bound (thus maybe decrease x)
+        # do this by incrementaly decreasing x by epsilon until y(x) is less than
+        # y_bound
+        # if y(x)-y(x-epsilon) is less than the tolerance, increase epsilon
+        x = x_root
+        y_val = y(x)
+        while y_val > y_bound:
+            y_val_prev = y_val
+            x -= epsilon
+            y_val = y(x)
+            if y_val_prev - y_val < tolerance / 10:
+                epsilon *= 2
+        return x

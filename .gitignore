@@ -16,3 +16,4 @@ dist/
 !site/*
 *.pkl
 *json
+*.log
