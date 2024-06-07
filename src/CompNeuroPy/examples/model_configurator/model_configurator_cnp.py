@@ -846,6 +846,86 @@ class Simulator:
         var_arr[0, :] = get_arr[:, 0]
         return var_arr
 
+    def get_ipsp(
+        self,
+        pop_name: str,
+        g_ampa: float = 0,
+        g_gaba: float = 0,
+        do_plot: bool = False,
+    ):
+        """
+        Simulate the single neuron network of the given pop_name for max 5000 ms. The
+        neuron is hold at the resting potential by setting the applied current to
+        I_app_hold. Then the conductances g_ampa and g_gaba are applied (simulating a
+        single incoming ampa/gaba spike). The maximum of the (negative) difference of
+        the membrane potential and the resting potential is returned as the IPSP.
+
+        Args:
+            pop_name (str):
+                Name of the population
+            g_ampa (float):
+                Conductance of the ampa synapse
+            g_gaba (float):
+                Conductance of the gaba synapse
+            do_plot (bool):
+                If True, plot the membrane potential
+
+        Returns:
+            psp (float):
+                Maximum of the (negative) difference of the membrane potential and the
+                resting potential
+        """
+        ### get the network, population, monitor from single nets
+        net = single_nets.single_net(pop_name=pop_name, mode="normal").net
+        population = single_nets.single_net(pop_name=pop_name, mode="normal").population
+        monitor = single_nets.single_net(pop_name=pop_name, mode="normal").monitor
+        ### get init_sampler, I_app_hold from prepare_psp
+        init_sampler = prepare_psp.get(pop_name=pop_name).psp_init_sampler
+        I_app_hold = prepare_psp.get(pop_name=pop_name).I_app_hold
+        ### reset network
+        net.reset()
+        net.set_seed(0)
+        ### set the initial variables of the neuron model
+        if init_sampler is not None:
+            init_sampler.set_init_variables(population)
+        ### set I_app (I_app_hold) to hold the resting potential
+        population.I_app = I_app_hold
+        ### simulate 50 ms initial duration
+        net.simulate(50)
+        ### get the current v and set it as v_psp_thresh for the population's stop
+        ### condition
+        v_rec_rest = population.v[0]
+        population.v_psp_thresh = v_rec_rest
+        ### apply given conductances --> changes v, causes psp
+        population.g_ampa = g_ampa
+        population.g_gaba = g_gaba
+        ### simulate until v is near v_rec_rest again or until 5000 ms
+        net.simulate_until(max_duration=5000, population=population)
+        ### get v and spike dict to calculate psp
+        v_rec = monitor.get("v")[:, 0]
+        spike_dict = monitor.get("spike")
+        ### if neuron spiked only check psps until spike time, otherwise until last
+        ### (current) time step
+        spike_timestep_list = spike_dict[0] + [net.get_current_step()]
+        end_timestep = int(round(min(spike_timestep_list), 0))
+        ### calculate psp, maximum of negative difference of v_rec and v_rec_rest
+        psp = float(
+            np.absolute(np.clip(v_rec[:end_timestep] - v_rec_rest, None, 0)).max()
+        )
+
+        if do_plot:
+            plt.figure()
+            plt.title(
+                f"g_ampa={g_ampa}\ng_gaba={g_gaba}\nv_rec_rest={v_rec_rest}\npsp={psp}"
+            )
+            plt.plot(v_rec)
+            plt.savefig(
+                f"tmp_psp_{population.name}_{int(g_ampa*1000)}_{int(g_gaba*1000)}.png"
+            )
+            plt.close("all")
+
+        return psp
+
 
 class ModelConfigurator:
     def __init__(
@@ -860,7 +940,7 @@ class ModelConfigurator:
         clear_cache: bool = False,
         log_file: str | None = None,
     ):
-        ### initialize logger
+        ### initialize logger TODO test if no Logger works
         sf.Logger(log_file=log_file)
         ### analyze the given model, create model before analyzing, then clear ANNarchy
         self._analyze_model = AnalyzeModel(model=model)
@@ -885,8 +965,6 @@ class ModelConfigurator:
             analyze_model=self._analyze_model,
             do_not_config_list=do_not_config_list,
         )
-        ### define the simulator with all simulations for the single neuron networks
-        Simulator()
         ### get the resting potential and corresponding I_hold for each population using
         ### the voltage clamp networks
         global prepare_psp
@@ -895,17 +973,10 @@ class ModelConfigurator:
             do_not_config_list=do_not_config_list,
             do_plot=False,
         )
-        ### tmp test
-        for pop_name in model.populations:
-            if pop_name in do_not_config_list:
-                continue
-            print(f"pop_name: {pop_name}")
-            print(f"I_app_hold: {prepare_psp.get(pop_name=pop_name).I_app_hold}")
-            print(f"v_rest: {prepare_psp.get(pop_name=pop_name).v_rest}")
 
-        quit()  # TODO seems to work until here, continue here
-
-        self._max_syn = GetMaxSyn()
+        self._max_syn = GetMaxSyn(
+            model=model, do_not_config_list=do_not_config_list, max_psp=max_psp
+        )
         self._weight_templates = GetWeightTemplates()
 
 
@@ -1400,7 +1471,6 @@ class PreparePSP:
             ### skip populations which should not be configured
             if pop_name in do_not_config_list:
                 continue
-            self._prepare_psp_dict[pop_name] = {}
             ### find initial v_rest using the voltage clamp network
             sf.Logger().log(
                 f"search v_rest with y(X) = delta_v_2000(v=X) using grid search for pop {pop_name}"
@@ -1446,6 +1516,7 @@ class PreparePSP:
                 I_app_hold=I_app_hold,
             )
             ### store the prepare PSP information
+            self._prepare_psp_dict[pop_name] = {}
             self._prepare_psp_dict[pop_name]["v_rest"] = v_rest
             self._prepare_psp_dict[pop_name]["I_app_hold"] = I_app_hold
             self._prepare_psp_dict[pop_name]["psp_init_sampler"] = psp_init_sampler
@@ -1535,7 +1606,7 @@ class PreparePSP:
             ### negative current initially reduces v then v climbs back up -->
             ### get_v_change_after_v_rest checks how much v changes during second half of
             ### 2000 ms simulation
-            y_=lambda X_val: -self._get_v_change_after_v_rest(
+            y=lambda X_val: -self._get_v_change_after_v_rest(
                 pop_name=pop_name,
                 variables_v_rest=variables_v_rest,
                 ### incremental_continuous_bound_search only uses positive values for X and
@@ -1694,8 +1765,99 @@ class PreparePSP:
 
 
 class GetMaxSyn:
-    def __init__(self):
-        pass
+    def __init__(
+        self, model: CompNeuroModel, do_not_config_list: list[str], max_psp: float
+    ):
+        self._max_syn_dict = {}
+        ### loop over all populations
+        for pop_name in model.populations:
+            ### skip populations which should not be configured
+            if pop_name in do_not_config_list:
+                continue
+
+            ### get max g_gabe
+            g_gaba_max = self._get_max_g_gaba(pop_name=pop_name, max_psp=max_psp)
+
+            ### get max g_ampa
+            g_ampa_max = self._get_max_g_ampa(pop_name=pop_name, g_gaba_max=g_gaba_max)
+            print(f"g_gaba_max: {g_gaba_max}, g_ampa_max: {g_ampa_max}")
+            quit()  ### TODO seems to work until here, continue here
+            ### get max I_app
+            I_app_max = self._get_max_I_app(pop_name=pop_name)
+
+            ### store the maximal synaptic input in dict
+            self._max_syn_dict[pop_name] = {}
+            self._max_syn_dict[pop_name]["g_gaba"] = g_gaba_max
+            self._max_syn_dict[pop_name]["g_ampa"] = g_ampa_max
+            self._max_syn_dict[pop_name]["I_app"] = I_app_max
+
+    def get(self, pop_name: str):
+        """
+        Return the maximal synaptic input for the given population.
+
+        Args:
+            pop_name (str):
+                Name of the population
+
+        Returns:
+            ReturnMaxSyn:
+                Maximal synaptic input for the given population with Attributes: g_gaba,
+                g_ampa, I_app
+        """
+        return self.ReturnMaxSyn(
+            g_gaba=self._max_syn_dict[pop_name]["g_gaba"],
+            g_ampa=self._max_syn_dict[pop_name]["g_ampa"],
+            I_app=self._max_syn_dict[pop_name]["I_app"],
+        )
+
+    class ReturnMaxSyn:
+        def __init__(self, g_gaba: float, g_ampa: float, I_app: float):
+            self.g_gaba = g_gaba
+            self.g_ampa = g_ampa
+            self.I_app = I_app
+
+    def _get_max_g_gaba(self, pop_name: str, max_psp: float):
+        ### find g_gaba max using max IPSP
+        sf.Logger().log("search g_gaba_max with y(X) = PSP(g_ampa=0, g_gaba=X)")
+        return ef.find_x_bound(
+            y=lambda X_val: Simulator().get_ipsp(
+                pop_name=pop_name,
+                g_gaba=X_val,
+            ),
+            x0=0,
+            y_bound=max_psp,
+            tolerance=0.005,
+        )
+
+    def _get_max_g_ampa(self, pop_name: str, g_gaba_max: float):
+        ### find g_ampa max by "overriding" IPSP of g_gaba max
+        sf.Logger().log(
+            f"search g_ampa_max with y(X) = PSP(g_ampa=X, g_gaba=g_gaba_max={g_gaba_max})"
+        )
+
+        def func(x):
+            ipsp = Simulator().get_ipsp(
+                pop_name=pop_name,
+                g_gaba=g_gaba_max,
+                g_ampa=x,
+            )
+            ### find_x_bound tries to increase x to increase y, therefore, use
+            ### -ipsp, since initially the ipsp is maximal, thus, y is negative and by
+            ### increasing x it should increase to 0
+            y = -ipsp
+            ### next problem: find_x_bound expects a function which increases beyond the
+            ### bound but -ipsp can maximum reach 0, thus, use -ipsp + x
+            if y >= 0:
+                return y + x
+            else:
+                return y
+
+        return ef.find_x_bound(
+            y=func,
+            x0=0,
+            y_bound=0,
+            tolerance=0.005,
+        )
 
 
 class GetWeightTemplates:

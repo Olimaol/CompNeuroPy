@@ -22,6 +22,9 @@ from CompNeuroPy import (
 from CompNeuroPy.examples.model_configurator.model_configurator_cnp import (
     ModelConfigurator,
 )
+from CompNeuroPy.examples.model_configurator.model_configurator_cnp_old import (
+    model_configurator,
+)
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -371,7 +374,7 @@ if __name__ == "__main__":
 
     ### obtain the maximum synaptic loads for the populations and the
     ### maximum weights of their afferent projections
-    model_conf.get_max_syn(cache=True, clear=False)
+    model_conf.get_max_syn(cache=False, clear=False)
 
     ### now either set weights directly
     weights = {

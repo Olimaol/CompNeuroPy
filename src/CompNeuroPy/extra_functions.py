@@ -2630,7 +2630,7 @@ class RNG:
 
 
 def find_x_bound(
-    y_: Callable[[float], float],
+    y: Callable[[float], float],
     x0: float,
     y_bound: float,
     tolerance: float = 1e-5,
@@ -2659,12 +2659,6 @@ def find_x_bound(
         x_bound (float):
             The x value such that y(x) is closest to y_bound within the tolerance.
     """
-
-    def y(x):
-        x_y = y_(x)
-        sf.Logger().log(f"x: {x}; y: {x_y}")
-        return x_y
-
     # Catch invalid bound type
     if bound_type not in ["equal", "greater", "less"]:
         raise ValueError("bound_type should be 'equal', 'greater', or 'less'.")
@@ -2672,10 +2666,10 @@ def find_x_bound(
     # Check if the initial value y(x0) is already y_bound
     y0 = y(x0)
     if np.isclose(y0, y_bound, atol=tolerance):
-        print("Warning: The initial value is already equal to y_bound.")
+        sf.Logger().log("Warning: The initial value is already equal to y_bound.")
         return x0, x0
 
-    sf.Logger().log(f"x0: {x0}, y0: {y0}, y_bound: {y_bound}")
+    sf.Logger().log(f"x0: {x0}, y0: {y0}, y_bound: {bound_type} {y_bound}")
 
     # Define a helper function to find x such that y(x) - y_bound = 0
     def func(x):
@@ -2684,7 +2678,7 @@ def find_x_bound(
     # Exponential search to find an interval [a, b] where y(a) < y_bound < y(b)
     a = x0
     b = x0 + 1
-    while y(b) < y_bound:
+    while func(b) < 0:
         a = b
         b *= 2
         if b > 1e6:  # Avoid infinite loop in case y_bound is not reachable
@@ -2695,21 +2689,30 @@ def find_x_bound(
         )
     sf.Logger().log(f"a: {a}, b: {b}")
 
-    # Check if the maximum value is less than y_bound
-    res = minimize_scalar(lambda x: -y(x), bounds=(x0, b), method="bounded")
-    y_max = -res.fun
-    if y_max < y_bound:
-        raise ValueError(
-            "y_bound cannot be reached, the function saturates below y_bound."
-        )
-    sf.Logger().log(f"y_max: {y_max}")
-
     # Use brentq to find the root within the interval [a, b]
-    x_root: float = brentq(func, a, b, xtol=tolerance, full_output=False)
-    sf.Logger().log(f"x_root: {x_root}")
+    x_root: float = brentq(func, a, b, full_output=False)
+    y_root = y(x_root)
+    sf.Logger().log(f"y(x_root={x_root}) = {y_root}")
+
+    # check if y(x_root) is not within the tolerance of y_bound
+    if not np.isclose(y_root, y_bound, atol=tolerance):
+        sf.Logger().log(
+            f"Warning: y(x_root) is not within the tolerance of y_bound (y(x_root)={y_root}, y_bound={y_bound}, tolerance={tolerance})!"
+        )
 
     if bound_type == "equal":
         # Return the x value such that y(x) = y_bound
+        sf.Logger().log(f"Returning y(x={x_root}) = {y_root}")
+        return x_root
+
+    if bound_type == "greater" and y_root > y_bound:
+        # Return the x value such that y(x) > y_bound
+        sf.Logger().log(f"Returning y(x={x_root}) = {y_root}")
+        return x_root
+
+    if bound_type == "less" and y_root < y_bound:
+        # Return the x value such that y(x) < y_bound
+        sf.Logger().log(f"Returning y(x={x_root}) = {y_root}")
         return x_root
 
     # Calculate the gradient at x_root
@@ -2732,6 +2735,7 @@ def find_x_bound(
             y_val = y(x)
             if y_val - y_val_prev < tolerance / 10:
                 epsilon *= 2
+        sf.Logger().log(f"Returning y(x={x}) = {y_val}")
         return x
     elif bound_type == "less":
         # Find the x value such that y(x) < y_bound (thus maybe decrease x)
@@ -2746,4 +2750,5 @@ def find_x_bound(
             y_val = y(x)
             if y_val_prev - y_val < tolerance / 10:
                 epsilon *= 2
+        sf.Logger().log(f"Returning y(x={x}) = {y_val}")
         return x

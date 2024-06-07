@@ -546,7 +546,7 @@ class Logger:
 
     _instance = None
     _log_file: str | None
-    _caller_name = ""
+    _call_stack = ""
 
     def __new__(cls, log_file: str | None = None):
         """
@@ -571,17 +571,55 @@ class Logger:
             txt (str):
                 Text to be logged
         """
-        if self._log_file is None:
-            return
-        caller_frame = inspect.currentframe().f_back
-        caller_name = caller_frame.f_code.co_name
 
-        if caller_name == self._caller_name:
+        _, call_stack = self.trace_calls()
+
+        if call_stack == self._call_stack:
             txt = f"{textwrap.indent(str(txt), '    ')}"
         else:
-            txt = f"[{caller_name}]:\n{textwrap.indent(str(txt), '    ')}"
+            txt = f"\n[{call_stack}]:\n{textwrap.indent(str(txt), '    ')}"
 
-        self._caller_name = caller_name
+        self._call_stack = call_stack
 
         with open(self._log_file, "a") as f:
             print(txt, file=f)
+
+    def trace_calls(self):
+        # Get the call stack
+        stack = inspect.stack()
+
+        call_stack = []
+        for frame in stack:
+            # Get the function name
+            function_name = frame.function
+            # Check if it's a method of a class by looking for 'self' or 'cls'
+            locals = frame.frame.f_locals
+            if "self" in locals:
+                class_name = locals["self"].__class__.__name__
+                full_name = f"{class_name}.{function_name}"
+            elif "cls" in locals:
+                class_name = locals["cls"].__name__
+                full_name = f"{class_name}.{function_name}"
+            else:
+                # If function_name is '<module>', replace it with the module name
+                if function_name == "<module>":
+                    module_name = frame.frame.f_globals["__name__"]
+                    full_name = f"{module_name}"
+                else:
+                    full_name = function_name
+            call_stack.append(full_name)
+
+        # Remove the first two elements of the call stack, which are the functions of
+        # the Logger class
+        call_stack = call_stack[2:]
+
+        # Get the name of the current function
+        current_function_name = call_stack[0]
+
+        # Reverse the call stack to get the order of the calls
+        call_stack = call_stack[::-1]
+
+        # Convert the call stack to a string
+        call_stack = " -> ".join(call_stack)
+
+        return current_function_name, call_stack
