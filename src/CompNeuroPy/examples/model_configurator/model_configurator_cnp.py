@@ -1,7 +1,10 @@
 from CompNeuroPy.generate_model import CompNeuroModel
+from CompNeuroPy.experiment import CompNeuroExp
+from CompNeuroPy.monitors import CompNeuroMonitors
 from CompNeuroPy import model_functions as mf
 from CompNeuroPy import extra_functions as ef
 from CompNeuroPy import system_functions as sf
+from CompNeuroPy import analysis_functions as af
 
 from ANNarchy import (
     Population,
@@ -23,6 +26,7 @@ from ANNarchy import (
     populations,
     Binomial,
     CurrentInjection,
+    raster_plot,
 )
 
 from ANNarchy.core import ConnectorMethods
@@ -30,7 +34,7 @@ from ANNarchy.core import ConnectorMethods
 # from ANNarchy.core.Global import _network
 import numpy as np
 from scipy.interpolate import interp1d, interpn
-from scipy.signal import find_peaks, argrelmin
+from scipy.signal import find_peaks, argrelmin, argrelextrema
 import matplotlib.pyplot as plt
 import inspect
 import textwrap
@@ -48,6 +52,7 @@ from scipy.stats import poisson
 from ANNarchy.extensions.bold import BoldMonitor
 from sklearn.linear_model import LinearRegression
 import sympy as sp
+from scipy.optimize import minimize, Bounds
 
 
 class ArrSampler:
@@ -438,6 +443,51 @@ class CreateSingleNeuronNetworks:
             self.monitor: Monitor = single_net_dict["monitor"]
             self.init_sampler: ArrSampler = single_net_dict["init_sampler"]
 
+    def init_sampler(self, model: CompNeuroModel, do_not_config_list: list[str]):
+        """
+        Return the init samplers for all populations of the normal mode. All samplers
+        are returned in an object with a get method to get the sampler for a specific
+        population.
+
+        Args:
+            model (CompNeuroModel):
+                Model to be analyzed
+            do_not_config_list (list[str]):
+                List of population names which should not be configured
+
+        Returns:
+            AllSampler:
+                Object with a get method to get the init sampler for a specific
+                population
+        """
+        init_sampler_dict = {}
+        for pop_name in model.populations:
+            if pop_name in do_not_config_list:
+                continue
+            init_sampler_dict[pop_name] = self._single_net_dict["normal"][pop_name][
+                "init_sampler"
+            ]
+        return self.AllSampler(init_sampler_dict)
+
+    class AllSampler:
+        def __init__(self, init_sampler_dict: dict[str, ArrSampler]):
+            self.init_sampler_dict = init_sampler_dict
+
+        def get(self, pop_name: str):
+            """
+            Get the init sampler for the given population.
+
+            Args:
+                pop_name (str):
+                    Name of the population
+
+            Returns:
+                sampler (ArrSampler):
+                    Init sampler for the given population
+            """
+            sampler: ArrSampler = self.init_sampler_dict[pop_name]
+            return sampler
+
     def _create_single_neuron_networks(
         self,
         model: CompNeuroModel,
@@ -705,13 +755,356 @@ class CreateSingleNeuronNetworks:
         )
 
 
-class Simulator:
-    _instance = None
+class PreparePSP:
+    """
+    Find v_rest, corresponding I_hold (in case of self-active neurons) and an
+    init_sampler to initialize the neuron model for the PSP calculation for each
+    population.
+    """
 
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(Simulator, cls).__new__(cls)
-        return cls._instance
+    def __init__(
+        self,
+        model: CompNeuroModel,
+        single_nets: CreateSingleNeuronNetworks,
+        do_not_config_list: list[str],
+        simulator: "Simulator",
+        do_plot: bool,
+    ):
+        """
+        Args:
+            model (CompNeuroModel):
+                Model to be prepared
+            do_not_config_list (list[str]):
+                List of populations which should not be configured
+            do_plot (bool):
+                If True, plot the membrane potential
+        """
+        self._single_nets = single_nets
+        self._prepare_psp_dict = {}
+        self._simulator = simulator
+        ### loop over all populations
+        for pop_name in model.populations:
+            ### skip populations which should not be configured
+            if pop_name in do_not_config_list:
+                continue
+            ### find initial v_rest using the voltage clamp network
+            sf.Logger().log(
+                f"[{pop_name}]: search v_rest with y(X) = delta_v_2000(v=X) using grid search"
+            )
+            v_rest, delta_v_v_rest, variables_v_rest = self._find_v_rest_initial(
+                pop_name=pop_name,
+                do_plot=do_plot,
+            )
+            sf.Logger().log(
+                f"[{pop_name}]: found v_rest={v_rest} with delta_v_2000(v=v_rest)={delta_v_v_rest}"
+            )
+            ### check if v is constant after setting v to v_rest by simulating the normal
+            ### single neuron network for 2000 ms
+            v_rest_is_constant, v_rest_arr = self._get_v_rest_is_const(
+                pop_name=pop_name,
+                variables_v_rest=variables_v_rest,
+                do_plot=do_plot,
+            )
+
+            if v_rest_is_constant:
+                ### v_rest found (last v value of the previous simulation), no
+                ### I_app_hold needed
+                v_rest = v_rest_arr[-1]
+                I_app_hold = 0
+            else:
+                ### there is no resting_state i.e. neuron is self-active --> find
+                ### smallest negative I_app to silence neuron
+                sf.Logger().log(
+                    f"[{pop_name}]: neuron seems to be self-active --> find smallest I_app to silence the neuron"
+                )
+                v_rest, I_app_hold = self._find_I_app_hold(
+                    pop_name=pop_name,
+                    variables_v_rest=variables_v_rest,
+                )
+            sf.Logger().log(
+                f"[{pop_name}]: final values: I_app_hold = {I_app_hold}, v_rest = {v_rest}"
+            )
+
+            ### get the sampler for the initial variables
+            psp_init_sampler = self._get_init_neuron_variables_for_psp(
+                pop_name=pop_name,
+                v_rest=v_rest,
+                I_app_hold=I_app_hold,
+            )
+            ### store the prepare PSP information
+            self._prepare_psp_dict[pop_name] = {}
+            self._prepare_psp_dict[pop_name]["v_rest"] = v_rest
+            self._prepare_psp_dict[pop_name]["I_app_hold"] = I_app_hold
+            self._prepare_psp_dict[pop_name]["psp_init_sampler"] = psp_init_sampler
+
+    def get(self, pop_name: str):
+        """
+        Return the prepare PSP information for the given population.
+
+        Args:
+            pop_name (str):
+                Name of the population
+
+        Returns:
+            ReturnPreparePSP:
+                Prepare PSP information for the given population with Attributes: v_rest,
+                I_app_hold, psp_init_sampler
+        """
+        return self.ReturnPreparePSP(
+            v_rest=self._prepare_psp_dict[pop_name]["v_rest"],
+            I_app_hold=self._prepare_psp_dict[pop_name]["I_app_hold"],
+            psp_init_sampler=self._prepare_psp_dict[pop_name]["psp_init_sampler"],
+        )
+
+    class ReturnPreparePSP:
+        def __init__(
+            self, v_rest: float, I_app_hold: float, psp_init_sampler: ArrSampler
+        ):
+            self.v_rest = v_rest
+            self.I_app_hold = I_app_hold
+            self.psp_init_sampler = psp_init_sampler
+
+    def _get_init_neuron_variables_for_psp(
+        self, pop_name: str, v_rest: float, I_app_hold: float
+    ):
+        """
+        Get the initial variables of the neuron model for the PSP calculation.
+
+        Args:
+            pop_name (str):
+                Name of the population
+            v_rest (float):
+                Resting membrane potential
+            I_app_hold (float):
+                Current which silences the neuron
+
+        Returns:
+            sampler (ArrSampler):
+                Sampler with the initial variables of the neuron model
+        """
+        ### get the names of the variables of the neuron model
+        var_name_list = self._single_nets.single_net(
+            pop_name=pop_name, mode="normal"
+        ).population.variables
+        ### get the variables of the neuron model after 5000 ms
+        var_arr = self._simulator.get_v_psp(
+            v_rest=v_rest, I_app_hold=I_app_hold, pop_name=pop_name
+        )
+        ### create a sampler with this single data sample
+        sampler = ArrSampler(arr=var_arr, var_name_list=var_name_list)
+        return sampler
+
+    def _find_I_app_hold(
+        self,
+        pop_name: str,
+        variables_v_rest: dict,
+    ):
+        """
+        Find the current which silences the neuron.
+
+        Args:
+            pop_name (str):
+                Name of the population
+            variables_v_rest (dict):
+                Stady state variables of the neuron during setting v_rest as membrane
+                potential
+
+        Returns:
+            v_rest (float):
+                Resting membrane potential
+            I_app_hold (float):
+                Current which silences the neuron
+        """
+        ### find I_app_hold with find_x_bound
+        sf.Logger().log(
+            f"[{pop_name}]: search I_app_hold with y(X) = CHANGE_OF_V(I_app=X)"
+        )
+
+        I_app_hold = -ef.find_x_bound(
+            ### negative current initially reduces v then v climbs back up -->
+            ### get_v_change_after_v_rest checks how much v changes during second half of
+            ### 2000 ms simulation
+            y=lambda X_val: -self._get_v_change_after_v_rest(
+                pop_name=pop_name,
+                variables_v_rest=variables_v_rest,
+                ### find_x_bound only uses positive values for X and
+                ### increases them, expecting to increase y, therefore use -X for I_app
+                ### (increasing X will "increase" negative current) and negative sign for
+                ### the returned value (for no current input the change is positive, this
+                ### should decrease to zero, with negative sign: for no current input the
+                ### change is negative, this should increase above zero)
+                I_app=-X_val,
+            ),
+            ### y is initially negative and should increase above 0, therefore search for
+            ### y_bound=0 with bound_type="greater"
+            x0=0,
+            y_bound=0,
+            tolerance=0.01,
+            bound_type="greater",
+        )
+        # y_bound = 0
+        # y: -10, -2, +0.1
+        # x:  0, 5, 7
+        # bound type greater should find value which is slightly larger than 0 TODO test this
+        ### again simulate the neuron with the obtained I_app_hold to get the new v_rest
+        v_rest_arr = self._simulator.get_v_2000(
+            pop_name=pop_name,
+            initial_variables=variables_v_rest,
+            I_app=I_app_hold,
+            do_plot=False,
+        )
+        v_rest = v_rest_arr[-1]
+        return v_rest, I_app_hold
+
+    def _find_v_rest_initial(
+        self,
+        pop_name: str,
+        do_plot: bool,
+    ):
+        """
+        Find the initial v_rest with the voltage clamp single neuron network for the
+        given population. Furthermore, get the change of v durign setting v_rest and the
+        stady state variables of the neuron (at the end of the simulation).
+
+        Args:
+            pop_name (str):
+                Name of the population
+            do_plot (bool):
+                True if plots should be created, False otherwise
+
+        Returns:
+            v_rest (float):
+                Resting membrane potential
+            detla_v_v_rest (float):
+                Change of the membrane potential during setting v_rest as membrane
+                potential
+            variables_v_rest (dict):
+                Stady state variables of the neuron during setting v_rest as membrane
+                potential
+        """
+        ### find v where dv/dt is minimal with voltage clamp network (best = 0, it can
+        ### only be >= 0)
+        v_arr = np.linspace(-90, -20, 200)
+        v_clamp_arr = np.array(
+            [
+                self._simulator.get_v_clamp_2000(pop_name=pop_name, v=v_val)
+                for v_val in v_arr
+            ]
+        )
+        v_clamp_min_idx = argrelmin(v_clamp_arr)[0]
+        v_rest = np.min(v_arr[v_clamp_min_idx])
+        if do_plot:
+            plt.figure()
+            plt.plot(v_arr, v_clamp_arr)
+            plt.axvline(v_rest, color="k")
+            plt.axhline(0, color="k", ls="dashed")
+            plt.savefig(f"v_clamp_{pop_name}.png")
+            plt.close("all")
+
+        ### do again the simulation only with the obtained v_rest to get the detla_v for
+        ### v_rest
+        detla_v_v_rest = (
+            self._simulator.get_v_clamp_2000(pop_name=pop_name, v=v_rest) * dt()
+        )
+        population = self._single_nets.single_net(
+            pop_name=pop_name, mode="v_clamp"
+        ).population
+        ### and the stady state variables of the neuron
+        variables_v_rest = {
+            var_name: getattr(population, var_name) for var_name in population.variables
+        }
+        return v_rest, detla_v_v_rest, variables_v_rest
+
+    def _get_v_rest_is_const(self, pop_name: str, variables_v_rest: dict, do_plot=bool):
+        """
+        Check if the membrane potential is constant after setting it to v_rest.
+
+        Args:
+            pop_name (str):
+                Name of the population
+            variables_v_rest (dict):
+                Stady state variables of the neuron during setting v_rest as membrane
+                potential, used as initial variables for the simulation
+            do_plot (bool):
+                True if plots should be created, False otherwise
+
+        Returns:
+            v_rest_is_constant (bool):
+                True if the membrane potential is constant, False otherwise
+            v_rest_arr (np.array):
+                Membrane potential for the 2000 ms simulation with shape: (time_steps,)
+        """
+        ### check if the neuron stays at v_rest with normal neuron
+        v_rest_arr = self._simulator.get_v_2000(
+            pop_name=pop_name,
+            initial_variables=variables_v_rest,
+            I_app=0,
+            do_plot=do_plot,
+        )
+        v_rest_arr_is_const = (
+            np.std(v_rest_arr) <= np.mean(np.absolute(v_rest_arr)) / 1000
+        )
+        return v_rest_arr_is_const, v_rest_arr
+
+    def _get_v_change_after_v_rest(
+        self, pop_name: str, variables_v_rest: dict, I_app: float
+    ):
+        """
+        Check how much the membrane potential changes after setting it to v_rest.
+
+        Args:
+            pop_name (str):
+                Name of the population
+            variables_v_rest (dict):
+                Stady state variables of the neuron during setting v_rest as membrane
+                potential, used as initial variables for the simulation
+            do_plot (bool):
+                True if plots should be created, False otherwise
+
+        Returns:
+            change_after_v_rest (np.array):
+                Change of the membrane potential after setting it to v_rest
+        """
+        ### simulate 2000 ms after setting v_rest
+        v_rest_arr = self._simulator.get_v_2000(
+            pop_name=pop_name,
+            initial_variables=variables_v_rest,
+            I_app=I_app,
+            do_plot=False,
+        )
+        ### check how much v changes during the second half
+        ### std(v) - mean(v)/1000 should be close to 0, the larger the value the more v
+        ### changes
+        change_after_v_rest = (
+            np.std(v_rest_arr[len(v_rest_arr) // 2 :], axis=0)
+            - np.mean(np.absolute(v_rest_arr[len(v_rest_arr) // 2 :]), axis=0) / 1000
+        )
+        return change_after_v_rest
+
+
+class Simulator:
+    """
+    Class with simulations for the single neuron networks.
+    """
+
+    def __init__(
+        self,
+        single_nets: CreateSingleNeuronNetworks,
+        figure_folder: str,
+        prepare_psp: PreparePSP | None = None,
+    ):
+        """
+        Args:
+            single_nets (CreateSingleNeuronNetworks):
+                Single neuron networks for normal and voltage clamp mode
+            figure_folder (str):
+                Folder where the figures should be saved
+            prepare_psp (PreparePSP):
+                Prepare PSP information
+        """
+        self._single_nets = single_nets
+        self._prepare_psp = prepare_psp
+        self._figure_folder = figure_folder
 
     def get_v_clamp_2000(
         self,
@@ -738,11 +1131,11 @@ class Simulator:
                 v_clamp_rec value of the single neuron after 2000 ms
         """
         ### get the network, population, init_sampler
-        net = single_nets.single_net(pop_name=pop_name, mode="v_clamp").net
-        population = single_nets.single_net(
+        net = self._single_nets.single_net(pop_name=pop_name, mode="v_clamp").net
+        population = self._single_nets.single_net(
             pop_name=pop_name, mode="v_clamp"
         ).population
-        init_sampler = single_nets.single_net(
+        init_sampler = self._single_nets.single_net(
             pop_name=pop_name, mode="v_clamp"
         ).init_sampler
         ### reset network
@@ -762,7 +1155,7 @@ class Simulator:
         return population.v_clamp_rec[0]
 
     def get_v_2000(
-        self, pop_name, initial_variables, I_app=None, do_plot=True
+        self, pop_name, initial_variables, I_app=None, do_plot=False
     ) -> np.ndarray:
         """
         Simulate normal single neuron 2000 ms and return v for this duration.
@@ -782,9 +1175,11 @@ class Simulator:
                 Membrane potential for the 2000 ms simulation with shape: (time_steps,)
         """
         ### get the network, population, monitor
-        net = single_nets.single_net(pop_name=pop_name, mode="normal").net
-        population = single_nets.single_net(pop_name=pop_name, mode="normal").population
-        monitor = single_nets.single_net(pop_name=pop_name, mode="normal").monitor
+        net = self._single_nets.single_net(pop_name=pop_name, mode="normal").net
+        population = self._single_nets.single_net(
+            pop_name=pop_name, mode="normal"
+        ).population
+        monitor = self._single_nets.single_net(pop_name=pop_name, mode="normal").monitor
         ### reset network
         net.reset()
         net.set_seed(0)
@@ -827,8 +1222,10 @@ class Simulator:
         """
 
         ### get the network, population, monitor
-        net = single_nets.single_net(pop_name=pop_name, mode="normal").net
-        population = single_nets.single_net(pop_name=pop_name, mode="normal").population
+        net = self._single_nets.single_net(pop_name=pop_name, mode="normal").net
+        population = self._single_nets.single_net(
+            pop_name=pop_name, mode="normal"
+        ).population
         ### reset network
         net.reset()
         net.set_seed(0)
@@ -876,12 +1273,14 @@ class Simulator:
                 resting potential
         """
         ### get the network, population, monitor from single nets
-        net = single_nets.single_net(pop_name=pop_name, mode="normal").net
-        population = single_nets.single_net(pop_name=pop_name, mode="normal").population
-        monitor = single_nets.single_net(pop_name=pop_name, mode="normal").monitor
+        net = self._single_nets.single_net(pop_name=pop_name, mode="normal").net
+        population = self._single_nets.single_net(
+            pop_name=pop_name, mode="normal"
+        ).population
+        monitor = self._single_nets.single_net(pop_name=pop_name, mode="normal").monitor
         ### get init_sampler, I_app_hold from prepare_psp
-        init_sampler = prepare_psp.get(pop_name=pop_name).psp_init_sampler
-        I_app_hold = prepare_psp.get(pop_name=pop_name).I_app_hold
+        init_sampler = self._prepare_psp.get(pop_name=pop_name).psp_init_sampler
+        I_app_hold = self._prepare_psp.get(pop_name=pop_name).I_app_hold
         ### reset network
         net.reset()
         net.set_seed(0)
@@ -908,23 +1307,90 @@ class Simulator:
         ### (current) time step
         spike_timestep_list = spike_dict[0] + [net.get_current_step()]
         end_timestep = int(round(min(spike_timestep_list), 0))
-        ### calculate psp, maximum of negative difference of v_rec and v_rec_rest
-        psp = float(
-            np.absolute(np.clip(v_rec[:end_timestep] - v_rec_rest, None, 0)).max()
-        )
+        ### find ipsp
+        ### 1st calculate difference of v and v_rest
+        v_diff = v_rec[:end_timestep] - v_rec_rest
+        ### clip diff between None and zero, only take negative values (ipsp)
+        v_diff = np.clip(v_diff, None, 0)
+        ### add a small value to the clipped values, thus only large enough negative
+        ### values considered as ipsp
+        v_diff = v_diff + 0.01
+        ### get the minimum of the difference as ipsp
+        psp = np.min(v_diff)
+        ### multiply with -1 to get the positive value of the ipsp
+        psp = -1 * psp
 
         if do_plot:
             plt.figure()
             plt.title(
                 f"g_ampa={g_ampa}\ng_gaba={g_gaba}\nv_rec_rest={v_rec_rest}\npsp={psp}"
             )
-            plt.plot(v_rec)
+            plt.plot(v_rec[:end_timestep])
+            plt.plot([0, end_timestep], [v_rec_rest, v_rec_rest], "k--")
+            plt.xlim(0, end_timestep)
+            plt.tight_layout()
             plt.savefig(
-                f"tmp_psp_{population.name}_{int(g_ampa*1000)}_{int(g_gaba*1000)}.png"
+                f"{self._figure_folder}/tmp_psp_{population.name}_{int(g_ampa*1000)}_{int(g_gaba*1000)}.png"
             )
             plt.close("all")
 
         return psp
+
+    def get_firing_rate(
+        self, pop_name: str, I_app: float = 0, g_ampa: float = 0, g_gaba: float = 0
+    ):
+        """
+        Simulate the single neuron network of the given pop_name for 500 ms initial
+        duration and 5000 ms. An input current I_app and the conductances g_ampa and
+        g_gaba are applied. The firing rate is calculated from the spikes in the last
+        5000 ms.
+
+        Args:
+            pop_name (str):
+                Name of the population
+            I_app (float, optional):
+                Applied current
+            g_ampa (float, optional):
+                Conductance of the ampa synapse
+            g_gaba (float, optional):
+                Conductance of the gaba synapse
+
+        Returns:
+            rate (float):
+                Firing rate in Hz
+        """
+
+        ### get the network, population, monitor, init_sampler from single nets
+        net = self._single_nets.single_net(pop_name=pop_name, mode="normal").net
+        population = self._single_nets.single_net(
+            pop_name=pop_name, mode="normal"
+        ).population
+        monitor = self._single_nets.single_net(pop_name=pop_name, mode="normal").monitor
+        init_sampler = self._single_nets.single_net(
+            pop_name=pop_name, mode="normal"
+        ).init_sampler
+        ### reset network
+        net.reset()
+        net.set_seed(0)
+        ### set the initial variables of the neuron model
+        if init_sampler is not None:
+            init_sampler.set_init_variables(population)
+        ### slow down conductances (i.e. make them constant)
+        population.tau_ampa = 1e20
+        population.tau_gaba = 1e20
+        ### apply given variables
+        population.I_app = I_app
+        population.g_ampa = g_ampa
+        population.g_gaba = g_gaba
+        ### simulate 500 ms initial duration + 5000 ms
+        net.simulate(500 + 5000)
+        ### get rate for the last 5000 ms
+        spike_dict = monitor.get("spike")
+        time_list = np.array(spike_dict[0])
+        nbr_spks = np.sum((time_list > (500 / dt())).astype(int))
+        rate = nbr_spks / (5000 / 1000)
+
+        return rate
 
 
 class ModelConfigurator:
@@ -937,47 +1403,347 @@ class ModelConfigurator:
         print_guide: bool = False,
         I_app_variable: str = "I_app",
         cache: bool = False,
-        clear_cache: bool = False,
         log_file: str | None = None,
     ):
-        ### initialize logger TODO test if no Logger works
+        ### store the given variables
+        self._model = model
+        self._do_not_config_list = do_not_config_list
+        self._target_firing_rate_dict = target_firing_rate_dict
+        self._base_dict = None
+        self._figure_folder = "model_conf_figures"  ### TODO add this to Simulator init
+        ### create the figure folder
+        sf.create_dir(self._figure_folder)
+        ### initialize logger
         sf.Logger(log_file=log_file)
         ### analyze the given model, create model before analyzing, then clear ANNarchy
-        self._analyze_model = AnalyzeModel(model=model)
+        self._analyze_model = AnalyzeModel(model=self._model)
         ### create the CompNeuroModel object for the reduced model (the model itself is
         ### not created yet)
         self._model_reduced = CreateReducedModel(
-            model=model,
+            model=self._model,
             analyze_model=self._analyze_model,
             reduced_size=100,
             do_create=False,
             do_compile=False,
             verbose=True,
         )
+        ### try to load the cached variables
+        cache_worked = False
+        if cache:
+            try:
+                ### load the cached variables
+                cache_loaded = sf.load_variables(
+                    name_list=["init_sampler", "max_syn"],
+                    path=".model_config_cache",
+                )
+                cache_worked = True
+            except FileNotFoundError:
+                pass
         ### create the single neuron networks (networks are compiled and ready to be
         ### simulated), normal model for searching for max conductances, max input
         ### current, resting firing rate; voltage clamp model for preparing the PSP
         ### simulationssearching, i.e., for resting potential and corresponding input
         ### current I_hold (for self-active neurons)
-        global single_nets
-        single_nets = CreateSingleNeuronNetworks(
-            model=model,
-            analyze_model=self._analyze_model,
-            do_not_config_list=do_not_config_list,
-        )
+        if not cache_worked:
+            self._single_nets = CreateSingleNeuronNetworks(
+                model=self._model,
+                analyze_model=self._analyze_model,
+                do_not_config_list=do_not_config_list,
+            )
+            ### get the init sampler for the populations
+            self._init_sampler = self._single_nets.init_sampler(
+                model=self._model, do_not_config_list=do_not_config_list
+            )
+            ### create simulator with single_nets
+            self._simulator = Simulator(
+                single_nets=self._single_nets,
+                figure_folder=self._figure_folder,
+                prepare_psp=None,
+            )
+        else:
+            self._init_sampler: CreateSingleNeuronNetworks.AllSampler = cache_loaded[
+                "init_sampler"
+            ]
         ### get the resting potential and corresponding I_hold for each population using
         ### the voltage clamp networks
-        global prepare_psp
-        prepare_psp = PreparePSP(
-            model=model,
+        if not cache_worked:
+            self._prepare_psp = PreparePSP(
+                model=self._model,
+                single_nets=self._single_nets,
+                do_not_config_list=do_not_config_list,
+                simulator=self._simulator,
+                do_plot=False,
+            )
+            self.simulator = Simulator(
+                single_nets=self._single_nets,
+                figure_folder=self._figure_folder,
+                prepare_psp=self._prepare_psp,
+            )
+        ### get the maximum synaptic conductances and input currents for each population
+        if not cache_worked:
+            self._max_syn = GetMaxSyn(
+                model=self._model,
+                simulator=self._simulator,
+                do_not_config_list=do_not_config_list,
+                max_psp=max_psp,
+                target_firing_rate_dict=target_firing_rate_dict,
+            )
+        else:
+            self._max_syn = cache_loaded["max_syn"]
+        ### cache single_nets, prepare_psp, max_syn
+        if cache and not cache_worked:
+            sf.save_variables(
+                variable_list=[
+                    self._init_sampler,
+                    self._max_syn,
+                ],
+                name_list=["init_sampler", "max_syn"],
+                path=".model_config_cache",
+            )
+        ### get the weights dictionaries
+        self._weight_dicts = GetWeights(
+            model=self._model,
             do_not_config_list=do_not_config_list,
-            do_plot=False,
+            analyze_model=self._analyze_model,
+            max_syn=self._max_syn,
         )
 
-        self._max_syn = GetMaxSyn(
-            model=model, do_not_config_list=do_not_config_list, max_psp=max_psp
+    def set_weights(self, weight_dict: dict[str, float]):
+        """
+        Set the weights of the model.
+
+        Args:
+            weight_dict (dict[str, float]):
+                Dict with the weights for each projection
+        """
+        self._weight_dicts.weight_dict = weight_dict
+
+    def set_syn_load(
+        self,
+        syn_load_dict: dict[str, float],
+        syn_contribution_dict: dict[str, dict[str, float]],
+    ):
+        """
+        Set the synaptic load of the model.
+
+        Args:
+            syn_load_dict (dict[str, float]):
+                Dict with ampa and gaba synaptic load for each population
+            syn_contribution_dict (dict[str, dict[str, float]]):
+                Dict with the contribution of the afferent projections to the ampa and
+                gaba synaptic load of each population
+        """
+        self._weight_dicts.syn_load_dict = syn_load_dict
+        self._weight_dicts.syn_contribution_dict = syn_contribution_dict
+
+    def set_base(self):
+        """
+        Set the baseline currents of the model, found for the current weights to reach
+        the target firing rates.
+        """
+        if self._base_dict is None:
+            self._base_dict = GetBase(
+                model_normal=self._model,
+                model_reduced=self._model_reduced.model_reduced,
+                target_firing_rate_dict=self._target_firing_rate_dict,
+                weight_dicts=self._weight_dicts,
+                do_not_config_list=self._do_not_config_list,
+                init_sampler=self._init_sampler,
+                max_syn=self._max_syn,
+            ).base_dict
+
+
+class GetBase:
+    def __init__(
+        self,
+        model_normal: CompNeuroModel,
+        model_reduced: CompNeuroModel,
+        target_firing_rate_dict: dict,
+        weight_dicts: "GetWeights",
+        do_not_config_list: list[str],
+        init_sampler: CreateSingleNeuronNetworks.AllSampler,
+        max_syn: "GetMaxSyn",
+    ):
+        self._model_normal = model_normal
+        self._model_reduced = model_reduced
+        self._weight_dicts = weight_dicts
+        self._do_not_config_list = do_not_config_list
+        self._init_sampler = init_sampler
+        self._max_syn = max_syn
+        ### get the populations names of the configured populations
+        self._pop_names_config = [
+            pop_name
+            for pop_name in model_normal.populations
+            if pop_name not in do_not_config_list
+        ]
+        ### convert the target firing rate dict to a array
+        self._target_firing_rate_arr = []
+        for pop_name in self._pop_names_config:
+            self._target_firing_rate_arr.append(target_firing_rate_dict[pop_name])
+        self._target_firing_rate_arr = np.array(self._target_firing_rate_arr)
+        ### get the base currents
+        self._base_dict = self._get_base()
+
+    @property
+    def base_dict(self):
+        return self._base_dict
+
+    def _set_model_weights(self):
+        ### loop over all populations which should be configured
+        for pop_name in self._pop_names_config:
+            ### loop over all target types
+            for target_type in ["ampa", "gaba"]:
+                ### get afferent projections of the corresponding target type
+                afferent_projection_list = self._weight_dicts._get_afferent_proj_names(
+                    pop_name=pop_name, target=target_type
+                )
+                ### loop over all afferent projections
+                for proj_name in afferent_projection_list:
+                    ### set weight of the projection in the conductance-calculating
+                    ### input current population
+                    proj_weight = self._weight_dicts.weight_dict[proj_name]
+                    setattr(
+                        get_population(f"{pop_name}_{target_type}_aux"),
+                        f"weights_{proj_name}",
+                        proj_weight,
+                    )
+
+    def _get_base(self):
+        ### clear ANNarchy
+        mf.cnp_clear(functions=False, neurons=True, synapses=True, constants=False)
+        ### create and compile the model
+        self._model_reduced.create()
+        ### create monitors for recording the spikes of all populations
+        ### for CompNeuroMonitors we need the "_reduced" suffix
+        mon = CompNeuroMonitors(
+            mon_dict={
+                f"{pop_name}_reduced": ["spike"]
+                for pop_name in self._model_normal.populations
+            }
         )
-        self._weight_templates = GetWeightTemplates()
+        ### create the experiment
+        exp = self.MyExperiment(monitors=mon)
+        ### initialize all populations with the init sampler
+        for pop_name in self._pop_names_config:
+            ### for get_population we need the "_reduced" suffix
+            self._init_sampler.get(pop_name=pop_name).set_init_variables(
+                get_population(f"{pop_name}_reduced")
+            )
+        ### set the model weights
+        self._set_model_weights()
+        ### store the model state for all populations
+        exp.store_model_state(compartment_list=self._model_reduced.populations)
+        self._exp = exp
+        ### use objective_function to search for input base currents to reach the
+        ### target firing rates
+        lb = []
+        ub = []
+        x0 = []
+        for pop_name in self._pop_names_config:
+            lb.append(-self._max_syn.get(pop_name=pop_name).I_app)
+            ub.append(self._max_syn.get(pop_name=pop_name).I_app)
+            x0.append(0)
+
+        self.objective_function(x0)  ### TODO continue here
+        quit()
+
+        ### Perform the optimization using L-BFGS-B method
+        result = minimize(
+            fun=self.objective_function, x0=x0, method="L-BFGS-B", bounds=Bounds(lb, ub)
+        )
+
+        ### Optimized input values
+        optimized_inputs = result.x
+
+        print(f"Optimized inputs: {optimized_inputs}")
+        quit()
+
+    def objective_function(self, I_app_list: list[float]):
+        """
+        Objective function to minimize the difference between the target firing rates and
+        the firing rates of the model with the given input currents.
+
+        Args:
+            I_app_list (list[float]):
+                List with the input currents for each population
+
+        Returns:
+            diff (float):
+                Difference between the target firing rates and the firing rates of the
+                model with the given input currents
+        """
+        ### get the firing rates of the model with the given input currents
+        rate_arr = self._get_firing_rate(I_app_list)
+        ### calculate the difference between the target firing rates and the firing rates
+        ### of the model with the given input currents
+        diff = self._target_firing_rate_arr - rate_arr
+        return np.sum(diff**2)
+
+    def _get_firing_rate(self, I_app_list: list[float]):
+        ### convert the I_app_list to a dict
+        I_app_dict = {}
+        counter = 0
+        for pop_name in self._pop_names_config:
+            ### for the I_app_dict we need the "_reduced" suffix
+            I_app_dict[f"{pop_name}_reduced"] = I_app_list[counter]
+            counter += 1
+        ### run the experiment
+        results = self._exp.run(I_app_dict)
+        ### get the firing rates from the recorded spikes
+        rate_list = []
+        rate_dict = {}
+        for pop_name in self._pop_names_config:
+            ### for the spike dict we need the "_reduced" suffix
+            spike_dict = results.recordings[0][f"{pop_name}_reduced;spike"]
+            t, _ = raster_plot(spike_dict)
+            nbr_spikes = len(t)
+            ### divide number of spikes by the number of neurons and the duration in s
+            rate = nbr_spikes / (5.0 * get_population(f"{pop_name}_reduced").size)
+            rate_list.append(rate)
+            rate_dict[pop_name] = rate
+        sf.Logger().log(f"I_app_dict: {I_app_dict}")
+        sf.Logger().log(f"Firing rates: {rate_dict}")
+
+        af.PlotRecordings(
+            figname="firing_rates.png",
+            recordings=results.recordings,
+            recording_times=results.recording_times,
+            shape=(len(self._model_normal.populations), 1),
+            plan={
+                "position": list(range(1, len(self._model_normal.populations) + 1)),
+                "compartment": [
+                    f"{pop_name}_reduced" for pop_name in self._model_normal.populations
+                ],
+                "variable": ["spike"] * len(self._model_normal.populations),
+                "format": ["hybrid"] * len(self._model_normal.populations),
+            },
+        )
+        return np.array(rate_list)
+
+    class MyExperiment(CompNeuroExp):
+        def run(self, I_app_dict: dict[str, float]):
+            """
+            Simulate the model for 5000 ms with the given input currents.
+
+            Args:
+                I_app_dict (dict[str, float]):
+                    Dict with the input currents for each population
+
+            Returns:
+                results (CompNeuroResults):
+                    Results of the simulation
+            """
+            ### reset to initial state
+            self.reset()
+            ### activate monitor
+            self.monitors.start()
+            ### set the input currents
+            for pop_name, I_app in I_app_dict.items():
+                get_population(pop_name).I_app = I_app
+            ### simulate 5000 ms
+            simulate(5000, measure_time=True)
+            ### return results
+            return self.results()
 
 
 class CreateReducedModel:
@@ -1443,331 +2209,33 @@ class CreateReducedModel:
             super().__init__(parameters=parameters, equations=equations)
 
 
-class PreparePSP:
+class GetMaxSyn:
     """
-    Find v_rest, corresponding I_hold (in case of self-active neurons) and an
-    init_sampler to initialize the neuron model for the PSP calculation for each
-    population.
+    Find the maximal synaptic input for each population.
     """
 
     def __init__(
         self,
         model: CompNeuroModel,
+        simulator: Simulator,
         do_not_config_list: list[str],
-        do_plot: bool,
+        max_psp: float,
+        target_firing_rate_dict: dict[str, float],
     ):
         """
         Args:
             model (CompNeuroModel):
-                Model to be prepared
+                Model to be analyzed
+            simulator (Simulator):
+                Simulator object for simulations with the single neuron networks
             do_not_config_list (list[str]):
                 List of populations which should not be configured
-            do_plot (bool):
-                If True, plot the membrane potential
+            max_psp (float):
+                Maximal postsynaptic potential in mV
+            target_firing_rate_dict (dict[str, float]):
+                Target firing rate for each population
         """
-        self._prepare_psp_dict = {}
-        ### loop over all populations
-        for pop_name in model.populations:
-            ### skip populations which should not be configured
-            if pop_name in do_not_config_list:
-                continue
-            ### find initial v_rest using the voltage clamp network
-            sf.Logger().log(
-                f"search v_rest with y(X) = delta_v_2000(v=X) using grid search for pop {pop_name}"
-            )
-            v_rest, delta_v_v_rest, variables_v_rest = self._find_v_rest_initial(
-                pop_name=pop_name,
-                do_plot=do_plot,
-            )
-            sf.Logger().log(
-                f"for {pop_name} found v_rest={v_rest} with delta_v_2000(v=v_rest)={delta_v_v_rest}"
-            )
-            ### check if v is constant after setting v to v_rest by simulating the normal
-            ### single neuron network for 2000 ms
-            v_rest_is_constant, v_rest_arr = self._get_v_rest_is_const(
-                pop_name=pop_name,
-                variables_v_rest=variables_v_rest,
-                do_plot=do_plot,
-            )
-
-            if v_rest_is_constant:
-                ### v_rest found (last v value of the previous simulation), no
-                ### I_app_hold needed
-                v_rest = v_rest_arr[-1]
-                I_app_hold = 0
-            else:
-                ### there is no resting_state i.e. neuron is self-active --> find
-                ### smallest negative I_app to silence neuron
-                sf.Logger().log(
-                    f"neuron of {pop_name} seems to be self-active --> find smallest I_app to silence the neuron"
-                )
-                v_rest, I_app_hold = self._find_I_app_hold(
-                    pop_name=pop_name,
-                    variables_v_rest=variables_v_rest,
-                )
-            sf.Logger().log(
-                f"final values for {pop_name}: I_app_hold = {I_app_hold}, v_rest = {v_rest}"
-            )
-
-            ### get the sampler for the initial variables
-            psp_init_sampler = self._get_init_neuron_variables_for_psp(
-                pop_name=pop_name,
-                v_rest=v_rest,
-                I_app_hold=I_app_hold,
-            )
-            ### store the prepare PSP information
-            self._prepare_psp_dict[pop_name] = {}
-            self._prepare_psp_dict[pop_name]["v_rest"] = v_rest
-            self._prepare_psp_dict[pop_name]["I_app_hold"] = I_app_hold
-            self._prepare_psp_dict[pop_name]["psp_init_sampler"] = psp_init_sampler
-
-    def get(self, pop_name: str):
-        """
-        Return the prepare PSP information for the given population.
-
-        Args:
-            pop_name (str):
-                Name of the population
-
-        Returns:
-            ReturnPreparePSP:
-                Prepare PSP information for the given population with Attributes: v_rest,
-                I_app_hold, psp_init_sampler
-        """
-        return self.ReturnPreparePSP(
-            v_rest=self._prepare_psp_dict[pop_name]["v_rest"],
-            I_app_hold=self._prepare_psp_dict[pop_name]["I_app_hold"],
-            psp_init_sampler=self._prepare_psp_dict[pop_name]["psp_init_sampler"],
-        )
-
-    class ReturnPreparePSP:
-        def __init__(
-            self, v_rest: float, I_app_hold: float, psp_init_sampler: ArrSampler
-        ):
-            self.v_rest = v_rest
-            self.I_app_hold = I_app_hold
-            self.psp_init_sampler = psp_init_sampler
-
-    def _get_init_neuron_variables_for_psp(
-        self, pop_name: str, v_rest: float, I_app_hold: float
-    ):
-        """
-        Get the initial variables of the neuron model for the PSP calculation.
-
-        Args:
-            pop_name (str):
-                Name of the population
-            v_rest (float):
-                Resting membrane potential
-            I_app_hold (float):
-                Current which silences the neuron
-
-        Returns:
-            sampler (ArrSampler):
-                Sampler with the initial variables of the neuron model
-        """
-        ### get the names of the variables of the neuron model
-        var_name_list = single_nets.single_net(
-            pop_name=pop_name, mode="normal"
-        ).population.variables
-        ### get the variables of the neuron model after 5000 ms
-        var_arr = Simulator().get_v_psp(
-            v_rest=v_rest, I_app_hold=I_app_hold, pop_name=pop_name
-        )
-        ### create a sampler with this single data sample
-        sampler = ArrSampler(arr=var_arr, var_name_list=var_name_list)
-        return sampler
-
-    def _find_I_app_hold(
-        self,
-        pop_name: str,
-        variables_v_rest: dict,
-    ):
-        """
-        Find the current which silences the neuron.
-
-        Args:
-            pop_name (str):
-                Name of the population
-            variables_v_rest (dict):
-                Stady state variables of the neuron during setting v_rest as membrane
-                potential
-
-        Returns:
-            v_rest (float):
-                Resting membrane potential
-            I_app_hold (float):
-                Current which silences the neuron
-        """
-        ### find I_app_hold with incremental_continuous_bound_search
-        sf.Logger().log("search I_app_hold with y(X) = CHANGE_OF_V(I_app=X)")
-
-        I_app_hold = -ef.find_x_bound(
-            ### negative current initially reduces v then v climbs back up -->
-            ### get_v_change_after_v_rest checks how much v changes during second half of
-            ### 2000 ms simulation
-            y=lambda X_val: -self._get_v_change_after_v_rest(
-                pop_name=pop_name,
-                variables_v_rest=variables_v_rest,
-                ### incremental_continuous_bound_search only uses positive values for X and
-                ### increases them, expecting to increase y, therefore use -X for I_app
-                ### (increasing X will "increase" negative current) and negative sign for
-                ### the returned value (for no current input the change is positive, this
-                ### should decrease to zero, with negative sign: for no current input the
-                ### change is negative, this should increase above zero)
-                I_app=-X_val,
-            ),
-            ### y is initially negative and should increase above 0, therefore search for
-            ### y_bound=0 with bound_type="greater"
-            x0=0,
-            y_bound=0,
-            tolerance=0.01,
-            bound_type="greater",
-        )
-        # y_bound = 0
-        # y: -10, -2, +0.1
-        # x:  0, 5, 7
-        # bound type greater should find value which is slightly larger than 0 TODO test this
-        ### again simulate the neuron with the obtained I_app_hold to get the new v_rest
-        v_rest_arr = Simulator().get_v_2000(
-            pop_name=pop_name,
-            initial_variables=variables_v_rest,
-            I_app=I_app_hold,
-            do_plot=False,
-        )
-        v_rest = v_rest_arr[-1]
-        return v_rest, I_app_hold
-
-    def _find_v_rest_initial(
-        self,
-        pop_name: str,
-        do_plot: bool,
-    ):
-        """
-        Find the initial v_rest with the voltage clamp single neuron network for the
-        given population. Furthermore, get the change of v durign setting v_rest and the
-        stady state variables of the neuron (at the end of the simulation).
-
-        Args:
-            pop_name (str):
-                Name of the population
-            do_plot (bool):
-                True if plots should be created, False otherwise
-
-        Returns:
-            v_rest (float):
-                Resting membrane potential
-            detla_v_v_rest (float):
-                Change of the membrane potential during setting v_rest as membrane
-                potential
-            variables_v_rest (dict):
-                Stady state variables of the neuron during setting v_rest as membrane
-                potential
-        """
-        ### find v where dv/dt is minimal with voltage clamp network (best = 0, it can
-        ### only be >= 0)
-        v_arr = np.linspace(-90, -20, 200)
-        v_clamp_arr = np.array(
-            [
-                Simulator().get_v_clamp_2000(pop_name=pop_name, v=v_val)
-                for v_val in v_arr
-            ]
-        )
-        v_clamp_min_idx = argrelmin(v_clamp_arr)[0]
-        v_rest = np.min(v_arr[v_clamp_min_idx])
-        if do_plot:
-            plt.figure()
-            plt.plot(v_arr, v_clamp_arr)
-            plt.axvline(v_rest, color="k")
-            plt.axhline(0, color="k", ls="dashed")
-            plt.savefig(f"v_clamp_{pop_name}.png")
-            plt.close("all")
-
-        ### do again the simulation only with the obtained v_rest to get the detla_v for
-        ### v_rest
-        detla_v_v_rest = (
-            Simulator().get_v_clamp_2000(pop_name=pop_name, v=v_rest) * dt()
-        )
-        population = single_nets.single_net(
-            pop_name=pop_name, mode="v_clamp"
-        ).population
-        ### and the stady state variables of the neuron
-        variables_v_rest = {
-            var_name: getattr(population, var_name) for var_name in population.variables
-        }
-        return v_rest, detla_v_v_rest, variables_v_rest
-
-    def _get_v_rest_is_const(self, pop_name: str, variables_v_rest: dict, do_plot=bool):
-        """
-        Check if the membrane potential is constant after setting it to v_rest.
-
-        Args:
-            pop_name (str):
-                Name of the population
-            variables_v_rest (dict):
-                Stady state variables of the neuron during setting v_rest as membrane
-                potential, used as initial variables for the simulation
-            do_plot (bool):
-                True if plots should be created, False otherwise
-
-        Returns:
-            v_rest_is_constant (bool):
-                True if the membrane potential is constant, False otherwise
-            v_rest_arr (np.array):
-                Membrane potential for the 2000 ms simulation with shape: (time_steps,)
-        """
-        ### check if the neuron stays at v_rest with normal neuron
-        v_rest_arr = Simulator().get_v_2000(
-            pop_name=pop_name,
-            initial_variables=variables_v_rest,
-            I_app=0,
-            do_plot=do_plot,
-        )
-        v_rest_arr_is_const = (
-            np.std(v_rest_arr) <= np.mean(np.absolute(v_rest_arr)) / 1000
-        )
-        return v_rest_arr_is_const, v_rest_arr
-
-    def _get_v_change_after_v_rest(
-        self, pop_name: str, variables_v_rest: dict, I_app: float
-    ):
-        """
-        Check how much the membrane potential changes after setting it to v_rest.
-
-        Args:
-            pop_name (str):
-                Name of the population
-            variables_v_rest (dict):
-                Stady state variables of the neuron during setting v_rest as membrane
-                potential, used as initial variables for the simulation
-            do_plot (bool):
-                True if plots should be created, False otherwise
-
-        Returns:
-            change_after_v_rest (np.array):
-                Change of the membrane potential after setting it to v_rest
-        """
-        ### simulate 2000 ms after setting v_rest
-        v_rest_arr = Simulator().get_v_2000(
-            pop_name=pop_name,
-            initial_variables=variables_v_rest,
-            I_app=I_app,
-            do_plot=False,
-        )
-        ### check how much v changes during the second half
-        ### std(v) - mean(v)/1000 should be close to 0, the larger the value the more v
-        ### changes
-        change_after_v_rest = (
-            np.std(v_rest_arr[len(v_rest_arr) // 2 :], axis=0)
-            - np.mean(np.absolute(v_rest_arr[len(v_rest_arr) // 2 :]), axis=0) / 1000
-        )
-        return change_after_v_rest
-
-
-class GetMaxSyn:
-    def __init__(
-        self, model: CompNeuroModel, do_not_config_list: list[str], max_psp: float
-    ):
+        self._simulator = simulator
         self._max_syn_dict = {}
         ### loop over all populations
         for pop_name in model.populations:
@@ -1780,10 +2248,11 @@ class GetMaxSyn:
 
             ### get max g_ampa
             g_ampa_max = self._get_max_g_ampa(pop_name=pop_name, g_gaba_max=g_gaba_max)
-            print(f"g_gaba_max: {g_gaba_max}, g_ampa_max: {g_ampa_max}")
-            quit()  ### TODO seems to work until here, continue here
+
             ### get max I_app
-            I_app_max = self._get_max_I_app(pop_name=pop_name)
+            I_app_max = self._get_max_I_app(
+                pop_name=pop_name, target_firing_rate_dict=target_firing_rate_dict
+            )
 
             ### store the maximal synaptic input in dict
             self._max_syn_dict[pop_name] = {}
@@ -1817,10 +2286,26 @@ class GetMaxSyn:
             self.I_app = I_app
 
     def _get_max_g_gaba(self, pop_name: str, max_psp: float):
+        """
+        Find the maximal g_gaba for the given population. A single spike with maximal
+        g_gaba should result in a inhibitory postsynaptic potential of max_psp.
+
+        Args:
+            pop_name (str):
+                Name of the population
+            max_psp (float):
+                Maximal postsynaptic potential in mV
+
+        Returns:
+            g_gaba_max (float):
+                Maximal g_gaba
+        """
         ### find g_gaba max using max IPSP
-        sf.Logger().log("search g_gaba_max with y(X) = PSP(g_ampa=0, g_gaba=X)")
+        sf.Logger().log(
+            f"[{pop_name}]: search g_gaba_max with y(X) = PSP(g_ampa=0, g_gaba=X)"
+        )
         return ef.find_x_bound(
-            y=lambda X_val: Simulator().get_ipsp(
+            y=lambda X_val: self._simulator.get_ipsp(
                 pop_name=pop_name,
                 g_gaba=X_val,
             ),
@@ -1830,13 +2315,27 @@ class GetMaxSyn:
         )
 
     def _get_max_g_ampa(self, pop_name: str, g_gaba_max: float):
+        """
+        Find the maximal g_ampa for the given population. The maximal g_ampa should
+        override the maximal IPSP of g_gaba.
+
+        Args:
+            pop_name (str):
+                Name of the population
+            g_gaba_max (float):
+                Maximal g_gaba
+
+        Returns:
+            g_ampa_max (float):
+                Maximal g_ampa
+        """
         ### find g_ampa max by "overriding" IPSP of g_gaba max
         sf.Logger().log(
-            f"search g_ampa_max with y(X) = PSP(g_ampa=X, g_gaba=g_gaba_max={g_gaba_max})"
+            f"[{pop_name}]: search g_ampa_max with y(X) = PSP(g_ampa=X, g_gaba=g_gaba_max={g_gaba_max})"
         )
 
         def func(x):
-            ipsp = Simulator().get_ipsp(
+            ipsp = self._simulator.get_ipsp(
                 pop_name=pop_name,
                 g_gaba=g_gaba_max,
                 g_ampa=x,
@@ -1859,10 +2358,253 @@ class GetMaxSyn:
             tolerance=0.005,
         )
 
+    def _get_max_I_app(self, pop_name: str, target_firing_rate_dict: dict[str, float]):
+        """
+        Find the maximal current input for the given population. The maximal current
+        input should result in "resting" firing rate + target firing rate + 100 Hz.
 
-class GetWeightTemplates:
-    def __init__(self):
-        pass
+        Args:
+            pop_name (str):
+                Name of the population
+            target_firing_rate_dict (dict[str, float]):
+                Target firing rate for each population
+
+        Returns:
+            I_app_max (float):
+                Maximal current input
+        """
+        ### get f_0 and f_max
+        f_0 = self._simulator.get_firing_rate(pop_name=pop_name)
+        f_max = f_0 + target_firing_rate_dict[pop_name] + 100
+
+        ### find I_max with f_0, and f_max using find_x_bound
+        sf.Logger().log(
+            f"[{pop_name}]: search I_app_max with y(X) = f(I_app=X, g_ampa=0, g_gaba=0)"
+        )
+        I_max = ef.find_x_bound(
+            y=lambda X_val: self._simulator.get_firing_rate(
+                pop_name=pop_name,
+                I_app=X_val,
+            ),
+            x0=0,
+            y_bound=f_max,
+            tolerance=1,
+        )
+
+        return I_max
+
+
+class GetWeights:
+    def __init__(
+        self,
+        model: CompNeuroModel,
+        do_not_config_list: list[str],
+        analyze_model: AnalyzeModel,
+        max_syn: GetMaxSyn,
+    ):
+        self._model = model
+        self._do_not_config_list = do_not_config_list
+        self._analyze_model = analyze_model
+        self._max_syn = max_syn
+        ### initialize the weight_dict with the maximal weights
+        weight_dict_init = {}
+        for proj_name in model.projections:
+            post_pop_name = analyze_model.pre_post_pop_name_dict[proj_name][1]
+            target_type = analyze_model.proj_init_parameter_dict[proj_name]["target"]
+            if target_type == "ampa":
+                weight = self._max_syn.get(pop_name=post_pop_name).g_ampa
+            elif target_type == "gaba":
+                weight = self._max_syn.get(pop_name=post_pop_name).g_gaba
+            weight_dict_init[proj_name] = weight
+        ### first set the interal weight dict variable, then the property to calculate
+        ### syn_load_dict and syn_contribution_dict
+        self._weight_dict = weight_dict_init
+        self.weight_dict = weight_dict_init
+
+    @property
+    def weight_dict(self):
+        return self._weight_dict
+
+    @weight_dict.setter
+    def weight_dict(self, value: dict[str, float]):
+        ### check if the dictionary "value" has the same keys as the internal weight_dict
+        if set(value.keys()) != set(self._weight_dict.keys()):
+            raise ValueError(
+                f"The keys of the weight_dict must be: {set(self._weight_dict.keys())}"
+            )
+        ### if weight_dict is set, recalculate syn_load_dict and syn_contribution_dict
+        self._weight_dict = value
+        self._syn_load_dict = self._get_syn_load_dict()
+        self._syn_contribution_dict = self._get_syn_contribution_dict()
+
+    @property
+    def syn_load_dict(self):
+        return self._syn_load_dict
+
+    @syn_load_dict.setter
+    def syn_load_dict(self, value: dict[str, dict[str, float]]):
+        ### check if the dictionary "value" has the same structure as the internal
+        ### nested dict syn_load_dict
+        if set(value.keys()) != set(self._syn_load_dict.keys()):
+            raise ValueError(
+                f"The syn_load_dict must have this structure: {self._syn_load_dict}"
+            )
+        for pop_name in value.keys():
+            if set(value[pop_name].keys()) != set(self._syn_load_dict[pop_name].keys()):
+                raise ValueError(
+                    f"The syn_load_dict must have this structure: {self._syn_load_dict}"
+                )
+        ### check if values are between 0 and 1
+        for pop_name in value.keys():
+            for target in value[pop_name].keys():
+                if not 0 <= value[pop_name][target] <= 1:
+                    raise ValueError(
+                        "The values of the syn_load_dict must be between 0 and 1"
+                    )
+
+        ### if syn_load_dict is set, recalculate weight_dict
+        self._syn_load_dict = value
+        self._weight_dict = self._get_weight_dict()
+
+    @property
+    def syn_contribution_dict(self):
+        return self._syn_contribution_dict
+
+    @syn_contribution_dict.setter
+    def syn_contribution_dict(self, value: dict[str, dict[str, dict[str, float]]]):
+        ### check if the dictionary "value" has the same structure as the internal
+        ### nested dict syn_contribution_dict
+        if set(value.keys()) != set(self._syn_contribution_dict.keys()):
+            raise ValueError(
+                f"The syn_contribution_dict must have this structure: {self._syn_contribution_dict}"
+            )
+        for pop_name in value.keys():
+            if set(value[pop_name].keys()) != set(
+                self._syn_contribution_dict[pop_name].keys()
+            ):
+                raise ValueError(
+                    f"The syn_contribution_dict must have this structure: {self._syn_contribution_dict}"
+                )
+            for target in value[pop_name].keys():
+                if set(value[pop_name][target].keys()) != set(
+                    self._syn_contribution_dict[pop_name][target].keys()
+                ):
+                    raise ValueError(
+                        f"The syn_contribution_dict must have this structure: {self._syn_contribution_dict}"
+                    )
+        ### check if values are between 0 and 1
+        for pop_name in value.keys():
+            for target in value[pop_name].keys():
+                for proj_name in value[pop_name][target].keys():
+                    if not 0 <= value[pop_name][target][proj_name] <= 1:
+                        raise ValueError(
+                            "The values of the syn_contribution_dict must be between 0 and 1"
+                        )
+
+        ### if syn_contribution_dict is set, recalculate weight_dict
+        self._syn_contribution_dict = value
+        self._weight_dict = self._get_weight_dict()
+
+    def _get_weight_dict(self):
+        ### set the weights population wise for the afferent projections
+        weight_dict = {}
+        ### loop over all populations
+        for pop_name in self._model.populations:
+            ### skip populations which should not be configured
+            if pop_name in self._do_not_config_list:
+                continue
+            synaptic_load = self._syn_load_dict[pop_name]
+            ### loop over target types
+            for target, load in synaptic_load.items():
+                synaptic_contribution = self._syn_contribution_dict[pop_name][target]
+                ### loop over afferebt projections with target type
+                for proj_name in synaptic_contribution.keys():
+                    max_conductance = (
+                        self._max_syn.get(pop_name=pop_name).g_ampa
+                        if target == "ampa"
+                        else self._max_syn.get(pop_name=pop_name).g_gaba
+                    )
+                    weight_dict[proj_name] = (
+                        load * synaptic_contribution[proj_name] * max_conductance
+                    )
+
+        return weight_dict
+
+    def _get_syn_load_dict(self):
+        syn_load_dict = {}
+        ### loop over populations
+        for pop_name in self._model.populations:
+            ### skip populations which should not be configured
+            if pop_name in self._do_not_config_list:
+                continue
+            syn_load_dict[pop_name] = {}
+            ### loop over target types
+            for target in ["ampa", "gaba"]:
+                ### get all afferent projections with target type
+                proj_name_list = self._get_afferent_proj_names(
+                    pop_name=pop_name, target=target
+                )
+                if len(proj_name_list) == 0:
+                    continue
+                ### get the maximal weight of the afferent projections
+                max_weight = max(
+                    [self._weight_dict[proj_name] for proj_name in proj_name_list]
+                )
+                ### get the synaptic load
+                if target == "ampa":
+                    syn_load_dict[pop_name][target] = (
+                        max_weight / self._max_syn.get(pop_name=pop_name).g_ampa
+                    )
+                elif target == "gaba":
+                    syn_load_dict[pop_name][target] = (
+                        max_weight / self._max_syn.get(pop_name=pop_name).g_gaba
+                    )
+
+        return syn_load_dict
+
+    def _get_syn_contribution_dict(self):
+        syn_contribution_dict = {}
+        ### loop over populations
+        for pop_name in self._model.populations:
+            ### skip populations which should not be configured
+            if pop_name in self._do_not_config_list:
+                continue
+            syn_contribution_dict[pop_name] = {}
+            ### loop over target types
+            for target in ["ampa", "gaba"]:
+                ### get all afferent projections with target type
+                proj_name_list = self._get_afferent_proj_names(
+                    pop_name=pop_name, target=target
+                )
+                if len(proj_name_list) == 0:
+                    continue
+                ### get the synaptic contribution
+                syn_contribution_dict[pop_name][target] = {}
+                for proj_name in proj_name_list:
+                    syn_contribution_dict[pop_name][target][
+                        proj_name
+                    ] = self._weight_dict[proj_name] / max(
+                        [self._weight_dict[proj_name] for proj_name in proj_name_list]
+                    )
+
+        return syn_contribution_dict
+
+    ### synaptic load for each population between 0 and 1, determines the largest weight of incoming synapses, 1 means maximal conductance
+    ### to get synaptic load of a population/target, get all afferent projections of the population/target and take the maximal weight divided by the (global) maximal weight
+    ### synaptic contribution for each if a population has for a target type multiple afferent projections --> array with numbers for these projections
+    ### divide the array by tjhe max value --> e.g. result is [0.6,1.0] weights of the projections then are 0.6*max_weight and 1.0*max_weight, where max weight is determined by the synaptic load
+
+    def _get_afferent_proj_names(self, pop_name: str, target: str):
+        proj_name_list = []
+        for proj_name in self._model.projections:
+            if (
+                self._analyze_model.pre_post_pop_name_dict[proj_name][1] == pop_name
+                and self._analyze_model.proj_init_parameter_dict[proj_name]["target"]
+                == target
+            ):
+                proj_name_list.append(proj_name)
+
+        return proj_name_list
 
 
 class CreateVoltageClampEquations:

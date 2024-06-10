@@ -369,29 +369,44 @@ if __name__ == "__main__":
         do_not_config_list=do_not_config_list,
         print_guide=True,
         I_app_variable="I_app",
+        cache=True,
         log_file="model_configurator.log",
     )
 
-    ### obtain the maximum synaptic loads for the populations and the
-    ### maximum weights of their afferent projections
-    model_conf.get_max_syn(cache=False, clear=False)
-
-    ### now either set weights directly
-    weights = {
-        "stn": {
-            "cor_exc__stn": 0.1420716334652917 * 0,
-            "cor_inh__stn": 0.3210113100293368 * 0,
+    ### set syn load
+    model_conf.set_syn_load(
+        syn_load_dict={
+            "stn": {"ampa": 0.0, "gaba": 0.0},
+            "snr": {"ampa": 0.0, "gaba": 0.0},
+            "gpe": {"ampa": 1.0},
+            "thal": {"gaba": 0.0},
         },
-        "gpe": {"stn__gpe": 0.14456939170522481 * 0},
-        "snr": {
-            "stn__snr": 0.14456939170522481 * 0,
-            "gpe__snr": 0.04,
-            "snr__snr": 0.3258095138891384 * 0,
+        syn_contribution_dict={
+            "stn": {"ampa": {"cor_exc__stn": 1.0}, "gaba": {"cor_inh__stn": 1.0}},
+            "snr": {
+                "ampa": {"stn__snr": 1.0},
+                "gaba": {"gpe__snr": 1.0, "snr__snr": 1.0},
+            },
+            "gpe": {"ampa": {"stn__gpe": 1.0}},
+            "thal": {"gaba": {"snr__thal": 1.0}},
         },
-        "thal": {"snr__thal": 0.33855115254020435 * 0},
-    }
+    )
+    print(model_conf._weight_dicts.weight_dict)
+    # ### or set weights
+    # model_conf.set_weights(
+    #     weight_dict={
+    #         "cor_exc__stn": 0.14017251511767667,
+    #         "cor_inh__stn": 0.3185158233680059,
+    #         "stn__snr": 0.1411802181516728,
+    #         "gpe__snr": 0.3210042713120005,
+    #         "snr__snr": 0.3210042713120005,
+    #         "stn__gpe": 0.1411802181516728,
+    #         "snr__thal": 1.169558816450918,
+    #     }
+    # )
 
-    model_conf.set_weights(weights)
+    I_base_dict = model_conf.set_base()
+    quit()
 
     ### or define synaptic load of populations
     # synaptic_load_dict = {
