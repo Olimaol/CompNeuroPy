@@ -370,6 +370,7 @@ if __name__ == "__main__":
         print_guide=True,
         I_app_variable="I_app",
         cache=True,
+        clear_cache=False,
         log_file="model_configurator.log",
     )
 
@@ -378,7 +379,7 @@ if __name__ == "__main__":
         syn_load_dict={
             "stn": {"ampa": 0.0, "gaba": 0.0},
             "snr": {"ampa": 0.0, "gaba": 0.0},
-            "gpe": {"ampa": 1.0},
+            "gpe": {"ampa": 0.0},
             "thal": {"gaba": 0.0},
         },
         syn_contribution_dict={

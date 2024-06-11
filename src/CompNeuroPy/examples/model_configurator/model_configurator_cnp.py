@@ -27,6 +27,7 @@ from ANNarchy import (
     Binomial,
     CurrentInjection,
     raster_plot,
+    set_seed,
 )
 
 from ANNarchy.core import ConnectorMethods
@@ -1403,6 +1404,7 @@ class ModelConfigurator:
         print_guide: bool = False,
         I_app_variable: str = "I_app",
         cache: bool = False,
+        clear_cache: bool = False,
         log_file: str | None = None,
     ):
         ### store the given variables
@@ -1428,6 +1430,8 @@ class ModelConfigurator:
             verbose=True,
         )
         ### try to load the cached variables
+        if clear_cache:
+            sf.clear_dir(".model_config_cache")
         cache_worked = False
         if cache:
             try:
@@ -1474,7 +1478,7 @@ class ModelConfigurator:
                 simulator=self._simulator,
                 do_plot=False,
             )
-            self.simulator = Simulator(
+            self._simulator = Simulator(
                 single_nets=self._single_nets,
                 figure_folder=self._figure_folder,
                 prepare_psp=self._prepare_psp,
@@ -1487,7 +1491,7 @@ class ModelConfigurator:
                 do_not_config_list=do_not_config_list,
                 max_psp=max_psp,
                 target_firing_rate_dict=target_firing_rate_dict,
-            )
+            ).max_syn_getter
         else:
             self._max_syn = cache_loaded["max_syn"]
         ### cache single_nets, prepare_psp, max_syn
@@ -1553,6 +1557,91 @@ class ModelConfigurator:
             ).base_dict
 
 
+class Minimize:
+    def __init__(self, func, yt, x0, lb, ub, tol, max_it) -> None:
+        """
+        Args:
+            func (Callable):
+                Function which takes a vector as input and returns a vector as output
+            target_values (np.array):
+                Target output vector of the function
+            x0 (np.array):
+                Initial input vector
+            lb (np.array):
+                Lower bounds of the input vector
+            ub (np.array):
+                Upper bounds of the input vector
+            tol (float):
+                If the maximum absolute error of the output vector is smaller than this
+                value, the optimization stops
+            max_it (int):
+                Maximum number of iterations
+        """
+        ### TODO continue here, I think it works but neuron models explode
+        x = x0
+        error = np.inf
+        it = 0
+        search_gradient_diff = np.ones(x0.shape)
+        alpha = 0.1
+        while np.max(np.abs(error)) > tol and it < max_it:
+            print("\n\nnext iteration")
+            y = func(x)
+            print(f"x: {x}")
+            print(f"y: {y}\n")
+            ### calculate the gradient i.e. change of the output values for each input
+            grad = np.zeros((yt.shape[0], x0.shape[0]))
+            for i in range(len(x0)):
+                ### search for the gradient of the i-th input, increase the stepwidth
+                ### which is used to calculate the gradient if the gradient for the
+                ### associated output value is below 1
+                while grad[i, i] < 1:
+                    x_plus = x.copy()
+                    ### change only the currently selected input whose gradient should be
+                    ### calculated
+                    x_plus[i] += search_gradient_diff[i]
+                    y_plus = func(x_plus)
+                    print(f"x_plus: {x_plus}")
+                    print(f"y_plus: {y_plus}\n")
+                    grad[:, i] = y_plus - y
+                    ### if gradient is above 10 reduce the search gradient diff
+                    if grad[i, i] >= 10:
+                        search_gradient_diff[i] /= 1.5
+                    ### if gradient is below 1 increase the search gradient diff
+                    elif grad[i, i] < 1:
+                        search_gradient_diff[i] *= 2
+            ### calculate the wanted change of the output values
+            delta_y = yt - y
+            print(f"delta_y: {delta_y}")
+            print(f"grad:\n{grad}")
+
+            # Example coefficient matrix A (m x n matrix)
+            A = grad
+
+            # Right-hand side vector b (m-dimensional vector)
+            b = delta_y
+
+            # Solve the system using least squares method
+            solution, residuals, rank, s = np.linalg.lstsq(A, b, rcond=None)
+
+            # Output the results
+            print("Solution vector x:", solution)
+            print("Residuals:", residuals)
+            print("Rank of matrix A:", rank)
+            print("Singular values of A:", s)
+
+            # Calculate the matrix-vector product Ax
+            Ax = np.dot(A, solution)
+
+            # Output the matrix-vector product and compare with b
+            print("Matrix-vector product Ax:", Ax)
+            print("Original vector b:", b)
+
+            ### solution contains the info how much each input should change (how many
+            ### times the change of gradient is needed to reach the target values)
+            x = x + solution * search_gradient_diff * alpha
+            it += 1
+
+
 class GetBase:
     def __init__(
         self,
@@ -1562,7 +1651,7 @@ class GetBase:
         weight_dicts: "GetWeights",
         do_not_config_list: list[str],
         init_sampler: CreateSingleNeuronNetworks.AllSampler,
-        max_syn: "GetMaxSyn",
+        max_syn: "GetMaxSyn.MaxSynGetter",
     ):
         self._model_normal = model_normal
         self._model_reduced = model_reduced
@@ -1576,12 +1665,14 @@ class GetBase:
             for pop_name in model_normal.populations
             if pop_name not in do_not_config_list
         ]
-        ### convert the target firing rate dict to a array
+        ### convert the target firing rate dict to an array
         self._target_firing_rate_arr = []
+        print(self._pop_names_config)
         for pop_name in self._pop_names_config:
             self._target_firing_rate_arr.append(target_firing_rate_dict[pop_name])
         self._target_firing_rate_arr = np.array(self._target_firing_rate_arr)
         ### get the base currents
+        self._prepare_get_base()
         self._base_dict = self._get_base()
 
     @property
@@ -1608,7 +1699,7 @@ class GetBase:
                         proj_weight,
                     )
 
-    def _get_base(self):
+    def _prepare_get_base(self):
         ### clear ANNarchy
         mf.cnp_clear(functions=False, neurons=True, synapses=True, constants=False)
         ### create and compile the model
@@ -1622,7 +1713,7 @@ class GetBase:
             }
         )
         ### create the experiment
-        exp = self.MyExperiment(monitors=mon)
+        self._exp = self.MyExperiment(monitors=mon)
         ### initialize all populations with the init sampler
         for pop_name in self._pop_names_config:
             ### for get_population we need the "_reduced" suffix
@@ -1632,33 +1723,95 @@ class GetBase:
         ### set the model weights
         self._set_model_weights()
         ### store the model state for all populations
-        exp.store_model_state(compartment_list=self._model_reduced.populations)
-        self._exp = exp
-        ### use objective_function to search for input base currents to reach the
-        ### target firing rates
-        lb = []
-        ub = []
-        x0 = []
+        self._exp.store_model_state(compartment_list=self._model_reduced.populations)
+        ### set lower and upper bounds and initial guess
+        self._lb = []
+        self._ub = []
+        self._x0 = []
         for pop_name in self._pop_names_config:
-            lb.append(-self._max_syn.get(pop_name=pop_name).I_app)
-            ub.append(self._max_syn.get(pop_name=pop_name).I_app)
-            x0.append(0)
+            self._lb.append(-self._max_syn.get(pop_name=pop_name).I_app)
+            self._ub.append(self._max_syn.get(pop_name=pop_name).I_app)
+            self._x0.append(0.0)
 
-        self.objective_function(x0)  ### TODO continue here
-        quit()
+    def _get_base(self):
+        """
+        Perform the optimization to find the base currents for the target firing rates.
 
-        ### Perform the optimization using L-BFGS-B method
-        result = minimize(
-            fun=self.objective_function, x0=x0, method="L-BFGS-B", bounds=Bounds(lb, ub)
+        Returns:
+            optimized_inputs (np.array):
+                Optimized input currents
+        """
+
+        ### Perform the optimization using Minimize class
+        Minimize(
+            func=self._get_firing_rate,
+            yt=self._target_firing_rate_arr,
+            x0=np.array(self._x0),
+            lb=np.array(self._lb),
+            ub=np.array(self._ub),
+            tol=1,
+            max_it=20,
         )
 
-        ### Optimized input values
-        optimized_inputs = result.x
+        ### Perform the optimization using L-BFGS-B method
+        # result = minimize(
+        #     fun=self._objective_function,
+        #     x0=self._x0,
+        #     method="L-BFGS-B",
+        #     bounds=Bounds(self._lb, self._ub),
+        # )
 
-        print(f"Optimized inputs: {optimized_inputs}")
+        # ### Perform the optimization using Powell method
+        # result = minimize(self._objective_function, self._x0, method='Powell')
+
+        # ### Optimized input values
+        # optimized_inputs = result.x
+
+        # print(f"Optimized inputs: {optimized_inputs}")
+
+        # ### Perform the optimization using DeapCma method
+        # ### define lower bounds of paramters to optimize
+        # lb = np.array(self._lb)
+
+        # ### define upper bounds of paramters to optimize
+        # ub = np.array(self._ub)
+
+        # ### create an "minimal" instance of the DeapCma class
+        # deap_cma = ef.DeapCma(
+        #     lower=lb,
+        #     upper=ub,
+        #     evaluate_function=self.objective_function_deap,
+        # )
+
+        # ### run the optimization
+        # deap_cma_result = deap_cma.run(max_evals=1000)
+
+        # for key, val in deap_cma_result.items():
+        #     if key in ["logbook", "deap_pop"]:
+        #         continue
+        #     print(f"{key}: {val}")
         quit()
 
-    def objective_function(self, I_app_list: list[float]):
+    def _objective_function_deap(self, population):
+        """
+        Objective function wrapper for the DeapCma optimization.
+
+        Args:
+            population (list):
+                List of individuals with input currents for each model population
+
+        Returns:
+            loss_list (list):
+                List of losses for each individual of the population
+        """
+        loss_list = []
+        ### the population is a list of individuals which are lists of parameters
+        for individual in population:
+            loss_of_individual = self._objective_function(I_app_list=individual)
+            loss_list.append((loss_of_individual,))
+        return loss_list
+
+    def _objective_function(self, I_app_list: list[float]):
         """
         Objective function to minimize the difference between the target firing rates and
         the firing rates of the model with the given input currents.
@@ -1701,23 +1854,23 @@ class GetBase:
             rate = nbr_spikes / (5.0 * get_population(f"{pop_name}_reduced").size)
             rate_list.append(rate)
             rate_dict[pop_name] = rate
-        sf.Logger().log(f"I_app_dict: {I_app_dict}")
-        sf.Logger().log(f"Firing rates: {rate_dict}")
+        # sf.Logger().log(f"I_app_dict: {I_app_dict}")
+        # sf.Logger().log(f"Firing rates: {rate_dict}")
 
-        af.PlotRecordings(
-            figname="firing_rates.png",
-            recordings=results.recordings,
-            recording_times=results.recording_times,
-            shape=(len(self._model_normal.populations), 1),
-            plan={
-                "position": list(range(1, len(self._model_normal.populations) + 1)),
-                "compartment": [
-                    f"{pop_name}_reduced" for pop_name in self._model_normal.populations
-                ],
-                "variable": ["spike"] * len(self._model_normal.populations),
-                "format": ["hybrid"] * len(self._model_normal.populations),
-            },
-        )
+        # af.PlotRecordings(
+        #     figname="firing_rates.png",
+        #     recordings=results.recordings,
+        #     recording_times=results.recording_times,
+        #     shape=(len(self._model_normal.populations), 1),
+        #     plan={
+        #         "position": list(range(1, len(self._model_normal.populations) + 1)),
+        #         "compartment": [
+        #             f"{pop_name}_reduced" for pop_name in self._model_normal.populations
+        #         ],
+        #         "variable": ["spike"] * len(self._model_normal.populations),
+        #         "format": ["hybrid"] * len(self._model_normal.populations),
+        #     },
+        # )
         return np.array(rate_list)
 
     class MyExperiment(CompNeuroExp):
@@ -1735,13 +1888,14 @@ class GetBase:
             """
             ### reset to initial state
             self.reset()
+            set_seed(0)
             ### activate monitor
             self.monitors.start()
             ### set the input currents
             for pop_name, I_app in I_app_dict.items():
                 get_population(pop_name).I_app = I_app
             ### simulate 5000 ms
-            simulate(5000, measure_time=True)
+            simulate(5000)
             ### return results
             return self.results()
 
@@ -2260,30 +2414,38 @@ class GetMaxSyn:
             self._max_syn_dict[pop_name]["g_ampa"] = g_ampa_max
             self._max_syn_dict[pop_name]["I_app"] = I_app_max
 
-    def get(self, pop_name: str):
-        """
-        Return the maximal synaptic input for the given population.
+    @property
+    def max_syn_getter(self):
+        return self.MaxSynGetter(self._max_syn_dict)
 
-        Args:
-            pop_name (str):
-                Name of the population
+    class MaxSynGetter:
+        def __init__(self, max_syn_dict: dict) -> None:
+            self._max_syn_dict = max_syn_dict
 
-        Returns:
-            ReturnMaxSyn:
-                Maximal synaptic input for the given population with Attributes: g_gaba,
-                g_ampa, I_app
-        """
-        return self.ReturnMaxSyn(
-            g_gaba=self._max_syn_dict[pop_name]["g_gaba"],
-            g_ampa=self._max_syn_dict[pop_name]["g_ampa"],
-            I_app=self._max_syn_dict[pop_name]["I_app"],
-        )
+        def get(self, pop_name: str):
+            """
+            Return the maximal synaptic input for the given population.
 
-    class ReturnMaxSyn:
-        def __init__(self, g_gaba: float, g_ampa: float, I_app: float):
-            self.g_gaba = g_gaba
-            self.g_ampa = g_ampa
-            self.I_app = I_app
+            Args:
+                pop_name (str):
+                    Name of the population
+
+            Returns:
+                ReturnMaxSyn:
+                    Maximal synaptic input for the given population with Attributes: g_gaba,
+                    g_ampa, I_app
+            """
+            return self.ReturnMaxSyn(
+                g_gaba=self._max_syn_dict[pop_name]["g_gaba"],
+                g_ampa=self._max_syn_dict[pop_name]["g_ampa"],
+                I_app=self._max_syn_dict[pop_name]["I_app"],
+            )
+
+        class ReturnMaxSyn:
+            def __init__(self, g_gaba: float, g_ampa: float, I_app: float):
+                self.g_gaba = g_gaba
+                self.g_ampa = g_ampa
+                self.I_app = I_app
 
     def _get_max_g_gaba(self, pop_name: str, max_psp: float):
         """
@@ -2400,7 +2562,7 @@ class GetWeights:
         model: CompNeuroModel,
         do_not_config_list: list[str],
         analyze_model: AnalyzeModel,
-        max_syn: GetMaxSyn,
+        max_syn: GetMaxSyn.MaxSynGetter,
     ):
         self._model = model
         self._do_not_config_list = do_not_config_list
