@@ -581,11 +581,11 @@ class Izhikevich2003NoisyBaseSNR(Neuron):
                 ### power of signal
                 tau_power * dpower_I_signal/dt     = I_signal**2 - power_I_signal
                 ### membrane potential and recovery variable
-                dv/dt       = n2 * v * v + n1 * v + n0 - u + I
+                dv/dt       = n2 * v * v + n1 * v + n0 - u + I : min=-100, max=0
                 du/dt       = a * (b * v - u)
             """,
             spike="""
-                v >= 30
+                v >= 0
             """,
             reset="""
                 v = c

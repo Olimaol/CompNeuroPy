@@ -152,7 +152,7 @@ class AnalyzeModel:
         self._clear_model(model=model, do_create=False)
 
     def _clear_model(self, model: CompNeuroModel, do_create: bool = True):
-        mf.cnp_clear(functions=False, neurons=True, synapses=True, constants=False)
+        mf.cnp_clear(functions=False, constants=False)
         if do_create:
             model.create(do_compile=False)
 
@@ -196,10 +196,6 @@ class AnalyzeModel:
                 for param in init_params
                 if param != "self" and param != "storage_order" and param != "copied"
             }
-            ### get the afferent projections dict of the population TODO do we still need this?
-            # self.afferent_projection_dict[pop_name] = (
-            #     self._get_afferent_projection_dict(pop_name=pop_name)
-            # )
 
     def _analyze_projections(self, model: CompNeuroModel):
         """
@@ -770,6 +766,7 @@ class PreparePSP:
         do_not_config_list: list[str],
         simulator: "Simulator",
         do_plot: bool,
+        figure_folder: str,
     ):
         """
         Args:
@@ -783,6 +780,7 @@ class PreparePSP:
         self._single_nets = single_nets
         self._prepare_psp_dict = {}
         self._simulator = simulator
+        self._figure_folder = figure_folder
         ### loop over all populations
         for pop_name in model.populations:
             ### skip populations which should not be configured
@@ -943,10 +941,6 @@ class PreparePSP:
             tolerance=0.01,
             bound_type="greater",
         )
-        # y_bound = 0
-        # y: -10, -2, +0.1
-        # x:  0, 5, 7
-        # bound type greater should find value which is slightly larger than 0 TODO test this
         ### again simulate the neuron with the obtained I_app_hold to get the new v_rest
         v_rest_arr = self._simulator.get_v_2000(
             pop_name=pop_name,
@@ -999,7 +993,7 @@ class PreparePSP:
             plt.plot(v_arr, v_clamp_arr)
             plt.axvline(v_rest, color="k")
             plt.axhline(0, color="k", ls="dashed")
-            plt.savefig(f"v_clamp_{pop_name}.png")
+            plt.savefig(f"{self._figure_folder}/v_clamp_{pop_name}.png")
             plt.close("all")
 
         ### do again the simulation only with the obtained v_rest to get the detla_v for
@@ -1412,7 +1406,7 @@ class ModelConfigurator:
         self._do_not_config_list = do_not_config_list
         self._target_firing_rate_dict = target_firing_rate_dict
         self._base_dict = None
-        self._figure_folder = "model_conf_figures"  ### TODO add this to Simulator init
+        self._figure_folder = "model_conf_figures"  ### TODO add this to figures
         ### create the figure folder
         sf.create_dir(self._figure_folder)
         ### initialize logger
@@ -1477,6 +1471,7 @@ class ModelConfigurator:
                 do_not_config_list=do_not_config_list,
                 simulator=self._simulator,
                 do_plot=False,
+                figure_folder=self._figure_folder,
             )
             self._simulator = Simulator(
                 single_nets=self._single_nets,
@@ -1521,6 +1516,7 @@ class ModelConfigurator:
                 Dict with the weights for each projection
         """
         self._weight_dicts.weight_dict = weight_dict
+        self._check_if_not_config_pops_have_correct_rates()
 
     def set_syn_load(
         self,
@@ -1539,26 +1535,119 @@ class ModelConfigurator:
         """
         self._weight_dicts.syn_load_dict = syn_load_dict
         self._weight_dicts.syn_contribution_dict = syn_contribution_dict
+        self._check_if_not_config_pops_have_correct_rates()
+
+    def _check_if_not_config_pops_have_correct_rates(self):
+        """
+        Check if the populations which should not be configured have the correct firing
+        rates.
+        """
+        ### initialize the normal model + compile the model
+        self._init_model_with_fitted_base(base_dict=self._base_dict)
+
+        ### record spikes of the do_not_config populations
+        mon = CompNeuroMonitors(
+            mon_dict={
+                pop_name: ["spike"] for pop_name in self._do_not_config_list
+            }  # _model.populations # tmp test
+        )
+        mon.start()
+        ### simulate the model for 5000 ms
+        # get_population("stn").I_app = 8  # tmp test
+        simulate(5000)
+
+        ### get the firing rates
+        recordings = mon.get_recordings()
+        for pop_name in self._do_not_config_list:
+            spike_dict = recordings[0][f"{pop_name};spike"]
+            t, _ = raster_plot(spike_dict)
+            spike_count = len(t)
+            pop_size = len(get_population(pop_name))
+            firing_rate = spike_count / (5 * pop_size)
+            if np.abs(firing_rate - self._target_firing_rate_dict[pop_name]) > 1:
+                sf.Logger().log(
+                    f"Warning: Population {pop_name} has a firing rate of {firing_rate} instead of {self._target_firing_rate_dict[pop_name]}"
+                )
+                print(
+                    f"Warning: Population {pop_name} has a firing rate of {firing_rate} instead of {self._target_firing_rate_dict[pop_name]}"
+                )
+
+        # ### tmp plot
+        # recording_times = mon.get_recording_times()
+
+        # af.PlotRecordings(
+        #     figname="tmp.png",
+        #     recordings=recordings,
+        #     recording_times=recording_times,
+        #     shape=(len(self._model.populations), 1),
+        #     plan={
+        #         "position": list(range(1, len(self._model.populations) + 1)),
+        #         "compartment": self._model.populations,
+        #         "variable": ["spike"] * len(self._model.populations),
+        #         "format": ["hybrid"] * len(self._model.populations),
+        #     },
+        # )
+        # quit()
 
     def set_base(self):
         """
         Set the baseline currents of the model, found for the current weights to reach
-        the target firing rates.
+        the target firing rates. The model is compiled after setting the baselines.
         """
+        ### get the base dict
         if self._base_dict is None:
-            self._base_dict = GetBase(
-                model_normal=self._model,
-                model_reduced=self._model_reduced.model_reduced,
-                target_firing_rate_dict=self._target_firing_rate_dict,
-                weight_dicts=self._weight_dicts,
-                do_not_config_list=self._do_not_config_list,
-                init_sampler=self._init_sampler,
-                max_syn=self._max_syn,
-            ).base_dict
+            self.get_base()
+
+        ### initialize the normal model + set the baselines with the base dict
+        self._init_model_with_fitted_base(base_dict=self._base_dict)
+
+    def get_base(self):
+        """
+        Get the baseline currents of the model.
+
+        Returns:
+            base_dict (dict[str, float]):
+                Dict with the baseline currents for each population
+        """
+        ### get the base dict
+        self._base_dict = GetBase(
+            model_normal=self._model,
+            model_reduced=self._model_reduced.model_reduced,
+            target_firing_rate_dict=self._target_firing_rate_dict,
+            weight_dicts=self._weight_dicts,
+            do_not_config_list=self._do_not_config_list,
+            init_sampler=self._init_sampler,
+            max_syn=self._max_syn,
+        ).base_dict
+        return self._base_dict
+
+    def _init_model_with_fitted_base(self, base_dict: dict[str, float] | None = None):
+        """
+        Initialize the neurons of the model using the init_sampler, set the baseline
+        currents of the model from the base dict (containing fitted baselines) and the
+        weights from the weight dicts and compile the model.
+        """
+        ### clear ANNarchy and create the normal model
+        mf.cnp_clear(functions=False, constants=False)
+        self._model.create(do_compile=False)
+        ### set the initial variables of the neurons
+        for pop_name, init_sampler in self._init_sampler.init_sampler_dict.items():
+            init_sampler.set_init_variables(get_population(pop_name))
+        ### set the baseline currents
+        if base_dict is not None:
+            for pop_name, I_app in base_dict.items():
+                setattr(get_population(pop_name), "I_app", I_app)
+        ### compile the model
+        self._model.compile()
+        ### set the weights
+        for proj_name, weight in self._weight_dicts.weight_dict.items():
+            setattr(get_projection(proj_name), "w", weight)
 
 
 class Minimize:
-    def __init__(self, func, yt, x0, lb, ub, tol, max_it) -> None:
+    def __init__(
+        self, func, yt, x0, lb, ub, tol_error, tol_convergence, max_it
+    ) -> None:
         """
         Args:
             func (Callable):
@@ -1571,23 +1660,117 @@ class Minimize:
                 Lower bounds of the input vector
             ub (np.array):
                 Upper bounds of the input vector
-            tol (float):
-                If the maximum absolute error of the output vector is smaller than this
-                value, the optimization stops
+            tol_error (float):
+                If the error is below this value the optimization stops
+            tol_convergence (float):
+                If the change of the error stays below this value the optimization stops
             max_it (int):
                 Maximum number of iterations
         """
         ### TODO continue here, I think it works but neuron models explode
         x = x0
-        error = np.inf
+        x_old = x0
+        y = yt
+        error = np.ones(x0.shape) * 20
+        error_old = np.ones(x0.shape) * 20
         it = 0
         search_gradient_diff = np.ones(x0.shape)
-        alpha = 0.1
-        while np.max(np.abs(error)) > tol and it < max_it:
+        alpha = np.ones(x0.shape)
+        error_list = []
+        dx_list = []
+        dy_list = []
+        x_list = []
+        y_list = []
+        it_list = []
+
+        def error_changed(error_list, tol, n=3):
+            if len(error_list) < 2:
+                return True
+            return (np.max(error_list[-n:]) - np.min(error_list[-n:])) > tol
+
+        ### TODO not check if error is small enough but if the change of the error
+        ### converges, for this, check the mean of the last 10 error changes
+        while it < max_it and error_changed(error_list, tol_convergence):
             print("\n\nnext iteration")
+            y_old = y
             y = func(x)
+            dx_list.append(x - x_old)
+            dy_list.append(y - y_old)
+            ### TODO if x did not change much, use the previous gradient again
             print(f"x: {x}")
-            print(f"y: {y}\n")
+            print(f"y: {y}")
+            x_list.append(x)
+            y_list.append(y)
+            it_list.append(it)
+            ### here we know the new y(x)
+            ### check if the error sign changed
+            error_old = error
+            error = yt - y
+            ### if error is small enough stop the optimization
+            if np.all(np.abs(error) < tol_error):
+                break
+            error_sign_changed = np.sign(error) != np.sign(error_old)
+            print(f"error_sign_changed: {error_sign_changed}")
+            ### get how much the error (in total, not for individual inputs) changed
+            error_list.append(np.mean(np.abs(error)))
+            print(f"error_list: {error_list}\n")
+            ### if the error sign changed:
+            ### - TODO check if error is larger as before, if yes -> use again the previous x, if use previous x also compute current y
+            ### - we calculate (as usual) a new gradient
+            ### - we reduce alpha, so this time the step is smaller
+            error_increased = np.abs(error) > np.abs(error_old)
+            x[error_sign_changed & error_increased] = x_old[
+                error_sign_changed & error_increased
+            ]
+            if np.any(error_sign_changed & error_increased):
+                y = func(x)
+
+                # TODO I do not understand this example, this message was printed but x did not change
+                # next iteration
+                # x: [12.56441496 40.92615539 18.96717589 90.30010779]
+                # y: [30.00888889 59.99777778 50.01333333 96.85333333]
+                # error_sign_changed: [False False False False]
+                # error_list: [23.759444444444448, 2.517777777777779, 78.90388888888889, 22.96944444444445]
+
+                # x_plus: [13.56441496 40.92615539 18.96717589 90.30010779]
+                # y_plus: [32.22222222 60.10888889 50.08666667 97.41111111]
+
+                # x_plus: [12.56441496 42.92615539 18.96717589 90.30010779]
+                # y_plus: [30.00888889 62.06666667 50.01333333 91.96666667]
+
+                # x_plus: [12.56441496 40.92615539 19.96717589 90.30010779]
+                # y_plus: [30.00888889 59.89333333 51.14666667 96.79333333]
+
+                # x_plus: [ 12.56441496  40.92615539  18.96717589 132.96677446]
+                # y_plus: [ 30.00888889  59.99777778  50.01333333 214.46666667]
+
+                # delta_y: [-8.88888889e-03  2.22222222e-03 -1.33333333e-02 -9.18533333e+01]
+                # grad:
+                # [[ 2.21333333e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00]
+                # [ 1.11111111e-01  2.06888889e+00 -1.04444444e-01  0.00000000e+00]
+                # [ 7.33333333e-02  0.00000000e+00  1.13333333e+00  0.00000000e+00]
+                # [ 5.57777778e-01 -4.88666667e+00 -6.00000000e-02  1.17613333e+02]]
+                # Solution vector x: [-4.01606426e-03  7.08996344e-04 -1.15048429e-02 -7.80934579e-01]
+                # delta_y from solution: [-8.88888889e-03  2.22222222e-03 -1.33333333e-02 -9.18533333e+01]
+
+                # next iteration
+                # x: [12.56200532 40.92757338 18.96027299 76.97215765]
+                # y: [30.01333333 60.00444444 50.00444444 61.82444444]
+                # error_sign_changed: [False  True False False]
+                # error_list: [23.759444444444448, 2.517777777777779, 78.90388888888889, 22.96944444444445, 14.211666666666666]
+
+                # some errors changed sign and increased
+                # x: [12.56200532 40.92615539 18.96027299 76.97215765]
+                # y: [30.01333333 60.02       50.00444444 61.86      ]
+
+                print("some errors changed sign and increased")
+                print(f"x: {x}")
+                print(f"y: {y}\n")
+                x_list.append(x)
+                y_list.append(y)
+                it_list.append(it)
+            alpha[error_sign_changed] /= 2
+            alpha[~error_sign_changed] += (1 - alpha[~error_sign_changed]) / 5
             ### calculate the gradient i.e. change of the output values for each input
             grad = np.zeros((yt.shape[0], x0.shape[0]))
             for i in range(len(x0)):
@@ -1625,21 +1808,55 @@ class Minimize:
 
             # Output the results
             print("Solution vector x:", solution)
-            print("Residuals:", residuals)
-            print("Rank of matrix A:", rank)
-            print("Singular values of A:", s)
 
             # Calculate the matrix-vector product Ax
             Ax = np.dot(A, solution)
 
             # Output the matrix-vector product and compare with b
-            print("Matrix-vector product Ax:", Ax)
-            print("Original vector b:", b)
+            print("delta_y from solution:", Ax)
 
             ### solution contains the info how much each input should change (how many
             ### times the change of gradient is needed to reach the target values)
+            x_old = x
             x = x + solution * search_gradient_diff * alpha
             it += 1
+
+        self.x = x
+        self.success = np.all(np.abs(error) < tol_error)
+
+        x_arr = np.array(x_list)
+        y_arr = np.array(y_list)
+        it_arr = np.array(it_list)
+
+        plt.close("all")
+        plt.figure()
+        for idx in range(4):
+            ax = plt.subplot(4, 1, idx + 1)
+            ### plot the x values
+            plt.plot(it_arr, x_arr[:, idx])
+            plt.ylabel(f"x{idx}")
+            ### second y axis on the right for the y values
+            ax2 = ax.twinx()
+            ax2.plot(it_arr, y_arr[:, idx], color="red")
+            ax2.set_ylabel(f"y{idx}", color="red")
+        plt.xlabel("iteration")
+        plt.tight_layout()
+        plt.savefig("optimization.png")
+
+        plt.close("all")
+        plt.figure()
+        dx_arr = x_arr[1:] - x_arr[:-1]
+        dx_ausgehend_von = x_arr[:-1]
+        dy_arr = y_arr[1:] - y_arr[:-1]
+        dy_ausgehend_von = y_arr[:-1]
+        for idx in range(4):
+            ax = plt.subplot(4, 1, idx + 1)
+            ### plot the x values
+            plt.plot(dx_ausgehend_von[:, idx], dy_arr[:, idx] / dx_arr[:, idx])
+            plt.ylabel(f"dy{idx}/dx{idx}")
+        plt.xlabel("x")
+        plt.tight_layout()
+        plt.savefig("dy_dx_asugehend_x.png")
 
 
 class GetBase:
@@ -1701,7 +1918,7 @@ class GetBase:
 
     def _prepare_get_base(self):
         ### clear ANNarchy
-        mf.cnp_clear(functions=False, neurons=True, synapses=True, constants=False)
+        mf.cnp_clear(functions=False, constants=False)
         ### create and compile the model
         self._model_reduced.create()
         ### create monitors for recording the spikes of all populations
@@ -1738,59 +1955,31 @@ class GetBase:
         Perform the optimization to find the base currents for the target firing rates.
 
         Returns:
-            optimized_inputs (np.array):
-                Optimized input currents
+            base_dict (dict):
+                Dict with the base currents for each population
         """
 
         ### Perform the optimization using Minimize class
-        Minimize(
+        result = Minimize(
             func=self._get_firing_rate,
             yt=self._target_firing_rate_arr,
             x0=np.array(self._x0),
             lb=np.array(self._lb),
             ub=np.array(self._ub),
-            tol=1,
+            tol_error=1,
+            tol_convergence=0.1,
             max_it=20,
         )
 
-        ### Perform the optimization using L-BFGS-B method
-        # result = minimize(
-        #     fun=self._objective_function,
-        #     x0=self._x0,
-        #     method="L-BFGS-B",
-        #     bounds=Bounds(self._lb, self._ub),
-        # )
-
-        # ### Perform the optimization using Powell method
-        # result = minimize(self._objective_function, self._x0, method='Powell')
-
-        # ### Optimized input values
-        # optimized_inputs = result.x
-
-        # print(f"Optimized inputs: {optimized_inputs}")
-
-        # ### Perform the optimization using DeapCma method
-        # ### define lower bounds of paramters to optimize
-        # lb = np.array(self._lb)
-
-        # ### define upper bounds of paramters to optimize
-        # ub = np.array(self._ub)
-
-        # ### create an "minimal" instance of the DeapCma class
-        # deap_cma = ef.DeapCma(
-        #     lower=lb,
-        #     upper=ub,
-        #     evaluate_function=self.objective_function_deap,
-        # )
-
-        # ### run the optimization
-        # deap_cma_result = deap_cma.run(max_evals=1000)
-
-        # for key, val in deap_cma_result.items():
-        #     if key in ["logbook", "deap_pop"]:
-        #         continue
-        #     print(f"{key}: {val}")
-        quit()
+        optimized_inputs = result.x
+        if not result.success:
+            sf.Logger().log("Optimization failed, target firing rates not reached!")
+            print("Optimization failed, target firing rates not reached!")
+        base_dict = {
+            pop_name: optimized_inputs[idx]
+            for idx, pop_name in enumerate(self._pop_names_config)
+        }
+        return base_dict
 
     def _objective_function_deap(self, population):
         """
@@ -1849,9 +2038,11 @@ class GetBase:
             ### for the spike dict we need the "_reduced" suffix
             spike_dict = results.recordings[0][f"{pop_name}_reduced;spike"]
             t, _ = raster_plot(spike_dict)
+            ### only take spikes after the first 500 ms
+            t = t[t > 500]
             nbr_spikes = len(t)
             ### divide number of spikes by the number of neurons and the duration in s
-            rate = nbr_spikes / (5.0 * get_population(f"{pop_name}_reduced").size)
+            rate = nbr_spikes / (4.5 * get_population(f"{pop_name}_reduced").size)
             rate_list.append(rate)
             rate_dict[pop_name] = rate
         # sf.Logger().log(f"I_app_dict: {I_app_dict}")
