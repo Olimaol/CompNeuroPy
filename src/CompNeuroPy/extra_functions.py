@@ -2442,10 +2442,18 @@ class RNG:
     """
 
     def __init__(self, seed):
+        """
+        Args:
+            seed (int):
+                Seed for the random number generator.
+        """
         self.rng = np.random.default_rng(seed=seed)
         self._original_seed = seed
 
     def reset(self):
+        """
+        Reset the random number generator to the original seed.
+        """
         self.rng.bit_generator.state = np.random.default_rng(
             seed=self._original_seed
         ).bit_generator.state
