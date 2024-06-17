@@ -57,7 +57,7 @@ def flatten_list(lst):
     Retuns flattened list
 
     Args:
-        lst (list of lists or mixed: values and lists):
+        lst (list of lists or mixed values and lists):
             List to be flattened
 
     Returns:
@@ -223,10 +223,6 @@ class _DataCl(object):
             return super().__getattribute__(__name)
 
 
-### keep old name for compatibility
-data_obj = _DataCl
-
-
 def create_cm(colors, name="my_cmap", N=256, gamma=1.0, vmin=0, vmax=1):
     """
     Create a `LinearSegmentedColormap` from a list of colors.
@@ -370,10 +366,6 @@ class _LinearColormapClass(LinearSegmentedColormap):
         return super().__call__(X, alpha, bytes)
 
 
-### keep old name for compatibility
-my_linear_cmap_obj = _LinearColormapClass
-
-
 class DecisionTree:
     """
     Class to create a decision tree.
@@ -472,10 +464,6 @@ class DecisionTree:
             return [path_str + "/" + node.name, prob * node.prob]
 
 
-### keep old name for compatibility
-decision_tree = DecisionTree
-
-
 class DecisionTreeNode:
     """
     Class to create a node in a decision tree.
@@ -537,10 +525,6 @@ class DecisionTreeNode:
                 Path product of the node
         """
         return self.tree._get_path_prod_rec(self)
-
-
-### keep old name for compatibility
-node_cl = DecisionTreeNode
 
 
 def evaluate_expression_with_dict(expression, value_dict):
@@ -2220,9 +2204,6 @@ class InteractivePlot:
         self.create_plot(self.axs, self.sliders)
         ### restart the animation
         self.ani.event_source.start()
-
-
-interactive_plot = InteractivePlot
 
 
 def efel_loss(trace1, trace2, feature_list):
