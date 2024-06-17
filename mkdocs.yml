@@ -74,4 +74,5 @@ nav:
     - Define Experiments: 'examples/experiment.md'
     - DBS Simulator: 'examples/dbs.md'
     - Optimize a neuron model: 'examples/opt_neuron.md'
+    - Cma Optimization: 'examples/deap_cma.md'
   - License: 'license.md'

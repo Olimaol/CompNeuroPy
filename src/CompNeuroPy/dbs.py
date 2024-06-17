@@ -14,7 +14,7 @@ from ANNarchy import (
 from ANNarchy.core import ConnectorMethods
 import numpy as np
 from CompNeuroPy import model_functions as mf
-from CompNeuroPy.generate_model import generate_model
+from CompNeuroPy.generate_model import CompNeuroModel
 from typingchecker import check_types
 import inspect
 
@@ -102,9 +102,11 @@ class _CreateDBSmodel:
             ### self.axon_rate_amp is None --> use the axon_rate_amp_pop_name_list and axon_rate_amp_value_list to create the dict
             self.axon_rate_amp: dict[Population | str, float] = {
                 ### key is either a Populaiton or the string "default"
-                get_population(pop_name[4:])
-                if pop_name.startswith("pop;")
-                else pop_name: axon_rate_amp_val
+                (
+                    get_population(pop_name[4:])
+                    if pop_name.startswith("pop;")
+                    else pop_name
+                ): axon_rate_amp_val
                 for pop_name, axon_rate_amp_val in zip(
                     self.axon_rate_amp_pop_name_list, self.axon_rate_amp_value_list
                 )
@@ -148,9 +150,11 @@ class _CreateDBSmodel:
             ### if key is a Population, use the name of the Population and prepend pop;
             ### if key is the string "default", use the string
             self.axon_rate_amp_pop_name_list = [
-                f"pop;{axon_rate_amp_key.name}"
-                if isinstance(axon_rate_amp_key, Population)
-                else axon_rate_amp_key
+                (
+                    f"pop;{axon_rate_amp_key.name}"
+                    if isinstance(axon_rate_amp_key, Population)
+                    else axon_rate_amp_key
+                )
                 for axon_rate_amp_key in axon_rate_amp.keys()
             ]
             self.axon_rate_amp_value_list = list(axon_rate_amp.values())
@@ -284,9 +288,9 @@ class _CreateDBSmodel:
             ]
 
             ### get the parameters of the connector function
-            connector_function_parameter_dict[
-                proj.name
-            ] = self.get_connector_parameters(proj)
+            connector_function_parameter_dict[proj.name] = (
+                self.get_connector_parameters(proj)
+            )
 
             ### get the names of the pre- and post-synaptic populations
             pre_post_pop_name_dict[proj.name] = (proj.pre.name, proj.post.name)
@@ -531,9 +535,9 @@ class _CreateDBSmodel:
         )
 
         ### 3rd add axon spike term
-        neuron_model_init_parameter_dict[
-            "axon_spike"
-        ] = "pulse(t)*dbs_on*unif_var_dbs1 > 1-prob_axon_spike"
+        neuron_model_init_parameter_dict["axon_spike"] = (
+            "pulse(t)*dbs_on*unif_var_dbs1 > 1-prob_axon_spike"
+        )
 
         ### 4th add axon reset term
         neuron_model_init_parameter_dict[
@@ -544,9 +548,9 @@ class _CreateDBSmodel:
         """
 
         ### 5th extend description
-        neuron_model_init_parameter_dict[
-            "description"
-        ] = f"{neuron_model_init_parameter_dict['description']}\nWith DBS mechanisms implemented."
+        neuron_model_init_parameter_dict["description"] = (
+            f"{neuron_model_init_parameter_dict['description']}\nWith DBS mechanisms implemented."
+        )
 
         return neuron_model_init_parameter_dict
 
@@ -677,9 +681,9 @@ class _CreateDBSmodel:
         )
 
         ### 3rd extend description
-        neuron_model_init_parameter_dict[
-            "description"
-        ] = f"{neuron_model_init_parameter_dict['description']}\nWith DBS mechanisms implemented."
+        neuron_model_init_parameter_dict["description"] = (
+            f"{neuron_model_init_parameter_dict['description']}\nWith DBS mechanisms implemented."
+        )
 
         return neuron_model_init_parameter_dict
 
@@ -795,14 +799,14 @@ class _CreateDBSmodel:
         synapse_init_parameter_dict["equations"] = "\n".join(equations_line_split_list)
 
         ### 3rd add pre_axon_spike
-        synapse_init_parameter_dict[
-            "pre_axon_spike"
-        ] = "g_target+=ite(unif_var_dbs<p_axon_spike_trans,w*post.dbs_on,0)"
+        synapse_init_parameter_dict["pre_axon_spike"] = (
+            "g_target+=ite(unif_var_dbs<p_axon_spike_trans,w*post.dbs_on,0)"
+        )
 
         ### 4th extend description
-        synapse_init_parameter_dict[
-            "description"
-        ] = f"{synapse_init_parameter_dict['description']}\nWith DBS mechanisms implemented."
+        synapse_init_parameter_dict["description"] = (
+            f"{synapse_init_parameter_dict['description']}\nWith DBS mechanisms implemented."
+        )
 
         return synapse_init_parameter_dict
 
@@ -849,9 +853,9 @@ class _CreateDBSmodel:
         synapse_init_parameter_dict["equations"] = "\n".join(equations_line_split_list)
 
         ### 3rd extend description
-        synapse_init_parameter_dict[
-            "description"
-        ] = f"{synapse_init_parameter_dict['description']}\nWith DBS mechanisms implemented."
+        synapse_init_parameter_dict["description"] = (
+            f"{synapse_init_parameter_dict['description']}\nWith DBS mechanisms implemented."
+        )
 
         return synapse_init_parameter_dict
 
@@ -879,7 +883,7 @@ class _CreateDBSmodelcnp(_CreateDBSmodel):
 
     def __init__(
         self,
-        model: generate_model,
+        model: CompNeuroModel,
         stimulated_population: Population,
         excluded_populations_list: list[Population],
         passing_fibres_list: list[Projection],
@@ -889,7 +893,7 @@ class _CreateDBSmodelcnp(_CreateDBSmodel):
         Prepare model for DBS stimulation.
 
         Args:
-            model (generate_model):
+            model (CompNeuroModel):
                 CompNeuroPy model
             stimulated_population (Population):
                 Population which is stimulated by DBS
@@ -917,7 +921,7 @@ class _CreateDBSmodelcnp(_CreateDBSmodel):
         parent class as model_creation_function. The new model can be accessed via the
         model attribute.
         """
-        self.model = generate_model(
+        self.model = CompNeuroModel(
             model_creation_function=super().recreate_model,
             name=f"{self.model.name}_dbs",
             description=f"{self.model.description}\nWith DBS mechanisms implemented.",
@@ -951,7 +955,7 @@ class DBSstimulator:
         created)! Use a CompNeuroPy model working with names of populations and
         projections anyway (recommended) or use the update_pointers method.
 
-    Examples:
+    Example:
         ```python
         from ANNarchy import Population, Izhikevich, compile, simulate, setup
         from CompNeuroPy import DBSstimulator
@@ -962,7 +966,7 @@ class DBSstimulator:
         # create populations
         population1 = Population(10, neuron=Izhikevich, name="my_pop1")
         population2 = Population(10, neuron=Izhikevich, name="my_pop2")
-        >>>
+
         # create DBS stimulator
         dbs = DBSstimulator(
             stimulated_population=population1,
@@ -1012,7 +1016,7 @@ class DBSstimulator:
         axon_rate_amp: float | dict[Population | str, float] = 1.0,
         seed: int | None = None,
         auto_implement: bool = False,
-        model: generate_model | None = None,
+        model: CompNeuroModel | None = None,
     ) -> None:
         """
         Initialize DBS stimulator.

@@ -9,10 +9,22 @@ from ANNarchy import (
 )
 from CompNeuroPy.neuron_models import (
     poisson_neuron_up_down,
-    Izhikevich2003_flexible_noisy_I,
+    Izhikevich2003NoisyBaseSNR,
 )
-from CompNeuroPy import generate_model, Monitors, plot_recordings, my_raster_plot
-from model_configurator_cnp import model_configurator
+from CompNeuroPy import (
+    generate_model,
+    Monitors,
+    plot_recordings,
+    my_raster_plot,
+    CompNeuroMonitors,
+    PlotRecordings,
+)
+from CompNeuroPy.examples.model_configurator.model_configurator_cnp import (
+    ModelConfigurator,
+)
+from CompNeuroPy.examples.model_configurator.model_configurator_cnp_old import (
+    model_configurator,
+)
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -27,6 +39,7 @@ def BGM_part_function(params):
     )
     cor_exc.tau_up = params["cor_exc.tau_up"]
     cor_exc.tau_down = params["cor_exc.tau_down"]
+    cor_exc.rates = params["cor_exc.rates"]
     cor_inh = Population(
         params["cor_inh.size"],
         poisson_neuron_up_down,
@@ -34,71 +47,92 @@ def BGM_part_function(params):
     )
     cor_inh.tau_up = params["cor_inh.tau_up"]
     cor_inh.tau_down = params["cor_inh.tau_down"]
+    cor_inh.rates = params["cor_inh.rates"]
     ### BG Populations
     stn = Population(
         params["stn.size"],
-        Izhikevich2003_flexible_noisy_I,
+        Izhikevich2003NoisyBaseSNR(
+            a=params["stn.a"],
+            b=params["stn.b"],
+            c=params["stn.c"],
+            d=params["stn.d"],
+            n2=params["stn.n2"],
+            n1=params["stn.n1"],
+            n0=params["stn.n0"],
+            tau_ampa=params["stn.tau_ampa"],
+            tau_gaba=params["stn.tau_gaba"],
+            E_ampa=params["stn.E_ampa"],
+            E_gaba=params["stn.E_gaba"],
+            noise=0,
+            tau_power=10,
+            snr_target=4,
+            rate_noise=100,
+        ),
         name="stn",
     )
-    stn.a = params["stn.a"]
-    stn.b = params["stn.b"]
-    stn.c = params["stn.c"]
-    stn.d = params["stn.d"]
-    stn.n2 = params["stn.n2"]
-    stn.n1 = params["stn.n1"]
-    stn.n0 = params["stn.n0"]
-    stn.tau_ampa = params["stn.tau_ampa"]
-    stn.tau_gaba = params["stn.tau_gaba"]
-    stn.E_ampa = params["stn.E_ampa"]
-    stn.E_gaba = params["stn.E_gaba"]
     snr = Population(
         params["snr.size"],
-        Izhikevich2003_flexible_noisy_I,
+        Izhikevich2003NoisyBaseSNR(
+            a=params["snr.a"],
+            b=params["snr.b"],
+            c=params["snr.c"],
+            d=params["snr.d"],
+            n2=params["snr.n2"],
+            n1=params["snr.n1"],
+            n0=params["snr.n0"],
+            tau_ampa=params["snr.tau_ampa"],
+            tau_gaba=params["snr.tau_gaba"],
+            E_ampa=params["snr.E_ampa"],
+            E_gaba=params["snr.E_gaba"],
+            noise=0,
+            tau_power=10,
+            snr_target=4,
+            rate_noise=100,
+        ),
         name="snr",
     )
-    snr.a = params["snr.a"]
-    snr.b = params["snr.b"]
-    snr.c = params["snr.c"]
-    snr.d = params["snr.d"]
-    snr.n2 = params["snr.n2"]
-    snr.n1 = params["snr.n1"]
-    snr.n0 = params["snr.n0"]
-    snr.tau_ampa = params["snr.tau_ampa"]
-    snr.tau_gaba = params["snr.tau_gaba"]
-    snr.E_ampa = params["snr.E_ampa"]
-    snr.E_gaba = params["snr.E_gaba"]
     gpe = Population(
         params["gpe.size"],
-        Izhikevich2003_flexible_noisy_I,
+        Izhikevich2003NoisyBaseSNR(
+            a=params["gpe.a"],
+            b=params["gpe.b"],
+            c=params["gpe.c"],
+            d=params["gpe.d"],
+            n2=params["gpe.n2"],
+            n1=params["gpe.n1"],
+            n0=params["gpe.n0"],
+            tau_ampa=params["gpe.tau_ampa"],
+            tau_gaba=params["gpe.tau_gaba"],
+            E_ampa=params["gpe.E_ampa"],
+            E_gaba=params["gpe.E_gaba"],
+            noise=0,
+            tau_power=10,
+            snr_target=4,
+            rate_noise=100,
+        ),
         name="gpe",
     )
-    gpe.a = params["gpe.a"]
-    gpe.b = params["gpe.b"]
-    gpe.c = params["gpe.c"]
-    gpe.d = params["gpe.d"]
-    gpe.n2 = params["gpe.n2"]
-    gpe.n1 = params["gpe.n1"]
-    gpe.n0 = params["gpe.n0"]
-    gpe.tau_ampa = params["gpe.tau_ampa"]
-    gpe.tau_gaba = params["gpe.tau_gaba"]
-    gpe.E_ampa = params["gpe.E_ampa"]
-    gpe.E_gaba = params["gpe.E_gaba"]
     thal = Population(
         params["thal.size"],
-        Izhikevich2003_flexible_noisy_I,
+        Izhikevich2003NoisyBaseSNR(
+            a=params["thal.a"],
+            b=params["thal.b"],
+            c=params["thal.c"],
+            d=params["thal.d"],
+            n2=params["thal.n2"],
+            n1=params["thal.n1"],
+            n0=params["thal.n0"],
+            tau_ampa=params["thal.tau_ampa"],
+            tau_gaba=params["thal.tau_gaba"],
+            E_ampa=params["thal.E_ampa"],
+            E_gaba=params["thal.E_gaba"],
+            noise=0,
+            tau_power=10,
+            snr_target=4,
+            rate_noise=100,
+        ),
         name="thal",
     )
-    thal.a = params["thal.a"]
-    thal.b = params["thal.b"]
-    thal.c = params["thal.c"]
-    thal.d = params["thal.d"]
-    thal.n2 = params["thal.n2"]
-    thal.n1 = params["thal.n1"]
-    thal.n0 = params["thal.n0"]
-    thal.tau_ampa = params["thal.tau_ampa"]
-    thal.tau_gaba = params["thal.tau_gaba"]
-    thal.E_ampa = params["thal.E_ampa"]
-    thal.E_gaba = params["thal.E_gaba"]
 
     ######   PROJECTIONS   ######
     ### cortex go output
@@ -109,7 +143,7 @@ def BGM_part_function(params):
         name="cor_exc__stn",
     )
     cor_exc__stn.connect_fixed_probability(
-        probability=params["cor_exc__stn.probability"], weights=1
+        probability=params["cor_exc__stn.probability"], weights=0
     )
 
     cor_inh__stn = Projection(
@@ -119,7 +153,7 @@ def BGM_part_function(params):
         name="cor_inh__stn",
     )
     cor_inh__stn.connect_fixed_probability(
-        probability=params["cor_inh__stn.probability"], weights=1
+        probability=params["cor_inh__stn.probability"], weights=0
     )
 
     ### stn output
@@ -130,7 +164,7 @@ def BGM_part_function(params):
         name="stn__snr",
     )
     stn__snr.connect_fixed_probability(
-        probability=params["stn__snr.probability"], weights=1
+        probability=params["stn__snr.probability"], weights=0
     )
     stn__gpe = Projection(
         pre=stn,
@@ -139,7 +173,7 @@ def BGM_part_function(params):
         name="stn__gpe",
     )
     stn__gpe.connect_fixed_probability(
-        probability=params["stn__gpe.probability"], weights=1
+        probability=params["stn__gpe.probability"], weights=0
     )
     ### gpe proto output
     if params["general.more_complex"]:
@@ -150,7 +184,7 @@ def BGM_part_function(params):
         #     name="gpe__stn",
         # )
         # gpe__stn.connect_fixed_probability(
-        #     probability=params["gpe__stn.probability"], weights=1
+        #     probability=params["gpe__stn.probability"], weights=0
         # )
         gpe__snr = Projection(
             pre=gpe,
@@ -159,7 +193,7 @@ def BGM_part_function(params):
             name="gpe__snr",
         )
         gpe__snr.connect_fixed_probability(
-            probability=params["gpe__snr.probability"], weights=1
+            probability=params["gpe__snr.probability"], weights=0
         )
     ### snr output
     snr__thal = Projection(
@@ -169,7 +203,7 @@ def BGM_part_function(params):
         name="snr__thal",
     )
     snr__thal.connect_fixed_probability(
-        probability=params["snr__thal.probability"], weights=1
+        probability=params["snr__thal.probability"], weights=0
     )
     if params["general.more_complex"]:
         snr__snr = Projection(
@@ -179,7 +213,7 @@ def BGM_part_function(params):
             name="snr__snr",
         )
         snr__snr.connect_fixed_probability(
-            probability=params["snr__snr.probability"], weights=1
+            probability=params["snr__snr.probability"], weights=0
         )
 
 
@@ -191,9 +225,11 @@ if __name__ == "__main__":
     params["cor_exc.size"] = 100
     params["cor_exc.tau_up"] = 10
     params["cor_exc.tau_down"] = 30
+    params["cor_exc.rates"] = 15
     params["cor_inh.size"] = 100
     params["cor_inh.tau_up"] = 10
     params["cor_inh.tau_down"] = 30
+    params["cor_inh.rates"] = 30
     ### BG Populations
     params["snr.size"] = 100
     params["snr.a"] = 0.005
@@ -255,7 +291,7 @@ if __name__ == "__main__":
     params["snr__snr.probability"] = 0.6
 
     ### create model which should be configurated
-    ### if you create or compile has no effect
+    ### create or compile have no effect
     setup(dt=0.1)
     model = generate_model(
         model_creation_function=BGM_part_function,
@@ -265,8 +301,59 @@ if __name__ == "__main__":
         do_create=False,
     )
 
+    # model.create()
+    # mon = CompNeuroMonitors(
+    #     {
+    #         pop_name: [
+    #             "I_noise",
+    #             "I_signal",
+    #             "I",
+    #             "power_I_signal",
+    #             "spike",
+    #         ]
+    #         for pop_name in ["stn"]
+    #     }
+    # )
+    # mon.start()
+
+    # simulate(500)
+    # get_population("stn").I_app = 10
+    # simulate(500)
+
+    # recordings = mon.get_recordings()
+    # recording_times = mon.get_recording_times()
+
+    # PlotRecordings(
+    #     recordings=recordings,
+    #     recording_times=recording_times,
+    #     chunk=0,
+    #     shape=(5, 1),
+    #     plan={
+    #         "position": list(range(1, 5 + 1)),
+    #         "compartment": ["stn"] * 5,
+    #         "variable": [
+    #             "I_noise",
+    #             "I_signal",
+    #             "I",
+    #             "power_I_signal",
+    #             "spike",
+    #         ],
+    #         "format": [
+    #             "line",
+    #             "line",
+    #             "line",
+    #             "line",
+    #             "hybrid",
+    #         ],
+    #     },
+    #     figname="model_recordings_noise.png",
+    #     # time_lim=(495, 505),
+    # )
+    # quit()
+
     ### model configurator should get target resting-state firing rates for the
     ### model populations one wants to configure and their afferents as input
+    ### TODO allow for target range
     target_firing_rate_dict = {
         "cor_exc": 15,
         "cor_inh": 30,
@@ -278,66 +365,65 @@ if __name__ == "__main__":
     do_not_config_list = ["cor_exc", "cor_inh"]
 
     ### initialize model_configurator
-    model_conf = model_configurator(
-        model,
-        target_firing_rate_dict,
+    model_conf = ModelConfigurator(
+        model=model,
+        target_firing_rate_dict=target_firing_rate_dict,
+        max_psp=0.7,
         do_not_config_list=do_not_config_list,
         print_guide=True,
         I_app_variable="I_app",
-        interpolation_grid_points=36,
+        cache=True,
+        clear_cache=False,
+        log_file="model_configurator.log",
     )
 
-    ### obtain the maximum synaptic loads for the populations and the
-    ### maximum weights of their afferent projections
-    model_conf.get_max_syn(clear=False)
-
-    ### now either set weights directly
-    ### or define synaptic load of populations
-    synaptic_load_dict = {
-        "stn": [0.3, 0.3],
-        "gpe": [0.4],
-        "snr": [0.5, 0.3],
-        "thal": [0.1],
-    }
-    ### and define the contributions of their afferent projections
-    synaptic_contribution_dict = {"snr": {"gaba": {"gpe__snr": 0.7, "snr__snr": 0.3}}}
-    synaptic_contribution_dict = model_conf.set_syn_load(
-        synaptic_load_dict,
-        synaptic_contribution_dict,
+    ### set syn load
+    model_conf.set_syn_load(
+        syn_load_dict={
+            "stn": {"ampa": 1.0, "gaba": 1.0},
+            "snr": {"ampa": 1.0, "gaba": 1.0},
+            "gpe": {"ampa": 1.0},
+            "thal": {"gaba": 1.0},
+        },
+        syn_contribution_dict={
+            "stn": {"ampa": {"cor_exc__stn": 1.0}, "gaba": {"cor_inh__stn": 1.0}},
+            "snr": {
+                "ampa": {"stn__snr": 1.0},
+                "gaba": {"gpe__snr": 1.0, "snr__snr": 1.0},
+            },
+            "gpe": {"ampa": {"stn__gpe": 1.0}},
+            "thal": {"gaba": {"snr__thal": 1.0}},
+        },
     )
+    print(model_conf._weight_dicts.weight_dict)
+    # ### or set weights
+    # model_conf.set_weights(
+    #     weight_dict={
+    #         "cor_exc__stn": 0.14017251511767667,
+    #         "cor_inh__stn": 0.3185158233680059,
+    #         "stn__snr": 0.1411802181516728,
+    #         "gpe__snr": 0.3210042713120005,
+    #         "snr__snr": 0.3210042713120005,
+    #         "stn__gpe": 0.1411802181516728,
+    #         "snr__thal": 1.169558816450918,
+    #     }
+    # )
 
-    ### after setting the weights i.e. the synaptic load/contributions
-    ### get the baseline currents
-    I_base_dict = model_conf.set_base(I_base_variable="base_mean")
-    print("user I_base:")
+    I_base_dict = model_conf.get_base()
+    print("I_base:")
     print(I_base_dict)
-    print("model cor_stn_weight:")
-    print(get_projection("cor_exc__stn").w)
 
-    for pop_name in model.populations:
-        if "cor" in pop_name:
-            continue
-        get_population(pop_name).rate_base_noise = 10
-        get_population(pop_name).base_noise = max(
-            [
-                model_conf.I_app_max_dict[pop_name] * 0.02,
-                abs(get_population(pop_name).base_mean[0]) * 0.02,
-            ]
-        )
-        print(f"pop_name: {pop_name}")
-        print(f"base_mean: {get_population(pop_name).base_mean[0]}")
-        print(f"base_noise: {get_population(pop_name).base_noise[0]}")
-        print(f"rate_base_noise: {get_population(pop_name).rate_base_noise[0]}\n")
+    model_conf.set_base()
 
     ### do a test simulation
     mon = Monitors(
         {
-            "pop;cor_exc": ["spike"],
-            "pop;cor_inh": ["spike"],
-            "pop;stn": ["spike", "g_ampa", "g_gaba"],
-            "pop;gpe": ["spike", "g_ampa", "g_gaba"],
-            "pop;snr": ["spike", "g_ampa", "g_gaba"],
-            "pop;thal": ["spike", "g_ampa", "g_gaba"],
+            "cor_exc": ["spike"],
+            "cor_inh": ["spike"],
+            "stn": ["spike", "g_ampa", "g_gaba"],
+            "gpe": ["spike", "g_ampa", "g_gaba"],
+            "snr": ["spike", "g_ampa", "g_gaba"],
+            "thal": ["spike", "g_ampa", "g_gaba"],
         }
     )
     get_population("cor_exc").rates = target_firing_rate_dict["cor_exc"]
@@ -408,8 +494,3 @@ if __name__ == "__main__":
             "15;thal;g_gaba;line",
         ],
     )
-
-    # TODO
-    # it seems that there are problems with snr
-    # it even gets wotse if I deactivate the lateral inhib
-    # maybe check which g_ampa, g_gaba are expected based on weights and which actually are present

@@ -67,6 +67,10 @@
     options:
         heading_level: 3
         show_root_full_path: false
+::: CompNeuroPy.neuron_models.final_models.izhikevich_2003_like_nm.Izhikevich2003NoisyBaseSNR
+    options:
+        heading_level: 3
+        show_root_full_path: false
 
 ## Izhikevich (2007)-like Neurons
 ::: CompNeuroPy.neuron_models.final_models.izhikevich_2007_like_nm.Izhikevich2007
@@ -106,6 +110,10 @@
         heading_level: 3
         show_root_full_path: false
 ::: CompNeuroPy.neuron_models.final_models.izhikevich_2007_like_nm.Izhikevich2007NoisyAmpaOscillating
+    options:
+        heading_level: 3
+        show_root_full_path: false
+::: CompNeuroPy.neuron_models.final_models.izhikevich_2007_like_nm.IzhikevichGolomb
     options:
         heading_level: 3
         show_root_full_path: false

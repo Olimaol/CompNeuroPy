@@ -618,10 +618,6 @@ class CompNeuroMonitors:
         return compartment_type, compartment_name, period
 
 
-### old name for backwards compatibility, TODO: remove in future
-Monitors = CompNeuroMonitors
-
-
 class RecordingTimes:
     def __init__(self, recording_times_list):
         """
@@ -696,7 +692,7 @@ class RecordingTimes:
         """
         return self.recording_times_list
 
-    def nr_periods(self, chunk=None, compartment=None):
+    def nbr_periods(self, chunk=None, compartment=None):
         """
         Get the number of recording periods (start-pause) of a specified chunk/model
         compartment.
@@ -716,6 +712,8 @@ class RecordingTimes:
         chunk = self._check_chunk(chunk)
         compartment = self.__check_compartment__(compartment, chunk)
         return self._get_nr_periods(chunk, compartment)
+
+    nr_periods = nbr_periods
 
     def combine_periods(
         self,
@@ -752,9 +750,6 @@ class RecordingTimes:
         time_step = recordings[0]["dt"]
         time_list = []
 
-        ### get data arr
-        data_arr = recordings[chunk][recording_data_str]
-
         ### get time arr
         for period in range(nr_periods):
             start_time, end_time = self.time_lims(
@@ -766,9 +761,16 @@ class RecordingTimes:
             time_list.append(times)
         time_arr = np.concatenate(time_list, 0)
 
+        ### get data arr
+        try:
+            data_arr = recordings[chunk][recording_data_str]
+        except:
+            ### create an nan array with the same length as time_arr
+            data_arr = np.full(time_arr.shape, np.nan)
+
         ### fill gaps with nan or interpolate
         if fill == "nan":
-            time_arr, data_arr = af.time_data_add_nan(
+            time_arr, data_arr = af.time_data_fill_gaps(
                 time_arr,
                 data_arr,
                 fill_time_step=period_time,
@@ -799,7 +801,7 @@ class RecordingTimes:
         considered and filled with nan values.
 
         !!! warning
-            If you use mode="consecutive": Missing recordings at the end of chunks
+            If you use mode="consecutive": Missing recordings AT THE END OF chunks
             (simulated but not recorded) are not considered, this leads to times which
             differ from the original simulation times (these time periods without
             recording are simply ignored)!
@@ -891,7 +893,7 @@ class RecordingTimes:
         ### check if there are gaps in the time array
         ### fill them with the corersponding times and
         ### the data array with nan values
-        time_arr, data_arr = af.time_data_add_nan(
+        time_arr, data_arr = af.time_data_fill_gaps(
             time_arr,
             data_arr,
             fill_time_step=period_time,

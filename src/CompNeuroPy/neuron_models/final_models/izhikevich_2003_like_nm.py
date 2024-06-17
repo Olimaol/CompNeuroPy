@@ -458,6 +458,151 @@ class Izhikevich2003NoisyAmpaOscillating(Neuron):
         self._instantiated.append(True)
 
 
+class Izhikevich2003NoisyBaseSNR(Neuron):
+    """
+    TEMPLATE
+
+    [Izhikevich (2003)](https://doi.org/10.1109/TNN.2003.820440)-like neuron model with
+    additional conductance based synapses for AMPA and GABA currents and a noisy baseline
+    current defined by the signal-to-noise ratio (SNR).
+
+    Parameters:
+        a (float, optional):
+            Time constant of the recovery variable u.
+        b (float, optional):
+            Sensitivity of the recovery variable u to the membrane potential v.
+        c (float, optional):
+            After-spike reset value of the membrane potential v.
+        d (float, optional):
+            After-spike change of the recovery variable u.
+        n2 (float, optional):
+            Factor of the quadratic equation of the membrane potential v.
+        n1 (float, optional):
+            Factor of the quadratic equation of the membrane potential v.
+        n0 (float, optional):
+            Factor of the quadratic equation of the membrane potential v.
+        tau_ampa (float, optional):
+            Time constant of the AMPA conductance.
+        tau_gaba (float, optional):
+            Time constant of the GABA conductance.
+        E_ampa (float, optional):
+            Reversal potential of the AMPA conductance.
+        E_gaba (float, optional):
+            Reversal potential of the GABA conductance.
+        I_app (float, optional):
+            External applied current.
+        I_base (float, optional):
+            Baseline current.
+        noise (float, optional):
+            Can be set to 0 to disable the noise and 1 to enable it. (For other values
+            the noise is scaled accordingly but the target snr is only reached for 1.)
+        tau_power (float, optional):
+            Time constant of the power calculation.
+        snr_target (float, optional):
+            Target signal-to-noise ratio (SNR).
+        rate_noise (float, optional):
+            Rate of the Poisson distributed noise in the baseline current, i.e. how
+            often the baseline current is changed randomly.
+
+    Variables to record:
+        - g_ampa
+        - g_gaba
+        - power_I_signal
+        - I_noise
+        - I_signal
+        - I
+        - v
+        - u
+        - r
+    """
+
+    # For reporting
+    _instantiated = []
+
+    def __init__(
+        self,
+        a: float = 0,
+        b: float = 0,
+        c: float = 0,
+        d: float = 0,
+        n2: float = 0,
+        n1: float = 0,
+        n0: float = 0,
+        tau_ampa: float = 1,
+        tau_gaba: float = 1,
+        E_ampa: float = 0,
+        E_gaba: float = 0,
+        I_app: float = 0,
+        I_base: float = 0,
+        noise: float = 1,
+        tau_power: float = 1,
+        snr_target: float = 1,
+        rate_noise: float = 0,
+    ):
+        # Create the arguments
+        parameters = f"""
+            ### izhikevich parameters
+            a               = {a} : population
+            b               = {b} : population
+            c               = {c} : population
+            d               = {d} : population
+            n2              = {n2} : population
+            n1              = {n1} : population
+            n0              = {n0} : population
+            ### synaptic currents
+            tau_ampa        = {tau_ampa} : population
+            tau_gaba        = {tau_gaba} : population
+            E_ampa          = {E_ampa} : population
+            E_gaba          = {E_gaba} : population
+            ### external currents
+            I_app           = {I_app}
+            I_base          = {I_base}
+            ### noise
+            noise           = {noise}
+            tau_power       = {tau_power}
+            snr_target      = {snr_target}
+            rate_noise      = {rate_noise}
+        """
+
+        super().__init__(
+            parameters=parameters,
+            equations="""
+                ### input current
+                I_noise  = noise*ite(Uniform(0, 1) * 1000.0 / dt > rate_noise, I_noise, Normal(0, 1))
+                I_signal = I_base - neg(g_ampa*(v - E_ampa)) - pos(g_gaba*(v - E_gaba)) + I_app
+                ### scale noise to reach target snr, scale factor is:
+                ### scaling_factor = sqrt((power_I_signal/power_I_noise)/snr_target)
+                ### since power of N(0,1) is 1, we can scale the noise by:
+                ### scaling_factor = sqrt(power_I_signal/snr_target)
+                I = I_signal + I_noise * sqrt(power_I_signal/snr_target)
+                ### synaptic conductances
+                tau_ampa * dg_ampa/dt = -g_ampa
+                tau_gaba * dg_gaba/dt = -g_gaba
+                ### power of signal
+                tau_power * dpower_I_signal/dt     = I_signal**2 - power_I_signal
+                ### membrane potential and recovery variable
+                dv/dt       = n2 * v * v + n1 * v + n0 - u + I : min=-100, max=0
+                du/dt       = a * (b * v - u)
+            """,
+            spike="""
+                v >= 0
+            """,
+            reset="""
+                v = c
+                u = u + d
+            """,
+            name="Izhikevich2003_noisy_I_snr",
+            description="""
+                Neuron model from Izhikevich (2003). With additional conductance based
+                synapses for AMPA and GABA currents and a noisy baseline current with
+                a specified signal-to-noise ratio (SNR).
+            """,
+        )
+
+        # For reporting
+        self._instantiated.append(True)
+
+
 class Izhikevich2003NoisyBase(Neuron):
     """
     TEMPLATE

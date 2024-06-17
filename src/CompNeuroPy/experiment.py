@@ -1,6 +1,6 @@
 from ANNarchy import reset
 from CompNeuroPy.monitors import RecordingTimes
-from CompNeuroPy import CompNeuroMonitors
+from CompNeuroPy.monitors import CompNeuroMonitors
 from CompNeuroPy import model_functions as mf
 from copy import deepcopy
 
@@ -20,7 +20,7 @@ class CompNeuroExp:
         data (dict):
             dict for storing optional data
 
-    Examples:
+    Example:
         ```python
         from CompNeuroPy import CompNeuroExp
         from ANNarchy import simulate
@@ -220,7 +220,3 @@ class CompNeuroExp:
                 the experiment by calling the results function of the CompNeuroExp class.
             """
         )
-
-
-### old name for backward compatibility, TODO remove
-Experiment = CompNeuroExp

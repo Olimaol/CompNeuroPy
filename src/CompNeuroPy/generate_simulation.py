@@ -1,6 +1,6 @@
 from ANNarchy import get_time
 from CompNeuroPy import extra_functions as ef
-from CompNeuroPy import CompNeuroMonitors
+from CompNeuroPy.monitors import CompNeuroMonitors
 import numpy as np
 from typing import Callable
 
@@ -247,10 +247,6 @@ class CompNeuroSim:
         )
 
         return simulation_info_obj
-
-
-### old name for backward compatibility, TODO: remove
-generate_simulation = CompNeuroSim
 
 
 class SimInfo:

@@ -7,6 +7,7 @@ from functools import wraps
 from joblib import Parallel, delayed
 import inspect
 import subprocess
+import textwrap
 
 
 def clear_dir(path):
@@ -93,7 +94,7 @@ def save_variables(variable_list: list, name_list: list, path: str | list = "./"
             save path for all variables, or save path for each variable of the
             variable_list. Default: "./"
 
-    Examples:
+    Example:
         ```python
         import numpy as np
         from CompNeuroPy import save_variables, load_variables
@@ -146,7 +147,7 @@ def load_variables(name_list: list, path: str | list = "./"):
             dictionary with the loaded variables, keys are the names of the
             files, values are the loaded variables
 
-    Examples:
+    Example:
         ```python
         import numpy as np
         from CompNeuroPy import save_variables, load_variables
@@ -292,7 +293,7 @@ def create_data_raw_folder(
         **kwargs (Any, optional):
             Global variables of the caller script.
 
-    Examples:
+    Example:
         ```python
         from CompNeuroPy import create_data_raw_folder
 
@@ -507,3 +508,120 @@ def create_data_raw_folder(
             f.write("# CompNeuroPy was installed locally with commit:\n")
             compneuropy_commit = compneuropy_git_log[0].replace("\n", "")
             f.write(f"# {compneuropy_commit}")
+
+
+def _find_folder_with_prefix(base_path, prefix):
+    """
+    Find a folder with a specified prefix in the given base path.
+
+    Args:
+        base_path (str):
+            Path to the base directory to search in.
+        prefix (str):
+            Prefix of the folder to find.
+
+    Returns:
+        str or None:
+            Name of the folder with the specified prefix if found, otherwise None.
+    """
+    # List all items (files and directories) in the base_path
+    items = os.listdir(base_path)
+
+    # Iterate through the items to find a folder with the specified prefix
+    for item in items:
+        item_path = os.path.join(base_path, item)
+
+        # Check if the item is a directory and its name starts with the given prefix
+        if os.path.isdir(item_path) and item.startswith(prefix):
+            return item
+
+    # If no folder with the specified prefix is found, return None
+    return None
+
+
+class Logger:
+    """
+    Logger singleton class to log the progress of the model configuration. Has to be
+    initialized with the path to the log file once."""
+
+    _instance = None
+    _log_file: str | None
+    _call_stack = ""
+
+    def __new__(cls, log_file: str | None = None):
+        """
+        Args:
+            log_file (str):
+                Path to the log file
+        """
+        if cls._instance is None:
+            cls._instance = super(Logger, cls).__new__(cls)
+            cls._log_file = log_file
+            if log_file is not None:
+                with open(log_file, "w") as f:
+                    print("Logger file:", file=f)
+        return cls._instance
+
+    def log(self, txt):
+        """
+        Log the given text to the log file. Only if the log file was given during
+        the first initialization.
+
+        Args:
+            txt (str):
+                Text to be logged
+        """
+        if self._log_file is None:
+            return
+
+        _, call_stack = self._trace_calls()
+
+        if call_stack == self._call_stack:
+            txt = f"{textwrap.indent(str(txt), '    ')}"
+        else:
+            txt = f"\n[{call_stack}]:\n{textwrap.indent(str(txt), '    ')}"
+
+        self._call_stack = call_stack
+
+        with open(self._log_file, "a") as f:
+            print(txt, file=f)
+
+    def _trace_calls(self):
+        # Get the call stack
+        stack = inspect.stack()
+
+        call_stack = []
+        for frame in stack:
+            # Get the function name
+            function_name = frame.function
+            # Check if it's a method of a class by looking for 'self' or 'cls'
+            locals = frame.frame.f_locals
+            if "self" in locals:
+                class_name = locals["self"].__class__.__name__
+                full_name = f"{class_name}.{function_name}"
+            elif "cls" in locals:
+                class_name = locals["cls"].__name__
+                full_name = f"{class_name}.{function_name}"
+            else:
+                # If function_name is '<module>', replace it with the module name
+                if function_name == "<module>":
+                    module_name = frame.frame.f_globals["__name__"]
+                    full_name = f"{module_name}"
+                else:
+                    full_name = function_name
+            call_stack.append(full_name)
+
+        # Remove the first two elements of the call stack, which are the functions of
+        # the Logger class
+        call_stack = call_stack[2:]
+
+        # Get the name of the current function
+        current_function_name = call_stack[0]
+
+        # Reverse the call stack to get the order of the calls
+        call_stack = call_stack[::-1]
+
+        # Convert the call stack to a string
+        call_stack = " -> ".join(call_stack)
+
+        return current_function_name, call_stack

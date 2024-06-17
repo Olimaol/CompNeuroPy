@@ -22,15 +22,18 @@ from deap import cma
 from ANNarchy import Neuron, Population, simulate, setup, get_population
 from sympy import symbols, Symbol, solve, sympify, Eq, lambdify, factor
 from scipy.interpolate import griddata
+from scipy.optimize import brentq
 import re
 from typingchecker import check_types
 import warnings
 import json
 from matplotlib.widgets import Slider
-from matplotlib.gridspec import GridSpec
 from screeninfo import get_monitors
 import cmaes
 import efel
+import time
+import threading
+from matplotlib.animation import FuncAnimation
 
 
 def print_df(df: pd.DataFrame | dict, **kwargs):
@@ -54,7 +57,7 @@ def flatten_list(lst):
     Retuns flattened list
 
     Args:
-        lst (list of lists or mixed: values and lists):
+        lst (list of lists or mixed values and lists):
             List to be flattened
 
     Returns:
@@ -104,7 +107,7 @@ def suppress_stdout():
     """
     Suppresses the print output of a function
 
-    Examples:
+    Example:
         ```python
         with suppress_stdout():
             print("this will not be printed")
@@ -122,7 +125,7 @@ def suppress_stdout():
 def sci(nr):
     """
     Rounds a number to a single decimal.
-    If number is smaller than 0 it is converted to scientific notation with 1 decimal.
+    If number is smaller than 1 it is converted to scientific notation with 1 decimal.
 
     Args:
         nr (float or int):
@@ -142,10 +145,10 @@ def sci(nr):
         >>> sci(177.22)
         '177.2'
     """
-    if af.get_number_of_zero_decimals(nr) == 0:
+    if nr >= 1:
         return str(round(nr, 1))
     else:
-        return f"{nr*10**af.get_number_of_zero_decimals(nr):.1f}e-{af.get_number_of_zero_decimals(nr)}"
+        return f"{nr:.1e}"
 
 
 class Cmap:
@@ -218,10 +221,6 @@ class _DataCl(object):
         except:
             self.__setattr__(__name, _DataCl())
             return super().__getattribute__(__name)
-
-
-### keep old name for compatibility
-data_obj = _DataCl
 
 
 def create_cm(colors, name="my_cmap", N=256, gamma=1.0, vmin=0, vmax=1):
@@ -367,10 +366,6 @@ class _LinearColormapClass(LinearSegmentedColormap):
         return super().__call__(X, alpha, bytes)
 
 
-### keep old name for compatibility
-my_linear_cmap_obj = _LinearColormapClass
-
-
 class DecisionTree:
     """
     Class to create a decision tree.
@@ -469,10 +464,6 @@ class DecisionTree:
             return [path_str + "/" + node.name, prob * node.prob]
 
 
-### keep old name for compatibility
-decision_tree = DecisionTree
-
-
 class DecisionTreeNode:
     """
     Class to create a node in a decision tree.
@@ -534,10 +525,6 @@ class DecisionTreeNode:
                 Path product of the node
         """
         return self.tree._get_path_prod_rec(self)
-
-
-### keep old name for compatibility
-node_cl = DecisionTreeNode
 
 
 def evaluate_expression_with_dict(expression, value_dict):
@@ -682,13 +669,52 @@ class DeapCma:
     """
     Class to run the deap Covariance Matrix Adaptation Evolution Strategy optimization.
 
+    Using the [CMAES](https://deap.readthedocs.io/en/master/api/algo.html#module-deap.cma) algorithm from [deap](https://github.com/deap/deap)
+
+    * Fortin, F. A., De Rainville, F. M., Gardner, M. A. G., Parizeau, M., & Gagné, C. (2012). DEAP: Evolutionary algorithms made easy. The Journal of Machine Learning Research, 13(1), 2171-2175. [pdf](https://www.jmlr.org/papers/volume13/fortin12a/fortin12a.pdf)
+
     Attributes:
         deap_dict (dict):
             Dictionary containing the toolbox, the hall of fame, the statistics, the
             lower and upper bounds, the parameter names, the inverse scaler and the
             strategy.
+
+    Example:
+        For complete example see [here](../examples/deap_cma.md)
+        ```python
+        from CompNeuroPy import DeapCma
+        import numpy as np
+
+
+        ### for DeapCma we need to define the evaluate_function
+        def evaluate_function(population):
+            loss_list = []
+            ### the population is a list of individuals which are lists of parameters
+            for individual in population:
+                loss_of_individual = float(individual[0] + individual[1] + individual[2])
+                loss_list.append((loss_of_individual,))
+            return loss_list
+
+
+        ### define lower bounds of paramters to optimize
+        lb = np.array([0, 0, 0])
+
+        ### define upper bounds of paramters to optimize
+        ub = np.array([10, 10, 10])
+
+        ### create an "minimal" instance of the DeapCma class
+        deap_cma = DeapCma(
+            lower=lb,
+            upper=ub,
+            evaluate_function=evaluate_function,
+        )
+
+        ### run the optimization
+        deap_cma_result = deap_cma.run(max_evals=1000)
+        ```
     """
 
+    @check_types()
     def __init__(
         self,
         lower: np.ndarray,
@@ -696,6 +722,7 @@ class DeapCma:
         evaluate_function: Callable,
         max_evals: None | int = None,
         p0: None | np.ndarray = None,
+        sig0: None | float = None,
         param_names: None | list[str] = None,
         learn_rate_factor: float = 1,
         damping_factor: float = 1,
@@ -703,6 +730,7 @@ class DeapCma:
         plot_file: None | str = "logbook.png",
         cma_params_dict: dict = {},
         source_solutions: list[tuple[np.ndarray, float]] = [],
+        hard_bounds: bool = False,
     ):
         """
 
@@ -720,8 +748,13 @@ class DeapCma:
             p0 (None | np.ndarray, optional):
                 Initial guess for the parameters. By default the mean of lower and upper
                 bounds.
+            sig0 (None | float, optional):
+                Initial guess for the standard deviation of the parameters. It will be
+                scaled by the range of the parameters. By default 0.25, i.e. 25% of the
+                range (for each parameter).
             param_names (None | list[str], optional):
-                Names of the parameters. By default None.
+                Names of the parameters. By default None, i.e. the parameters are named
+                "param0", "param1", ...
             learn_rate_factor (float, optional):
                 Learning rate factor (decrease -> slower). By default 1.
             damping_factor (float, optional):
@@ -736,7 +769,13 @@ class DeapCma:
                 details
             source_solutions (list[tuple[np.ndarray, float]], optional):
                 List of tuples with the parameters and losses of source solutions. These
-                solutions are used to initialize the covariance matrix. By default [].
+                solutions are used to initialize the covariance matrix. Using source
+                solutions ignores the initial guess p0 and sets the cma parameter
+                'cmatrix' (which will also be ignored if given in cma_params_dict). By
+                default [].
+            hard_bounds (bool, optional):
+                Whether or not to use hard bounds (parmeters are clipped to lower and
+                upper bounds). By default False.
         """
         ### store attributes
         self.max_evals = max_evals
@@ -744,6 +783,7 @@ class DeapCma:
         self.upper = upper
         self.evaluate_function = evaluate_function
         self.p0 = p0
+        self.sig0 = sig0
         self.param_names = param_names
         self.learn_rate_factor = learn_rate_factor
         self.damping_factor = damping_factor
@@ -751,6 +791,7 @@ class DeapCma:
         self.plot_file = plot_file
         self.cma_params_dict = cma_params_dict
         self.source_solutions = source_solutions
+        self.hard_bounds = hard_bounds
 
         ### prepare the optimization
         self.deap_dict = self._prepare()
@@ -771,6 +812,7 @@ class DeapCma:
         upper = self.upper
         evaluate_function = self.evaluate_function
         p0 = self.p0
+        sig0 = self.sig0
         param_names = self.param_names
         learn_rate_factor = self.learn_rate_factor
         damping_factor = self.damping_factor
@@ -781,12 +823,18 @@ class DeapCma:
         upper_orig = deepcopy(upper)
         lower_orig = deepcopy(lower)
 
-        def scaler(x):
-            return (x - lower_orig) / (upper_orig - lower_orig)
+        def scaler(x, diff=False):
+            if not diff:
+                return (x - lower_orig) / (upper_orig - lower_orig)
+            else:
+                return x / (upper_orig - lower_orig)
 
         ### create inverse scaler to scale parameters back into original range [lower,upper]
-        def inv_scaler(x):
-            return x * (upper_orig - lower_orig) + lower_orig
+        def inv_scaler(x, diff=False):
+            if not diff:
+                return x * (upper_orig - lower_orig) + lower_orig
+            else:
+                return x * (upper_orig - lower_orig)
 
         ### scale upper and lower bounds
         lower = scaler(lower)
@@ -817,9 +865,22 @@ class DeapCma:
                 gamma=1,
             )
             cma_params_dict["cmatrix"] = cmatrix
+
+            if self.hard_bounds:
+                ### clip centroid to [0,1]
+                centroid = np.clip(centroid, 0, 1)
         else:
-            centroid = (lower + upper) / 2 if isinstance(p0, type(None)) else scaler(p0)
-            sigma = (upper - lower) / 4
+            ### lower + upper / 2 is always 0.5 since lower and upper are scaled
+            centroid = (
+                (lower + upper) / 2
+                if isinstance(p0, type(None))
+                else (
+                    scaler(np.clip(p0, lower, upper))
+                    if self.hard_bounds
+                    else scaler(p0)
+                )
+            )
+            sigma = 0.25 if isinstance(sig0, type(None)) else sig0
 
         ### create the strategy
         strategy = cma.Strategy(
@@ -827,6 +888,11 @@ class DeapCma:
             sigma=sigma,
             **cma_params_dict,
         )
+
+        if verbose:
+            print(
+                f"Starting optimization with:\ncentroid: {inv_scaler(strategy.centroid)}, (scaled: {strategy.centroid})\nsigma: {inv_scaler(strategy.sigma,diff=True)}, (scaled: {strategy.sigma})"
+            )
 
         ### slow down the learning rate and increase the damping
         strategy.ccov1 *= learn_rate_factor
@@ -868,6 +934,7 @@ class DeapCma:
             "param_names": param_names,
             "inv_scaler": inv_scaler,
             "strategy": strategy,
+            "hard_bounds": self.hard_bounds,
         }
 
     def run(
@@ -892,8 +959,10 @@ class DeapCma:
 
         Returns:
             best (dict):
-                Dictionary containing the best parameters, the logbook, the last population
-                of individuals and the best fitness.
+                Dictionary containing the best parameters (as key and value pairs),
+                the logbook of the optimization (key = 'logbook'), the last population
+                of individuals (key = 'deap_pop') and the best fitness (key =
+                'best_fitness').
         """
 
         ### get attributes
@@ -981,13 +1050,17 @@ class DeapCma:
         stats = deap_dict["stats"]
         halloffame = deap_dict["hof"]
         strategy = deap_dict["strategy"]
+        hard_bounds = deap_dict["hard_bounds"]
 
         ### init logbook
         logbook = tools.Logbook()
         logbook.header = ["gen", "nevals"] + (stats.fields if stats else [])
 
         ### define progress bar
-        progress_bar = tqdm(range(ngen), total=ngen, unit="gen")
+        if verbose:
+            progress_bar = range(ngen)
+        else:
+            progress_bar = tqdm(range(ngen), total=ngen, unit="gen")
         early_stop = False
 
         ### loop over generations
@@ -996,9 +1069,10 @@ class DeapCma:
             population = toolbox.generate()
             ### clip individuals of population to variable bounds
             ### TODO only if bounds are hard
-            for ind in population:
-                for idx, val in enumerate(ind):
-                    ind[idx] = np.clip(val, lower[idx], upper[idx])
+            if hard_bounds:
+                for ind in population:
+                    for idx, val in enumerate(ind):
+                        ind[idx] = np.clip(val, lower[idx], upper[idx])
             ### Evaluate the individuals (here whole population at once)
             ### scale parameters back into original range [lower,upper]
             population_inv_scaled = [inv_scaler(ind) for ind in deepcopy(population)]
@@ -1028,12 +1102,23 @@ class DeapCma:
             record = stats.compile(population) if stats is not None else {}
             logbook.record(gen=gen, nevals=len(population), **record)
             if verbose:
+                ### print logbook
                 print(logbook.stream)
+                ### print evaluated individuals and their fitnesses
+                print_dict = {
+                    f"ind_{idx}": list(ind)
+                    for idx, ind in enumerate(deepcopy(population_inv_scaled))
+                }
+                for idx, key in enumerate(print_dict):
+                    print_dict[key].append(fitnesses[idx][0])
+                print_df(print_dict)
+                print("")
 
             ### update progress bar with current best loss
-            progress_bar.set_postfix_str(
-                f"best loss: {halloffame[0].fitness.values[0]:.5f}"
-            )
+            if not verbose:
+                progress_bar.set_postfix_str(
+                    f"best loss: {halloffame[0].fitness.values[0]:.5f}"
+                )
         if early_stop and verbose:
             print("Stopping because convergence is reached.")
 
@@ -1059,9 +1144,10 @@ class VClampParamSearch:
         self,
         neuron_model: Neuron,
         equations: str = """
-        C*dv/dt = k*(v - v_r)*(v - v_t) - u
+        C*dv/dt = k*(v - v_r)*(v - v_t) - u + I
         du/dt = a*(b*(v - v_r) - u)
         """,
+        external_current_var: str = "I",
         bounds: dict[str, tuple[float, float]] = {
             "C": (0.1, 100),
             "v_r": (-90, -40),
@@ -1089,9 +1175,14 @@ class VClampParamSearch:
             equations (str, optional):
                 The equations whose parameters should be obtained. Default: Izhikevich
                 2007 neuron model
+            external_current_var (str, optional):
+                The name of the variable in the neuron model which is used as the
+                external current. Has to be used in the neuron model and the given
+                equations Default: "I"
             bounds (dict, optional):
-                The bounds for the parameters. For each parameter a bound should be
-                given! Default: Izhikevich 2007 neuron model
+                The bounds for the parameters. For each parameter of the equation a
+                bound should be given (except for the external current variable)!
+                Default: Izhikevich 2007 neuron model
             p0 (dict, optional):
                 The initial guess for the parameters. Dict keys should be the same as
                 the keys of bounds. The values can be either a single number for each
@@ -1130,6 +1221,7 @@ class VClampParamSearch:
         self._verbose_extreme = False
         ### store the given neuron model and a voltage clamp version of it
         self.neuron_model = neuron_model
+        self.external_current_var = external_current_var
         self._neuron_model = deepcopy(neuron_model)
         self._neuron_model_clamp = self._get_neuron_model_clamp()
 
@@ -1159,9 +1251,9 @@ class VClampParamSearch:
         if self.do_plot:
             sf.create_dir("/".join(plot_file.split("/")[:-1]))
 
-        ### create the functions for v_clamp_inst and v_clamp_hold using the given
+        ### create the functions for I_clamp_inst and I_clamp_hold using the given
         ### izhikevich equations
-        self._f_inst, self._f_hold, self._f_variables = self._create_v_clamp_functions()
+        self._f_inst, self._f_hold, self._f_variables = self._create_I_clamp_functions()
 
         ### create the voltage step arrays
         self._v_0_arr, self._v_step_arr = self._create_voltage_step_arrays()
@@ -1172,25 +1264,25 @@ class VClampParamSearch:
         mf.cnp_clear()
         self._model_normal, self._model_clamp = self._create_model()
 
-        ### perform resting state and voltage step simulations to obtain v_clamp_inst,
-        ### v_clamp_hold and v_rest
-        self._v_clamp_inst_arr = None
-        self._v_clamp_hold_arr = None
+        ### perform resting state and voltage step simulations to obtain I_clamp_inst,
+        ### I_clamp_hold and v_rest
+        self._I_clamp_inst_arr = None
+        self._I_clamp_hold_arr = None
         if self.verbose:
             print("Performing simulations...")
         (
             self._v_rest,
-            self._v_clamp_inst_arr,
-            self._v_clamp_hold_arr,
+            self._I_clamp_inst_arr,
+            self._I_clamp_hold_arr,
             self._v_step_unique,
-            self._v_clamp_hold_unique,
+            self._I_clamp_hold_unique,
         ) = self._simulations()
 
-        ### tune the free paramters of the functions for v_clamp_inst and v_clamp_hold
+        ### tune the free paramters of the functions for I_clamp_inst and I_clamp_hold
         ### to fit the data
         if self.verbose:
             print("Tuning parameters...")
-        self._p_opt = self._tune_v_clamp_functions()
+        self._p_opt = self._tune_I_clamp_functions()
         self.p_opt = {
             param_name: self._p_opt.get(param_name, None)
             for param_name in self.bounds.keys()
@@ -1217,7 +1309,8 @@ class VClampParamSearch:
         )
 
         ### create a neuron model with the tuned parameters and the given equations
-        ### then run the simulations again with this neuron model
+        ### then run the simulations again with this neuron model to do the plots
+        ### with the tuned parameters
         if self.verbose:
             print("Running simulations with tuned parameters...")
         mf.cnp_clear()
@@ -1261,24 +1354,28 @@ class VClampParamSearch:
                 the neuron model with the tuned parameters and the given equations
         """
         ### create the neuron with the tuned parameters, if a parameter is not tuned
-        ### use the mid of the bounds (these parameters should not affect v_clamp_inst
-        ### and v_clamp_hold)
+        ### use the mid of the bounds (these parameters should not affect I_clamp_inst
+        ### and I_clamp_hold)
         parameters = "\n".join(
             [
                 f"{key} = {self._p_opt.get(key,sum(self.bounds[key])/2)}"
                 for key in self.bounds.keys()
             ]
         )
+        ### also add the external current variable
+        parameters = parameters + "\n" + f"{self.external_current_var} = 0"
         neuron_mondel = Neuron(
             parameters=parameters,
             equations=self.equations + "\nr=0",
         )
+        if self.verbose:
+            print(f"Neuron model with tuned parameters:\n{neuron_mondel}")
 
         return neuron_mondel
 
-    def _tune_v_clamp_functions(self):
+    def _tune_I_clamp_functions(self):
         """
-        Tune the free paramters of the functions for v_clamp_inst and v_clamp_hold
+        Tune the free paramters of the functions for I_clamp_inst and I_clamp_hold
         to fit the data.
         """
         ### get the names of the free parameters which will be tuned
@@ -1289,7 +1386,7 @@ class VClampParamSearch:
             sub_var_names_list.append(str(var))
 
         ### target array for the error function below
-        target_arr = np.concatenate([self._v_clamp_inst_arr, self._v_clamp_hold_unique])
+        target_arr = np.concatenate([self._I_clamp_inst_arr, self._I_clamp_hold_unique])
 
         ### create a function for the error
         def error_function(x):
@@ -1389,16 +1486,16 @@ class VClampParamSearch:
 
         return result_dict
 
-    def _create_v_clamp_functions(self):
+    def _create_I_clamp_functions(self):
         """
-        Create the functions for v_clamp_inst and v_clamp_hold using the given
+        Create the functions for I_clamp_inst and I_clamp_hold using the given
         izhikevich equations.
 
         Returns:
             f_inst (Callable):
-                Function for v_clamp_inst
+                Function for I_clamp_inst
             f_hold (Callable):
-                Function for v_clamp_hold
+                Function for I_clamp_hold
             variables (list):
                 List of variables used for the functions
         """
@@ -1415,8 +1512,7 @@ class VClampParamSearch:
         ### values
         variables_sympy_dict = {key: Symbol(key) for key in variables_name_list}
 
-        ### also create sympy symbols for v_clamp, v_0 and v_step
-        variables_sympy_dict["v_clamp"] = Symbol("v_clamp")
+        ### also create sympy symbols for v_0 and v_step
         variables_sympy_dict["v_0"] = Symbol("v_0")
         variables_sympy_dict["v_step"] = Symbol("v_step")
 
@@ -1427,11 +1523,11 @@ class VClampParamSearch:
         for line_idx, line in enumerate(eq_line_list):
             left_side = line.split("=")[0]
             right_side = line.split("=")[1]
-            ### check if line contains dv/dt, replace it with v_clamp and add v_clamp
-            ### to variables_to_solve_for_list, also set instant_update to True
+            ### check if line contains dv/dt, replace it with 0 and add external current
+            ### variable to variables_to_solve_for_list, also set instant_update to True
             if "dv/dt" in line:
-                variables_to_solve_for_list.append("v_clamp")
-                left_side = left_side.replace("dv/dt", "v_clamp")
+                variables_to_solve_for_list.append(self.external_current_var)
+                left_side = left_side.replace("dv/dt", "0")
                 instant_update_list.append(True)
             ### check if line contains any other derivative with syntax "d<var>/dt"
             ### using re, replace it with 0 and add the variable to
@@ -1464,8 +1560,8 @@ class VClampParamSearch:
             eq_sympy_list_hold_v_0, variables_to_solve_for_list, "holding v_0"
         )
 
-        ### 2nd for v_clamp_inst set v to v_step only in equaitons which are
-        ### updated instantaneously  (v_clamp and all non-derivatives), for all
+        ### 2nd for I_clamp_inst set v to v_step only in equations which are
+        ### updated instantaneously  (I_clamp and all non-derivatives), for all
         ### derivatives use the solution for holding v_0
         eq_sympy_list_inst = deepcopy(eq_sympy_list)
         for line_idx, line in enumerate(eq_sympy_list_inst):
@@ -1488,7 +1584,7 @@ class VClampParamSearch:
             eq_sympy_list_inst, variables_to_solve_for_list, "step from v_0 to v_step"
         )
 
-        ### 3rd for v_clamp_hold (i.e. holding v_step) set v to v_step in all
+        ### 3rd for I_clamp_hold (i.e. holding v_step) set v to v_step in all
         ### equations
         eq_sympy_list_hold = deepcopy(eq_sympy_list)
         for line_idx, line in enumerate(eq_sympy_list_hold):
@@ -1500,21 +1596,22 @@ class VClampParamSearch:
             eq_sympy_list_hold, variables_to_solve_for_list, "holding v_step"
         )
 
-        ### get the equations for v_clamp_inst and v_clamp_hold
-        eq_v_clamp_inst = solution_inst[variables_sympy_dict["v_clamp"]]
-        eq_v_clamp_hold = solution_hold[variables_sympy_dict["v_clamp"]]
+        ### get the equations for I_clamp_inst and I_clamp_hold (i.e. the external
+        ### current variable)
+        eq_I_clamp_inst = solution_inst[variables_sympy_dict[self.external_current_var]]
+        eq_I_clamp_hold = solution_hold[variables_sympy_dict[self.external_current_var]]
         if self.verbose:
-            print(f"Equation for v_clamp_inst: {factor(eq_v_clamp_inst)}")
-            print(f"Equation for v_clamp_hold: {factor(eq_v_clamp_hold)}")
+            print(f"Equation for I_clamp_inst: {factor(eq_I_clamp_inst)}")
+            print(f"Equation for I_clamp_hold: {factor(eq_I_clamp_hold)}")
 
-        ### create functions for v_clamp_inst and v_clamp_hold
-        ### 1st obtain all variables from the equations for v_clamp_inst and v_clamp_hold
+        ### create functions for I_clamp_inst and I_clamp_hold
+        ### 1st obtain all variables from the equations for I_clamp_inst and I_clamp_hold
         f_variables = list(
-            set(list(eq_v_clamp_inst.free_symbols) + list(eq_v_clamp_hold.free_symbols))
+            set(list(eq_I_clamp_inst.free_symbols) + list(eq_I_clamp_hold.free_symbols))
         )
         ### 2nd create a function for each equation
-        f_inst = lambdify(f_variables, eq_v_clamp_inst)
-        f_hold = lambdify(f_variables, eq_v_clamp_hold)
+        f_inst = lambdify(f_variables, eq_I_clamp_inst)
+        f_hold = lambdify(f_variables, eq_I_clamp_hold)
 
         return f_inst, f_hold, f_variables
 
@@ -1571,15 +1668,15 @@ class VClampParamSearch:
 
     def _simulations(self):
         """
-        Perform the resting state and voltage step simulations to obtain v_clamp_inst,
-        v_clamp_hold and v_rest.
+        Perform the resting state and voltage step simulations to obtain I_clamp_inst,
+        I_clamp_hold and v_rest.
 
         Returns:
             v_rest (float):
                 resting state voltage
-            v_clamp_inst (np.array):
+            I_clamp_inst (np.array):
                 array of the voltage clamp values directly after the voltage step
-            v_clamp_hold (np.array):
+            I_clamp_hold (np.array):
                 array of the voltage clamp values after the holding period
 
         """
@@ -1591,71 +1688,72 @@ class VClampParamSearch:
         simulate(duration)
         get_population("pop_clamp").v = self._v_step_arr
         simulate(self._timestep)
-        v_clamp_inst_arr = get_population("pop_clamp").v_clamp
+        I_clamp_inst_arr = get_population("pop_clamp").I_clamp
         simulate(duration - self._timestep)
-        v_clamp_hold_arr = get_population("pop_clamp").v_clamp
+        I_clamp_hold_arr = get_population("pop_clamp").I_clamp
         v_rest = get_population("pop_normal").v[0]
 
         ### get unique values of v_step and their indices
         v_step_unique, v_step_unique_idx = np.unique(
             self._v_step_arr, return_index=True
         )
-        ### get the corresponding values of v_clamp_hold (because it does only depend om
+        ### get the corresponding values of I_clamp_hold (because it does only depend on
         ### v_step)
-        v_clamp_hold_unique = v_clamp_hold_arr[v_step_unique_idx]
+        I_clamp_hold_unique = I_clamp_hold_arr[v_step_unique_idx]
 
-        if self.do_plot and not isinstance(self._v_clamp_inst_arr, type(None)):
+        if self.do_plot and not isinstance(self._I_clamp_inst_arr, type(None)):
+            plt.close("all")
             plt.figure(figsize=(6.4 * 3, 4.8 * 2))
-            ### create a 2D color-coded plot of the data for v_clamp_inst and v_clamp_hold
+            ### create a 2D color-coded plot of the data for I_clamp_inst and I_clamp_hold
             x = self._v_0_arr
             y = self._v_step_arr
 
-            ### create 2 subplots for original v_clamp_inst and v_clamp_hold
+            ### create 2 subplots for original I_clamp_inst and I_clamp_hold
             plt.subplot(231)
-            self._plot_v_clamp_subplot(
+            self._plot_I_clamp_subplot(
                 x,
                 y,
-                self._v_clamp_inst_arr,
-                "v_clamp_inst original",
+                self._I_clamp_inst_arr,
+                "I_clamp_inst original",
             )
             plt.subplot(234)
-            self._plot_v_clamp_subplot(
+            self._plot_I_clamp_subplot(
                 x,
                 y,
-                self._v_clamp_hold_arr,
-                "v_clamp_hold original",
+                self._I_clamp_hold_arr,
+                "I_clamp_hold original",
             )
 
-            ### create 2 subplots for tuned v_clamp_inst and v_clamp_hold
+            ### create 2 subplots for tuned I_clamp_inst and I_clamp_hold
             plt.subplot(232)
-            self._plot_v_clamp_subplot(
+            self._plot_I_clamp_subplot(
                 x,
                 y,
-                v_clamp_inst_arr,
-                "v_clamp_inst tuned",
+                I_clamp_inst_arr,
+                "I_clamp_inst tuned",
             )
             plt.subplot(235)
-            self._plot_v_clamp_subplot(
+            self._plot_I_clamp_subplot(
                 x,
                 y,
-                v_clamp_hold_arr,
-                "v_clamp_hold tuned",
+                I_clamp_hold_arr,
+                "I_clamp_hold tuned",
             )
 
             ### create 2 subplots for differences
             plt.subplot(233)
-            self._plot_v_clamp_subplot(
+            self._plot_I_clamp_subplot(
                 x,
                 y,
-                self._v_clamp_inst_arr - v_clamp_inst_arr,
-                "v_clamp_inst diff",
+                self._I_clamp_inst_arr - I_clamp_inst_arr,
+                "I_clamp_inst diff",
             )
             plt.subplot(236)
-            self._plot_v_clamp_subplot(
+            self._plot_I_clamp_subplot(
                 x,
                 y,
-                self._v_clamp_hold_arr - v_clamp_hold_arr,
-                "v_clamp_hold diff",
+                self._I_clamp_hold_arr - I_clamp_hold_arr,
+                "I_clamp_hold diff",
             )
 
             plt.tight_layout()
@@ -1664,17 +1762,17 @@ class VClampParamSearch:
                 self.plot_file.split(".")[0] + "_data." + self.plot_file.split(".")[1],
                 dpi=300,
             )
-            plt.close()
+            plt.close("all")
 
         return (
             v_rest,
-            v_clamp_inst_arr,
-            v_clamp_hold_arr,
+            I_clamp_inst_arr,
+            I_clamp_hold_arr,
             v_step_unique,
-            v_clamp_hold_unique,
+            I_clamp_hold_unique,
         )
 
-    def _plot_v_clamp_subplot(self, x, y, c, label):
+    def _plot_I_clamp_subplot(self, x, y, c, label):
         plt.title(label)
 
         ci = c
@@ -1837,9 +1935,9 @@ class VClampParamSearch:
 
     def _adjust_equations_for_voltage_clamp(self, eq_line_list: list):
         """
-        Replaces the 'dv/dt' or 'v+=' equation with a voltage clamp version in which the
-        new variable 'v_clamp' is calculated from the right side of the 'dv/dt' or 'v+='
-        equation.
+        Replaces the 'dv/dt' equation with a voltage clamp version (dv/dt=0) in which the
+        new variable 'I_clamp' is obtained by solving the 'dv/dt' equation for its
+        external current variable.
 
         Args:
             eq_line_list (list):
@@ -1865,81 +1963,46 @@ class VClampParamSearch:
         ### remove whitespaces
         eq_v = eq_v.replace(" ", "")
 
-        ### split eqatuion at ":" to separate flags
+        ### split eqatuion at ":" to ignore flags
         eq_v_split = eq_v.split(":")
         eq_v = eq_v_split[0]
-        ### check if flags are present
-        if len(eq_v_split) == 1:
-            flags = ""
-        else:
-            flags = ":" + eq_v_split[1]
         ### adjust the equation for voltage clamp
-        if "+=" in eq_v:
-            eq_v, eq_v_clamp = self._adjust_equation_for_voltage_clamp_plus(eq_v, flags)
-        else:
-            eq_v, eq_v_clamp = self._adjust_equation_for_voltage_clamp_dvdt(eq_v, flags)
+        eq_v, eq_I_clamp = self._adjust_equation_for_voltage_clamp_dvdt(eq_v)
         ### delete old equation from equation list using the index of the equation
         eq_line_list.pop(line_is_v_list.index(True))
         ### insert new equation at the same position
         eq_line_list.insert(line_is_v_list.index(True), eq_v)
-        ### insert new equation for "v_clamp" at the same position
-        eq_line_list.insert(line_is_v_list.index(True), eq_v_clamp)
+        ### insert new equation for "I_clamp" at the same position
+        eq_line_list.insert(line_is_v_list.index(True), eq_I_clamp)
 
         return eq_line_list
 
-    def _adjust_equation_for_voltage_clamp_plus(self, eq_v: str, flags: str):
-        """
-        Convert the v-update equation using "v+=" into a voltage clamp version.
-
-        Args:
-            eq_v (str):
-                the equation string for updating v (without flags)
-            flags (str):
-                the flags of the equation string
-
-        Returns:
-            eq_v (str):
-                the adjusted equation string for updating v (without flags)
-            eq_v_clamp (str):
-                the equation string for "v_clamp" (with flags)
-        """
-        ### split equations at "=" to separate left and right side
-        eq_v_left, eq_v_right = eq_v.split("=")
-        ### set right side to zero and combine equation again with "="
-        eq_v = eq_v_left + "=" + "0"
-        ### create new equation for "v_clamp" with right side of original equation
-        eq_v_clamp = "v_clamp=" + eq_v_right + flags
-
-        return eq_v, eq_v_clamp
-
-    def _adjust_equation_for_voltage_clamp_dvdt(self, eq_v: str, flags: str):
+    def _adjust_equation_for_voltage_clamp_dvdt(self, eq_v: str):
         """
         Convert the v-update equation using "dv/dt" into a voltage clamp version.
 
+        !!! warning
+            Equation needs to contain dv/dt and the external current variable.
+
         Args:
             eq_v (str):
-                the equation string for updating v (without flags)
-            flags (str):
-                the flags of the equation string
+                the equation string for updating v (without flags and whitespace)
 
         Returns:
             eq_v (str):
                 the adjusted equation string for updating v (without flags)
-            eq_v_clamp (str):
-                the equation string for "v_clamp" (with flags)
+            eq_I_clamp (str):
+                the equation string for "I_clamp"
         """
-        ### if equation starts with "dv/dt=" do the same as for "v+="
-        if eq_v.startswith("dv/dt="):
-            return self._adjust_equation_for_voltage_clamp_plus(eq_v, flags)
 
         ### if equation doesn't start with "dv/dt=" --> need to rearrange equation
-        ### i.e. solve the equation for dv/dt
-        eq_v = eq_v.replace("dv/dt", "delta_v")
+        ### set dv/dt to zero and solve the equation for the external current variable
+        ### (will be I_clamp)
+        eq_v = eq_v.replace("dv/dt", "0")
 
         ### split the equation at "=" and move everything on one side (other side = 0)
-        ### replace the whole right side with "right_side" making solving easier
         left_side, right_side = eq_v.split("=")
-        eq_v_one_side = f"(right_side) - {left_side}"
+        eq_v_one_side = f"{right_side} - {left_side}"
 
         ### prepare the sympy equation generation
         attributes_name_list = self._get_neuron_model_attributes(self._neuron_model)
@@ -1950,30 +2013,31 @@ class VClampParamSearch:
             key: attributes_tuple[attributes_name_list.index(key)]
             for key in attributes_name_list
         }
-        ### further create symbols for delta_v and right_side
-        attributes_sympy_dict["delta_v"] = Symbol("delta_v")
-        attributes_sympy_dict["right_side"] = Symbol("right_side")
 
         ### now creating the sympy equation
         eq_sympy = sympify(eq_v_one_side)
 
-        ### solve the equation for delta_v
-        result = solve(eq_sympy, attributes_sympy_dict["delta_v"], dict=True)
+        ### solve the equation for the external current variable
+        if self.verbose:
+            print(f"attributes_sympy_dict: {attributes_sympy_dict}")
+        result = solve(
+            eq_sympy, attributes_sympy_dict[self.external_current_var], dict=True
+        )
         if len(result) != 1:
-            raise ValueError("Could not solve equation of neuronmodel for dv/dt!")
+            raise ValueError(
+                f"Could not solve equation of neuronmodel for external current variable {self.external_current_var}!"
+            )
 
         ### convert result to string
-        result = str(result[0][attributes_sympy_dict["delta_v"]])
-
-        ### replace "right_side" by the actual right side in brackets
-        result = result.replace("right_side", f"({right_side})")
+        result = str(result[0][attributes_sympy_dict[self.external_current_var]])
 
         ### create new equation for dv/dt
         eq_v = "dv/dt = 0"
-        ### create new equation for "v_clamp" with the equation solved for dv/dt
-        eq_v_clamp = "v_clamp=" + result + flags
+        ### create new equation for "I_clamp" with the equation solved for the external
+        ### current variable
+        eq_I_clamp = "I_clamp=" + result
 
-        return eq_v, eq_v_clamp
+        return eq_v, eq_I_clamp
 
     def _get_line_is_v(self, line: str):
         """
@@ -2004,120 +2068,142 @@ class VClampParamSearch:
         return False
 
 
-def interactive_plot(
-    nrows: int,
-    ncols: int,
-    sliders: list[dict],
-    create_plot: Callable,
-):
-    """
-    Create an interactive plot with sliders.
+class InteractivePlot:
 
-    Args:
-        nrows (int):
-            number of rows of subplots
-        ncols (int):
-            number of columns of subplots
-        sliders (list):
-            list of dictionaries with slider kwargs (see matplotlib.widgets.Slider), at
-            least the following keys have to be present:
-                - label (str):
-                    label of the slider
-                - valmin (float):
-                    minimum value of the slider
-                - valmax (float):
-                    maximum value of the slider
-        create_plot (Callable):
-            function which fills the subplots, has to have the signature
-            create_plot(axs, sliders), where axs is a list of axes (for each subplot)
-            and sliders is the given sliders list with newly added keys "ax" (axes of
-            the slider) and "slider" (the Slider object itself, so that you can access
-            the slider values in the create_plot function using the .val attribute)
+    def __init__(
+        self,
+        nrows: int,
+        ncols: int,
+        sliders: list[dict],
+        create_plot: Callable,
+        update_loop: Callable | None = None,
+        figure_frequency: float = 20.0,
+        update_frequency: float = np.inf,
+    ):
+        """
+        Create an interactive plot with sliders.
 
-    Examples:
-        ```python
-        def create_plot(axs, sliders):
-            axs[0].axhline(sliders[0]["slider"].val, color="r")
-            axs[1].axvline(sliders[1]["slider"].val, color="r")
+        Args:
+            nrows (int):
+                number of rows of subplots
+            ncols (int):
+                number of columns of subplots
+            sliders (list):
+                list of dictionaries with slider kwargs (see matplotlib.widgets.Slider), at
+                least the following keys have to be present:
+                    - label (str):
+                        label of the slider
+                    - valmin (float):
+                        minimum value of the slider
+                    - valmax (float):
+                        maximum value of the slider
+            create_plot (Callable):
+                function which fills the subplots, has to have the signature
+                create_plot(axs, sliders), where axs is a list of axes (for each subplot)
+                and sliders is the given sliders list with newly added keys "ax" (axes of
+                the slider) and "slider" (the Slider object itself, so that you can access
+                the slider values in the create_plot function using the .val attribute)
+            update_loop (Callable, optional):
+                Function which is called periodically. After each call the plot is updated.
+                If None, the plot is only updated when a slider is changed. Default is None.
+            figure_frequency (float, optional):
+                Frequency of the figure update in Hz. Default is 20.0.
+            update_frequency (float, optional):
+                Frequency of the update loop in Hz. Default is np.inf.
 
-        interactive_plot(
-            nrows=2,
-            ncols=1,
-            sliders=[
-                {"label": "a", "valmin": 0.0, "valmax": 1.0, "valinit": 0.3},
-                {"label": "b", "valmin": 0.0, "valmax": 1.0, "valinit": 0.7},
-            ],
-            create_plot=create_plot,
-        )
-        ```
-    """
+        Example:
+            ```python
+            def create_plot(axs, sliders):
+                axs[0].axhline(sliders[0]["slider"].val, color="r")
+                axs[1].axvline(sliders[1]["slider"].val, color="r")
 
-    def update(axs, sliders):
-        ### remove everything from all axes except the sliders axes
-        for ax in axs:
-            if ax not in [slider["ax"] for slider in sliders]:
-                ax.cla()
-        ### recreate the plot
-        create_plot(axs, sliders)
-        ### redraw the canvas
-        fig.canvas.draw_idle()
-
-    ### create the figure as large as the screen
-    screen_width, screen_height = get_monitors()[0].width, get_monitors()[0].height
-    figsize = (screen_width / 100, screen_height / 100)
-    fig = plt.figure(figsize=figsize)
-
-    ### create the axes filled with the create_plot function
-    grid = GridSpec((nrows + 1) * len(sliders), ncols * len(sliders), figure=fig)
-    axs = []
-    for row_idx in range(nrows):
-        for col_idx in range(ncols):
-            ax = fig.add_subplot(
-                grid[
-                    row_idx * len(sliders) : (row_idx + 1) * len(sliders),
-                    col_idx * len(sliders) : (col_idx + 1) * len(sliders),
-                ]
+            interactive_plot(
+                nrows=2,
+                ncols=1,
+                sliders=[
+                    {"label": "a", "valmin": 0.0, "valmax": 1.0, "valinit": 0.3},
+                    {"label": "b", "valmin": 0.0, "valmax": 1.0, "valinit": 0.7},
+                ],
+                create_plot=create_plot,
             )
-            axs.append(ax)
+            ```
+        """
+        self.create_plot = create_plot
+        self._waiter = _Waiter(duration=2.0, on_finish=self._recreate_plot)
+        plt.close("all")
 
-    ### create the sliders axes
-    for slider_idx, slider_kwargs in enumerate(sliders):
-        sliders[slider_idx]["ax"] = fig.add_subplot(
-            grid[nrows * len(sliders) + slider_idx, :]
+        ### create the figure as large as the screen
+        screen_width, screen_height = get_monitors()[0].width, get_monitors()[0].height
+        figsize = (screen_width / 100, screen_height / 100)
+        fig, axs = plt.subplots(nrows, ncols, figsize=figsize)
+        self.fig = fig
+        self.axs = axs
+
+        ### create the sliders figure, set the axes for the sliders
+        fig_sliders, axs_sliders = plt.subplots(
+            len(sliders), 1, figsize=(6.4, 4.8 * len(sliders))
         )
+        if len(sliders) == 1:
+            axs_sliders = [axs_sliders]
+        for slider_idx in range(len(sliders)):
+            sliders[slider_idx]["ax"] = axs_sliders[slider_idx]
 
-    ### initialize the sliders to their axes
-    for slider_idx, slider_kwargs in enumerate(sliders):
-        ### if init out of min max, change min max
-        if "valinit" in slider_kwargs:
-            if slider_kwargs["valinit"] < slider_kwargs["valmin"]:
-                slider_kwargs["valmin"] = slider_kwargs["valinit"]
-            elif slider_kwargs["valinit"] > slider_kwargs["valmax"]:
-                slider_kwargs["valmax"] = slider_kwargs["valinit"]
-        slider = Slider(**slider_kwargs)
-        slider.on_changed(lambda val: update(axs, sliders))
-        sliders[slider_idx]["slider"] = slider
+        ### initialize the sliders
+        for slider_idx, slider_kwargs in enumerate(sliders):
+            ### if init out of min max, change min max
+            if "valinit" in slider_kwargs:
+                if slider_kwargs["valinit"] < slider_kwargs["valmin"]:
+                    slider_kwargs["valmin"] = slider_kwargs["valinit"]
+                elif slider_kwargs["valinit"] > slider_kwargs["valmax"]:
+                    slider_kwargs["valmax"] = slider_kwargs["valinit"]
+            slider = Slider(**slider_kwargs)
+            slider.on_changed(lambda val: self._waiter.start())
+            sliders[slider_idx]["slider"] = slider
 
-    ### create the plot
-    create_plot(axs, sliders)
-    ### arange subplots
-    plt.tight_layout()
-    new_right_border = 0.85
-    new_left_border = 0.15
-    for slider_idx, slider_kwargs in enumerate(sliders):
-        ax = sliders[slider_idx]["ax"]
-        ### set new borders
-        ax.set_position(
-            [
-                new_left_border,
-                ax.get_position().y0,
-                new_right_border - new_left_border,
-                ax.get_position().height,
-            ]
-        )
+        self.sliders = sliders
 
-    ### show the plot
-    plt.show()
+        ### create the plot
+        create_plot(axs, sliders)
+
+        if update_loop is None:
+            ### show the plot
+            self.ani = FuncAnimation(
+                self.fig,
+                func=lambda frame: 0,
+                frames=10,
+                interval=(1.0 / figure_frequency) * 1000,
+                repeat=True,
+            )
+            self.fig.tight_layout()
+            plt.show()
+        else:
+            ### run update loop until figure is closed
+            figure_pause = 1 / figure_frequency
+            max_updates_per_pause = update_frequency / figure_frequency
+            while plt.fignum_exists(fig.number):
+                ### update figure
+                self._recreate_plot
+                plt.pause(figure_pause)
+                ### in between do the update loop multiple times
+                start = time.time()
+                nr_updates = 0
+                while (
+                    time.time() - start < figure_pause
+                    and nr_updates < max_updates_per_pause
+                ):
+                    update_loop()
+                    nr_updates += 1
+
+    def _recreate_plot(self):
+        ### pause the animation
+        self.ani.event_source.stop()
+        ### clear the axes
+        for ax in self.axs.flatten():
+            ax.cla()
+        ### recreate the plot
+        self.create_plot(self.axs, self.sliders)
+        ### restart the animation
+        self.ani.event_source.start()
 
 
 def efel_loss(trace1, trace2, feature_list):
@@ -2212,7 +2298,7 @@ def efel_loss(trace1, trace2, feature_list):
         return loss
 
     ### calculate and return the mean of the differences of the features
-    features_1, features_2 = efel.getFeatureValues(
+    features_1, features_2 = efel.get_feature_values(
         [trace1, trace2],
         feature_list,
         raise_warnings=False,
@@ -2244,3 +2330,236 @@ def efel_loss(trace1, trace2, feature_list):
     if verbose:
         print(f"loss: {loss}")
     return loss
+
+
+class _Waiter:
+    """
+    Class that waits for a certain duration while the rest of the code continues to run.
+
+    Attributes:
+        finished (bool):
+            True if the waiting is finished, False otherwise.
+    """
+
+    def __init__(self, duration=5, on_finish=None):
+        """
+        Args:
+            duration (float):
+                The duration in seconds after which Waiter.finished will return True.
+            on_finish (callable):
+                A callable that will be called when the counter finishes.
+        """
+        self.duration = duration
+        self.on_finish = on_finish
+        self._finished = False
+        self._running = False
+        self._lock = threading.Lock()
+        self._threads = {}
+
+    def _start_waiting(self):
+        """
+        The function that will be run in a separate thread to wait for the duration. It
+        will set finished to True when the duration is reached. It will also call the
+        on_finish callable if it is not None.
+        """
+        ### at the beginning of the thread set the stop flags for all other threads
+        for thread_id, thread in self._threads.items():
+            if thread[0].ident != threading.get_ident():
+                thread[1].set()
+        ### wait duration
+        time.sleep(self.duration)
+        ### check if the current thread was already stopped, if not set finished to True
+        if not (self._threads[threading.get_ident()][1].is_set()):
+            with self._lock:
+                ### set finished to True
+                self._finished = True
+                ### remove the current thread from the threads dict
+                self._threads.pop(threading.get_ident())
+                ### call the on_finish callable in the main thread
+                if self.on_finish is not None:
+                    threading.Timer(0.01, self.on_finish).start()
+        else:
+            with self._lock:
+                ### do not set finished to True and remove the current thread from the
+                ### threads dict
+                self._threads.pop(threading.get_ident())
+
+    def start(self):
+        """
+        Start the waiting process in a separate thread. The waiting will last for the
+        duration specified in the constructor. If the waiting is already running, it
+        will be stopped and restarted.
+        """
+        ### start new waiting thread
+        thread = threading.Thread(target=self._start_waiting, daemon=True)
+        stop_flag = threading.Event()
+        ### start the thread
+        thread.start()
+        ### store the thread and the stop flag
+        with self._lock:
+            self._threads[thread.ident] = [thread, stop_flag]
+
+    @property
+    def finished(self):
+        with self._lock:
+            return self._finished
+
+
+class RNG:
+    """
+    Resettable random number generator.
+
+    Attributes:
+        rng (np.random.Generator):
+            Random number generator.
+
+    Example:
+        ```python
+        rng = RNG(seed=1234)
+        print(rng.rng.integers(0, 10, 5))
+        rng.reset()
+        print(rng.rng.integers(0, 10, 5))
+        ```
+    """
+
+    def __init__(self, seed):
+        """
+        Args:
+            seed (int):
+                Seed for the random number generator.
+        """
+        self.rng = np.random.default_rng(seed=seed)
+        self._original_seed = seed
+
+    def reset(self):
+        """
+        Reset the random number generator to the original seed.
+        """
+        self.rng.bit_generator.state = np.random.default_rng(
+            seed=self._original_seed
+        ).bit_generator.state
+
+
+def find_x_bound(
+    y: Callable[[float], float],
+    x0: float,
+    y_bound: float,
+    tolerance: float = 1e-5,
+    bound_type: str = "equal",
+) -> float:
+    """
+    Find the x value such that y(x) is closest to y_bound within a given tolerance. The
+    value y_bound should be reachable by y(x) by increasing x from the initial value x0.
+
+    Args:
+        y (Callable[[float], float]):
+            A function that takes a single float argument and returns a single float
+            value.
+        x0 (float):
+            The initial value of x to start the search.
+        y_bound (float):
+            The target value of y.
+        tolerance (float, optional):
+            The tolerance for the difference between y(x) and y_bound. Defaults to 1e-5.
+        bound_type (str, optional):
+            The type of bound to find. Can be 'equal'(y(x) should be close to y_bound),
+            'greater'(y(x) should be close to y_bound and greater), or 'less'(y(x) should
+            be close to y_bound and less). Defaults to 'equal'.
+
+    Returns:
+        x_bound (float):
+            The x value such that y(x) is closest to y_bound within the tolerance.
+    """
+    # Catch invalid bound type
+    if bound_type not in ["equal", "greater", "less"]:
+        raise ValueError("bound_type should be 'equal', 'greater', or 'less'.")
+
+    # Check if the initial value y(x0) is already y_bound
+    y0 = y(x0)
+    if np.isclose(y0, y_bound, atol=tolerance):
+        sf.Logger().log("Warning: The initial value is already equal to y_bound.")
+        return x0, x0
+
+    sf.Logger().log(f"x0: {x0}, y0: {y0}, y_bound: {bound_type} {y_bound}")
+
+    # Define a helper function to find x such that y(x) - y_bound = 0
+    def func(x):
+        return y(x) - y_bound
+
+    # Exponential search to find an interval [a, b] where y(a) < y_bound < y(b)
+    a = x0
+    b = x0 + 1
+    while func(b) < 0:
+        a = b
+        b *= 2
+        if b > 1e6:  # Avoid infinite loop in case y_bound is not reachable
+            break
+    if b > 1e6:
+        raise ValueError(
+            "y_bound cannot be reached, the function saturates below y_bound."
+        )
+    sf.Logger().log(f"a: {a}, b: {b}")
+
+    # Use brentq to find the root within the interval [a, b]
+    x_root: float = brentq(func, a, b, full_output=False)
+    y_root = y(x_root)
+    sf.Logger().log(f"y(x_root={x_root}) = {y_root}")
+
+    # check if y(x_root) is not within the tolerance of y_bound
+    if not np.isclose(y_root, y_bound, atol=tolerance):
+        sf.Logger().log(
+            f"Warning: y(x_root) is not within the tolerance of y_bound (y(x_root)={y_root}, y_bound={y_bound}, tolerance={tolerance})!"
+        )
+
+    if bound_type == "equal":
+        # Return the x value such that y(x) = y_bound
+        sf.Logger().log(f"Returning y(x={x_root}) = {y_root}")
+        return x_root
+
+    if bound_type == "greater" and y_root > y_bound:
+        # Return the x value such that y(x) > y_bound
+        sf.Logger().log(f"Returning y(x={x_root}) = {y_root}")
+        return x_root
+
+    if bound_type == "less" and y_root < y_bound:
+        # Return the x value such that y(x) < y_bound
+        sf.Logger().log(f"Returning y(x={x_root}) = {y_root}")
+        return x_root
+
+    # Calculate the gradient at x_root
+    dx = np.abs(x_root - x0) * 1e-3
+    grad_y = (y(x_root + dx) - y(x_root - dx)) / (2 * dx)
+
+    # Define epsilon based on the gradient
+    epsilon = tolerance / np.abs(grad_y) if grad_y != 0 else tolerance
+
+    if bound_type == "greater":
+        # Find the x value such that y(x) > y_bound (thus maybe increase x)
+        # do this by incrementaly increasing x by epsilon until y(x) is greater than
+        # y_bound
+        # if y(x+epsilon)-y(x) is less than the tolerance, increase epsilon
+        x = x_root
+        y_val = y(x)
+        while y_val < y_bound:
+            y_val_prev = y_val
+            x += epsilon
+            y_val = y(x)
+            if y_val - y_val_prev < tolerance / 10:
+                epsilon *= 2
+        sf.Logger().log(f"Returning y(x={x}) = {y_val}")
+        return x
+    elif bound_type == "less":
+        # Find the x value such that y(x) < y_bound (thus maybe decrease x)
+        # do this by incrementaly decreasing x by epsilon until y(x) is less than
+        # y_bound
+        # if y(x)-y(x-epsilon) is less than the tolerance, increase epsilon
+        x = x_root
+        y_val = y(x)
+        while y_val > y_bound:
+            y_val_prev = y_val
+            x -= epsilon
+            y_val = y(x)
+            if y_val_prev - y_val < tolerance / 10:
+                epsilon *= 2
+        sf.Logger().log(f"Returning y(x={x}) = {y_val}")
+        return x

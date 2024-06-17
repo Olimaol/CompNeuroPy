@@ -1,14 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
-import matplotlib
 from ANNarchy import raster_plot, dt, inter_spike_interval, coefficient_of_variation
 import warnings
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy import extra_functions as ef
 from CompNeuroPy.monitors import RecordingTimes
+from CompNeuroPy.experiment import CompNeuroExp
 from scipy.interpolate import interp1d
-from multiprocessing import Process
 from typingchecker import check_types
 
 
@@ -723,788 +722,6 @@ def get_pop_rate(
     return (np.arange(t_start, t_start + duration, dt), ret)
 
 
-@check_types()
-def plot_recordings(
-    figname: str,
-    recordings: list,
-    recording_times: RecordingTimes,
-    chunk: int,
-    shape: tuple,
-    plan: list[str],
-    time_lim: None | tuple = None,
-    dpi: int = 300,
-):
-    """
-    Plots the recordings of a single chunk from recordings. Plotted variables are
-    specified in plan.
-
-    Args:
-        figname (str):
-            path + name of figure (e.g. "figures/my_figure.png")
-        recordings (list):
-            a recordings list from CompNeuroPy obtained with the function
-            get_recordings() from a CompNeuroMonitors object.
-        recording_times (object):
-            recording_times object from CompNeuroPy obtained with the
-            function get_recording_times() from a CompNeuroMonitors object.
-        chunk (int):
-            which chunk of recordings should be used (the index of chunk)
-        shape (tuple):
-            Defines the subplot arrangement e.g. (3,2) = 3 rows, 2 columns
-        plan (list of strings):
-            Defines which recordings are plotted in which subplot and how.
-            Entries of the list have the structure:
-                "subplot_nr;model_component_name;variable_to_plot;format",
-                e.g. "1,my_pop1;v;line".
-                mode: defines how the data is plotted, available modes:
-                    - for spike data: raster, mean, hybrid
-                    - for other data: line, mean, matrix
-                    - only for projection data: matrix_mean
-        time_lim (tuple, optional):
-            Defines the x-axis for all subplots. The list contains two
-            numbers: start and end time in ms. The times have to be
-            within the chunk. Default: None, i.e., time lims of chunk
-        dpi (int, optional):
-            The dpi of the saved figure. Default: 300
-    """
-    proc = Process(
-        target=_plot_recordings,
-        args=(figname, recordings, recording_times, chunk, shape, plan, time_lim, dpi),
-    )
-    proc.start()
-    proc.join()
-    if proc.exitcode != 0:
-        quit()
-
-
-def _plot_recordings(
-    figname: str,
-    recordings: list,
-    recording_times: RecordingTimes,
-    chunk: int,
-    shape: tuple,
-    plan: list[str],
-    time_lim: None | tuple,
-    dpi: int,
-):
-    """
-    Plots the recordings for the given recording_times specified in plan.
-
-    Args:
-        figname (str):
-            path + name of figure (e.g. "figures/my_figure.png")
-        recordings (list):
-            a recordings list from CompNeuroPy obtained with the function
-            get_recordings() from a CompNeuroMonitors object.
-        recording_times (object):
-            recording_times object from CompNeuroPy obtained with the
-            function get_recording_times() from a CompNeuroMonitors object.
-        chunk (int):
-            which chunk of recordings should be used (the index of chunk)
-        shape (tuple):
-            Defines the subplot arrangement e.g. (3,2) = 3 rows, 2 columns
-        plan (list of strings):
-            Defines which recordings are plotted in which subplot and how.
-                Entries of the list have the structure:
-                "subplot_nr;model_component_name;variable_to_plot;format",
-                e.g. "1,my_pop1;v;line".
-                mode: defines how the data is plotted, available modes:
-                    - for spike data: raster, mean, hybrid
-                    - for other data: line, mean, matrix
-                    - only for projection data: matrix_mean
-        time_lim (tuple):
-            Defines the x-axis for all subplots. The list contains two
-            numbers: start and end time in ms. The times have to be
-            within the chunk.
-        dpi (int):
-            The dpi of the saved figure.
-    """
-    print(f"generate fig {figname}", end="... ", flush=True)
-    recordings = recordings[chunk]
-    if isinstance(time_lim, type(None)):
-        time_lim = recording_times.time_lims(chunk=chunk)
-    start_time = time_lim[0]
-    end_time = time_lim[1]
-    compartment_list = []
-    for plan_str in plan:
-        compartment = plan_str.split(";")[1]
-        if not (compartment in compartment_list):
-            compartment_list.append(compartment)
-
-    ### get idx_lim for all compartments, in parallel check that there are no pauses
-    time_arr_dict = {}
-    time_step = recordings["dt"]
-    for compartment in compartment_list:
-        actual_period = recordings[f"{compartment};period"]
-
-        time_arr_part = []
-
-        ### loop over periods
-        nr_periods = recording_times._get_nr_periods(
-            chunk=chunk, compartment=compartment
-        )
-        for period in range(nr_periods):
-            ### get the time_lim and idx_lim of the period
-            time_lims = recording_times.time_lims(
-                chunk=chunk, compartment=compartment, period=period
-            )
-            time_arr_part.append(
-                np.arange(time_lims[0], time_lims[1] + actual_period, actual_period)
-            )
-
-        time_arr_dict[compartment] = np.concatenate(time_arr_part)
-
-    plt.figure(figsize=([6.4 * shape[1], 4.8 * shape[0]]))
-    for subplot in plan:
-        try:
-            nr, part, variable, mode = subplot.split(";")
-            nr = int(nr)
-            style = ""
-        except:
-            try:
-                nr, part, variable, mode, style = subplot.split(";")
-                nr = int(nr)
-            except:
-                print(
-                    '\nERROR plot_recordings: for each subplot give plan-string as: "nr;part;variable;mode" or "nr;part;variable;mode;style" if style is available!\nWrong string: '
-                    + subplot
-                    + "\n"
-                )
-                quit()
-        try:
-            ### check if variable is equation
-            variable_is_equation = (
-                "+" in variable or "-" in variable or "*" in variable or "/" in variable
-            )
-            if variable_is_equation:
-                ### evalueate the equation
-                value_dict = {}
-                for rec_key, rec_val in recordings.items():
-                    if rec_key is f"{part};parameter_dict":
-                        continue
-                    if ";" in rec_key:
-                        rec_var_name = rec_key.split(";")[1]
-                    else:
-                        rec_var_name = rec_key
-                    value_dict[rec_var_name] = rec_val
-                for param_key, param_val in recordings[
-                    f"{part};parameter_dict"
-                ].items():
-                    value_dict[param_key] = param_val
-                ### evaluate
-                evaluated_variable = ef.evaluate_expression_with_dict(
-                    expression=variable, value_dict=value_dict
-                )
-                ### add the evaluated variable to the recordings
-                recordings[f"{part};{variable}"] = evaluated_variable
-
-            ### set data
-            data = recordings[f"{part};{variable}"]
-        except:
-            print(
-                "\nWARNING plot_recordings: data",
-                ";".join([part, variable]),
-                "not in recordings\n",
-            )
-            plt.subplot(shape[0], shape[1], nr)
-            plt.text(
-                0.5,
-                0.5,
-                " ".join([part, variable]) + " not available",
-                va="center",
-                ha="center",
-            )
-            continue
-
-        plt.subplot(shape[0], shape[1], nr)
-        if (variable == "spike" or variable == "axon_spike") and (
-            mode == "raster" or mode == "single"
-        ):  # "single" only for down compatibility
-            nr_neurons = len(list(data.keys()))
-            t, n = my_raster_plot(data)
-            t = t * time_step  # convert time steps into ms
-            mask = ((t >= start_time).astype(int) * (t <= end_time).astype(int)).astype(
-                bool
-            )
-            if mask.size == 0:
-                plt.title("Spikes " + part)
-                print(
-                    "\nWARNING plot_recordings: data",
-                    ";".join([part, variable]),
-                    "does not contain any spikes in the given time interval.\n",
-                )
-                plt.text(
-                    0.5,
-                    0.5,
-                    " ".join([part, variable]) + " does not contain any spikes.",
-                    va="center",
-                    ha="center",
-                )
-            else:
-                if np.unique(n).size == 1:
-                    marker, size = ["|", 3000]
-                else:
-                    marker, size = [".", 3]
-                if style != "":
-                    color = style
-                else:
-                    color = "k"
-
-                plt.scatter(
-                    t[mask], n[mask], color=color, marker=marker, s=size, linewidth=0.1
-                )
-                plt.xlim(start_time, end_time)
-                plt.ylim(0 - 0.5, nr_neurons - 0.5)
-                plt.xlabel("time [ms]")
-                plt.ylabel("# neurons")
-                plt.title("Spikes " + part)
-        elif (variable == "spike" or variable == "axon_spike") and mode == "mean":
-            time_arr, firing_rate = get_pop_rate(
-                spikes=data,
-                t_start=start_time,
-                t_end=end_time,
-                time_step=time_step,
-            )
-            plt.plot(time_arr, firing_rate, color="k")
-            plt.xlim(start_time, end_time)
-            plt.xlabel("time [ms]")
-            plt.ylabel("Mean firing rate [Hz]")
-            plt.title("Mean firing rate " + part)
-        elif (variable == "spike" or variable == "axon_spike") and mode == "hybrid":
-            nr_neurons = len(list(data.keys()))
-            t, n = my_raster_plot(data)
-            t = t * time_step  # convert time steps into ms
-            mask = ((t >= start_time).astype(int) * (t <= end_time).astype(int)).astype(
-                bool
-            )
-            if mask.size == 0:
-                plt.title("Spikes " + part)
-                print(
-                    "\nWARNING plot_recordings: data",
-                    ";".join([part, variable]),
-                    "does not contain any spikes in the given time interval.\n",
-                )
-                plt.text(
-                    0.5,
-                    0.5,
-                    " ".join([part, variable]) + " does not contain any spikes.",
-                    va="center",
-                    ha="center",
-                )
-            else:
-                if np.unique(n).size == 1:
-                    marker, size = ["|", np.sqrt(3000)]
-                else:
-                    marker, size = [".", np.sqrt(3)]
-
-                plt.plot(
-                    t[mask], n[mask], f"k{marker}", markersize=size, markeredgewidth=0.1
-                )
-                plt.ylabel("# neurons")
-                plt.ylim(0 - 0.5, nr_neurons - 0.5)
-                ax = plt.gca().twinx()
-                time_arr, firing_rate = get_pop_rate(
-                    spikes=data,
-                    t_start=start_time,
-                    t_end=end_time,
-                    time_step=time_step,
-                )
-                ax.plot(
-                    time_arr,
-                    firing_rate,
-                    color="r",
-                )
-                plt.ylabel("Mean firing rate [Hz]", color="r")
-                ax.tick_params(axis="y", colors="r")
-                plt.xlim(start_time, end_time)
-                plt.xlabel("time [ms]")
-                plt.title("Activity " + part)
-        elif (variable != "spike" and variable != "axon_spike") and mode == "line":
-            if len(data.shape) == 1:
-                plt.plot(time_arr_dict[part], data, color="k")
-                plt.title(f"Variable {variable} of {part} (1)")
-            elif len(data.shape) == 2 and isinstance(data[0, 0], list) is not True:
-                ### population: data[time,neurons]
-                for neuron in range(data.shape[1]):
-                    # in case of gaps file time gaps and add nan to data TODO also for other plots
-                    plot_x, plot_y = time_data_add_nan(
-                        time_arr_dict[part], data[:, neuron]
-                    )
-
-                    plt.plot(
-                        plot_x,
-                        plot_y,
-                        color="k",
-                    )
-                plt.title(f"Variable {variable} of {part} ({data.shape[1]})")
-            elif len(data.shape) == 3 or (
-                len(data.shape) == 2 and isinstance(data[0, 0], list) is True
-            ):
-                if len(data.shape) == 3:
-                    ### projection data: data[time, postneurons, preneurons]
-                    for post_neuron in range(data.shape[1]):
-                        for pre_neuron in range(data.shape[2]):
-                            plt.plot(
-                                time_arr_dict[part],
-                                data[:, post_neuron, pre_neuron],
-                                color="k",
-                            )
-                else:
-                    ### data[time, postneurons][preneurons] (with different number of preneurons)
-                    for post_neuron in range(data.shape[1]):
-                        for pre_neuron in range(len(data[0, post_neuron])):
-                            plt.plot(
-                                time_arr_dict[part],
-                                np.array(
-                                    [
-                                        data[t, post_neuron][pre_neuron]
-                                        for t in range(data.shape[0])
-                                    ]
-                                ),
-                                color="k",
-                            )
-
-                plt.title(f"Variable {variable} of {part} ({data.shape[1]})")
-            else:
-                print(
-                    "\nERROR plot_recordings: shape not accepted,",
-                    ";".join([part, variable]),
-                    "\n",
-                )
-            plt.xlim(start_time, end_time)
-            plt.xlabel("time [ms]")
-        elif (variable != "spike" and variable != "axon_spike") and mode == "mean":
-            if len(data.shape) == 1:
-                plt.plot(time_arr_dict[part], data, color="k")
-                plt.title(f"Variable {variable} of {part} (1)")
-            elif len(data.shape) == 2 and isinstance(data[0, 0], list) is not True:
-                ### population: data[time,neurons]
-                nr_neurons = data.shape[1]
-                data = np.mean(data, 1)
-                plt.plot(
-                    time_arr_dict[part],
-                    data[:],
-                    color="k",
-                )
-                plt.title(f"Variable {variable} of {part} ({nr_neurons}, mean)")
-            elif len(data.shape) == 3 or (
-                len(data.shape) == 2 and isinstance(data[0, 0], list) is True
-            ):
-                if len(data.shape) == 3:
-                    ### projection data: data[time, postneurons, preneurons]
-                    for post_neuron in range(data.shape[1]):
-                        plt.plot(
-                            time_arr_dict[part],
-                            np.mean(data[:, post_neuron, :], 1),
-                            color="k",
-                        )
-                else:
-                    ### data[time, postneurons][preneurons] (with different number of preneurons)
-                    for post_neuron in range(data.shape[1]):
-                        avg_data = []
-                        for pre_neuron in range(len(data[0, post_neuron])):
-                            avg_data.append(
-                                np.array(
-                                    [
-                                        data[t, post_neuron][pre_neuron]
-                                        for t in range(data.shape[0])
-                                    ]
-                                )
-                            )
-                        plt.plot(
-                            time_arr_dict[part],
-                            np.mean(avg_data, 0),
-                            color="k",
-                        )
-
-                plt.title(
-                    f"Variable {variable} of {part}, mean for {data.shape[1]} post neurons"
-                )
-            else:
-                print(
-                    "\nERROR plot_recordings: shape not accepted,",
-                    ";".join([part, variable]),
-                    "\n",
-                )
-            plt.xlim(start_time, end_time)
-            plt.xlabel("time [ms]")
-
-        elif (
-            variable != "spike" and variable != "axon_spike"
-        ) and mode == "matrix_mean":
-            if len(data.shape) == 3 or (
-                len(data.shape) == 2 and isinstance(data[0, 0], list) is True
-            ):
-                if len(data.shape) == 3:
-                    ### average over pre neurons --> get 2D array [time, postneuron]
-                    data_avg = np.mean(data, 2)
-
-                    ### after cerating 2D array --> same procedure as for populations
-                    ### get the times and data between time_lims
-                    mask = (
-                        (time_arr_dict[part] >= start_time).astype(int)
-                        * (time_arr_dict[part] <= end_time).astype(int)
-                    ).astype(bool)
-                    time_arr = time_arr_dict[part][mask]
-                    data_arr = data_avg[mask, :]
-
-                    ### check with the actual_period and the times array if there is data missing
-                    ###     from time_lims and actual period opne should get all times at which data points should be
-                    actual_period = recordings[f"{part};period"]
-                    actual_start_time = (
-                        np.ceil(start_time / actual_period) * actual_period
-                    )
-                    actual_end_time = (
-                        np.ceil(end_time / actual_period - 1) * actual_period
-                    )
-                    soll_times = np.arange(
-                        actual_start_time,
-                        actual_end_time + actual_period,
-                        actual_period,
-                    )
-
-                    ### check if there are time points, where data is missing
-                    plot_data_arr = np.empty((soll_times.size, data_arr.shape[1]))
-                    plot_data_arr[:] = None
-                    for time_point_idx, time_point in enumerate(soll_times):
-                        if time_point in time_arr:
-                            ### data at time point is available --> use data
-                            idx_available_data = time_arr == time_point
-                            plot_data_arr[time_point_idx, :] = data_arr[
-                                idx_available_data, :
-                            ]
-                        ### if data is not available it stays none
-
-                    vmin = np.nanmin(plot_data_arr)
-                    vmax = np.nanmax(plot_data_arr)
-
-                    masked_array = np.ma.array(
-                        plot_data_arr.T, mask=np.isnan(plot_data_arr.T)
-                    )
-                    cmap = matplotlib.cm.viridis
-                    cmap.set_bad("red", 1.0)
-
-                    plt.title(
-                        f"Variable {variable} of {part} ({data.shape[1]}) [{ef.sci(vmin)}, {ef.sci(vmax)}]"
-                    )
-
-                    plt.gca().imshow(
-                        masked_array,
-                        aspect="auto",
-                        vmin=vmin,
-                        vmax=vmax,
-                        extent=[
-                            np.min(soll_times) - 0.5,
-                            np.max(soll_times) - 0.5,
-                            data.shape[1] - 0.5,
-                            -0.5,
-                        ],
-                        cmap=cmap,
-                        interpolation="none",
-                    )
-                    if data.shape[1] == 1:
-                        plt.yticks([0])
-                    else:
-                        plt.gca().yaxis.set_major_locator(MaxNLocator(integer=True))
-                    plt.xlabel("time [ms]")
-
-                else:
-                    ### data[time, postneurons][preneurons] (with different number of preneurons)
-                    ### average over pre neurons --> get 2D array [time, postneuron]
-                    data_avg = np.empty((data.shape[0], data.shape[1]))
-                    for post_neuron in range(data.shape[1]):
-                        avg_post = []
-                        for pre_neuron in range(len(data[0, post_neuron])):
-                            avg_post.append(
-                                np.array(
-                                    [
-                                        data[t, post_neuron][pre_neuron]
-                                        for t in range(data.shape[0])
-                                    ]
-                                )
-                            )
-                        data_avg[:, post_neuron] = np.mean(avg_post, 0)
-
-                    ### after cerating 2D array --> same procedure as for populations
-                    ### get the times and data between time_lims
-                    mask = (
-                        (time_arr_dict[part] >= start_time).astype(int)
-                        * (time_arr_dict[part] <= end_time).astype(int)
-                    ).astype(bool)
-                    time_arr = time_arr_dict[part][mask]
-                    data_arr = data_avg[mask, :]
-
-                    ### check with the actual_period and the times array if there is data missing
-                    ###     from time_lims and actual period opne should get all times at which data points should be
-                    actual_period = recordings[f"{part};period"]
-                    actual_start_time = (
-                        np.ceil(start_time / actual_period) * actual_period
-                    )
-                    actual_end_time = (
-                        np.ceil(end_time / actual_period - 1) * actual_period
-                    )
-                    soll_times = np.arange(
-                        actual_start_time,
-                        actual_end_time + actual_period,
-                        actual_period,
-                    )
-
-                    ### check if there are time points, where data is missing
-                    plot_data_arr = np.empty((soll_times.size, data_arr.shape[1]))
-                    plot_data_arr[:] = None
-                    for time_point_idx, time_point in enumerate(soll_times):
-                        if time_point in time_arr:
-                            ### data at time point is available --> use data
-                            idx_available_data = time_arr == time_point
-                            plot_data_arr[time_point_idx, :] = data_arr[
-                                idx_available_data, :
-                            ]
-                        ### if data is not available it stays none
-
-                    vmin = np.nanmin(plot_data_arr)
-                    vmax = np.nanmax(plot_data_arr)
-
-                    masked_array = np.ma.array(
-                        plot_data_arr.T, mask=np.isnan(plot_data_arr.T)
-                    )
-                    cmap = matplotlib.cm.viridis
-                    cmap.set_bad("red", 1.0)
-
-                    plt.title(
-                        f"Variable {variable} of {part} ({data.shape[1]}) [{ef.sci(vmin)}, {ef.sci(vmax)}]"
-                    )
-
-                    plt.gca().imshow(
-                        masked_array,
-                        aspect="auto",
-                        vmin=vmin,
-                        vmax=vmax,
-                        extent=[
-                            np.min(soll_times) - 0.5,
-                            np.max(soll_times) - 0.5,
-                            data.shape[1] - 0.5,
-                            -0.5,
-                        ],
-                        cmap=cmap,
-                        interpolation="none",
-                    )
-                    if data.shape[1] == 1:
-                        plt.yticks([0])
-                    else:
-                        plt.gca().yaxis.set_major_locator(MaxNLocator(integer=True))
-                    plt.xlabel("time [ms]")
-
-                plt.title(
-                    f"Variable {variable} of {part}, mean for {data.shape[1]} post neurons [{ef.sci(vmin)}, {ef.sci(vmax)}]"
-                )
-            else:
-                print(
-                    "\nERROR plot_recordings: shape not accepted,",
-                    ";".join([part, variable]),
-                    "\n",
-                )
-            plt.xlim(start_time, end_time)
-            plt.xlabel("time [ms]")
-
-        elif (variable != "spike" and variable != "axon_spike") and mode == "matrix":
-            # data[start_step:end_step,neuron]
-            if len(data.shape) == 2 and isinstance(data[0, 0], list) is not True:
-                ### data from population [times,neurons]
-                ### get the times and data between time_lims
-                mask = (
-                    (time_arr_dict[part] >= start_time).astype(int)
-                    * (time_arr_dict[part] <= end_time).astype(int)
-                ).astype(bool)
-
-                time_decimals = get_number_of_decimals(time_step)
-
-                time_arr = np.round(time_arr_dict[part][mask], time_decimals)
-                data_arr = data[mask, :]
-
-                ### check with the actual_period and the times array if there is data missing
-                ###     from time_lims and actual period opne should get all times at which data points should be
-                actual_period = recordings[f"{part};period"]
-                actual_start_time = np.ceil(start_time / actual_period) * actual_period
-                actual_end_time = np.ceil(end_time / actual_period - 1) * actual_period
-                soll_times = np.round(
-                    np.arange(
-                        actual_start_time,
-                        actual_end_time + actual_period,
-                        actual_period,
-                    ),
-                    time_decimals,
-                )
-
-                ### check if there are time points, where data is missing
-                plot_data_arr = np.empty((soll_times.size, data_arr.shape[1]))
-                plot_data_arr[:] = None
-                for time_point_idx, time_point in enumerate(soll_times):
-                    if time_point in time_arr:
-                        ### data at time point is available --> use data
-                        idx_available_data = time_arr == time_point
-                        plot_data_arr[time_point_idx, :] = data_arr[
-                            idx_available_data, :
-                        ]
-                    ### if data is not available it stays none
-
-                vmin = np.nanmin(plot_data_arr)
-                vmax = np.nanmax(plot_data_arr)
-
-                masked_array = np.ma.array(
-                    plot_data_arr.T, mask=np.isnan(plot_data_arr.T)
-                )
-                cmap = matplotlib.cm.viridis
-                cmap.set_bad("red", 1.0)
-
-                plt.title(
-                    f"Variable {part} {variable} ({data.shape[1]}) [{ef.sci(vmin)}, {ef.sci(vmax)}]"
-                )
-
-                plt.gca().imshow(
-                    masked_array,
-                    aspect="auto",
-                    vmin=vmin,
-                    vmax=vmax,
-                    extent=[
-                        np.min(soll_times) - 0.5,
-                        np.max(soll_times) - 0.5,
-                        data.shape[1] - 0.5,
-                        -0.5,
-                    ],
-                    cmap=cmap,
-                    interpolation="none",
-                )
-                if data.shape[1] == 1:
-                    plt.yticks([0])
-                else:
-                    plt.gca().yaxis.set_major_locator(MaxNLocator(integer=True))
-                plt.xlabel("time [ms]")
-            elif len(data.shape) == 3 or (
-                len(data.shape) == 2 and isinstance(data[0, 0], list) is True
-            ):
-                ### data from projection
-                if len(data.shape) == 3:
-                    ### projection data: data[time, postneurons, preneurons]
-                    ### create a 2D array from the 3D array
-                    data_resh = data.reshape(
-                        (data.shape[0], int(data.shape[1] * data.shape[2]))
-                    )
-                    data_split = np.split(data_resh, data.shape[1], axis=1)
-                    ### separate the post_neurons by nan vectors
-                    data_with_none = np.concatenate(
-                        [
-                            np.concatenate(
-                                [
-                                    data_split[idx],
-                                    np.zeros((data.shape[0], 1)) * np.nan,
-                                ],
-                                axis=1,
-                            )
-                            for idx in range(len(data_split))
-                        ],
-                        axis=1,
-                    )[:, :-1]
-
-                    ### after cerating 2D array --> same procedure as for populations
-                    ### get the times and data between time_lims
-                    mask = (
-                        (time_arr_dict[part] >= start_time).astype(int)
-                        * (time_arr_dict[part] <= end_time).astype(int)
-                    ).astype(bool)
-                    time_arr = time_arr_dict[part][mask]
-                    data_arr = data_with_none[mask, :]
-
-                    ### check with the actual_period and the times array if there is data missing
-                    ###     from time_lims and actual period opne should get all times at which data points should be
-                    actual_period = recordings[f"{part};period"]
-                    actual_start_time = (
-                        np.ceil(start_time / actual_period) * actual_period
-                    )
-                    actual_end_time = (
-                        np.ceil(end_time / actual_period - 1) * actual_period
-                    )
-                    soll_times = np.arange(
-                        actual_start_time,
-                        actual_end_time + actual_period,
-                        actual_period,
-                    )
-
-                    ### check if there are time points, where data is missing
-                    plot_data_arr = np.empty((soll_times.size, data_arr.shape[1]))
-                    plot_data_arr[:] = None
-                    for time_point_idx, time_point in enumerate(soll_times):
-                        if time_point in time_arr:
-                            ### data at time point is available --> use data
-                            idx_available_data = time_arr == time_point
-                            plot_data_arr[time_point_idx, :] = data_arr[
-                                idx_available_data, :
-                            ]
-                        ### if data is not available it stays none
-
-                    vmin = np.nanmin(plot_data_arr)
-                    vmax = np.nanmax(plot_data_arr)
-
-                    masked_array = np.ma.array(
-                        plot_data_arr.T, mask=np.isnan(plot_data_arr.T)
-                    )
-                    cmap = matplotlib.cm.viridis
-                    cmap.set_bad("red", 1.0)
-
-                    plt.title(
-                        f"Variable {variable} of {part} ({data.shape[1]}) [{ef.sci(vmin)}, {ef.sci(vmax)}]"
-                    )
-
-                    plt.gca().imshow(
-                        masked_array,
-                        aspect="auto",
-                        vmin=vmin,
-                        vmax=vmax,
-                        extent=[
-                            np.min(soll_times) - 0.5,
-                            np.max(soll_times) - 0.5,
-                            data.shape[1] - 0.5,
-                            -0.5,
-                        ],
-                        cmap=cmap,
-                        interpolation="none",
-                    )
-                    if data.shape[1] == 1:
-                        plt.yticks([0])
-                    else:
-                        plt.gca().yaxis.set_major_locator(MaxNLocator(integer=True))
-                    plt.xlabel("time [ms]")
-                else:
-                    ### data[time, postneurons][preneurons] (with different number of preneurons)
-                    pass
-
-            else:
-                print(
-                    "\nERROR plot_recordings: shape not accepted,",
-                    ";".join([part, variable]),
-                    "\n",
-                )
-                quit()
-        else:
-            print(
-                "\nERROR plot_recordings: mode",
-                mode,
-                "not available for variable",
-                variable,
-                "\n",
-            )
-            quit()
-    plt.tight_layout()
-
-    ### save plot
-    figname_parts = figname.split("/")
-    if len(figname_parts) > 1:
-        save_dir = "/".join(figname_parts[:-1])
-        sf.create_dir(save_dir)
-    plt.savefig(figname, dpi=dpi)
-    plt.close()
-    print("Done")
-
-
 def get_number_of_zero_decimals(nr):
     """
     For numbers which are smaller than zero get the number of digits after the decimal
@@ -1597,43 +814,6 @@ def sample_data_with_timestep(time_arr, data_arr, timestep):
     new_data_arr = interpolate_func(new_time_arr)
 
     return (new_time_arr, new_data_arr)
-
-
-def time_data_add_nan(time_arr, data_arr, fill_time_step=None, axis=0):
-    """
-    If there are gaps in time_arr --> fill them with respective time values.
-    Fill the corresponding data_arr values with nan.
-
-    By default it is tried to fill the time array with continuously increasing times
-    based on the smallest time difference found there can still be discontinuities after
-    filling the arrays (because existing time values are not changed).
-
-    But one can also give a fixed fill time step.
-
-    Args:
-        time_arr (1D array):
-            times of data_arr in ms
-        data_arr (nD array):
-            the size of the specified dimension of data array must have the same length
-            as time_arr
-        fill_time_step (number, optional, default=None):
-            if there are gaps they are filled with this time step
-        axis (int):
-            which dimension of the data_arr belongs to the time_arr
-
-    Returns:
-        time_arr (1D array):
-            time array with gaps filled
-        data_arr (nD array):
-            data array with gaps filled
-    """
-    return time_data_fill_gaps(
-        time_arr,
-        data_arr,
-        fill_time_step=fill_time_step,
-        axis=axis,
-        fill="nan",
-    )
 
 
 def time_data_fill_gaps(
@@ -1819,10 +999,9 @@ def get_maximum(input_data: list | np.ndarray | tuple | float):
 class PlotRecordings:
     """
     Plot recordings from CompNeuroMonitors.
-
-    TODO: CHeck if there are memory issues with large recordings or many subplots.
     """
 
+    ### TODO: Check if there are memory issues with large recordings or many subplots.
     @check_types()
     def __init__(
         self,
@@ -2452,7 +1631,7 @@ class PlotRecordings:
         ).astype(bool)
 
         ### fill gaps in time_arr and data_arr with nan
-        time_arr, data_arr = time_data_add_nan(
+        time_arr, data_arr = time_data_fill_gaps(
             time_arr=time_arr[mask], data_arr=data_arr[mask], axis=0
         )
 
@@ -2674,3 +1853,180 @@ class PlotRecordings:
         plt.title(
             f"Variable {variable} of {compartment} ({nr_neurons}) [{ef.sci(np.nanmin(data_arr))}, {ef.sci(np.nanmax(data_arr))}]"
         )
+
+
+def get_spike_features_of_chunk(chunk: int, results: CompNeuroExp._ResultsCl):
+    """
+    Get the features of the spikes of a chunk of the results of a CompNeuroExp.
+
+    !!! warning
+        The results data dict has to contain the population name as key "pop_name".
+        The spikes have to be recorded.
+
+    Args:
+        chunk (int):
+            index of the chunk
+        results (CompNeuroExp._ResultsCl):
+            results of the experiment
+
+    Returns:
+        spike_features (dict):
+            dictionary with the features of the spikes
+    """
+    ### get number of spikes
+    spike_dict = results.recordings[chunk][f"{results.data['pop_name']};spike"]
+    t, _ = my_raster_plot(spike_dict)
+    nbr_spikes = len(t)
+    ### get time of 1st, 2nd, 3rd spike
+    if nbr_spikes > 0:
+        time_1st_spike = t[0] * results.recordings[chunk]["dt"]
+        if nbr_spikes > 1:
+            time_2nd_spike = t[1] * results.recordings[chunk]["dt"]
+            if nbr_spikes > 2:
+                time_3rd_spike = t[2] * results.recordings[chunk]["dt"]
+            else:
+                time_3rd_spike = None
+        else:
+            time_2nd_spike = None
+            time_3rd_spike = None
+    else:
+        time_1st_spike = None
+        time_2nd_spike = None
+        time_3rd_spike = None
+    ### get time of last spike
+    if nbr_spikes > 0:
+        time_last_spike = t[-1] * results.recordings[chunk]["dt"]
+    else:
+        time_last_spike = None
+    ### get CV of ISI
+    if nbr_spikes > 1:
+        isi = np.diff(t * results.recordings[chunk]["dt"])
+        cv_isi = np.std(isi) / np.mean(isi)
+    else:
+        cv_isi = None
+
+    return {
+        "spike_count": nbr_spikes,
+        "time_to_first_spike": time_1st_spike,
+        "time_to_second_spike": time_2nd_spike,
+        "time_to_third_spike": time_3rd_spike,
+        "time_to_last_spike": time_last_spike,
+        "ISI_CV": cv_isi,
+    }
+
+
+def get_spike_features_loss_of_chunk(
+    chunk: int,
+    results1: CompNeuroExp._ResultsCl,
+    results2: CompNeuroExp._ResultsCl,
+    chunk2: None | int = None,
+    feature_list: list[str] | None = None,
+):
+    """
+    Calculate the loss/difference between the spike features of two chunks of the
+    results of CompNeuroExp.
+
+    !!! warning
+        The results data dict has to contain the population name as key "pop_name".
+        The spikes have to be recorded.
+
+    Args:
+        chunk (int):
+            index of the chunk
+        results1 (CompNeuroExp._ResultsCl):
+            results of the first experiment
+        results2 (CompNeuroExp._ResultsCl):
+            results of the second experiment
+        chunk2 (None|int):
+            index of the chunk of the second results, if None the same as chunk
+        feature_list (list[str]|None):
+            list of feature names which should be used to calculate the loss, if None
+            the default list is used
+
+    Returns:
+        loss (float):
+            loss/difference between the spike features of the two chunks
+    """
+    verbose = False
+    if chunk2 is None:
+        chunk2 = chunk
+
+    ### get recording duration of chunk
+    nbr_periods = results1.recording_times.nbr_periods(
+        chunk=chunk, compartment=results1.data["pop_name"]
+    )
+    chunk_duration_ms = 0
+    chunk_duration_idx = 0
+    for period in range(nbr_periods):
+        chunk_duration_ms += np.abs(
+            np.diff(
+                results1.recording_times.time_lims(
+                    chunk=chunk, compartment=results1.data["pop_name"], period=period
+                )
+            )
+        )
+        chunk_duration_idx += np.abs(
+            np.diff(
+                results1.recording_times.idx_lims(
+                    chunk=chunk, compartment=results1.data["pop_name"], period=period
+                )
+            )
+        )
+
+    ### set a plausible "maximum" absolute difference for each feature
+    diff_max: dict[str, float] = {
+        "spike_count": chunk_duration_idx,
+        "time_to_first_spike": chunk_duration_ms,
+        "time_to_second_spike": chunk_duration_ms,
+        "time_to_third_spike": chunk_duration_ms,
+        "time_to_last_spike": chunk_duration_ms,
+        "ISI_CV": 1,
+    }
+    if verbose:
+        print(f"\ndiff_max: {diff_max}")
+
+    ### set a plausible "close" absolute difference for each feature
+    diff_close: dict[str, float] = {
+        "spike_count": np.ceil(chunk_duration_ms / 200),
+        "time_to_first_spike": np.clip(chunk_duration_ms * 0.1, 5, 50),
+        "time_to_second_spike": np.clip(chunk_duration_ms * 0.1, 5, 50),
+        "time_to_third_spike": np.clip(chunk_duration_ms * 0.1, 5, 50),
+        "time_to_last_spike": np.clip(chunk_duration_ms * 0.1, 5, 50),
+        "ISI_CV": 0.1,
+    }
+    if verbose:
+        print(f"\ndiff_close: {diff_close}\n")
+
+    ### catch if features from feature_list are not supported
+    if feature_list is None:
+        feature_list = list(diff_max.keys())
+    features_not_supported = [
+        feature for feature in feature_list if feature not in diff_max
+    ]
+    if features_not_supported:
+        raise ValueError(f"Features not supported: {features_not_supported}")
+
+    ### calculate and return the mean of the differences of the features
+    features_1 = get_spike_features_of_chunk(chunk, results1)
+    features_2 = get_spike_features_of_chunk(chunk2, results2)
+
+    if verbose:
+        print(f"\nfeatures_1: {features_1}\n")
+        print(f"features_2: {features_2}\n")
+    loss = 0.0
+    for feature in feature_list:
+        ### if both features are None use 0
+        if features_1[feature] is None and features_2[feature] is None:
+            diff = 0.0
+        ### if single feature is None use diff_max
+        elif features_1[feature] is None or features_2[feature] is None:
+            diff = diff_max[feature]
+        else:
+            diff = float(np.absolute(features_1[feature] - features_2[feature]))
+        ### scale the difference by diff_close and add to loss
+        loss += diff / diff_close[feature]
+    loss /= len(feature_list)
+
+    if verbose:
+        print(f"loss: {loss}")
+    return loss
