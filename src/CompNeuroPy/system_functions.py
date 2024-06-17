@@ -571,6 +571,8 @@ class Logger:
             txt (str):
                 Text to be logged
         """
+        if self._log_file is None:
+            return
 
         _, call_stack = self.trace_calls()
 
