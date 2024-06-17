@@ -417,21 +417,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Introduction">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example:
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -450,21 +435,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Define the experiment">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example:
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -473,21 +443,6 @@
       The get_loss_function
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="The get_loss_function">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example:
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1085,6 +1040,27 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/deap_cma/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cma Optimization
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1143,21 +1119,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Introduction">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example:
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -1176,21 +1137,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Define the experiment">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example:
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -1199,21 +1145,6 @@
       The get_loss_function
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="The get_loss_function">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example:
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1304,7 +1235,8 @@
 </ul>
 </li>
 </ul>
-<h3 id="example">Example:<a class="headerlink" href="#example" title="Permanent link">#</a></h3>
+<div class="admonition example">
+<p class="admonition-title">Example</p>
 <div class="highlight"><pre><span></span><code><span class="n">opt</span> <span class="o">=</span> <span class="n">OptNeuron</span><span class="p">(</span>
     <span class="n">experiment</span><span class="o">=</span><span class="n">my_exp</span><span class="p">,</span>
     <span class="n">get_loss_function</span><span class="o">=</span><span class="n">get_loss</span><span class="p">,</span>
@@ -1317,9 +1249,10 @@
     <span class="n">record</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;r&quot;</span><span class="p">],</span>
 <span class="p">)</span>
 </code></pre></div>
+</div>
 <p>A full example is available in the <a href="../../examples/opt_neuron/">Examples</a>.</p>
 <h2 id="run-the-optimization">Run the optimization<a class="headerlink" href="#run-the-optimization" title="Permanent link">#</a></h2>
-<p>To run the optimization simply call the <em>run()</em> function of the <a href="#CompNeuroPy.opt_neuron.OptNeuron"><code>OptNeuron</code></a> object.</p>
+<p>To run the optimization simply call the <a href="./#CompNeuroPy.opt_neuron.OptNeuron.run"><em>run()</em></a> function of the <a href="#CompNeuroPy.opt_neuron.OptNeuron"><code>OptNeuron</code></a> object. This returns the optimized parameters and more.</p>
 <h2 id="define-the-experiment">Define the experiment<a class="headerlink" href="#define-the-experiment" title="Permanent link">#</a></h2>
 <p>You have to define a <a href="../define_experiment/#CompNeuroPy.experiment.CompNeuroExp"><code>CompNeuroExp</code></a> object containing a <em>run()</em> function. In the <em>run()</em> function simulations and recordings are performed.</p>
 <div class="admonition warning">
@@ -1337,7 +1270,8 @@
 <li>the best parameters, the corresponding loss, and the corresponding results of the experiment will be available after the optimization, you can store any additional data which should be available after optimiozation in the <em>self.data</em> attribute</li>
 <li>do not call the functions <em>store_model_state()</em> and <em>reset_model_state()</em> of the <a href="../define_experiment/#CompNeuroPy.experiment.CompNeuroExp"><code>CompNeuroExp</code></a> class within the <em>run()</em> function!</li>
 </ul>
-<h3 id="example_1">Example:<a class="headerlink" href="#example_1" title="Permanent link">#</a></h3>
+<div class="admonition example">
+<p class="admonition-title">Example</p>
 <div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">my_exp</span><span class="p">(</span><span class="n">CompNeuroExp</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Define an experiment by inheriting from CompNeuroExp.</span>
@@ -1407,13 +1341,15 @@
         <span class="c1">### return results, use the object&#39;s self.results()</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">()</span>
 </code></pre></div>
+</div>
 <h2 id="the-get_loss_function">The get_loss_function<a class="headerlink" href="#the-get_loss_function" title="Permanent link">#</a></h2>
 <p>The <em>get_loss_function</em> must have two arguments. When this function is called during optimization, the first argument is always the <em>results</em> object returned by the <em>experiment</em>, i.e. the results of the neuron you want to optimize. The second argument depends on whether you have specified <em>results_soll</em>, i.e. data to be reproduced by the <em>neuron_model</em>, or whether you have specified a <em>target_neuron_model</em> whose results are to be reproduced by the <em>neuron_model</em>. Thus, the second argument is either <em>results_soll</em> provided to the <a href="#CompNeuroPy.opt_neuron.OptNeuron"><code>OptNeuron</code></a> class during initialization or another <em>results</em> object (returned by the <a href="../define_experiment/#CompNeuroPy.experiment.CompNeuroExp"><code>CompNeuroExp</code></a> <em>run</em> function), generated with the <em>target_neuron_model</em>.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p>You always have to work with the neuron rank 0 within the <em>get_loss_function</em>!</p>
 </div>
-<h3 id="example_2">Example:<a class="headerlink" href="#example_2" title="Permanent link">#</a></h3>
+<div class="admonition example">
+<p class="admonition-title">Example</p>
 <p>In this example we assume, that <em>results_soll</em> was provided during initialization of the <a href="#CompNeuroPy.opt_neuron.OptNeuron"><code>OptNeuron</code></a> class (no <em>target_neuron_model</em> used).
 <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">get_loss</span><span class="p">(</span><span class="n">results_ist</span><span class="p">:</span> <span class="n">CompNeuroExp</span><span class="o">.</span><span class="n">_ResultsCl</span><span class="p">,</span> <span class="n">results_soll</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1452,6 +1388,7 @@
     <span class="c1">### be summed during the optimization</span>
     <span class="k">return</span> <span class="p">[</span><span class="n">rmse1</span><span class="p">,</span> <span class="n">rmse2</span><span class="p">]</span>
 </code></pre></div></p>
+</div>
 
 
 <div class="doc doc-object doc-class">
@@ -2817,7 +2754,60 @@
 <span class="normal">1385</span>
 <span class="normal">1386</span>
 <span class="normal">1387</span>
-<span class="normal">1388</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">OptNeuron</span><span class="p">:</span>
+<span class="normal">1388</span>
+<span class="normal">1389</span>
+<span class="normal">1390</span>
+<span class="normal">1391</span>
+<span class="normal">1392</span>
+<span class="normal">1393</span>
+<span class="normal">1394</span>
+<span class="normal">1395</span>
+<span class="normal">1396</span>
+<span class="normal">1397</span>
+<span class="normal">1398</span>
+<span class="normal">1399</span>
+<span class="normal">1400</span>
+<span class="normal">1401</span>
+<span class="normal">1402</span>
+<span class="normal">1403</span>
+<span class="normal">1404</span>
+<span class="normal">1405</span>
+<span class="normal">1406</span>
+<span class="normal">1407</span>
+<span class="normal">1408</span>
+<span class="normal">1409</span>
+<span class="normal">1410</span>
+<span class="normal">1411</span>
+<span class="normal">1412</span>
+<span class="normal">1413</span>
+<span class="normal">1414</span>
+<span class="normal">1415</span>
+<span class="normal">1416</span>
+<span class="normal">1417</span>
+<span class="normal">1418</span>
+<span class="normal">1419</span>
+<span class="normal">1420</span>
+<span class="normal">1421</span>
+<span class="normal">1422</span>
+<span class="normal">1423</span>
+<span class="normal">1424</span>
+<span class="normal">1425</span>
+<span class="normal">1426</span>
+<span class="normal">1427</span>
+<span class="normal">1428</span>
+<span class="normal">1429</span>
+<span class="normal">1430</span>
+<span class="normal">1431</span>
+<span class="normal">1432</span>
+<span class="normal">1433</span>
+<span class="normal">1434</span>
+<span class="normal">1435</span>
+<span class="normal">1436</span>
+<span class="normal">1437</span>
+<span class="normal">1438</span>
+<span class="normal">1439</span>
+<span class="normal">1440</span>
+<span class="normal">1441</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">OptNeuron</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    This class is used to optimize neuron models with ANNarchy.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -2959,7 +2949,9 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">bads_params_dict</span> <span class="o">=</span> <span class="n">bads_params_dict</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">loss_history</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">recording_period</span> <span class="o">=</span> <span class="n">recording_period</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">recording_period_str</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_recording_period_string</span><span class="p">(</span>
+                <span class="n">recording_period</span>
+            <span class="p">)</span>
 
             <span class="c1">### if using deap pop size is the number of individuals for the optimization</span>
             <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;deap&quot;</span><span class="p">:</span>
@@ -3005,6 +2997,28 @@
             <span class="n">model</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">monitors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_models</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">popsize</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">monitors</span> <span class="o">=</span> <span class="n">monitors</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">experiment</span> <span class="o">=</span> <span class="n">experiment</span><span class="p">(</span><span class="n">monitors</span><span class="o">=</span><span class="n">monitors</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_recording_period_string</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">recording_period</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the recording period string for the CompNeuroMonitors. If there is no</span>
+<span class="sd">        recording period or if there is only the variable &quot;spike&quot; recorded, the</span>
+<span class="sd">        recording period string is empty.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            recording_period (float, optional):</span>
+<span class="sd">                The recording period for the simulation in ms. Default: None.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            recording_period_str (str):</span>
+<span class="sd">                The recording period string for the CompNeuroMonitors.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">recording_period_str</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;;</span><span class="si">{</span><span class="n">recording_period</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">if</span> <span class="n">recording_period</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="ow">and</span> <span class="p">(</span><span class="s2">&quot;spike&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">record</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">record</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">recording_period_str</span>
 
     <span class="k">def</span> <span class="nf">_get_lower_upper_p0</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -3177,15 +3191,9 @@
 
                 <span class="c1">### create monitors</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">record</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="n">recording_period_str</span> <span class="o">=</span> <span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">recording_period</span><span class="si">}</span><span class="s2">&quot;</span>
-                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">recording_period</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-                        <span class="ow">and</span> <span class="p">(</span><span class="s2">&quot;spike&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">record</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">record</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span>
-                        <span class="k">else</span> <span class="s2">&quot;&quot;</span>
-                    <span class="p">)</span>
                     <span class="n">monitors</span> <span class="o">=</span> <span class="n">CompNeuroMonitors</span><span class="p">(</span>
                         <span class="p">{</span>
-                            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pop_name</span><span class="si">}{</span><span class="n">recording_period_str</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">record</span>
+                            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pop_name</span><span class="si">}{</span><span class="bp">self</span><span class="o">.</span><span class="n">recording_period_str</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">record</span>
                             <span class="k">for</span> <span class="n">pop_name</span> <span class="ow">in</span> <span class="p">[</span>
                                 <span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
                                 <span class="n">target_model</span><span class="o">.</span><span class="n">populations</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
@@ -3214,14 +3222,10 @@
                 <span class="p">)</span>
                 <span class="c1">### create monitors</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">record</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="n">recording_period_str</span> <span class="o">=</span> <span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">recording_period</span><span class="si">}</span><span class="s2">&quot;</span>
-                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">recording_period</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-                        <span class="ow">and</span> <span class="p">(</span><span class="s2">&quot;spike&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">record</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">record</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span>
-                        <span class="k">else</span> <span class="s2">&quot;&quot;</span>
-                    <span class="p">)</span>
                     <span class="n">monitors</span> <span class="o">=</span> <span class="n">CompNeuroMonitors</span><span class="p">(</span>
-                        <span class="p">{</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}{</span><span class="n">recording_period_str</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">record</span><span class="p">}</span>
+                        <span class="p">{</span>
+                            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">populations</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}{</span><span class="bp">self</span><span class="o">.</span><span class="n">recording_period_str</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">record</span>
+                        <span class="p">}</span>
                     <span class="p">)</span>
 
         <span class="k">return</span> <span class="n">model</span><span class="p">,</span> <span class="n">target_model</span><span class="p">,</span> <span class="n">monitors</span>
@@ -4080,12 +4084,16 @@
 <span class="sd">            best (dict):</span>
 <span class="sd">                dictionary containing the optimized parameters (as keys) and:</span>
 
-<span class="sd">                - &quot;loss&quot;: the loss</span>
-<span class="sd">                - &quot;all_loss&quot;: the individual losses of the get_loss_function</span>
-<span class="sd">                - &quot;std&quot;: the SD of the loss (in case of noisy models with multiple</span>
-<span class="sd">                    runs per loss calculation)</span>
-<span class="sd">                - &quot;results&quot;: the results generated by the experiment</span>
-<span class="sd">                - &quot;results_soll&quot;: the target results</span>
+<span class="sd">                - &quot;loss&quot; (float): the loss (of best run)</span>
+<span class="sd">                - &quot;all_loss&quot; (list): the individual losses of the get_loss_function</span>
+<span class="sd">                - &quot;std&quot; (float): the SD of the loss (in case of noisy models with</span>
+<span class="sd">                    multiple runs per loss calculation)</span>
+<span class="sd">                - &quot;results&quot; (CompNeuroExp._ResultsCl): the results generated by the</span>
+<span class="sd">                    experiment</span>
+<span class="sd">                - &quot;results_soll&quot; (as given by the user or CompNeuroExp._ResultsCl): the</span>
+<span class="sd">                    target results</span>
+<span class="sd">                - &quot;parameters&quot; (dict): all parameters given in the variable bounds and</span>
+<span class="sd">                    their optimized values</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">verbose_run</span> <span class="o">=</span> <span class="n">verbose</span>
@@ -4118,6 +4126,7 @@
         <span class="n">best</span><span class="p">[</span><span class="s2">&quot;std&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fit</span><span class="p">[</span><span class="s2">&quot;std&quot;</span><span class="p">]</span>
         <span class="n">best</span><span class="p">[</span><span class="s2">&quot;results&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fit</span><span class="p">[</span><span class="s2">&quot;results&quot;</span><span class="p">]</span>
         <span class="n">best</span><span class="p">[</span><span class="s2">&quot;results_soll&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">results_soll</span>
+        <span class="n">best</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_final_parameters</span><span class="p">(</span><span class="n">best</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="n">best</span>
 
         <span class="c1">### create loss history array</span>
@@ -4146,6 +4155,36 @@
 
         <span class="k">return</span> <span class="n">best</span>
 
+    <span class="k">def</span> <span class="nf">_get_final_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">best</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the final parameters as dictionary.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            best (dict):</span>
+<span class="sd">                dictionary containing the optimized parameters (as keys) and other keys.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            final_parameters (dict):</span>
+<span class="sd">                dictionary containing all parameters of the variable bounds (as keys)</span>
+<span class="sd">                and their optimized values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">final_parameters</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1">### first all optimized variables (bounds=list)</span>
+        <span class="k">for</span> <span class="n">param_name</span><span class="p">,</span> <span class="n">param_bounds</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables_bounds</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">param_bounds</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="n">final_parameters</span><span class="p">[</span><span class="n">param_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">best</span><span class="p">[</span><span class="n">param_name</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">final_parameters</span><span class="p">[</span><span class="n">param_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">param_bounds</span>
+
+        <span class="c1">### now all string variables (bounds=str)</span>
+        <span class="k">for</span> <span class="n">param_name</span><span class="p">,</span> <span class="n">param_bounds</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables_bounds</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">param_bounds</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">final_parameters</span><span class="p">[</span><span class="n">param_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">ef</span><span class="o">.</span><span class="n">evaluate_expression_with_dict</span><span class="p">(</span>
+                    <span class="n">param_bounds</span><span class="p">,</span> <span class="n">final_parameters</span>
+                <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">final_parameters</span>
+
     <span class="k">def</span> <span class="nf">_run_with_deap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_evals</span><span class="p">,</span> <span class="n">deap_plot_file</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Runs the optimization with deap.</span>
@@ -4156,6 +4195,10 @@
 
 <span class="sd">            deap_plot_file (str):</span>
 <span class="sd">                the name of the figure which will be saved and shows the logbook</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">                Dictionary containing the best parameters, the logbook, the last population</span>
+<span class="sd">                of individuals and the best fitness.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deap_cma</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
@@ -4691,7 +4734,9 @@ for the BADS optimization. Default: None.</p>
 <span class="normal">228</span>
 <span class="normal">229</span>
 <span class="normal">230</span>
-<span class="normal">231</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@check_types</span><span class="p">(</span><span class="n">warnings</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@check_types</span><span class="p">(</span><span class="n">warnings</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">experiment</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">CompNeuroExp</span><span class="p">],</span>
@@ -4826,7 +4871,9 @@ for the BADS optimization. Default: None.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">bads_params_dict</span> <span class="o">=</span> <span class="n">bads_params_dict</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">loss_history</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">recording_period</span> <span class="o">=</span> <span class="n">recording_period</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">recording_period_str</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_recording_period_string</span><span class="p">(</span>
+            <span class="n">recording_period</span>
+        <span class="p">)</span>
 
         <span class="c1">### if using deap pop size is the number of individuals for the optimization</span>
         <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;deap&quot;</span><span class="p">:</span>
@@ -5004,12 +5051,16 @@ the logbook. Default: "logbook.png".</p>
             <div class="doc-md-description">
               <p>dictionary containing the optimized parameters (as keys) and:</p>
 <ul>
-<li>"loss": the loss</li>
-<li>"all_loss": the individual losses of the get_loss_function</li>
-<li>"std": the SD of the loss (in case of noisy models with multiple
-    runs per loss calculation)</li>
-<li>"results": the results generated by the experiment</li>
-<li>"results_soll": the target results</li>
+<li>"loss" (float): the loss (of best run)</li>
+<li>"all_loss" (list): the individual losses of the get_loss_function</li>
+<li>"std" (float): the SD of the loss (in case of noisy models with
+    multiple runs per loss calculation)</li>
+<li>"results" (CompNeuroExp._ResultsCl): the results generated by the
+    experiment</li>
+<li>"results_soll" (as given by the user or CompNeuroExp._ResultsCl): the
+    target results</li>
+<li>"parameters" (dict): all parameters given in the variable bounds and
+    their optimized values</li>
 </ul>
             </div>
           </td>
@@ -5019,21 +5070,7 @@ the logbook. Default: "logbook.png".</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/opt_neuron.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1274</span>
-<span class="normal">1275</span>
-<span class="normal">1276</span>
-<span class="normal">1277</span>
-<span class="normal">1278</span>
-<span class="normal">1279</span>
-<span class="normal">1280</span>
-<span class="normal">1281</span>
-<span class="normal">1282</span>
-<span class="normal">1283</span>
-<span class="normal">1284</span>
-<span class="normal">1285</span>
-<span class="normal">1286</span>
-<span class="normal">1287</span>
-<span class="normal">1288</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1288</span>
 <span class="normal">1289</span>
 <span class="normal">1290</span>
 <span class="normal">1291</span>
@@ -5116,7 +5153,26 @@ the logbook. Default: "logbook.png".</p>
 <span class="normal">1368</span>
 <span class="normal">1369</span>
 <span class="normal">1370</span>
-<span class="normal">1371</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@check_types</span><span class="p">()</span>
+<span class="normal">1371</span>
+<span class="normal">1372</span>
+<span class="normal">1373</span>
+<span class="normal">1374</span>
+<span class="normal">1375</span>
+<span class="normal">1376</span>
+<span class="normal">1377</span>
+<span class="normal">1378</span>
+<span class="normal">1379</span>
+<span class="normal">1380</span>
+<span class="normal">1381</span>
+<span class="normal">1382</span>
+<span class="normal">1383</span>
+<span class="normal">1384</span>
+<span class="normal">1385</span>
+<span class="normal">1386</span>
+<span class="normal">1387</span>
+<span class="normal">1388</span>
+<span class="normal">1389</span>
+<span class="normal">1390</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@check_types</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">run</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">max_evals</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -5149,12 +5205,16 @@ the logbook. Default: "logbook.png".</p>
 <span class="sd">        best (dict):</span>
 <span class="sd">            dictionary containing the optimized parameters (as keys) and:</span>
 
-<span class="sd">            - &quot;loss&quot;: the loss</span>
-<span class="sd">            - &quot;all_loss&quot;: the individual losses of the get_loss_function</span>
-<span class="sd">            - &quot;std&quot;: the SD of the loss (in case of noisy models with multiple</span>
-<span class="sd">                runs per loss calculation)</span>
-<span class="sd">            - &quot;results&quot;: the results generated by the experiment</span>
-<span class="sd">            - &quot;results_soll&quot;: the target results</span>
+<span class="sd">            - &quot;loss&quot; (float): the loss (of best run)</span>
+<span class="sd">            - &quot;all_loss&quot; (list): the individual losses of the get_loss_function</span>
+<span class="sd">            - &quot;std&quot; (float): the SD of the loss (in case of noisy models with</span>
+<span class="sd">                multiple runs per loss calculation)</span>
+<span class="sd">            - &quot;results&quot; (CompNeuroExp._ResultsCl): the results generated by the</span>
+<span class="sd">                experiment</span>
+<span class="sd">            - &quot;results_soll&quot; (as given by the user or CompNeuroExp._ResultsCl): the</span>
+<span class="sd">                target results</span>
+<span class="sd">            - &quot;parameters&quot; (dict): all parameters given in the variable bounds and</span>
+<span class="sd">                their optimized values</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">verbose_run</span> <span class="o">=</span> <span class="n">verbose</span>
@@ -5187,6 +5247,7 @@ the logbook. Default: "logbook.png".</p>
     <span class="n">best</span><span class="p">[</span><span class="s2">&quot;std&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fit</span><span class="p">[</span><span class="s2">&quot;std&quot;</span><span class="p">]</span>
     <span class="n">best</span><span class="p">[</span><span class="s2">&quot;results&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fit</span><span class="p">[</span><span class="s2">&quot;results&quot;</span><span class="p">]</span>
     <span class="n">best</span><span class="p">[</span><span class="s2">&quot;results_soll&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">results_soll</span>
+    <span class="n">best</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_final_parameters</span><span class="p">(</span><span class="n">best</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="n">best</span>
 
     <span class="c1">### create loss history array</span>

@@ -357,15 +357,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#CompNeuroPy.generate_model.CompNeuroModel" class="md-nav__link">
     <span class="md-ellipsis">
       CompNeuroModel
@@ -1067,6 +1058,27 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/deap_cma/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cma Optimization
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1122,15 +1134,6 @@
   <a href="#introduction" class="md-nav__link">
     <span class="md-ellipsis">
       Introduction
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#example" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example
     </span>
   </a>
   
@@ -1241,26 +1244,27 @@
 <li><strong>model creation</strong>: create the ANNarchy objects (populations, projections), i.e., run the <code>model_creation function</code></li>
 <li><strong>model compilation</strong>: compile all created models</li>
 </ol>
-<h2 id="example">Example<a class="headerlink" href="#example" title="Permanent link">#</a></h2>
-<pre><code>from CompNeuroPy import CompNeuroModel
+<div class="admonition example">
+<p class="admonition-title">Example</p>
+<p><pre><code>from CompNeuroPy import CompNeuroModel
 my_model = CompNeuroModel(model_creation_function=create_model,  ### the most important part, this function creates the model (populations, projections)
-                          model_kwargs={'a':1, 'b':2},           ### define the two arguments a and b of function create_model
-                          name='my_model',                       ### you can give the model a name
-                          description='my simple example model', ### you can give the model a description
-                          do_create=True,                        ### create the model directly
-                          do_compile=True,                       ### let the model (and all models created before) compile directly
-                          compile_folder_name='my_model')        ### name of the saved compilation folder
-</code></pre>
-
-<p>The following function could be the corresponding model_creation_function:</p>
+                        model_kwargs={'a':1, 'b':2},           ### define the two arguments a and b of function create_model
+                        name='my_model',                       ### you can give the model a name
+                        description='my simple example model', ### you can give the model a description
+                        do_create=True,                        ### create the model directly
+                        do_compile=True,                       ### let the model (and all models created before) compile directly
+                        compile_folder_name='my_model')        ### name of the saved compilation folder
+</code></pre></p>
+<p>The following function could be the corresponding model_creation_function:
 <pre><code>from ANNarchy import Population, Izhikevich
 def create_model(a, b):
     pop = Population(geometry=a, neuron=Izhikevich, name='Izh_pop_a') ### first population, size a
     pop.b = 0                                                         ### some parameter adjustment
     Population(geometry=b, neuron=Izhikevich, name='Izh_pop_b')       ### second population, size b
 </code></pre>
-<p>Here, two populations are created (both use built-in Izhikevich neuron model of ANNarchy). The function does not require a return value. It is important that all populations and projections have unique names.</p>
+Here, two populations are created (both use built-in Izhikevich neuron model of ANNarchy). The function does not require a return value. It is important that all populations and projections have unique names.</p>
 <p>A more detailed example is available in the <a href="../../examples/generate_models/">Examples</a>.</p>
+</div>
 
 
 <div class="doc doc-object doc-class">
@@ -1802,7 +1806,14 @@ def create_model(a, b):
 <span class="normal">402</span>
 <span class="normal">403</span>
 <span class="normal">404</span>
-<span class="normal">405</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">CompNeuroModel</span><span class="p">:</span>
+<span class="normal">405</span>
+<span class="normal">406</span>
+<span class="normal">407</span>
+<span class="normal">408</span>
+<span class="normal">409</span>
+<span class="normal">410</span>
+<span class="normal">411</span>
+<span class="normal">412</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">CompNeuroModel</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for creating and compiling a model.</span>
 
@@ -1940,7 +1951,7 @@ def create_model(a, b):
             <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_attribute_df_compiled</span> <span class="o">=</span> <span class="kc">True</span>
 
-    <span class="k">def</span> <span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">compile_folder_name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">compile_folder_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">warn</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Compiles a created model.</span>
 
@@ -1948,6 +1959,9 @@ def create_model(a, b):
 <span class="sd">            compile_folder_name (str, optional):</span>
 <span class="sd">                Name of the folder in which the model is compiled. Default: value from</span>
 <span class="sd">                initialization.</span>
+<span class="sd">            warn (bool, optional):</span>
+<span class="sd">                If True a warning is printed if other models are initialized but not</span>
+<span class="sd">                created (they will not be compiled). Default: True.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1">### check if this model is created</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">created</span><span class="p">:</span>
@@ -1955,15 +1969,16 @@ def create_model(a, b):
                 <span class="n">compile_folder_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compile_folder_name</span>
 
             <span class="c1">### check if other models were initialized but not created --&gt; warn that they are not compiled</span>
-            <span class="n">not_created_model_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_if_models_created</span><span class="p">()</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">not_created_model_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span>
-                    <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">WARNING during compile of model &quot;</span>
-                    <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
-                    <span class="o">+</span> <span class="s2">&quot;: There are initialized models which are not created, thus not compiled! models:</span><span class="se">\n</span><span class="s2">&quot;</span>
-                    <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">not_created_model_list</span><span class="p">)</span>
-                    <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
-                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">warn</span><span class="p">:</span>
+                <span class="n">not_created_model_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_if_models_created</span><span class="p">()</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">not_created_model_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span>
+                        <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">WARNING during compile of model &quot;</span>
+                        <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+                        <span class="o">+</span> <span class="s2">&quot;: There are initialized models which are not created, thus not compiled! models:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                        <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">not_created_model_list</span><span class="p">)</span>
+                        <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="p">)</span>
             <span class="n">mf</span><span class="o">.</span><span class="n">compile_in_folder</span><span class="p">(</span><span class="n">compile_folder_name</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">compiled</span> <span class="o">=</span> <span class="kc">True</span>
 
@@ -1978,7 +1993,7 @@ def create_model(a, b):
                 <span class="o">+</span> <span class="s2">&quot;: Only compile the model after it has been created!&quot;</span>
             <span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">do_compile</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">compile_folder_name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">do_compile</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">compile_folder_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">warn</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates a model and optionally compiles it directly.</span>
 
@@ -1988,6 +2003,9 @@ def create_model(a, b):
 <span class="sd">            compile_folder_name (str, optional):</span>
 <span class="sd">                Name of the folder in which the model is compiled. Default: value from</span>
 <span class="sd">                initialization.</span>
+<span class="sd">            warn (bool, optional):</span>
+<span class="sd">                If True a warning is printed during compilation if other models are</span>
+<span class="sd">                initialized but not created (they will not be compiled). Default: True.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">created</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;already created!&quot;</span><span class="p">)</span>
@@ -2017,7 +2035,7 @@ def create_model(a, b):
             <span class="bp">self</span><span class="o">.</span><span class="n">_attribute_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_attribute_df</span><span class="p">()</span>
 
             <span class="k">if</span> <span class="n">do_compile</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">compile_folder_name</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">compile_folder_name</span><span class="p">,</span> <span class="n">warn</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_check_if_models_created</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -2515,7 +2533,7 @@ def create_model(a, b):
 
 
 <h3 id="CompNeuroPy.generate_model.CompNeuroModel.compile" class="doc doc-heading">
-          <code class="highlight language-python"><span class="nb">compile</span><span class="p">(</span><span class="n">compile_folder_name</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+          <code class="highlight language-python"><span class="nb">compile</span><span class="p">(</span><span class="n">compile_folder_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">warn</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
 
 <a href="#CompNeuroPy.generate_model.CompNeuroModel.compile" class="headerlink" title="Permanent link">#</a></h3>
 
@@ -2550,6 +2568,21 @@ initialization.</p>
           </td>
           <td>
                 <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>warn</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>If True a warning is printed if other models are initialized but not
+created (they will not be compiled). Default: True.</p>
+            </div>
+          </td>
+          <td>
+                <code>True</code>
           </td>
         </tr>
     </tbody>
@@ -2593,7 +2626,11 @@ initialization.</p>
 <span class="normal">181</span>
 <span class="normal">182</span>
 <span class="normal">183</span>
-<span class="normal">184</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">compile_folder_name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="normal">184</span>
+<span class="normal">185</span>
+<span class="normal">186</span>
+<span class="normal">187</span>
+<span class="normal">188</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">compile_folder_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">warn</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Compiles a created model.</span>
 
@@ -2601,6 +2638,9 @@ initialization.</p>
 <span class="sd">        compile_folder_name (str, optional):</span>
 <span class="sd">            Name of the folder in which the model is compiled. Default: value from</span>
 <span class="sd">            initialization.</span>
+<span class="sd">        warn (bool, optional):</span>
+<span class="sd">            If True a warning is printed if other models are initialized but not</span>
+<span class="sd">            created (they will not be compiled). Default: True.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1">### check if this model is created</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">created</span><span class="p">:</span>
@@ -2608,15 +2648,16 @@ initialization.</p>
             <span class="n">compile_folder_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compile_folder_name</span>
 
         <span class="c1">### check if other models were initialized but not created --&gt; warn that they are not compiled</span>
-        <span class="n">not_created_model_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_if_models_created</span><span class="p">()</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">not_created_model_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span>
-                <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">WARNING during compile of model &quot;</span>
-                <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
-                <span class="o">+</span> <span class="s2">&quot;: There are initialized models which are not created, thus not compiled! models:</span><span class="se">\n</span><span class="s2">&quot;</span>
-                <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">not_created_model_list</span><span class="p">)</span>
-                <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
-            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">warn</span><span class="p">:</span>
+            <span class="n">not_created_model_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_if_models_created</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">not_created_model_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">WARNING during compile of model &quot;</span>
+                    <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+                    <span class="o">+</span> <span class="s2">&quot;: There are initialized models which are not created, thus not compiled! models:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">not_created_model_list</span><span class="p">)</span>
+                    <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
         <span class="n">mf</span><span class="o">.</span><span class="n">compile_in_folder</span><span class="p">(</span><span class="n">compile_folder_name</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">compiled</span> <span class="o">=</span> <span class="kc">True</span>
 
@@ -2643,7 +2684,7 @@ initialization.</p>
 
 
 <h3 id="CompNeuroPy.generate_model.CompNeuroModel.create" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">create</span><span class="p">(</span><span class="n">do_compile</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">compile_folder_name</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+          <code class="highlight language-python"><span class="n">create</span><span class="p">(</span><span class="n">do_compile</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">compile_folder_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">warn</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
 
 <a href="#CompNeuroPy.generate_model.CompNeuroModel.create" class="headerlink" title="Permanent link">#</a></h3>
 
@@ -2694,16 +2735,27 @@ initialization.</p>
                 <code>None</code>
           </td>
         </tr>
+        <tr>
+          <td><code>warn</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>If True a warning is printed during compilation if other models are
+initialized but not created (they will not be compiled). Default: True.</p>
+            </div>
+          </td>
+          <td>
+                <code>True</code>
+          </td>
+        </tr>
     </tbody>
   </table>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/generate_model.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">186</span>
-<span class="normal">187</span>
-<span class="normal">188</span>
-<span class="normal">189</span>
-<span class="normal">190</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">190</span>
 <span class="normal">191</span>
 <span class="normal">192</span>
 <span class="normal">193</span>
@@ -2738,7 +2790,14 @@ initialization.</p>
 <span class="normal">222</span>
 <span class="normal">223</span>
 <span class="normal">224</span>
-<span class="normal">225</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">do_compile</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">compile_folder_name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">do_compile</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">compile_folder_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">warn</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Creates a model and optionally compiles it directly.</span>
 
@@ -2748,6 +2807,9 @@ initialization.</p>
 <span class="sd">        compile_folder_name (str, optional):</span>
 <span class="sd">            Name of the folder in which the model is compiled. Default: value from</span>
 <span class="sd">            initialization.</span>
+<span class="sd">        warn (bool, optional):</span>
+<span class="sd">            If True a warning is printed during compilation if other models are</span>
+<span class="sd">            initialized but not created (they will not be compiled). Default: True.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">created</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;already created!&quot;</span><span class="p">)</span>
@@ -2777,7 +2839,7 @@ initialization.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">_attribute_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_attribute_df</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="n">do_compile</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">compile_folder_name</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">compile_folder_name</span><span class="p">,</span> <span class="n">warn</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
           </details>
   </div>
@@ -2895,14 +2957,7 @@ the model</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/generate_model.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">252</span>
-<span class="normal">253</span>
-<span class="normal">254</span>
-<span class="normal">255</span>
-<span class="normal">256</span>
-<span class="normal">257</span>
-<span class="normal">258</span>
-<span class="normal">259</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">259</span>
 <span class="normal">260</span>
 <span class="normal">261</span>
 <span class="normal">262</span>
@@ -2934,7 +2989,14 @@ the model</p>
 <span class="normal">288</span>
 <span class="normal">289</span>
 <span class="normal">290</span>
-<span class="normal">291</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">set_param</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">compartment</span><span class="p">,</span> <span class="n">parameter_name</span><span class="p">,</span> <span class="n">parameter_value</span><span class="p">):</span>
+<span class="normal">291</span>
+<span class="normal">292</span>
+<span class="normal">293</span>
+<span class="normal">294</span>
+<span class="normal">295</span>
+<span class="normal">296</span>
+<span class="normal">297</span>
+<span class="normal">298</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">set_param</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">compartment</span><span class="p">,</span> <span class="n">parameter_name</span><span class="p">,</span> <span class="n">parameter_value</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Sets the specified parameter of the specified compartment.</span>
 

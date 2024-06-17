@@ -743,6 +743,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#CompNeuroPy.neuron_models.final_models.izhikevich_2003_like_nm.Izhikevich2003NoisyBaseSNR" class="md-nav__link">
+    <span class="md-ellipsis">
+      Izhikevich2003NoisyBaseSNR
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -843,6 +852,15 @@
   <a href="#CompNeuroPy.neuron_models.final_models.izhikevich_2007_like_nm.Izhikevich2007NoisyAmpaOscillating" class="md-nav__link">
     <span class="md-ellipsis">
       Izhikevich2007NoisyAmpaOscillating
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#CompNeuroPy.neuron_models.final_models.izhikevich_2007_like_nm.IzhikevichGolomb" class="md-nav__link">
+    <span class="md-ellipsis">
+      IzhikevichGolomb
     </span>
   </a>
   
@@ -1265,6 +1283,27 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/deap_cma/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cma Optimization
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1500,6 +1539,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#CompNeuroPy.neuron_models.final_models.izhikevich_2003_like_nm.Izhikevich2003NoisyBaseSNR" class="md-nav__link">
+    <span class="md-ellipsis">
+      Izhikevich2003NoisyBaseSNR
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1600,6 +1648,15 @@
   <a href="#CompNeuroPy.neuron_models.final_models.izhikevich_2007_like_nm.Izhikevich2007NoisyAmpaOscillating" class="md-nav__link">
     <span class="md-ellipsis">
       Izhikevich2007NoisyAmpaOscillating
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#CompNeuroPy.neuron_models.final_models.izhikevich_2007_like_nm.IzhikevichGolomb" class="md-nav__link">
+    <span class="md-ellipsis">
+      IzhikevichGolomb
     </span>
   </a>
   
@@ -1708,10 +1765,9 @@ population.</p>
     </tbody>
   </table>
 
-
-
-<p><strong>Examples:</strong></p>
-    <div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">ANNarchy</span> <span class="kn">import</span> <span class="n">Population</span><span class="p">,</span> <span class="n">simulate_until</span>
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">ANNarchy</span> <span class="kn">import</span> <span class="n">Population</span><span class="p">,</span> <span class="n">simulate_until</span>
 <span class="kn">from</span> <span class="nn">CompNeuroPy.neuron_models</span> <span class="kn">import</span> <span class="n">Integrator</span>
 
 <span class="c1"># Create a population of 10 integrator neurons</span>
@@ -1737,7 +1793,7 @@ population.</p>
 <span class="k">else</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No neuron reached threshold.&quot;</span><span class="p">)</span>
 </code></pre></div>
-
+</details>
 <details class="variables-to-record" open>
   <summary>Variables to record</summary>
   <ul>
@@ -1860,7 +1916,7 @@ population.</p>
 <span class="sd">        threshold (float, optional):</span>
 <span class="sd">            Threshold for the decision g_ampa has to reach. Default: 1.</span>
 
-<span class="sd">    Examples:</span>
+<span class="sd">    Example:</span>
 <span class="sd">        ```python</span>
 <span class="sd">        from ANNarchy import Population, simulate_until</span>
 <span class="sd">        from CompNeuroPy.neuron_models import Integrator</span>
@@ -2010,10 +2066,9 @@ population.</p>
     </tbody>
   </table>
 
-
-
-<p><strong>Examples:</strong></p>
-    <div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">ANNarchy</span> <span class="kn">import</span> <span class="n">Population</span><span class="p">,</span> <span class="n">simulate_until</span>
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">ANNarchy</span> <span class="kn">import</span> <span class="n">Population</span><span class="p">,</span> <span class="n">simulate_until</span>
 <span class="kn">from</span> <span class="nn">CompNeuroPy.neuron_models</span> <span class="kn">import</span> <span class="n">Integrator</span>
 
 <span class="c1"># Create a population of 10 integrator neurons</span>
@@ -2039,7 +2094,7 @@ population.</p>
 <span class="k">else</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No neuron reached threshold.&quot;</span><span class="p">)</span>
 </code></pre></div>
-
+</details>
 <details class="variables-to-record" open>
   <summary>Variables to record</summary>
   <ul>
@@ -2147,7 +2202,7 @@ population.</p>
 <span class="sd">        tau (float, optional):</span>
 <span class="sd">            Time constant in ms of the neuron. Default: 1.</span>
 
-<span class="sd">    Examples:</span>
+<span class="sd">    Example:</span>
 <span class="sd">        ```python</span>
 <span class="sd">        from ANNarchy import Population, simulate_until</span>
 <span class="sd">        from CompNeuroPy.neuron_models import Integrator</span>
@@ -5984,125 +6039,125 @@ often the baseline current is changed randomly.</p>
 </details>
             <details class="quote">
               <summary>Source code in <code>src/CompNeuroPy/neuron_models/final_models/izhikevich_2003_like_nm.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">461</span>
-<span class="normal">462</span>
-<span class="normal">463</span>
-<span class="normal">464</span>
-<span class="normal">465</span>
-<span class="normal">466</span>
-<span class="normal">467</span>
-<span class="normal">468</span>
-<span class="normal">469</span>
-<span class="normal">470</span>
-<span class="normal">471</span>
-<span class="normal">472</span>
-<span class="normal">473</span>
-<span class="normal">474</span>
-<span class="normal">475</span>
-<span class="normal">476</span>
-<span class="normal">477</span>
-<span class="normal">478</span>
-<span class="normal">479</span>
-<span class="normal">480</span>
-<span class="normal">481</span>
-<span class="normal">482</span>
-<span class="normal">483</span>
-<span class="normal">484</span>
-<span class="normal">485</span>
-<span class="normal">486</span>
-<span class="normal">487</span>
-<span class="normal">488</span>
-<span class="normal">489</span>
-<span class="normal">490</span>
-<span class="normal">491</span>
-<span class="normal">492</span>
-<span class="normal">493</span>
-<span class="normal">494</span>
-<span class="normal">495</span>
-<span class="normal">496</span>
-<span class="normal">497</span>
-<span class="normal">498</span>
-<span class="normal">499</span>
-<span class="normal">500</span>
-<span class="normal">501</span>
-<span class="normal">502</span>
-<span class="normal">503</span>
-<span class="normal">504</span>
-<span class="normal">505</span>
-<span class="normal">506</span>
-<span class="normal">507</span>
-<span class="normal">508</span>
-<span class="normal">509</span>
-<span class="normal">510</span>
-<span class="normal">511</span>
-<span class="normal">512</span>
-<span class="normal">513</span>
-<span class="normal">514</span>
-<span class="normal">515</span>
-<span class="normal">516</span>
-<span class="normal">517</span>
-<span class="normal">518</span>
-<span class="normal">519</span>
-<span class="normal">520</span>
-<span class="normal">521</span>
-<span class="normal">522</span>
-<span class="normal">523</span>
-<span class="normal">524</span>
-<span class="normal">525</span>
-<span class="normal">526</span>
-<span class="normal">527</span>
-<span class="normal">528</span>
-<span class="normal">529</span>
-<span class="normal">530</span>
-<span class="normal">531</span>
-<span class="normal">532</span>
-<span class="normal">533</span>
-<span class="normal">534</span>
-<span class="normal">535</span>
-<span class="normal">536</span>
-<span class="normal">537</span>
-<span class="normal">538</span>
-<span class="normal">539</span>
-<span class="normal">540</span>
-<span class="normal">541</span>
-<span class="normal">542</span>
-<span class="normal">543</span>
-<span class="normal">544</span>
-<span class="normal">545</span>
-<span class="normal">546</span>
-<span class="normal">547</span>
-<span class="normal">548</span>
-<span class="normal">549</span>
-<span class="normal">550</span>
-<span class="normal">551</span>
-<span class="normal">552</span>
-<span class="normal">553</span>
-<span class="normal">554</span>
-<span class="normal">555</span>
-<span class="normal">556</span>
-<span class="normal">557</span>
-<span class="normal">558</span>
-<span class="normal">559</span>
-<span class="normal">560</span>
-<span class="normal">561</span>
-<span class="normal">562</span>
-<span class="normal">563</span>
-<span class="normal">564</span>
-<span class="normal">565</span>
-<span class="normal">566</span>
-<span class="normal">567</span>
-<span class="normal">568</span>
-<span class="normal">569</span>
-<span class="normal">570</span>
-<span class="normal">571</span>
-<span class="normal">572</span>
-<span class="normal">573</span>
-<span class="normal">574</span>
-<span class="normal">575</span>
-<span class="normal">576</span>
-<span class="normal">577</span>
-<span class="normal">578</span>
-<span class="normal">579</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Izhikevich2003NoisyBase</span><span class="p">(</span><span class="n">Neuron</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">606</span>
+<span class="normal">607</span>
+<span class="normal">608</span>
+<span class="normal">609</span>
+<span class="normal">610</span>
+<span class="normal">611</span>
+<span class="normal">612</span>
+<span class="normal">613</span>
+<span class="normal">614</span>
+<span class="normal">615</span>
+<span class="normal">616</span>
+<span class="normal">617</span>
+<span class="normal">618</span>
+<span class="normal">619</span>
+<span class="normal">620</span>
+<span class="normal">621</span>
+<span class="normal">622</span>
+<span class="normal">623</span>
+<span class="normal">624</span>
+<span class="normal">625</span>
+<span class="normal">626</span>
+<span class="normal">627</span>
+<span class="normal">628</span>
+<span class="normal">629</span>
+<span class="normal">630</span>
+<span class="normal">631</span>
+<span class="normal">632</span>
+<span class="normal">633</span>
+<span class="normal">634</span>
+<span class="normal">635</span>
+<span class="normal">636</span>
+<span class="normal">637</span>
+<span class="normal">638</span>
+<span class="normal">639</span>
+<span class="normal">640</span>
+<span class="normal">641</span>
+<span class="normal">642</span>
+<span class="normal">643</span>
+<span class="normal">644</span>
+<span class="normal">645</span>
+<span class="normal">646</span>
+<span class="normal">647</span>
+<span class="normal">648</span>
+<span class="normal">649</span>
+<span class="normal">650</span>
+<span class="normal">651</span>
+<span class="normal">652</span>
+<span class="normal">653</span>
+<span class="normal">654</span>
+<span class="normal">655</span>
+<span class="normal">656</span>
+<span class="normal">657</span>
+<span class="normal">658</span>
+<span class="normal">659</span>
+<span class="normal">660</span>
+<span class="normal">661</span>
+<span class="normal">662</span>
+<span class="normal">663</span>
+<span class="normal">664</span>
+<span class="normal">665</span>
+<span class="normal">666</span>
+<span class="normal">667</span>
+<span class="normal">668</span>
+<span class="normal">669</span>
+<span class="normal">670</span>
+<span class="normal">671</span>
+<span class="normal">672</span>
+<span class="normal">673</span>
+<span class="normal">674</span>
+<span class="normal">675</span>
+<span class="normal">676</span>
+<span class="normal">677</span>
+<span class="normal">678</span>
+<span class="normal">679</span>
+<span class="normal">680</span>
+<span class="normal">681</span>
+<span class="normal">682</span>
+<span class="normal">683</span>
+<span class="normal">684</span>
+<span class="normal">685</span>
+<span class="normal">686</span>
+<span class="normal">687</span>
+<span class="normal">688</span>
+<span class="normal">689</span>
+<span class="normal">690</span>
+<span class="normal">691</span>
+<span class="normal">692</span>
+<span class="normal">693</span>
+<span class="normal">694</span>
+<span class="normal">695</span>
+<span class="normal">696</span>
+<span class="normal">697</span>
+<span class="normal">698</span>
+<span class="normal">699</span>
+<span class="normal">700</span>
+<span class="normal">701</span>
+<span class="normal">702</span>
+<span class="normal">703</span>
+<span class="normal">704</span>
+<span class="normal">705</span>
+<span class="normal">706</span>
+<span class="normal">707</span>
+<span class="normal">708</span>
+<span class="normal">709</span>
+<span class="normal">710</span>
+<span class="normal">711</span>
+<span class="normal">712</span>
+<span class="normal">713</span>
+<span class="normal">714</span>
+<span class="normal">715</span>
+<span class="normal">716</span>
+<span class="normal">717</span>
+<span class="normal">718</span>
+<span class="normal">719</span>
+<span class="normal">720</span>
+<span class="normal">721</span>
+<span class="normal">722</span>
+<span class="normal">723</span>
+<span class="normal">724</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Izhikevich2003NoisyBase</span><span class="p">(</span><span class="n">Neuron</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    TEMPLATE</span>
 
@@ -6522,133 +6577,133 @@ often the baseline current is changed randomly.</p>
 </details>
             <details class="quote">
               <summary>Source code in <code>src/CompNeuroPy/neuron_models/final_models/izhikevich_2003_like_nm.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">582</span>
-<span class="normal">583</span>
-<span class="normal">584</span>
-<span class="normal">585</span>
-<span class="normal">586</span>
-<span class="normal">587</span>
-<span class="normal">588</span>
-<span class="normal">589</span>
-<span class="normal">590</span>
-<span class="normal">591</span>
-<span class="normal">592</span>
-<span class="normal">593</span>
-<span class="normal">594</span>
-<span class="normal">595</span>
-<span class="normal">596</span>
-<span class="normal">597</span>
-<span class="normal">598</span>
-<span class="normal">599</span>
-<span class="normal">600</span>
-<span class="normal">601</span>
-<span class="normal">602</span>
-<span class="normal">603</span>
-<span class="normal">604</span>
-<span class="normal">605</span>
-<span class="normal">606</span>
-<span class="normal">607</span>
-<span class="normal">608</span>
-<span class="normal">609</span>
-<span class="normal">610</span>
-<span class="normal">611</span>
-<span class="normal">612</span>
-<span class="normal">613</span>
-<span class="normal">614</span>
-<span class="normal">615</span>
-<span class="normal">616</span>
-<span class="normal">617</span>
-<span class="normal">618</span>
-<span class="normal">619</span>
-<span class="normal">620</span>
-<span class="normal">621</span>
-<span class="normal">622</span>
-<span class="normal">623</span>
-<span class="normal">624</span>
-<span class="normal">625</span>
-<span class="normal">626</span>
-<span class="normal">627</span>
-<span class="normal">628</span>
-<span class="normal">629</span>
-<span class="normal">630</span>
-<span class="normal">631</span>
-<span class="normal">632</span>
-<span class="normal">633</span>
-<span class="normal">634</span>
-<span class="normal">635</span>
-<span class="normal">636</span>
-<span class="normal">637</span>
-<span class="normal">638</span>
-<span class="normal">639</span>
-<span class="normal">640</span>
-<span class="normal">641</span>
-<span class="normal">642</span>
-<span class="normal">643</span>
-<span class="normal">644</span>
-<span class="normal">645</span>
-<span class="normal">646</span>
-<span class="normal">647</span>
-<span class="normal">648</span>
-<span class="normal">649</span>
-<span class="normal">650</span>
-<span class="normal">651</span>
-<span class="normal">652</span>
-<span class="normal">653</span>
-<span class="normal">654</span>
-<span class="normal">655</span>
-<span class="normal">656</span>
-<span class="normal">657</span>
-<span class="normal">658</span>
-<span class="normal">659</span>
-<span class="normal">660</span>
-<span class="normal">661</span>
-<span class="normal">662</span>
-<span class="normal">663</span>
-<span class="normal">664</span>
-<span class="normal">665</span>
-<span class="normal">666</span>
-<span class="normal">667</span>
-<span class="normal">668</span>
-<span class="normal">669</span>
-<span class="normal">670</span>
-<span class="normal">671</span>
-<span class="normal">672</span>
-<span class="normal">673</span>
-<span class="normal">674</span>
-<span class="normal">675</span>
-<span class="normal">676</span>
-<span class="normal">677</span>
-<span class="normal">678</span>
-<span class="normal">679</span>
-<span class="normal">680</span>
-<span class="normal">681</span>
-<span class="normal">682</span>
-<span class="normal">683</span>
-<span class="normal">684</span>
-<span class="normal">685</span>
-<span class="normal">686</span>
-<span class="normal">687</span>
-<span class="normal">688</span>
-<span class="normal">689</span>
-<span class="normal">690</span>
-<span class="normal">691</span>
-<span class="normal">692</span>
-<span class="normal">693</span>
-<span class="normal">694</span>
-<span class="normal">695</span>
-<span class="normal">696</span>
-<span class="normal">697</span>
-<span class="normal">698</span>
-<span class="normal">699</span>
-<span class="normal">700</span>
-<span class="normal">701</span>
-<span class="normal">702</span>
-<span class="normal">703</span>
-<span class="normal">704</span>
-<span class="normal">705</span>
-<span class="normal">706</span>
-<span class="normal">707</span>
-<span class="normal">708</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Izhikevich2003NoisyBaseNonlin</span><span class="p">(</span><span class="n">Neuron</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">727</span>
+<span class="normal">728</span>
+<span class="normal">729</span>
+<span class="normal">730</span>
+<span class="normal">731</span>
+<span class="normal">732</span>
+<span class="normal">733</span>
+<span class="normal">734</span>
+<span class="normal">735</span>
+<span class="normal">736</span>
+<span class="normal">737</span>
+<span class="normal">738</span>
+<span class="normal">739</span>
+<span class="normal">740</span>
+<span class="normal">741</span>
+<span class="normal">742</span>
+<span class="normal">743</span>
+<span class="normal">744</span>
+<span class="normal">745</span>
+<span class="normal">746</span>
+<span class="normal">747</span>
+<span class="normal">748</span>
+<span class="normal">749</span>
+<span class="normal">750</span>
+<span class="normal">751</span>
+<span class="normal">752</span>
+<span class="normal">753</span>
+<span class="normal">754</span>
+<span class="normal">755</span>
+<span class="normal">756</span>
+<span class="normal">757</span>
+<span class="normal">758</span>
+<span class="normal">759</span>
+<span class="normal">760</span>
+<span class="normal">761</span>
+<span class="normal">762</span>
+<span class="normal">763</span>
+<span class="normal">764</span>
+<span class="normal">765</span>
+<span class="normal">766</span>
+<span class="normal">767</span>
+<span class="normal">768</span>
+<span class="normal">769</span>
+<span class="normal">770</span>
+<span class="normal">771</span>
+<span class="normal">772</span>
+<span class="normal">773</span>
+<span class="normal">774</span>
+<span class="normal">775</span>
+<span class="normal">776</span>
+<span class="normal">777</span>
+<span class="normal">778</span>
+<span class="normal">779</span>
+<span class="normal">780</span>
+<span class="normal">781</span>
+<span class="normal">782</span>
+<span class="normal">783</span>
+<span class="normal">784</span>
+<span class="normal">785</span>
+<span class="normal">786</span>
+<span class="normal">787</span>
+<span class="normal">788</span>
+<span class="normal">789</span>
+<span class="normal">790</span>
+<span class="normal">791</span>
+<span class="normal">792</span>
+<span class="normal">793</span>
+<span class="normal">794</span>
+<span class="normal">795</span>
+<span class="normal">796</span>
+<span class="normal">797</span>
+<span class="normal">798</span>
+<span class="normal">799</span>
+<span class="normal">800</span>
+<span class="normal">801</span>
+<span class="normal">802</span>
+<span class="normal">803</span>
+<span class="normal">804</span>
+<span class="normal">805</span>
+<span class="normal">806</span>
+<span class="normal">807</span>
+<span class="normal">808</span>
+<span class="normal">809</span>
+<span class="normal">810</span>
+<span class="normal">811</span>
+<span class="normal">812</span>
+<span class="normal">813</span>
+<span class="normal">814</span>
+<span class="normal">815</span>
+<span class="normal">816</span>
+<span class="normal">817</span>
+<span class="normal">818</span>
+<span class="normal">819</span>
+<span class="normal">820</span>
+<span class="normal">821</span>
+<span class="normal">822</span>
+<span class="normal">823</span>
+<span class="normal">824</span>
+<span class="normal">825</span>
+<span class="normal">826</span>
+<span class="normal">827</span>
+<span class="normal">828</span>
+<span class="normal">829</span>
+<span class="normal">830</span>
+<span class="normal">831</span>
+<span class="normal">832</span>
+<span class="normal">833</span>
+<span class="normal">834</span>
+<span class="normal">835</span>
+<span class="normal">836</span>
+<span class="normal">837</span>
+<span class="normal">838</span>
+<span class="normal">839</span>
+<span class="normal">840</span>
+<span class="normal">841</span>
+<span class="normal">842</span>
+<span class="normal">843</span>
+<span class="normal">844</span>
+<span class="normal">845</span>
+<span class="normal">846</span>
+<span class="normal">847</span>
+<span class="normal">848</span>
+<span class="normal">849</span>
+<span class="normal">850</span>
+<span class="normal">851</span>
+<span class="normal">852</span>
+<span class="normal">853</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Izhikevich2003NoisyBaseNonlin</span><span class="p">(</span><span class="n">Neuron</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    TEMPLATE</span>
 
@@ -6770,6 +6825,608 @@ often the baseline current is changed randomly.</p>
 <span class="s2">                Neuron model from Izhikevich (2003). With additional conductance based</span>
 <span class="s2">                synapses for AMPA and GABA currents and a noisy baseline current.</span>
 <span class="s2">                With nonlinear function for external current.</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># For reporting</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_instantiated</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+
+<h3 id="CompNeuroPy.neuron_models.final_models.izhikevich_2003_like_nm.Izhikevich2003NoisyBaseSNR" class="doc doc-heading">
+          <code>Izhikevich2003NoisyBaseSNR</code>
+
+
+<a href="#CompNeuroPy.neuron_models.final_models.izhikevich_2003_like_nm.Izhikevich2003NoisyBaseSNR" class="headerlink" title="Permanent link">#</a></h3>
+
+
+  <div class="doc doc-contents first">
+          <p class="doc doc-class-bases">
+            Bases: <code><span title="ANNarchy.Neuron">Neuron</span></code></p>
+
+  
+      <p>TEMPLATE</p>
+<p><a href="https://doi.org/10.1109/TNN.2003.820440">Izhikevich (2003)</a>-like neuron model with
+additional conductance based synapses for AMPA and GABA currents and a noisy baseline
+current defined by the signal-to-noise ratio (SNR).</p>
+
+
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>a</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Time constant of the recovery variable u.</p>
+            </div>
+          </td>
+          <td>
+                <code>0</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>b</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Sensitivity of the recovery variable u to the membrane potential v.</p>
+            </div>
+          </td>
+          <td>
+                <code>0</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>c</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>After-spike reset value of the membrane potential v.</p>
+            </div>
+          </td>
+          <td>
+                <code>0</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>d</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>After-spike change of the recovery variable u.</p>
+            </div>
+          </td>
+          <td>
+                <code>0</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>n2</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Factor of the quadratic equation of the membrane potential v.</p>
+            </div>
+          </td>
+          <td>
+                <code>0</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>n1</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Factor of the quadratic equation of the membrane potential v.</p>
+            </div>
+          </td>
+          <td>
+                <code>0</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>n0</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Factor of the quadratic equation of the membrane potential v.</p>
+            </div>
+          </td>
+          <td>
+                <code>0</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>tau_ampa</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Time constant of the AMPA conductance.</p>
+            </div>
+          </td>
+          <td>
+                <code>1</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>tau_gaba</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Time constant of the GABA conductance.</p>
+            </div>
+          </td>
+          <td>
+                <code>1</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>E_ampa</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Reversal potential of the AMPA conductance.</p>
+            </div>
+          </td>
+          <td>
+                <code>0</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>E_gaba</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Reversal potential of the GABA conductance.</p>
+            </div>
+          </td>
+          <td>
+                <code>0</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>I_app</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>External applied current.</p>
+            </div>
+          </td>
+          <td>
+                <code>0</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>I_base</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Baseline current.</p>
+            </div>
+          </td>
+          <td>
+                <code>0</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>noise</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Can be set to 0 to disable the noise and 1 to enable it. (For other values
+the noise is scaled accordingly but the target snr is only reached for 1.)</p>
+            </div>
+          </td>
+          <td>
+                <code>1</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>tau_power</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Time constant of the power calculation.</p>
+            </div>
+          </td>
+          <td>
+                <code>1</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>snr_target</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Target signal-to-noise ratio (SNR).</p>
+            </div>
+          </td>
+          <td>
+                <code>1</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>rate_noise</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Rate of the Poisson distributed noise in the baseline current, i.e. how
+often the baseline current is changed randomly.</p>
+            </div>
+          </td>
+          <td>
+                <code>0</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+<details class="variables-to-record" open>
+  <summary>Variables to record</summary>
+  <ul>
+<li>g_ampa</li>
+<li>g_gaba</li>
+<li>power_I_signal</li>
+<li>I_noise</li>
+<li>I_signal</li>
+<li>I</li>
+<li>v</li>
+<li>u</li>
+<li>r</li>
+</ul>
+</details>
+            <details class="quote">
+              <summary>Source code in <code>src/CompNeuroPy/neuron_models/final_models/izhikevich_2003_like_nm.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">461</span>
+<span class="normal">462</span>
+<span class="normal">463</span>
+<span class="normal">464</span>
+<span class="normal">465</span>
+<span class="normal">466</span>
+<span class="normal">467</span>
+<span class="normal">468</span>
+<span class="normal">469</span>
+<span class="normal">470</span>
+<span class="normal">471</span>
+<span class="normal">472</span>
+<span class="normal">473</span>
+<span class="normal">474</span>
+<span class="normal">475</span>
+<span class="normal">476</span>
+<span class="normal">477</span>
+<span class="normal">478</span>
+<span class="normal">479</span>
+<span class="normal">480</span>
+<span class="normal">481</span>
+<span class="normal">482</span>
+<span class="normal">483</span>
+<span class="normal">484</span>
+<span class="normal">485</span>
+<span class="normal">486</span>
+<span class="normal">487</span>
+<span class="normal">488</span>
+<span class="normal">489</span>
+<span class="normal">490</span>
+<span class="normal">491</span>
+<span class="normal">492</span>
+<span class="normal">493</span>
+<span class="normal">494</span>
+<span class="normal">495</span>
+<span class="normal">496</span>
+<span class="normal">497</span>
+<span class="normal">498</span>
+<span class="normal">499</span>
+<span class="normal">500</span>
+<span class="normal">501</span>
+<span class="normal">502</span>
+<span class="normal">503</span>
+<span class="normal">504</span>
+<span class="normal">505</span>
+<span class="normal">506</span>
+<span class="normal">507</span>
+<span class="normal">508</span>
+<span class="normal">509</span>
+<span class="normal">510</span>
+<span class="normal">511</span>
+<span class="normal">512</span>
+<span class="normal">513</span>
+<span class="normal">514</span>
+<span class="normal">515</span>
+<span class="normal">516</span>
+<span class="normal">517</span>
+<span class="normal">518</span>
+<span class="normal">519</span>
+<span class="normal">520</span>
+<span class="normal">521</span>
+<span class="normal">522</span>
+<span class="normal">523</span>
+<span class="normal">524</span>
+<span class="normal">525</span>
+<span class="normal">526</span>
+<span class="normal">527</span>
+<span class="normal">528</span>
+<span class="normal">529</span>
+<span class="normal">530</span>
+<span class="normal">531</span>
+<span class="normal">532</span>
+<span class="normal">533</span>
+<span class="normal">534</span>
+<span class="normal">535</span>
+<span class="normal">536</span>
+<span class="normal">537</span>
+<span class="normal">538</span>
+<span class="normal">539</span>
+<span class="normal">540</span>
+<span class="normal">541</span>
+<span class="normal">542</span>
+<span class="normal">543</span>
+<span class="normal">544</span>
+<span class="normal">545</span>
+<span class="normal">546</span>
+<span class="normal">547</span>
+<span class="normal">548</span>
+<span class="normal">549</span>
+<span class="normal">550</span>
+<span class="normal">551</span>
+<span class="normal">552</span>
+<span class="normal">553</span>
+<span class="normal">554</span>
+<span class="normal">555</span>
+<span class="normal">556</span>
+<span class="normal">557</span>
+<span class="normal">558</span>
+<span class="normal">559</span>
+<span class="normal">560</span>
+<span class="normal">561</span>
+<span class="normal">562</span>
+<span class="normal">563</span>
+<span class="normal">564</span>
+<span class="normal">565</span>
+<span class="normal">566</span>
+<span class="normal">567</span>
+<span class="normal">568</span>
+<span class="normal">569</span>
+<span class="normal">570</span>
+<span class="normal">571</span>
+<span class="normal">572</span>
+<span class="normal">573</span>
+<span class="normal">574</span>
+<span class="normal">575</span>
+<span class="normal">576</span>
+<span class="normal">577</span>
+<span class="normal">578</span>
+<span class="normal">579</span>
+<span class="normal">580</span>
+<span class="normal">581</span>
+<span class="normal">582</span>
+<span class="normal">583</span>
+<span class="normal">584</span>
+<span class="normal">585</span>
+<span class="normal">586</span>
+<span class="normal">587</span>
+<span class="normal">588</span>
+<span class="normal">589</span>
+<span class="normal">590</span>
+<span class="normal">591</span>
+<span class="normal">592</span>
+<span class="normal">593</span>
+<span class="normal">594</span>
+<span class="normal">595</span>
+<span class="normal">596</span>
+<span class="normal">597</span>
+<span class="normal">598</span>
+<span class="normal">599</span>
+<span class="normal">600</span>
+<span class="normal">601</span>
+<span class="normal">602</span>
+<span class="normal">603</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Izhikevich2003NoisyBaseSNR</span><span class="p">(</span><span class="n">Neuron</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    TEMPLATE</span>
+
+<span class="sd">    [Izhikevich (2003)](https://doi.org/10.1109/TNN.2003.820440)-like neuron model with</span>
+<span class="sd">    additional conductance based synapses for AMPA and GABA currents and a noisy baseline</span>
+<span class="sd">    current defined by the signal-to-noise ratio (SNR).</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        a (float, optional):</span>
+<span class="sd">            Time constant of the recovery variable u.</span>
+<span class="sd">        b (float, optional):</span>
+<span class="sd">            Sensitivity of the recovery variable u to the membrane potential v.</span>
+<span class="sd">        c (float, optional):</span>
+<span class="sd">            After-spike reset value of the membrane potential v.</span>
+<span class="sd">        d (float, optional):</span>
+<span class="sd">            After-spike change of the recovery variable u.</span>
+<span class="sd">        n2 (float, optional):</span>
+<span class="sd">            Factor of the quadratic equation of the membrane potential v.</span>
+<span class="sd">        n1 (float, optional):</span>
+<span class="sd">            Factor of the quadratic equation of the membrane potential v.</span>
+<span class="sd">        n0 (float, optional):</span>
+<span class="sd">            Factor of the quadratic equation of the membrane potential v.</span>
+<span class="sd">        tau_ampa (float, optional):</span>
+<span class="sd">            Time constant of the AMPA conductance.</span>
+<span class="sd">        tau_gaba (float, optional):</span>
+<span class="sd">            Time constant of the GABA conductance.</span>
+<span class="sd">        E_ampa (float, optional):</span>
+<span class="sd">            Reversal potential of the AMPA conductance.</span>
+<span class="sd">        E_gaba (float, optional):</span>
+<span class="sd">            Reversal potential of the GABA conductance.</span>
+<span class="sd">        I_app (float, optional):</span>
+<span class="sd">            External applied current.</span>
+<span class="sd">        I_base (float, optional):</span>
+<span class="sd">            Baseline current.</span>
+<span class="sd">        noise (float, optional):</span>
+<span class="sd">            Can be set to 0 to disable the noise and 1 to enable it. (For other values</span>
+<span class="sd">            the noise is scaled accordingly but the target snr is only reached for 1.)</span>
+<span class="sd">        tau_power (float, optional):</span>
+<span class="sd">            Time constant of the power calculation.</span>
+<span class="sd">        snr_target (float, optional):</span>
+<span class="sd">            Target signal-to-noise ratio (SNR).</span>
+<span class="sd">        rate_noise (float, optional):</span>
+<span class="sd">            Rate of the Poisson distributed noise in the baseline current, i.e. how</span>
+<span class="sd">            often the baseline current is changed randomly.</span>
+
+<span class="sd">    Variables to record:</span>
+<span class="sd">        - g_ampa</span>
+<span class="sd">        - g_gaba</span>
+<span class="sd">        - power_I_signal</span>
+<span class="sd">        - I_noise</span>
+<span class="sd">        - I_signal</span>
+<span class="sd">        - I</span>
+<span class="sd">        - v</span>
+<span class="sd">        - u</span>
+<span class="sd">        - r</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># For reporting</span>
+    <span class="n">_instantiated</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">a</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">b</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">c</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">d</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">n2</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">n1</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">n0</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">tau_ampa</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">tau_gaba</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">E_ampa</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">E_gaba</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">I_app</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">I_base</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">noise</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">tau_power</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">snr_target</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">rate_noise</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="c1"># Create the arguments</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            ### izhikevich parameters</span>
+<span class="s2">            a               = </span><span class="si">{</span><span class="n">a</span><span class="si">}</span><span class="s2"> : population</span>
+<span class="s2">            b               = </span><span class="si">{</span><span class="n">b</span><span class="si">}</span><span class="s2"> : population</span>
+<span class="s2">            c               = </span><span class="si">{</span><span class="n">c</span><span class="si">}</span><span class="s2"> : population</span>
+<span class="s2">            d               = </span><span class="si">{</span><span class="n">d</span><span class="si">}</span><span class="s2"> : population</span>
+<span class="s2">            n2              = </span><span class="si">{</span><span class="n">n2</span><span class="si">}</span><span class="s2"> : population</span>
+<span class="s2">            n1              = </span><span class="si">{</span><span class="n">n1</span><span class="si">}</span><span class="s2"> : population</span>
+<span class="s2">            n0              = </span><span class="si">{</span><span class="n">n0</span><span class="si">}</span><span class="s2"> : population</span>
+<span class="s2">            ### synaptic currents</span>
+<span class="s2">            tau_ampa        = </span><span class="si">{</span><span class="n">tau_ampa</span><span class="si">}</span><span class="s2"> : population</span>
+<span class="s2">            tau_gaba        = </span><span class="si">{</span><span class="n">tau_gaba</span><span class="si">}</span><span class="s2"> : population</span>
+<span class="s2">            E_ampa          = </span><span class="si">{</span><span class="n">E_ampa</span><span class="si">}</span><span class="s2"> : population</span>
+<span class="s2">            E_gaba          = </span><span class="si">{</span><span class="n">E_gaba</span><span class="si">}</span><span class="s2"> : population</span>
+<span class="s2">            ### external currents</span>
+<span class="s2">            I_app           = </span><span class="si">{</span><span class="n">I_app</span><span class="si">}</span>
+<span class="s2">            I_base          = </span><span class="si">{</span><span class="n">I_base</span><span class="si">}</span>
+<span class="s2">            ### noise</span>
+<span class="s2">            noise           = </span><span class="si">{</span><span class="n">noise</span><span class="si">}</span>
+<span class="s2">            tau_power       = </span><span class="si">{</span><span class="n">tau_power</span><span class="si">}</span>
+<span class="s2">            snr_target      = </span><span class="si">{</span><span class="n">snr_target</span><span class="si">}</span>
+<span class="s2">            rate_noise      = </span><span class="si">{</span><span class="n">rate_noise</span><span class="si">}</span>
+<span class="s2">        &quot;&quot;&quot;</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">parameters</span><span class="o">=</span><span class="n">parameters</span><span class="p">,</span>
+            <span class="n">equations</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                ### input current</span>
+<span class="s2">                I_noise  = noise*ite(Uniform(0, 1) * 1000.0 / dt &gt; rate_noise, I_noise, Normal(0, 1))</span>
+<span class="s2">                I_signal = I_base - neg(g_ampa*(v - E_ampa)) - pos(g_gaba*(v - E_gaba)) + I_app</span>
+<span class="s2">                ### scale noise to reach target snr, scale factor is:</span>
+<span class="s2">                ### scaling_factor = sqrt((power_I_signal/power_I_noise)/snr_target)</span>
+<span class="s2">                ### since power of N(0,1) is 1, we can scale the noise by:</span>
+<span class="s2">                ### scaling_factor = sqrt(power_I_signal/snr_target)</span>
+<span class="s2">                I = I_signal + I_noise * sqrt(power_I_signal/snr_target)</span>
+<span class="s2">                ### synaptic conductances</span>
+<span class="s2">                tau_ampa * dg_ampa/dt = -g_ampa</span>
+<span class="s2">                tau_gaba * dg_gaba/dt = -g_gaba</span>
+<span class="s2">                ### power of signal</span>
+<span class="s2">                tau_power * dpower_I_signal/dt     = I_signal**2 - power_I_signal</span>
+<span class="s2">                ### membrane potential and recovery variable</span>
+<span class="s2">                dv/dt       = n2 * v * v + n1 * v + n0 - u + I : min=-100, max=0</span>
+<span class="s2">                du/dt       = a * (b * v - u)</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="n">spike</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                v &gt;= 0</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="n">reset</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                v = c</span>
+<span class="s2">                u = u + d</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Izhikevich2003_noisy_I_snr&quot;</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                Neuron model from Izhikevich (2003). With additional conductance based</span>
+<span class="s2">                synapses for AMPA and GABA currents and a noisy baseline current with</span>
+<span class="s2">                a specified signal-to-noise ratio (SNR).</span>
 <span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span>
         <span class="p">)</span>
 
@@ -12451,6 +13108,493 @@ spike train as input).</p>
 <span class="s2">                conductance based synapses for AMPA and GABA currents with noise</span>
 <span class="s2">                in AMPA conductance. An additional oscillating current was added</span>
 <span class="s2">                to the model.</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># For reporting</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_instantiated</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+
+<h3 id="CompNeuroPy.neuron_models.final_models.izhikevich_2007_like_nm.IzhikevichGolomb" class="doc doc-heading">
+          <code>IzhikevichGolomb</code>
+
+
+<a href="#CompNeuroPy.neuron_models.final_models.izhikevich_2007_like_nm.IzhikevichGolomb" class="headerlink" title="Permanent link">#</a></h3>
+
+
+  <div class="doc doc-contents first">
+          <p class="doc doc-class-bases">
+            Bases: <code><span title="ANNarchy.Neuron">Neuron</span></code></p>
+
+  
+      <p>PREDEFINED</p>
+<p><a href="https://isbnsearch.org/isbn/9780262090438">Izhikevich (2007)</a>-like neuron model
+with conductance-based AMPA and GABA synapses, noise in the baseline current, a
+separated after-spike hyperpolarization and an inductive-like current causing late
+spiking. Mechanisms and parameters were adjusted to fit the striatal FSI neuron
+model from <a href="https://doi.org/10.1371/journal.pcbi.0030156">Golomb et al. (2007)</a>
+also used by <a href="https://doi.org/10.1523/JNEUROSCI.0339-16.2016">Corbit et al. (2016)</a>
+as striatal FSI neuron.</p>
+
+
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>I_app</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>External applied input current.</p>
+            </div>
+          </td>
+          <td>
+                <code>0.0</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>tau_ampa</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Time constant of the AMPA synapse.</p>
+            </div>
+          </td>
+          <td>
+                <code>10.0</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>tau_gaba</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Time constant of the GABA synapse.</p>
+            </div>
+          </td>
+          <td>
+                <code>10.0</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>E_ampa</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Reversal potential of the AMPA synapse.</p>
+            </div>
+          </td>
+          <td>
+                <code>0.0</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>E_gaba</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Reversal potential of the GABA synapse.</p>
+            </div>
+          </td>
+          <td>
+                <code>-90.0</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>base_mean</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Mean of the baseline current.</p>
+            </div>
+          </td>
+          <td>
+                <code>0.0</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>base_noise</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Standard deviation of the baseline current noise.</p>
+            </div>
+          </td>
+          <td>
+                <code>0.0</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>rate_base_noise</code></td>
+          <td>
+                <code>float</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Rate of the noise update (Poisson distributed) in the baseline current.</p>
+            </div>
+          </td>
+          <td>
+                <code>0.0</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>params_for_pop</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>If True, the parameters are population-wide and not neuron-specific.</p>
+            </div>
+          </td>
+          <td>
+                <code>False</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>init</code></td>
+          <td>
+                <code>dict</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Initial values for the variables.</p>
+            </div>
+          </td>
+          <td>
+                <code>{}</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+<details class="variables-to-record" open>
+  <summary>Variables to record</summary>
+  <ul>
+<li>offset_base</li>
+<li>I_base</li>
+<li>g_ampa</li>
+<li>g_gaba</li>
+<li>I_v</li>
+<li>v</li>
+<li>u</li>
+<li>uu</li>
+<li>s</li>
+<li>n</li>
+</ul>
+</details>
+            <details class="quote">
+              <summary>Source code in <code>src/CompNeuroPy/neuron_models/final_models/izhikevich_2007_like_nm.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1375</span>
+<span class="normal">1376</span>
+<span class="normal">1377</span>
+<span class="normal">1378</span>
+<span class="normal">1379</span>
+<span class="normal">1380</span>
+<span class="normal">1381</span>
+<span class="normal">1382</span>
+<span class="normal">1383</span>
+<span class="normal">1384</span>
+<span class="normal">1385</span>
+<span class="normal">1386</span>
+<span class="normal">1387</span>
+<span class="normal">1388</span>
+<span class="normal">1389</span>
+<span class="normal">1390</span>
+<span class="normal">1391</span>
+<span class="normal">1392</span>
+<span class="normal">1393</span>
+<span class="normal">1394</span>
+<span class="normal">1395</span>
+<span class="normal">1396</span>
+<span class="normal">1397</span>
+<span class="normal">1398</span>
+<span class="normal">1399</span>
+<span class="normal">1400</span>
+<span class="normal">1401</span>
+<span class="normal">1402</span>
+<span class="normal">1403</span>
+<span class="normal">1404</span>
+<span class="normal">1405</span>
+<span class="normal">1406</span>
+<span class="normal">1407</span>
+<span class="normal">1408</span>
+<span class="normal">1409</span>
+<span class="normal">1410</span>
+<span class="normal">1411</span>
+<span class="normal">1412</span>
+<span class="normal">1413</span>
+<span class="normal">1414</span>
+<span class="normal">1415</span>
+<span class="normal">1416</span>
+<span class="normal">1417</span>
+<span class="normal">1418</span>
+<span class="normal">1419</span>
+<span class="normal">1420</span>
+<span class="normal">1421</span>
+<span class="normal">1422</span>
+<span class="normal">1423</span>
+<span class="normal">1424</span>
+<span class="normal">1425</span>
+<span class="normal">1426</span>
+<span class="normal">1427</span>
+<span class="normal">1428</span>
+<span class="normal">1429</span>
+<span class="normal">1430</span>
+<span class="normal">1431</span>
+<span class="normal">1432</span>
+<span class="normal">1433</span>
+<span class="normal">1434</span>
+<span class="normal">1435</span>
+<span class="normal">1436</span>
+<span class="normal">1437</span>
+<span class="normal">1438</span>
+<span class="normal">1439</span>
+<span class="normal">1440</span>
+<span class="normal">1441</span>
+<span class="normal">1442</span>
+<span class="normal">1443</span>
+<span class="normal">1444</span>
+<span class="normal">1445</span>
+<span class="normal">1446</span>
+<span class="normal">1447</span>
+<span class="normal">1448</span>
+<span class="normal">1449</span>
+<span class="normal">1450</span>
+<span class="normal">1451</span>
+<span class="normal">1452</span>
+<span class="normal">1453</span>
+<span class="normal">1454</span>
+<span class="normal">1455</span>
+<span class="normal">1456</span>
+<span class="normal">1457</span>
+<span class="normal">1458</span>
+<span class="normal">1459</span>
+<span class="normal">1460</span>
+<span class="normal">1461</span>
+<span class="normal">1462</span>
+<span class="normal">1463</span>
+<span class="normal">1464</span>
+<span class="normal">1465</span>
+<span class="normal">1466</span>
+<span class="normal">1467</span>
+<span class="normal">1468</span>
+<span class="normal">1469</span>
+<span class="normal">1470</span>
+<span class="normal">1471</span>
+<span class="normal">1472</span>
+<span class="normal">1473</span>
+<span class="normal">1474</span>
+<span class="normal">1475</span>
+<span class="normal">1476</span>
+<span class="normal">1477</span>
+<span class="normal">1478</span>
+<span class="normal">1479</span>
+<span class="normal">1480</span>
+<span class="normal">1481</span>
+<span class="normal">1482</span>
+<span class="normal">1483</span>
+<span class="normal">1484</span>
+<span class="normal">1485</span>
+<span class="normal">1486</span>
+<span class="normal">1487</span>
+<span class="normal">1488</span>
+<span class="normal">1489</span>
+<span class="normal">1490</span>
+<span class="normal">1491</span>
+<span class="normal">1492</span>
+<span class="normal">1493</span>
+<span class="normal">1494</span>
+<span class="normal">1495</span>
+<span class="normal">1496</span>
+<span class="normal">1497</span>
+<span class="normal">1498</span>
+<span class="normal">1499</span>
+<span class="normal">1500</span>
+<span class="normal">1501</span>
+<span class="normal">1502</span>
+<span class="normal">1503</span>
+<span class="normal">1504</span>
+<span class="normal">1505</span>
+<span class="normal">1506</span>
+<span class="normal">1507</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">IzhikevichGolomb</span><span class="p">(</span><span class="n">Neuron</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    PREDEFINED</span>
+
+<span class="sd">    [Izhikevich (2007)](https://isbnsearch.org/isbn/9780262090438)-like neuron model</span>
+<span class="sd">    with conductance-based AMPA and GABA synapses, noise in the baseline current, a</span>
+<span class="sd">    separated after-spike hyperpolarization and an inductive-like current causing late</span>
+<span class="sd">    spiking. Mechanisms and parameters were adjusted to fit the striatal FSI neuron</span>
+<span class="sd">    model from [Golomb et al. (2007)](https://doi.org/10.1371/journal.pcbi.0030156)</span>
+<span class="sd">    also used by [Corbit et al. (2016)](https://doi.org/10.1523/JNEUROSCI.0339-16.2016)</span>
+<span class="sd">    as striatal FSI neuron.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        I_app (float, optional):</span>
+<span class="sd">            External applied input current.</span>
+<span class="sd">        tau_ampa (float, optional):</span>
+<span class="sd">            Time constant of the AMPA synapse.</span>
+<span class="sd">        tau_gaba (float, optional):</span>
+<span class="sd">            Time constant of the GABA synapse.</span>
+<span class="sd">        E_ampa (float, optional):</span>
+<span class="sd">            Reversal potential of the AMPA synapse.</span>
+<span class="sd">        E_gaba (float, optional):</span>
+<span class="sd">            Reversal potential of the GABA synapse.</span>
+<span class="sd">        base_mean (float, optional):</span>
+<span class="sd">            Mean of the baseline current.</span>
+<span class="sd">        base_noise (float, optional):</span>
+<span class="sd">            Standard deviation of the baseline current noise.</span>
+<span class="sd">        rate_base_noise (float, optional):</span>
+<span class="sd">            Rate of the noise update (Poisson distributed) in the baseline current.</span>
+<span class="sd">        params_for_pop (bool, optional):</span>
+<span class="sd">            If True, the parameters are population-wide and not neuron-specific.</span>
+<span class="sd">        init (dict, optional):</span>
+<span class="sd">            Initial values for the variables.</span>
+
+<span class="sd">    Variables to record:</span>
+<span class="sd">        - offset_base</span>
+<span class="sd">        - I_base</span>
+<span class="sd">        - g_ampa</span>
+<span class="sd">        - g_gaba</span>
+<span class="sd">        - I_v</span>
+<span class="sd">        - v</span>
+<span class="sd">        - u</span>
+<span class="sd">        - uu</span>
+<span class="sd">        - s</span>
+<span class="sd">        - n</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># For reporting</span>
+    <span class="n">_instantiated</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">I_app</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">tau_ampa</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span>
+        <span class="n">tau_gaba</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span>
+        <span class="n">E_ampa</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">E_gaba</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">90.0</span><span class="p">,</span>
+        <span class="n">base_mean</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">base_noise</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">rate_base_noise</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">params_for_pop</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">init</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>
+    <span class="p">):</span>
+        <span class="c1"># Create the arguments</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            ### base parameters</span>
+<span class="s2">            C               = 100</span>
+<span class="s2">            k               = 2.3422021975590845</span>
+<span class="s2">            v_r             = -70</span>
+<span class="s2">            v_t             = -50</span>
+<span class="s2">            a               = 0.4077132173988824</span>
+<span class="s2">            b               = 37.027824808742196</span>
+<span class="s2">            c               = -50</span>
+<span class="s2">            d               = 0</span>
+<span class="s2">            v_peak          = 0</span>
+<span class="s2">            ### after-spike current parameters</span>
+<span class="s2">            a_uu            = 0.4077132173988824</span>
+<span class="s2">            dd              = 819.0218598481788</span>
+<span class="s2">            ### slow currents parameters</span>
+<span class="s2">            a_s             = 0.19087175635342485</span>
+<span class="s2">            a_n             = 0.008987424013380247</span>
+<span class="s2">            b_n             = 2.9609600149723434</span>
+<span class="s2">            ### input current</span>
+<span class="s2">            I_app           = </span><span class="si">{</span><span class="n">I_app</span><span class="si">}</span>
+<span class="s2">            ### synaptic current parameters</span>
+<span class="s2">            tau_ampa        = </span><span class="si">{</span><span class="n">tau_ampa</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;: population&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">params_for_pop</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="si">}</span>
+<span class="s2">            tau_gaba        = </span><span class="si">{</span><span class="n">tau_gaba</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;: population&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">params_for_pop</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="si">}</span>
+<span class="s2">            E_ampa          = </span><span class="si">{</span><span class="n">E_ampa</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;: population&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">params_for_pop</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="si">}</span>
+<span class="s2">            E_gaba          = </span><span class="si">{</span><span class="n">E_gaba</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;: population&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">params_for_pop</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="si">}</span>
+<span class="s2">            ### input current scaling</span>
+<span class="s2">            a_I             = 223.0822501641062</span>
+<span class="s2">            ### baseline current parameters</span>
+<span class="s2">            base_mean       = </span><span class="si">{</span><span class="n">base_mean</span><span class="si">}</span>
+<span class="s2">            base_noise      = </span><span class="si">{</span><span class="n">base_noise</span><span class="si">}</span>
+<span class="s2">            rate_base_noise = </span><span class="si">{</span><span class="n">rate_base_noise</span><span class="si">}</span>
+<span class="s2">        &quot;&quot;&quot;</span>
+
+        <span class="n">prefix</span> <span class="o">=</span> <span class="n">_I_base_noise</span>
+        <span class="n">syn</span> <span class="o">=</span> <span class="n">_syn_default</span>
+        <span class="n">i_v</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;a_I*(I_app </span><span class="si">{</span><span class="n">_I_syn</span><span class="si">}</span><span class="s2"> + I_base)&quot;</span>
+        <span class="n">dv</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">_dv_default</span><span class="si">}</span><span class="s2"> - pos(uu*(v - E_gaba)) - pos(n)&quot;</span>
+        <span class="n">affix</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            duu/dt    = -a_uu*uu</span>
+<span class="s2">            ds/dt     = a_s*(I_v - s)</span>
+<span class="s2">            dn/dt     = a_n*(b_n*(I_v - s) - n)</span>
+<span class="s2">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># get equations</span>
+        <span class="n">equations</span> <span class="o">=</span> <span class="n">_get_equation_izhikevich_2007</span><span class="p">(</span>
+            <span class="n">syn</span><span class="o">=</span><span class="n">syn</span><span class="p">,</span> <span class="n">i_v</span><span class="o">=</span><span class="n">i_v</span><span class="p">,</span> <span class="n">dv</span><span class="o">=</span><span class="n">dv</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">,</span> <span class="n">affix</span><span class="o">=</span><span class="n">affix</span>
+        <span class="p">)</span>
+
+        <span class="c1"># set initial values</span>
+        <span class="n">equations</span> <span class="o">=</span> <span class="n">_set_init</span><span class="p">(</span><span class="n">equations</span><span class="p">,</span> <span class="n">init</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">parameters</span><span class="o">=</span><span class="n">parameters</span><span class="p">,</span>
+            <span class="n">equations</span><span class="o">=</span><span class="n">equations</span><span class="p">,</span>
+            <span class="n">spike</span><span class="o">=</span><span class="s2">&quot;v &gt;= v_peak&quot;</span><span class="p">,</span>
+            <span class="n">reset</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                v = c</span>
+<span class="s2">                u = u + d</span>
+<span class="s2">                uu = uu + dd</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;IzhikevichGolomb&quot;</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                Izhikevich (2007)-like neuron model fitted to the FSI neuron model</span>
+<span class="s2">                from Golomb et al. (2007) and Corbit et al. (2016).</span>
 <span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span>
         <span class="p">)</span>
 

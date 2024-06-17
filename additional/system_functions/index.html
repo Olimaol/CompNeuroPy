@@ -739,6 +739,39 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#CompNeuroPy.system_functions.Logger" class="md-nav__link">
+    <span class="md-ellipsis">
+      Logger
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Logger">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#CompNeuroPy.system_functions.Logger.__new__" class="md-nav__link">
+    <span class="md-ellipsis">
+      __new__()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#CompNeuroPy.system_functions.Logger.log" class="md-nav__link">
+    <span class="md-ellipsis">
+      log()
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#CompNeuroPy.system_functions.clear_dir" class="md-nav__link">
     <span class="md-ellipsis">
       clear_dir()
@@ -1043,6 +1076,27 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/deap_cma/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cma Optimization
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1100,6 +1154,39 @@
       system_functions
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#CompNeuroPy.system_functions.Logger" class="md-nav__link">
+    <span class="md-ellipsis">
+      Logger
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Logger">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#CompNeuroPy.system_functions.Logger.__new__" class="md-nav__link">
+    <span class="md-ellipsis">
+      __new__()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#CompNeuroPy.system_functions.Logger.log" class="md-nav__link">
+    <span class="md-ellipsis">
+      log()
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1204,6 +1291,398 @@
 
 
 
+<div class="doc doc-object doc-class">
+
+
+
+
+<h2 id="CompNeuroPy.system_functions.Logger" class="doc doc-heading">
+          <code>Logger</code>
+
+
+<a href="#CompNeuroPy.system_functions.Logger" class="headerlink" title="Permanent link">#</a></h2>
+
+
+  <div class="doc doc-contents ">
+
+  
+      <p>Logger singleton class to log the progress of the model configuration. Has to be
+initialized with the path to the log file once.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>src/CompNeuroPy/system_functions.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">542</span>
+<span class="normal">543</span>
+<span class="normal">544</span>
+<span class="normal">545</span>
+<span class="normal">546</span>
+<span class="normal">547</span>
+<span class="normal">548</span>
+<span class="normal">549</span>
+<span class="normal">550</span>
+<span class="normal">551</span>
+<span class="normal">552</span>
+<span class="normal">553</span>
+<span class="normal">554</span>
+<span class="normal">555</span>
+<span class="normal">556</span>
+<span class="normal">557</span>
+<span class="normal">558</span>
+<span class="normal">559</span>
+<span class="normal">560</span>
+<span class="normal">561</span>
+<span class="normal">562</span>
+<span class="normal">563</span>
+<span class="normal">564</span>
+<span class="normal">565</span>
+<span class="normal">566</span>
+<span class="normal">567</span>
+<span class="normal">568</span>
+<span class="normal">569</span>
+<span class="normal">570</span>
+<span class="normal">571</span>
+<span class="normal">572</span>
+<span class="normal">573</span>
+<span class="normal">574</span>
+<span class="normal">575</span>
+<span class="normal">576</span>
+<span class="normal">577</span>
+<span class="normal">578</span>
+<span class="normal">579</span>
+<span class="normal">580</span>
+<span class="normal">581</span>
+<span class="normal">582</span>
+<span class="normal">583</span>
+<span class="normal">584</span>
+<span class="normal">585</span>
+<span class="normal">586</span>
+<span class="normal">587</span>
+<span class="normal">588</span>
+<span class="normal">589</span>
+<span class="normal">590</span>
+<span class="normal">591</span>
+<span class="normal">592</span>
+<span class="normal">593</span>
+<span class="normal">594</span>
+<span class="normal">595</span>
+<span class="normal">596</span>
+<span class="normal">597</span>
+<span class="normal">598</span>
+<span class="normal">599</span>
+<span class="normal">600</span>
+<span class="normal">601</span>
+<span class="normal">602</span>
+<span class="normal">603</span>
+<span class="normal">604</span>
+<span class="normal">605</span>
+<span class="normal">606</span>
+<span class="normal">607</span>
+<span class="normal">608</span>
+<span class="normal">609</span>
+<span class="normal">610</span>
+<span class="normal">611</span>
+<span class="normal">612</span>
+<span class="normal">613</span>
+<span class="normal">614</span>
+<span class="normal">615</span>
+<span class="normal">616</span>
+<span class="normal">617</span>
+<span class="normal">618</span>
+<span class="normal">619</span>
+<span class="normal">620</span>
+<span class="normal">621</span>
+<span class="normal">622</span>
+<span class="normal">623</span>
+<span class="normal">624</span>
+<span class="normal">625</span>
+<span class="normal">626</span>
+<span class="normal">627</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Logger</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Logger singleton class to log the progress of the model configuration. Has to be</span>
+<span class="sd">    initialized with the path to the log file once.&quot;&quot;&quot;</span>
+
+    <span class="n">_instance</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_log_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">_call_stack</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">log_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            log_file (str):</span>
+<span class="sd">                Path to the log file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_instance</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">_instance</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">Logger</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">_log_file</span> <span class="o">=</span> <span class="n">log_file</span>
+            <span class="k">if</span> <span class="n">log_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">log_file</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Logger file:&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_instance</span>
+
+    <span class="k">def</span> <span class="nf">log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">txt</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Log the given text to the log file. Only if the log file was given during</span>
+<span class="sd">        the first initialization.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            txt (str):</span>
+<span class="sd">                Text to be logged</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log_file</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">_</span><span class="p">,</span> <span class="n">call_stack</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trace_calls</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">call_stack</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_call_stack</span><span class="p">:</span>
+            <span class="n">txt</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">textwrap</span><span class="o">.</span><span class="n">indent</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">txt</span><span class="p">),</span><span class="w"> </span><span class="s1">&#39;    &#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">txt</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">[</span><span class="si">{</span><span class="n">call_stack</span><span class="si">}</span><span class="s2">]:</span><span class="se">\n</span><span class="si">{</span><span class="n">textwrap</span><span class="o">.</span><span class="n">indent</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">txt</span><span class="p">),</span><span class="w"> </span><span class="s1">&#39;    &#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_stack</span> <span class="o">=</span> <span class="n">call_stack</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_log_file</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">txt</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_trace_calls</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Get the call stack</span>
+        <span class="n">stack</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">stack</span><span class="p">()</span>
+
+        <span class="n">call_stack</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">frame</span> <span class="ow">in</span> <span class="n">stack</span><span class="p">:</span>
+            <span class="c1"># Get the function name</span>
+            <span class="n">function_name</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">function</span>
+            <span class="c1"># Check if it&#39;s a method of a class by looking for &#39;self&#39; or &#39;cls&#39;</span>
+            <span class="nb">locals</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">f_locals</span>
+            <span class="k">if</span> <span class="s2">&quot;self&quot;</span> <span class="ow">in</span> <span class="nb">locals</span><span class="p">:</span>
+                <span class="n">class_name</span> <span class="o">=</span> <span class="nb">locals</span><span class="p">[</span><span class="s2">&quot;self&quot;</span><span class="p">]</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span>
+                <span class="n">full_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">class_name</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">function_name</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">elif</span> <span class="s2">&quot;cls&quot;</span> <span class="ow">in</span> <span class="nb">locals</span><span class="p">:</span>
+                <span class="n">class_name</span> <span class="o">=</span> <span class="nb">locals</span><span class="p">[</span><span class="s2">&quot;cls&quot;</span><span class="p">]</span><span class="o">.</span><span class="vm">__name__</span>
+                <span class="n">full_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">class_name</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">function_name</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># If function_name is &#39;&lt;module&gt;&#39;, replace it with the module name</span>
+                <span class="k">if</span> <span class="n">function_name</span> <span class="o">==</span> <span class="s2">&quot;&lt;module&gt;&quot;</span><span class="p">:</span>
+                    <span class="n">module_name</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">f_globals</span><span class="p">[</span><span class="s2">&quot;__name__&quot;</span><span class="p">]</span>
+                    <span class="n">full_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">module_name</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">full_name</span> <span class="o">=</span> <span class="n">function_name</span>
+            <span class="n">call_stack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">full_name</span><span class="p">)</span>
+
+        <span class="c1"># Remove the first two elements of the call stack, which are the functions of</span>
+        <span class="c1"># the Logger class</span>
+        <span class="n">call_stack</span> <span class="o">=</span> <span class="n">call_stack</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
+
+        <span class="c1"># Get the name of the current function</span>
+        <span class="n">current_function_name</span> <span class="o">=</span> <span class="n">call_stack</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Reverse the call stack to get the order of the calls</span>
+        <span class="n">call_stack</span> <span class="o">=</span> <span class="n">call_stack</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># Convert the call stack to a string</span>
+        <span class="n">call_stack</span> <span class="o">=</span> <span class="s2">&quot; -&gt; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">call_stack</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">current_function_name</span><span class="p">,</span> <span class="n">call_stack</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+
+
+<h3 id="CompNeuroPy.system_functions.Logger.__new__" class="doc doc-heading">
+          <code class="highlight language-python"><span class="fm">__new__</span><span class="p">(</span><span class="n">log_file</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+<a href="#CompNeuroPy.system_functions.Logger.__new__" class="headerlink" title="Permanent link">#</a></h3>
+
+
+  <div class="doc doc-contents ">
+  
+
+
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>log_file</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Path to the log file</p>
+            </div>
+          </td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+          <details class="quote">
+            <summary>Source code in <code>src/CompNeuroPy/system_functions.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">551</span>
+<span class="normal">552</span>
+<span class="normal">553</span>
+<span class="normal">554</span>
+<span class="normal">555</span>
+<span class="normal">556</span>
+<span class="normal">557</span>
+<span class="normal">558</span>
+<span class="normal">559</span>
+<span class="normal">560</span>
+<span class="normal">561</span>
+<span class="normal">562</span>
+<span class="normal">563</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">log_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Args:</span>
+<span class="sd">        log_file (str):</span>
+<span class="sd">            Path to the log file</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_instance</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_instance</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">Logger</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_log_file</span> <span class="o">=</span> <span class="n">log_file</span>
+        <span class="k">if</span> <span class="n">log_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">log_file</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Logger file:&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_instance</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+
+<h3 id="CompNeuroPy.system_functions.Logger.log" class="doc doc-heading">
+          <code class="highlight language-python"><span class="n">log</span><span class="p">(</span><span class="n">txt</span><span class="p">)</span></code>
+
+<a href="#CompNeuroPy.system_functions.Logger.log" class="headerlink" title="Permanent link">#</a></h3>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Log the given text to the log file. Only if the log file was given during
+the first initialization.</p>
+
+
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>txt</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Text to be logged</p>
+            </div>
+          </td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+          <details class="quote">
+            <summary>Source code in <code>src/CompNeuroPy/system_functions.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">565</span>
+<span class="normal">566</span>
+<span class="normal">567</span>
+<span class="normal">568</span>
+<span class="normal">569</span>
+<span class="normal">570</span>
+<span class="normal">571</span>
+<span class="normal">572</span>
+<span class="normal">573</span>
+<span class="normal">574</span>
+<span class="normal">575</span>
+<span class="normal">576</span>
+<span class="normal">577</span>
+<span class="normal">578</span>
+<span class="normal">579</span>
+<span class="normal">580</span>
+<span class="normal">581</span>
+<span class="normal">582</span>
+<span class="normal">583</span>
+<span class="normal">584</span>
+<span class="normal">585</span>
+<span class="normal">586</span>
+<span class="normal">587</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">txt</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Log the given text to the log file. Only if the log file was given during</span>
+<span class="sd">    the first initialization.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        txt (str):</span>
+<span class="sd">            Text to be logged</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log_file</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span>
+
+    <span class="n">_</span><span class="p">,</span> <span class="n">call_stack</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trace_calls</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">call_stack</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_call_stack</span><span class="p">:</span>
+        <span class="n">txt</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">textwrap</span><span class="o">.</span><span class="n">indent</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">txt</span><span class="p">),</span><span class="w"> </span><span class="s1">&#39;    &#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">txt</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">[</span><span class="si">{</span><span class="n">call_stack</span><span class="si">}</span><span class="s2">]:</span><span class="se">\n</span><span class="si">{</span><span class="n">textwrap</span><span class="o">.</span><span class="n">indent</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">txt</span><span class="p">),</span><span class="w"> </span><span class="s1">&#39;    &#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">_call_stack</span> <span class="o">=</span> <span class="n">call_stack</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_log_file</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">txt</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
 
 
 <div class="doc doc-object doc-function">
@@ -1253,8 +1732,7 @@
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/system_functions.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">12</span>
-<span class="normal">13</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">13</span>
 <span class="normal">14</span>
 <span class="normal">15</span>
 <span class="normal">16</span>
@@ -1278,7 +1756,8 @@
 <span class="normal">34</span>
 <span class="normal">35</span>
 <span class="normal">36</span>
-<span class="normal">37</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">clear_dir</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+<span class="normal">37</span>
+<span class="normal">38</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">clear_dir</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Deletes all files and subdirectories in the specified folder.</span>
 
@@ -1386,8 +1865,7 @@
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/system_functions.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">40</span>
-<span class="normal">41</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">41</span>
 <span class="normal">42</span>
 <span class="normal">43</span>
 <span class="normal">44</span>
@@ -1428,7 +1906,8 @@
 <span class="normal">79</span>
 <span class="normal">80</span>
 <span class="normal">81</span>
-<span class="normal">82</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">create_dir</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">print_info</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">clear</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="normal">82</span>
+<span class="normal">83</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">create_dir</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">print_info</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">clear</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Creates a directory.</span>
 
@@ -1551,10 +2030,9 @@ variable_list. Default: "./"</p>
     </tbody>
   </table>
 
-
-
-<p><strong>Examples:</strong></p>
-    <div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">CompNeuroPy</span> <span class="kn">import</span> <span class="n">save_variables</span><span class="p">,</span> <span class="n">load_variables</span>
 
 <span class="c1">### create variables</span>
@@ -1571,11 +2049,10 @@ variable_list. Default: "./"</p>
 <span class="nb">print</span><span class="p">(</span><span class="n">loaded_variables</span><span class="p">[</span><span class="s2">&quot;var1_file&quot;</span><span class="p">])</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">loaded_variables</span><span class="p">[</span><span class="s2">&quot;var2_file&quot;</span><span class="p">])</span>
 </code></pre></div>
-
+</details>
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/system_functions.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 85</span>
-<span class="normal"> 86</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 86</span>
 <span class="normal"> 87</span>
 <span class="normal"> 88</span>
 <span class="normal"> 89</span>
@@ -1621,7 +2098,8 @@ variable_list. Default: "./"</p>
 <span class="normal">129</span>
 <span class="normal">130</span>
 <span class="normal">131</span>
-<span class="normal">132</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">save_variables</span><span class="p">(</span><span class="n">variable_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">name_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span> <span class="o">=</span> <span class="s2">&quot;./&quot;</span><span class="p">):</span>
+<span class="normal">132</span>
+<span class="normal">133</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">save_variables</span><span class="p">(</span><span class="n">variable_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">name_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span> <span class="o">=</span> <span class="s2">&quot;./&quot;</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Args:</span>
 <span class="sd">        variable_list (list):</span>
@@ -1632,7 +2110,7 @@ variable_list. Default: "./"</p>
 <span class="sd">            save path for all variables, or save path for each variable of the</span>
 <span class="sd">            variable_list. Default: &quot;./&quot;</span>
 
-<span class="sd">    Examples:</span>
+<span class="sd">    Example:</span>
 <span class="sd">        ```python</span>
 <span class="sd">        import numpy as np</span>
 <span class="sd">        from CompNeuroPy import save_variables, load_variables</span>
@@ -1760,10 +2238,9 @@ files, values are the loaded variables</p>
     </tbody>
   </table>
 
-
-
-<p><strong>Examples:</strong></p>
-    <div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">CompNeuroPy</span> <span class="kn">import</span> <span class="n">save_variables</span><span class="p">,</span> <span class="n">load_variables</span>
 
 <span class="c1">### create variables</span>
@@ -1780,11 +2257,10 @@ files, values are the loaded variables</p>
 <span class="nb">print</span><span class="p">(</span><span class="n">loaded_variables</span><span class="p">[</span><span class="s2">&quot;var1_file&quot;</span><span class="p">])</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">loaded_variables</span><span class="p">[</span><span class="s2">&quot;var2_file&quot;</span><span class="p">])</span>
 </code></pre></div>
-
+</details>
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/system_functions.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">135</span>
-<span class="normal">136</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">136</span>
 <span class="normal">137</span>
 <span class="normal">138</span>
 <span class="normal">139</span>
@@ -1834,7 +2310,8 @@ files, values are the loaded variables</p>
 <span class="normal">183</span>
 <span class="normal">184</span>
 <span class="normal">185</span>
-<span class="normal">186</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">load_variables</span><span class="p">(</span><span class="n">name_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span> <span class="o">=</span> <span class="s2">&quot;./&quot;</span><span class="p">):</span>
+<span class="normal">186</span>
+<span class="normal">187</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">load_variables</span><span class="p">(</span><span class="n">name_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span> <span class="o">=</span> <span class="s2">&quot;./&quot;</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Args:</span>
 <span class="sd">        name_list (list):</span>
@@ -1848,7 +2325,7 @@ files, values are the loaded variables</p>
 <span class="sd">            dictionary with the loaded variables, keys are the names of the</span>
 <span class="sd">            files, values are the loaded variables</span>
 
-<span class="sd">    Examples:</span>
+<span class="sd">    Example:</span>
 <span class="sd">        ```python</span>
 <span class="sd">        import numpy as np</span>
 <span class="sd">        from CompNeuroPy import save_variables, load_variables</span>
@@ -1941,8 +2418,7 @@ larger than this threshold, the execution time is printed. Default: 0.1.</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/system_functions.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">189</span>
-<span class="normal">190</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">190</span>
 <span class="normal">191</span>
 <span class="normal">192</span>
 <span class="normal">193</span>
@@ -1964,7 +2440,8 @@ larger than this threshold, the execution time is printed. Default: 0.1.</p>
 <span class="normal">209</span>
 <span class="normal">210</span>
 <span class="normal">211</span>
-<span class="normal">212</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">timing_decorator</span><span class="p">(</span><span class="n">threshold</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
+<span class="normal">212</span>
+<span class="normal">213</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">timing_decorator</span><span class="p">(</span><span class="n">threshold</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Decorator to measure the execution time of a function.</span>
 
@@ -2088,8 +2565,7 @@ Default: 1.</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/system_functions.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">215</span>
-<span class="normal">216</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">216</span>
 <span class="normal">217</span>
 <span class="normal">218</span>
 <span class="normal">219</span>
@@ -2123,7 +2599,8 @@ Default: 1.</p>
 <span class="normal">247</span>
 <span class="normal">248</span>
 <span class="normal">249</span>
-<span class="normal">250</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">run_script_parallel</span><span class="p">(</span>
+<span class="normal">250</span>
+<span class="normal">251</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">run_script_parallel</span><span class="p">(</span>
     <span class="n">script_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">args_list</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;&quot;</span><span class="p">],</span> <span class="n">n_total</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -2243,10 +2720,9 @@ in the created folder:
     </tbody>
   </table>
 
-
-
-<p><strong>Examples:</strong></p>
-    <div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">CompNeuroPy</span> <span class="kn">import</span> <span class="n">create_data_raw_folder</span>
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">CompNeuroPy</span> <span class="kn">import</span> <span class="n">create_data_raw_folder</span>
 
 <span class="c1">### define global variables</span>
 <span class="n">var1</span> <span class="o">=</span> <span class="mi">1</span>
@@ -2261,11 +2737,10 @@ in the created folder:
     <span class="n">var3</span><span class="o">=</span><span class="n">var3</span><span class="p">,</span>
 <span class="p">)</span>
 </code></pre></div>
-
+</details>
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/system_functions.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">264</span>
-<span class="normal">265</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">265</span>
 <span class="normal">266</span>
 <span class="normal">267</span>
 <span class="normal">268</span>
@@ -2509,7 +2984,8 @@ in the created folder:
 <span class="normal">506</span>
 <span class="normal">507</span>
 <span class="normal">508</span>
-<span class="normal">509</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">create_data_raw_folder</span><span class="p">(</span>
+<span class="normal">509</span>
+<span class="normal">510</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">create_data_raw_folder</span><span class="p">(</span>
     <span class="n">folder_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
 <span class="p">):</span>
@@ -2540,7 +3016,7 @@ in the created folder:
 <span class="sd">        **kwargs (Any, optional):</span>
 <span class="sd">            Global variables of the caller script.</span>
 
-<span class="sd">    Examples:</span>
+<span class="sd">    Example:</span>
 <span class="sd">        ```python</span>
 <span class="sd">        from CompNeuroPy import create_data_raw_folder</span>
 

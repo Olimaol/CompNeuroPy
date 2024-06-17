@@ -1022,6 +1022,27 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/deap_cma/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cma Optimization
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1168,10 +1189,9 @@ created)! Use a CompNeuroPy model working with names of populations and
 projections anyway (recommended) or use the update_pointers method.</p>
 </div>
 
-
-
-<p><strong>Examples:</strong></p>
-    <div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">ANNarchy</span> <span class="kn">import</span> <span class="n">Population</span><span class="p">,</span> <span class="n">Izhikevich</span><span class="p">,</span> <span class="nb">compile</span><span class="p">,</span> <span class="n">simulate</span><span class="p">,</span> <span class="n">setup</span>
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">ANNarchy</span> <span class="kn">import</span> <span class="n">Population</span><span class="p">,</span> <span class="n">Izhikevich</span><span class="p">,</span> <span class="nb">compile</span><span class="p">,</span> <span class="n">simulate</span><span class="p">,</span> <span class="n">setup</span>
 <span class="kn">from</span> <span class="nn">CompNeuroPy</span> <span class="kn">import</span> <span class="n">DBSstimulator</span>
 
 <span class="c1"># setup ANNarchy</span>
@@ -1180,7 +1200,7 @@ projections anyway (recommended) or use the update_pointers method.</p>
 <span class="c1"># create populations</span>
 <span class="n">population1</span> <span class="o">=</span> <span class="n">Population</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">neuron</span><span class="o">=</span><span class="n">Izhikevich</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;my_pop1&quot;</span><span class="p">)</span>
 <span class="n">population2</span> <span class="o">=</span> <span class="n">Population</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">neuron</span><span class="o">=</span><span class="n">Izhikevich</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;my_pop2&quot;</span><span class="p">)</span>
-<span class="o">&gt;&gt;&gt;</span>
+
 <span class="c1"># create DBS stimulator</span>
 <span class="n">dbs</span> <span class="o">=</span> <span class="n">DBSstimulator</span><span class="p">(</span>
     <span class="n">stimulated_population</span><span class="o">=</span><span class="n">population1</span><span class="p">,</span>
@@ -1207,14 +1227,10 @@ projections anyway (recommended) or use the update_pointers method.</p>
 <span class="n">dbs</span><span class="o">.</span><span class="n">off</span><span class="p">()</span>
 <span class="n">simulate</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
 </code></pre></div>
-
+</details>
             <details class="quote">
               <summary>Source code in <code>src/CompNeuroPy/dbs.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 944</span>
-<span class="normal"> 945</span>
-<span class="normal"> 946</span>
-<span class="normal"> 947</span>
-<span class="normal"> 948</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 948</span>
 <span class="normal"> 949</span>
 <span class="normal"> 950</span>
 <span class="normal"> 951</span>
@@ -2053,7 +2069,11 @@ projections anyway (recommended) or use the update_pointers method.</p>
 <span class="normal">1784</span>
 <span class="normal">1785</span>
 <span class="normal">1786</span>
-<span class="normal">1787</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">DBSstimulator</span><span class="p">:</span>
+<span class="normal">1787</span>
+<span class="normal">1788</span>
+<span class="normal">1789</span>
+<span class="normal">1790</span>
+<span class="normal">1791</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">DBSstimulator</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for stimulating a population with DBS.</span>
 
@@ -2063,7 +2083,7 @@ projections anyway (recommended) or use the update_pointers method.</p>
 <span class="sd">        created)! Use a CompNeuroPy model working with names of populations and</span>
 <span class="sd">        projections anyway (recommended) or use the update_pointers method.</span>
 
-<span class="sd">    Examples:</span>
+<span class="sd">    Example:</span>
 <span class="sd">        ```python</span>
 <span class="sd">        from ANNarchy import Population, Izhikevich, compile, simulate, setup</span>
 <span class="sd">        from CompNeuroPy import DBSstimulator</span>
@@ -2074,7 +2094,7 @@ projections anyway (recommended) or use the update_pointers method.</p>
 <span class="sd">        # create populations</span>
 <span class="sd">        population1 = Population(10, neuron=Izhikevich, name=&quot;my_pop1&quot;)</span>
 <span class="sd">        population2 = Population(10, neuron=Izhikevich, name=&quot;my_pop2&quot;)</span>
-<span class="sd">        &gt;&gt;&gt;</span>
+
 <span class="sd">        # create DBS stimulator</span>
 <span class="sd">        dbs = DBSstimulator(</span>
 <span class="sd">            stimulated_population=population1,</span>
@@ -2124,7 +2144,7 @@ projections anyway (recommended) or use the update_pointers method.</p>
         <span class="n">axon_rate_amp</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Population</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
         <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">auto_implement</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-        <span class="n">model</span><span class="p">:</span> <span class="n">generate_model</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">model</span><span class="p">:</span> <span class="n">CompNeuroModel</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize DBS stimulator.</span>
@@ -3227,7 +3247,7 @@ TODO test what happens with mixed models</p>
         <tr>
           <td><code>model</code></td>
           <td>
-                <code><span title="CompNeuroPy.generate_model.generate_model">generate_model</span></code>
+                <code><span title="CompNeuroPy.generate_model">generate_model</span></code>
           </td>
           <td>
             <div class="doc-md-description">
@@ -3245,11 +3265,7 @@ populations and projections of the current magic model</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/dbs.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 994</span>
-<span class="normal"> 995</span>
-<span class="normal"> 996</span>
-<span class="normal"> 997</span>
-<span class="normal"> 998</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 998</span>
 <span class="normal"> 999</span>
 <span class="normal">1000</span>
 <span class="normal">1001</span>
@@ -3403,7 +3419,11 @@ populations and projections of the current magic model</p>
 <span class="normal">1149</span>
 <span class="normal">1150</span>
 <span class="normal">1151</span>
-<span class="normal">1152</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@check_types</span><span class="p">()</span>
+<span class="normal">1152</span>
+<span class="normal">1153</span>
+<span class="normal">1154</span>
+<span class="normal">1155</span>
+<span class="normal">1156</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@check_types</span><span class="p">()</span>
 <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">stimulated_population</span><span class="p">:</span> <span class="n">Population</span><span class="p">,</span>
@@ -3424,7 +3444,7 @@ populations and projections of the current magic model</p>
     <span class="n">axon_rate_amp</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Population</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
     <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">auto_implement</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-    <span class="n">model</span><span class="p">:</span> <span class="n">generate_model</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">model</span><span class="p">:</span> <span class="n">CompNeuroModel</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Initialize DBS stimulator.</span>
@@ -3798,11 +3818,7 @@ from initialization</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/dbs.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1618</span>
-<span class="normal">1619</span>
-<span class="normal">1620</span>
-<span class="normal">1621</span>
-<span class="normal">1622</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1622</span>
 <span class="normal">1623</span>
 <span class="normal">1624</span>
 <span class="normal">1625</span>
@@ -3890,7 +3906,11 @@ from initialization</p>
 <span class="normal">1707</span>
 <span class="normal">1708</span>
 <span class="normal">1709</span>
-<span class="normal">1710</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@check_types</span><span class="p">()</span>
+<span class="normal">1710</span>
+<span class="normal">1711</span>
+<span class="normal">1712</span>
+<span class="normal">1713</span>
+<span class="normal">1714</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@check_types</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">on</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">population_proportion</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -4007,18 +4027,18 @@ from initialization</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/dbs.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1750</span>
-<span class="normal">1751</span>
-<span class="normal">1752</span>
-<span class="normal">1753</span>
-<span class="normal">1754</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1754</span>
 <span class="normal">1755</span>
 <span class="normal">1756</span>
 <span class="normal">1757</span>
 <span class="normal">1758</span>
 <span class="normal">1759</span>
 <span class="normal">1760</span>
-<span class="normal">1761</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">off</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="normal">1761</span>
+<span class="normal">1762</span>
+<span class="normal">1763</span>
+<span class="normal">1764</span>
+<span class="normal">1765</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">off</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Deactivate DBS.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -4108,11 +4128,7 @@ from initialization</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/dbs.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1763</span>
-<span class="normal">1764</span>
-<span class="normal">1765</span>
-<span class="normal">1766</span>
-<span class="normal">1767</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1767</span>
 <span class="normal">1768</span>
 <span class="normal">1769</span>
 <span class="normal">1770</span>
@@ -4132,7 +4148,11 @@ from initialization</p>
 <span class="normal">1784</span>
 <span class="normal">1785</span>
 <span class="normal">1786</span>
-<span class="normal">1787</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">update_pointers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pointer_list</span><span class="p">):</span>
+<span class="normal">1787</span>
+<span class="normal">1788</span>
+<span class="normal">1789</span>
+<span class="normal">1790</span>
+<span class="normal">1791</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">update_pointers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pointer_list</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Update pointers to populations and projections after recreating the model.</span>
 

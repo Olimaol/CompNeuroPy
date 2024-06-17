@@ -1052,6 +1052,27 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/deap_cma/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cma Optimization
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1874,8 +1895,8 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Args:</span>
 <span class="sd">            name (str, optional):</span>
-<span class="sd">                name of the model, syntax: &quot;BGM_v&lt;model_version&gt;_p&lt;parameters_version&gt;&quot;</span>
-<span class="sd">                replace &lt;model_version&gt; and &lt;parameters_version&gt; with the versions you</span>
+<span class="sd">                name of the model, syntax: &quot;BGM_v*model_version*_p*parameters_version*&quot;</span>
+<span class="sd">                replace *model_version* and *parameters_version* with the versions you</span>
 <span class="sd">                want to use, see CompNeuroPy.full_models.BGM_22.parameters for available</span>
 <span class="sd">                versions. Default: &quot;BGM_v01_p01&quot;</span>
 <span class="sd">            do_create (bool, optional):</span>
@@ -1884,7 +1905,7 @@
 <span class="sd">                if True, the model is compiled after creation. Default: True</span>
 <span class="sd">            compile_folder_name (str, optional):</span>
 <span class="sd">                name of the folder in which the compiled model is saved. Default: None,</span>
-<span class="sd">                i.e. &quot;annarchy_BGM_v&lt;model_version&gt;&quot; is used</span>
+<span class="sd">                i.e. &quot;annarchy_BGM_v*model_version*&quot; is used</span>
 <span class="sd">            seed (int, optional):</span>
 <span class="sd">                the seed for the random number generator used during model creation.</span>
 <span class="sd">                Default: None, i.e. random seed is used</span>
@@ -1901,7 +1922,7 @@
             <span class="ow">and</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)[</span><span class="mi">2</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;p&quot;</span>
         <span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;name has to be of the form &#39;BGM_v&lt;model_version&gt;_p&lt;parameters_version&gt;&#39;&quot;</span>
+                <span class="s2">&quot;name has to be of the form &#39;BGM_v*model_version*_p*parameters_version*&#39;&quot;</span>
             <span class="p">)</span>
 
         <span class="c1">### set attributes (except the ones which are set in the super().__init__())</span>
@@ -2339,8 +2360,8 @@
           </td>
           <td>
             <div class="doc-md-description">
-              <p>name of the model, syntax: "BGM_v<model_version>_p<parameters_version>"
-replace <model_version> and <parameters_version> with the versions you
+              <p>name of the model, syntax: "BGM_v<em>model_version</em>_p<em>parameters_version</em>"
+replace <em>model_version</em> and <em>parameters_version</em> with the versions you
 want to use, see CompNeuroPy.full_models.BGM_22.parameters for available
 versions. Default: "BGM_v01_p01"</p>
             </div>
@@ -2385,7 +2406,7 @@ versions. Default: "BGM_v01_p01"</p>
           <td>
             <div class="doc-md-description">
               <p>name of the folder in which the compiled model is saved. Default: None,
-i.e. "annarchy_BGM_v<model_version>" is used</p>
+i.e. "annarchy_BGM_v<em>model_version</em>" is used</p>
             </div>
           </td>
           <td>
@@ -2521,8 +2542,8 @@ compartments and parameters unique. Default: ""</p>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Args:</span>
 <span class="sd">        name (str, optional):</span>
-<span class="sd">            name of the model, syntax: &quot;BGM_v&lt;model_version&gt;_p&lt;parameters_version&gt;&quot;</span>
-<span class="sd">            replace &lt;model_version&gt; and &lt;parameters_version&gt; with the versions you</span>
+<span class="sd">            name of the model, syntax: &quot;BGM_v*model_version*_p*parameters_version*&quot;</span>
+<span class="sd">            replace *model_version* and *parameters_version* with the versions you</span>
 <span class="sd">            want to use, see CompNeuroPy.full_models.BGM_22.parameters for available</span>
 <span class="sd">            versions. Default: &quot;BGM_v01_p01&quot;</span>
 <span class="sd">        do_create (bool, optional):</span>
@@ -2531,7 +2552,7 @@ compartments and parameters unique. Default: ""</p>
 <span class="sd">            if True, the model is compiled after creation. Default: True</span>
 <span class="sd">        compile_folder_name (str, optional):</span>
 <span class="sd">            name of the folder in which the compiled model is saved. Default: None,</span>
-<span class="sd">            i.e. &quot;annarchy_BGM_v&lt;model_version&gt;&quot; is used</span>
+<span class="sd">            i.e. &quot;annarchy_BGM_v*model_version*&quot; is used</span>
 <span class="sd">        seed (int, optional):</span>
 <span class="sd">            the seed for the random number generator used during model creation.</span>
 <span class="sd">            Default: None, i.e. random seed is used</span>
@@ -2548,7 +2569,7 @@ compartments and parameters unique. Default: ""</p>
         <span class="ow">and</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)[</span><span class="mi">2</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;p&quot;</span>
     <span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="s2">&quot;name has to be of the form &#39;BGM_v&lt;model_version&gt;_p&lt;parameters_version&gt;&#39;&quot;</span>
+            <span class="s2">&quot;name has to be of the form &#39;BGM_v*model_version*_p*parameters_version*&#39;&quot;</span>
         <span class="p">)</span>
 
     <span class="c1">### set attributes (except the ones which are set in the super().__init__())</span>

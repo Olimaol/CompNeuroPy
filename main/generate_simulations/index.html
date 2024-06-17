@@ -378,15 +378,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example:
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#simulation-information" class="md-nav__link">
     <span class="md-ellipsis">
       Simulation information
@@ -401,21 +392,6 @@
       Simulation functions
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Simulation functions">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example:
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1115,6 +1091,27 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/deap_cma/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cma Optimization
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1176,15 +1173,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example:
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#simulation-information" class="md-nav__link">
     <span class="md-ellipsis">
       Simulation information
@@ -1199,21 +1187,6 @@
       Simulation functions
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Simulation functions">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example:
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1332,7 +1305,8 @@
 
 <h2 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">#</a></h2>
 <p>A CompNeuroPy-simulation can be created using the <a href="#CompNeuroPy.generate_simulation.CompNeuroSim"><code>CompNeuroSim</code></a> class. Similar to the <a href="../generate_models/#CompNeuroPy.generate_model.CompNeuroModel"><code>CompNeuroModel</code></a> class, a function must be defined that contains the actual simulation (the <em>simulation_function</em>) and the <a href="#CompNeuroPy.generate_simulation.CompNeuroSim"><code>CompNeuroSim</code></a> object adds a clear framework. A <a href="#CompNeuroPy.generate_simulation.CompNeuroSim"><code>CompNeuroSim</code></a> is first initialized and can then be run multiple times.</p>
-<h2 id="example">Example:<a class="headerlink" href="#example" title="Permanent link">#</a></h2>
+<div class="admonition example">
+<p class="admonition-title">Example</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">CompNeuroPy</span> <span class="kn">import</span> <span class="n">CompNeuroSim</span>
 <span class="n">my_simulation</span> <span class="o">=</span> <span class="n">CompNeuroSim</span><span class="p">(</span><span class="n">simulation_function</span><span class="o">=</span><span class="n">some_simulation</span><span class="p">,</span>           <span class="c1">### the most important part, this function defines the simulation</span>
                             <span class="n">simulation_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;pop&#39;</span><span class="p">:</span><span class="n">pop1</span><span class="p">,</span> <span class="s1">&#39;duration&#39;</span><span class="p">:</span><span class="mi">100</span><span class="p">},</span> <span class="c1">### define the two arguments pop and duration of simulation_function</span>
@@ -1358,11 +1332,13 @@
 </code></pre></div>
 Here, one checks if the population <em>pop1</em> contains the attributes <em>a</em> and <em>b</em>. The <a href="../../additional/simulation_requirements/#CompNeuroPy.simulation_requirements.ReqPopHasAttr"><code>ReqPopHasAttr</code></a> is a built-in requirements-class of CompNeuroPy (see below).</p>
 <p>A more detailed example is available in the <a href="../../examples/run_and_monitor_simulations/">Examples</a>.</p>
+</div>
 <h2 id="simulation-information">Simulation information<a class="headerlink" href="#simulation-information" title="Permanent link">#</a></h2>
 <p>The function <em>simulation_info()</em> returns a <a href="#CompNeuroPy.generate_simulation.SimInfo"><code>SimInfo</code></a> object which contains usefull information about the simulation runs (see below). The <a href="#CompNeuroPy.generate_simulation.SimInfo"><code>SimInfo</code></a> object also provides usefull analysis functions associated with specific simulation functions. Currently it provides the <em>get_current_arr()</em> which returns arrays containing the input current for each time step of the built-in simulation functions <em>current_step()</em>, <em>current_stim()</em>, and <em>current_ramp()</em>.</p>
 <h2 id="simulation-functions">Simulation functions<a class="headerlink" href="#simulation-functions" title="Permanent link">#</a></h2>
 <p>Just define a classic ANNarchy simulation in a function. Within the functions, the ANNarchy functions <em>get_population()</em> and <em>get_projection()</em> can be used to access the populations and projections using the population and projection names provided by a <a href="../generate_models/#CompNeuroPy.generate_model.CompNeuroModel"><code>CompNeuroModel</code></a>. The return value of the simulation function can later be retrieved from the <a href="#CompNeuroPy.generate_simulation.SimInfo"><code>SimInfo</code></a> object (the <em>info</em> attribute) in a list containing the return value for each run of the simulation.</p>
-<h3 id="example_1">Example:<a class="headerlink" href="#example_1" title="Permanent link">#</a></h3>
+<div class="admonition example">
+<p class="admonition-title">Example</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">ANNarchy</span> <span class="kn">import</span> <span class="n">simulate</span><span class="p">,</span> <span class="n">get_population</span>
 
 <span class="k">def</span> <span class="nf">current_step</span><span class="p">(</span><span class="n">pop</span><span class="p">,</span> <span class="n">t1</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">t2</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">a1</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">a2</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
@@ -1370,7 +1346,7 @@ Here, one checks if the population <em>pop1</em> contains the attributes <em>a</
 <span class="sd">        stimulates a given population in two periods with two input currents</span>
 
 <span class="sd">        pop: population name of population, which should be stimulated with input current</span>
-<span class="sd">             neuron model of population has to contain &quot;I_app&quot; as input current in pA</span>
+<span class="sd">            neuron model of population has to contain &quot;I_app&quot; as input current in pA</span>
 <span class="sd">        t1/t2: times in ms before/after current step</span>
 <span class="sd">        a1/a2: current amplitudes before/after current step in pA</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1392,6 +1368,7 @@ Here, one checks if the population <em>pop1</em> contains the attributes <em>a</
     <span class="c1">### return some additional information which could be usefull</span>
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;duration&#39;</span><span class="p">:</span><span class="n">t1</span><span class="o">+</span><span class="n">t2</span><span class="p">}</span>
 </code></pre></div>
+</div>
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">#</a></h2>
 <p>In order to perform simulations with models, the models must almost always fulfill certain requirements. For example, if the input current of a population is to be set, this population (or the neuron model) must of course have the corresponding variable. Such preconditions can be tested in advance with the <code>simulation_requirements</code> classes. They only need to contain a function <em>run()</em> to test the requirements (if requirements are not met, cause an error). In CompNeuroPy predefined <a href="../../additional/simulation_requirements/"><code>simulation_requirements</code></a> classes are available (CompNeuroPy.simulation_requirements; currently only <a href="../../additional/simulation_requirements/#CompNeuroPy.simulation_requirements.ReqPopHasAttr"><code>ReqPopHasAttr</code></a>). In the <a href="#CompNeuroPy.generate_simulation.CompNeuroSim"><code>CompNeuroSim</code></a> class, the requirements are passed as arguments in a list (see above). Each requirement (list entry) must be defined as a dictionary with keys <em>req</em> (the requirement class) and the arguments of the requirement class (e.g., <em>pop</em> and <em>attr</em> for the <a href="../../additional/simulation_requirements/#CompNeuroPy.simulation_requirements.ReqPopHasAttr"><code>ReqPopHasAttr</code></a>).</p>
 <p>Here two requirements are defined (both <a href="../../additional/simulation_requirements/#CompNeuroPy.simulation_requirements.ReqPopHasAttr"><code>ReqPopHasAttr</code></a>). All populations of <em>my_model</em> should contain the attribute (variable or parameter) <em>'I'</em> and all populations of <em>my_other_model</em> should contain the attribute <em>'v'</em>:</p>
@@ -2773,7 +2750,11 @@ run. If flat=True, returns a flattened array.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/CompNeuroPy/generate_simulation.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">256</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
 <span class="normal">257</span>
 <span class="normal">258</span>
 <span class="normal">259</span>
@@ -2919,11 +2900,7 @@ run. If flat=True, returns a flattened array.</p>
 <span class="normal">399</span>
 <span class="normal">400</span>
 <span class="normal">401</span>
-<span class="normal">402</span>
-<span class="normal">403</span>
-<span class="normal">404</span>
-<span class="normal">405</span>
-<span class="normal">406</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">SimInfo</span><span class="p">:</span>
+<span class="normal">402</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">SimInfo</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class for storing the simulation information.</span>
 
@@ -3237,7 +3214,11 @@ run.</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/generate_simulation.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">279</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">275</span>
+<span class="normal">276</span>
+<span class="normal">277</span>
+<span class="normal">278</span>
+<span class="normal">279</span>
 <span class="normal">280</span>
 <span class="normal">281</span>
 <span class="normal">282</span>
@@ -3274,11 +3255,7 @@ run.</p>
 <span class="normal">313</span>
 <span class="normal">314</span>
 <span class="normal">315</span>
-<span class="normal">316</span>
-<span class="normal">317</span>
-<span class="normal">318</span>
-<span class="normal">319</span>
-<span class="normal">320</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+<span class="normal">316</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">name</span><span class="p">,</span>
     <span class="n">description</span><span class="p">,</span>
@@ -3420,7 +3397,11 @@ run. If flat=True, returns a flattened array.</p>
 
           <details class="quote">
             <summary>Source code in <code>src/CompNeuroPy/generate_simulation.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">322</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">318</span>
+<span class="normal">319</span>
+<span class="normal">320</span>
+<span class="normal">321</span>
+<span class="normal">322</span>
 <span class="normal">323</span>
 <span class="normal">324</span>
 <span class="normal">325</span>
@@ -3500,11 +3481,7 @@ run. If flat=True, returns a flattened array.</p>
 <span class="normal">399</span>
 <span class="normal">400</span>
 <span class="normal">401</span>
-<span class="normal">402</span>
-<span class="normal">403</span>
-<span class="normal">404</span>
-<span class="normal">405</span>
-<span class="normal">406</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_current_arr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="normal">402</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_current_arr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Method exclusively for the following simulation functions (built-in</span>
 <span class="sd">    CompNeuroPy):</span>
