@@ -285,6 +285,11 @@ class SimulationEvents:
     SimulationEvents. Do never simulate within the effect functions of the events. The
     simulation is done between the events.
 
+    !!! warning
+        The onset of events and trigger times should be given in simulation steps (not
+        in ms). The 'end' event has to be triggered to end the simulation (otherwise
+        it will be triggered right at the beginning).
+
     Example:
         ```python
         from CompNeuroPy import SimulationEvents
@@ -433,9 +438,15 @@ class SimulationEvents:
         Run the simulation. The simulation runs until the end event is triggered. The
         simulation can be run multiple times by calling this function multiple times.
         """
+        ### for all events with given onset, change onset to current step + onset
+        ### (otherwise run would need to be called at time 0)
+        for event in self.event_list:
+            if event.onset is not None:
+                event.onset = get_current_step() + event.onset
+
         ### check if there are events which have no onset and are not triggered by other
         ### events and have no model_trigger --> they would never start
-        ### --> set their onset to current step --> they ar run directly after calling run
+        ### --> set their onset to current step --> they are run directly after calling run
         triggered_events = []
         for event in self.event_list:
             if event.trigger is not None:
