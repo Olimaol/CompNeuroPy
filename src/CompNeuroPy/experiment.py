@@ -220,7 +220,3 @@ class CompNeuroExp:
                 the experiment by calling the results function of the CompNeuroExp class.
             """
         )
-
-
-### old name for backward compatibility, TODO remove
-Experiment = CompNeuroExp

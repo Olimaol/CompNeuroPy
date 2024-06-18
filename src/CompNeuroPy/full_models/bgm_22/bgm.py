@@ -62,8 +62,8 @@ class BGM(CompNeuroModel):
         """
         Args:
             name (str, optional):
-                name of the model, syntax: "BGM_v<model_version>_p<parameters_version>"
-                replace <model_version> and <parameters_version> with the versions you
+                name of the model, syntax: "BGM_v*model_version*_p*parameters_version*"
+                replace *model_version* and *parameters_version* with the versions you
                 want to use, see CompNeuroPy.full_models.BGM_22.parameters for available
                 versions. Default: "BGM_v01_p01"
             do_create (bool, optional):
@@ -72,7 +72,7 @@ class BGM(CompNeuroModel):
                 if True, the model is compiled after creation. Default: True
             compile_folder_name (str, optional):
                 name of the folder in which the compiled model is saved. Default: None,
-                i.e. "annarchy_BGM_v<model_version>" is used
+                i.e. "annarchy_BGM_v*model_version*" is used
             seed (int, optional):
                 the seed for the random number generator used during model creation.
                 Default: None, i.e. random seed is used
@@ -89,7 +89,7 @@ class BGM(CompNeuroModel):
             and name.split("_")[2][0] == "p"
         ):
             raise ValueError(
-                "name has to be of the form 'BGM_v<model_version>_p<parameters_version>'"
+                "name has to be of the form 'BGM_v*model_version*_p*parameters_version*'"
             )
 
         ### set attributes (except the ones which are set in the super().__init__())

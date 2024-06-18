@@ -14,7 +14,7 @@ from ANNarchy import (
 from ANNarchy.core import ConnectorMethods
 import numpy as np
 from CompNeuroPy import model_functions as mf
-from CompNeuroPy.generate_model import generate_model
+from CompNeuroPy.generate_model import CompNeuroModel
 from typingchecker import check_types
 import inspect
 
@@ -883,7 +883,7 @@ class _CreateDBSmodelcnp(_CreateDBSmodel):
 
     def __init__(
         self,
-        model: generate_model,
+        model: CompNeuroModel,
         stimulated_population: Population,
         excluded_populations_list: list[Population],
         passing_fibres_list: list[Projection],
@@ -893,7 +893,7 @@ class _CreateDBSmodelcnp(_CreateDBSmodel):
         Prepare model for DBS stimulation.
 
         Args:
-            model (generate_model):
+            model (CompNeuroModel):
                 CompNeuroPy model
             stimulated_population (Population):
                 Population which is stimulated by DBS
@@ -921,7 +921,7 @@ class _CreateDBSmodelcnp(_CreateDBSmodel):
         parent class as model_creation_function. The new model can be accessed via the
         model attribute.
         """
-        self.model = generate_model(
+        self.model = CompNeuroModel(
             model_creation_function=super().recreate_model,
             name=f"{self.model.name}_dbs",
             description=f"{self.model.description}\nWith DBS mechanisms implemented.",
@@ -1016,7 +1016,7 @@ class DBSstimulator:
         axon_rate_amp: float | dict[Population | str, float] = 1.0,
         seed: int | None = None,
         auto_implement: bool = False,
-        model: generate_model | None = None,
+        model: CompNeuroModel | None = None,
     ) -> None:
         """
         Initialize DBS stimulator.

@@ -410,7 +410,3 @@ class CompNeuroModel:
 
         ### return dataframe
         return pd.DataFrame(attribute_dict)
-
-
-### old name for compatibility, TODO: remove
-generate_model = CompNeuroModel

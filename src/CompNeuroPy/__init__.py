@@ -6,11 +6,9 @@ from CompNeuroPy.analysis_functions import (
     get_population_power_spectrum,
     get_power_spektrum_from_time_array,
     get_pop_rate,
-    plot_recordings,
     get_number_of_zero_decimals,
     get_number_of_decimals,
     sample_data_with_timestep,
-    time_data_add_nan,
     rmse,
     rsse,
     get_minimum,
@@ -30,12 +28,7 @@ from CompNeuroPy.extra_functions import (
     evaluate_expression_with_dict,
     VClampParamSearch,
     DeapCma,
-    interactive_plot,  # TODO remove
     InteractivePlot,
-    data_obj,  # TODO remove
-    my_linear_cmap_obj,  # TODO remove
-    decision_tree,  # TODO remove
-    node_cl,  # TODO remove
     efel_loss,
     RNG,
     find_x_bound,
@@ -71,10 +64,10 @@ from CompNeuroPy.simulation_requirements import req_pop_attr, ReqPopHasAttr
 from CompNeuroPy.statistic_functions import anova_between_groups
 
 ### classes
-from CompNeuroPy.monitors import Monitors, CompNeuroMonitors
-from CompNeuroPy.experiment import Experiment, CompNeuroExp
-from CompNeuroPy.generate_model import generate_model, CompNeuroModel
-from CompNeuroPy.generate_simulation import generate_simulation, CompNeuroSim
+from CompNeuroPy.monitors import CompNeuroMonitors
+from CompNeuroPy.experiment import CompNeuroExp
+from CompNeuroPy.generate_model import CompNeuroModel
+from CompNeuroPy.generate_simulation import CompNeuroSim
 from CompNeuroPy.dbs import DBSstimulator
 
 ### modules

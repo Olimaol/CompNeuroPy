@@ -6,7 +6,6 @@ from CompNeuroPy import analysis_functions as af
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy import model_functions as mf
 from CompNeuroPy.generate_model import CompNeuroModel
-from CompNeuroPy.experiment import CompNeuroExp
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -23,7 +22,7 @@ from deap import cma
 from ANNarchy import Neuron, Population, simulate, setup, get_population
 from sympy import symbols, Symbol, solve, sympify, Eq, lambdify, factor
 from scipy.interpolate import griddata
-from scipy.optimize import brentq, minimize_scalar
+from scipy.optimize import brentq
 import re
 from typingchecker import check_types
 import warnings
@@ -58,7 +57,7 @@ def flatten_list(lst):
     Retuns flattened list
 
     Args:
-        lst (list of lists or mixed: values and lists):
+        lst (list of lists or mixed values and lists):
             List to be flattened
 
     Returns:
@@ -224,10 +223,6 @@ class _DataCl(object):
             return super().__getattribute__(__name)
 
 
-### keep old name for compatibility
-data_obj = _DataCl
-
-
 def create_cm(colors, name="my_cmap", N=256, gamma=1.0, vmin=0, vmax=1):
     """
     Create a `LinearSegmentedColormap` from a list of colors.
@@ -371,10 +366,6 @@ class _LinearColormapClass(LinearSegmentedColormap):
         return super().__call__(X, alpha, bytes)
 
 
-### keep old name for compatibility
-my_linear_cmap_obj = _LinearColormapClass
-
-
 class DecisionTree:
     """
     Class to create a decision tree.
@@ -473,10 +464,6 @@ class DecisionTree:
             return [path_str + "/" + node.name, prob * node.prob]
 
 
-### keep old name for compatibility
-decision_tree = DecisionTree
-
-
 class DecisionTreeNode:
     """
     Class to create a node in a decision tree.
@@ -538,10 +525,6 @@ class DecisionTreeNode:
                 Path product of the node
         """
         return self.tree._get_path_prod_rec(self)
-
-
-### keep old name for compatibility
-node_cl = DecisionTreeNode
 
 
 def evaluate_expression_with_dict(expression, value_dict):
@@ -2223,9 +2206,6 @@ class InteractivePlot:
         self.ani.event_source.start()
 
 
-interactive_plot = InteractivePlot
-
-
 def efel_loss(trace1, trace2, feature_list):
     """
     Calculate the loss between two traces using the features from the feature_list.
@@ -2352,183 +2332,6 @@ def efel_loss(trace1, trace2, feature_list):
     return loss
 
 
-def get_spike_features_of_chunk(chunk: int, results: CompNeuroExp._ResultsCl):
-    """
-    Get the features of the spikes of a chunk of the results of a CompNeuroExp.
-
-    !!! warning
-        The results data dict has to contain the population name as key "pop_name".
-        The spikes have to be recorded.
-
-    Args:
-        chunk (int):
-            index of the chunk
-        results (CompNeuroExp._ResultsCl):
-            results of the experiment
-
-    Returns:
-        spike_features (dict):
-            dictionary with the features of the spikes
-    """
-    ### get number of spikes
-    spike_dict = results.recordings[chunk][f"{results.data['pop_name']};spike"]
-    t, _ = af.my_raster_plot(spike_dict)
-    nbr_spikes = len(t)
-    ### get time of 1st, 2nd, 3rd spike
-    if nbr_spikes > 0:
-        time_1st_spike = t[0] * results.recordings[chunk]["dt"]
-        if nbr_spikes > 1:
-            time_2nd_spike = t[1] * results.recordings[chunk]["dt"]
-            if nbr_spikes > 2:
-                time_3rd_spike = t[2] * results.recordings[chunk]["dt"]
-            else:
-                time_3rd_spike = None
-        else:
-            time_2nd_spike = None
-            time_3rd_spike = None
-    else:
-        time_1st_spike = None
-        time_2nd_spike = None
-        time_3rd_spike = None
-    ### get time of last spike
-    if nbr_spikes > 0:
-        time_last_spike = t[-1] * results.recordings[chunk]["dt"]
-    else:
-        time_last_spike = None
-    ### get CV of ISI
-    if nbr_spikes > 1:
-        isi = np.diff(t * results.recordings[chunk]["dt"])
-        cv_isi = np.std(isi) / np.mean(isi)
-    else:
-        cv_isi = None
-
-    return {
-        "spike_count": nbr_spikes,
-        "time_to_first_spike": time_1st_spike,
-        "time_to_second_spike": time_2nd_spike,
-        "time_to_third_spike": time_3rd_spike,
-        "time_to_last_spike": time_last_spike,
-        "ISI_CV": cv_isi,
-    }
-
-
-def get_spike_features_loss_of_chunk(
-    chunk: int,
-    results1: CompNeuroExp._ResultsCl,
-    results2: CompNeuroExp._ResultsCl,
-    chunk2: None | int = None,
-    feature_list: list[str] | None = None,
-):
-    """
-    Calculate the loss/difference between the spike features of two chunks of the
-    results of CompNeuroExp.
-
-    !!! warning
-        The results data dict has to contain the population name as key "pop_name".
-        The spikes have to be recorded.
-
-    Args:
-        chunk (int):
-            index of the chunk
-        results1 (CompNeuroExp._ResultsCl):
-            results of the first experiment
-        results2 (CompNeuroExp._ResultsCl):
-            results of the second experiment
-        chunk2 (None|int):
-            index of the chunk of the second results, if None the same as chunk
-        feature_list (list[str]|None):
-            list of feature names which should be used to calculate the loss, if None
-            the default list is used
-
-    Returns:
-        loss (float):
-            loss/difference between the spike features of the two chunks
-    """
-    verbose = False
-    if chunk2 is None:
-        chunk2 = chunk
-
-    ### get recording duration of chunk
-    nbr_periods = results1.recording_times.nbr_periods(
-        chunk=chunk, compartment=results1.data["pop_name"]
-    )
-    chunk_duration_ms = 0
-    chunk_duration_idx = 0
-    for period in range(nbr_periods):
-        chunk_duration_ms += np.abs(
-            np.diff(
-                results1.recording_times.time_lims(
-                    chunk=chunk, compartment=results1.data["pop_name"], period=period
-                )
-            )
-        )
-        chunk_duration_idx += np.abs(
-            np.diff(
-                results1.recording_times.idx_lims(
-                    chunk=chunk, compartment=results1.data["pop_name"], period=period
-                )
-            )
-        )
-
-    ### set a plausible "maximum" absolute difference for each feature
-    diff_max: dict[str, float] = {
-        "spike_count": chunk_duration_idx,
-        "time_to_first_spike": chunk_duration_ms,
-        "time_to_second_spike": chunk_duration_ms,
-        "time_to_third_spike": chunk_duration_ms,
-        "time_to_last_spike": chunk_duration_ms,
-        "ISI_CV": 1,
-    }
-    if verbose:
-        print(f"\ndiff_max: {diff_max}")
-
-    ### set a plausible "close" absolute difference for each feature
-    diff_close: dict[str, float] = {
-        "spike_count": np.ceil(chunk_duration_ms / 200),
-        "time_to_first_spike": np.clip(chunk_duration_ms * 0.1, 5, 50),
-        "time_to_second_spike": np.clip(chunk_duration_ms * 0.1, 5, 50),
-        "time_to_third_spike": np.clip(chunk_duration_ms * 0.1, 5, 50),
-        "time_to_last_spike": np.clip(chunk_duration_ms * 0.1, 5, 50),
-        "ISI_CV": 0.1,
-    }
-    if verbose:
-        print(f"\ndiff_close: {diff_close}\n")
-
-    ### catch if features from feature_list are not supported
-    if feature_list is None:
-        feature_list = list(diff_max.keys())
-    features_not_supported = [
-        feature for feature in feature_list if feature not in diff_max
-    ]
-    if features_not_supported:
-        raise ValueError(f"Features not supported: {features_not_supported}")
-
-    ### calculate and return the mean of the differences of the features
-    features_1 = get_spike_features_of_chunk(chunk, results1)
-    features_2 = get_spike_features_of_chunk(chunk2, results2)
-
-    if verbose:
-        print(f"\nfeatures_1: {features_1}\n")
-        print(f"features_2: {features_2}\n")
-    loss = 0.0
-    for feature in feature_list:
-        ### if both features are None use 0
-        if features_1[feature] is None and features_2[feature] is None:
-            diff = 0.0
-        ### if single feature is None use diff_max
-        elif features_1[feature] is None or features_2[feature] is None:
-            diff = diff_max[feature]
-        else:
-            diff = float(np.absolute(features_1[feature] - features_2[feature]))
-        ### scale the difference by diff_close and add to loss
-        loss += diff / diff_close[feature]
-    loss /= len(feature_list)
-
-    if verbose:
-        print(f"loss: {loss}")
-    return loss
-
-
 class _Waiter:
     """
     Class that waits for a certain duration while the rest of the code continues to run.
@@ -2620,10 +2423,18 @@ class RNG:
     """
 
     def __init__(self, seed):
+        """
+        Args:
+            seed (int):
+                Seed for the random number generator.
+        """
         self.rng = np.random.default_rng(seed=seed)
         self._original_seed = seed
 
     def reset(self):
+        """
+        Reset the random number generator to the original seed.
+        """
         self.rng.bit_generator.state = np.random.default_rng(
             seed=self._original_seed
         ).bit_generator.state

@@ -618,10 +618,6 @@ class CompNeuroMonitors:
         return compartment_type, compartment_name, period
 
 
-### old name for backwards compatibility, TODO: remove in future
-Monitors = CompNeuroMonitors
-
-
 class RecordingTimes:
     def __init__(self, recording_times_list):
         """
@@ -774,7 +770,7 @@ class RecordingTimes:
 
         ### fill gaps with nan or interpolate
         if fill == "nan":
-            time_arr, data_arr = af.time_data_add_nan(
+            time_arr, data_arr = af.time_data_fill_gaps(
                 time_arr,
                 data_arr,
                 fill_time_step=period_time,
@@ -805,7 +801,7 @@ class RecordingTimes:
         considered and filled with nan values.
 
         !!! warning
-            If you use mode="consecutive": Missing recordings at the end of chunks
+            If you use mode="consecutive": Missing recordings AT THE END OF chunks
             (simulated but not recorded) are not considered, this leads to times which
             differ from the original simulation times (these time periods without
             recording are simply ignored)!
@@ -897,7 +893,7 @@ class RecordingTimes:
         ### check if there are gaps in the time array
         ### fill them with the corersponding times and
         ### the data array with nan values
-        time_arr, data_arr = af.time_data_add_nan(
+        time_arr, data_arr = af.time_data_fill_gaps(
             time_arr,
             data_arr,
             fill_time_step=period_time,

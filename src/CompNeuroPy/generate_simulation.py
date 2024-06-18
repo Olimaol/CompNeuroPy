@@ -249,10 +249,6 @@ class CompNeuroSim:
         return simulation_info_obj
 
 
-### old name for backward compatibility, TODO: remove
-generate_simulation = CompNeuroSim
-
-
 class SimInfo:
     """
     Class for storing the simulation information.

@@ -571,8 +571,10 @@ class Logger:
             txt (str):
                 Text to be logged
         """
+        if self._log_file is None:
+            return
 
-        _, call_stack = self.trace_calls()
+        _, call_stack = self._trace_calls()
 
         if call_stack == self._call_stack:
             txt = f"{textwrap.indent(str(txt), '    ')}"
@@ -584,7 +586,7 @@ class Logger:
         with open(self._log_file, "a") as f:
             print(txt, file=f)
 
-    def trace_calls(self):
+    def _trace_calls(self):
         # Get the call stack
         stack = inspect.stack()
 
