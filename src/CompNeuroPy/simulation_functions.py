@@ -24,6 +24,11 @@ def attr_sim(pop: str, attr_dict, t=500):
             dictionary containing the attributes and their values
         t (int):
             duration in ms
+
+    Returns:
+        attr_list_dict (dict):
+            dictionary containing the attribute values for each time step, keys are the
+            attribute names
     """
 
     ### save prev attr
@@ -41,6 +46,10 @@ def attr_sim(pop: str, attr_dict, t=500):
     ### reset attributes to previous values
     for attr, v in v_prev_dict.items():
         setattr(get_population(pop), attr, v)
+
+    ### return the values for the attribute for each time step
+    attr_list_dict = {attr: [v] * int(round(t / dt())) for attr, v in attr_dict.items()}
+    return attr_list_dict
 
 
 def attribute_step(pop: str, attr, t1=500, t2=500, v1=0, v2=100):
@@ -66,16 +75,18 @@ def attribute_step(pop: str, attr, t1=500, t2=500, v1=0, v2=100):
             dictionary containing:
 
             - duration (int): duration of the simulation
+            - v_arr (np.array): array of attribute values for each time step
     """
-
+    v_list = []
     ### first/pre step simulation
-    attr_sim(pop, {attr: v1}, t=t1)
-
+    attr_list_dict = attr_sim(pop, {attr: v1}, t=t1)
+    v_list.extend(attr_list_dict[attr])
     ### second/post step simulation
-    attr_sim(pop, {attr: v2}, t=t2)
+    attr_list_dict = attr_sim(pop, {attr: v2}, t=t2)
+    v_list.extend(attr_list_dict[attr])
 
-    ### return duration of the simulation
-    return {"duration": t1 + t2}
+    ### return duration of the simulation and the attribute values
+    return {"duration": t1 + t2, "v_arr": np.array(v_list)}
 
 
 def attr_ramp(pop: str, attr, v0, v1, dur, n):
@@ -107,6 +118,7 @@ def attr_ramp(pop: str, attr, v0, v1, dur, n):
 
             - dv (int): step size of attribute
             - dur_stim (int): duration of single steps
+            - v_arr (np.array): array of attribute values for each time step
 
     Raises:
         ValueError: if resulting duration of one stimulation is not divisible by the
@@ -125,11 +137,13 @@ def attr_ramp(pop: str, attr, v0, v1, dur, n):
     dv = (v1 - v0) / (n - 1)  # for n stimulations only n-1 steps occur
     dur_stim = dur / n
     v = v0
+    v_list = []
     for _ in range(n):
-        attr_sim(pop, attr_dict={attr: v}, t=dur_stim)
+        attr_list_dict = attr_sim(pop, attr_dict={attr: v}, t=dur_stim)
+        v_list.extend(attr_list_dict[attr])
         v = v + dv
 
-    return {"dv": dv, "dur_stim": dur_stim}
+    return {"dv": dv, "dur_stim": dur_stim, "v_arr": np.array(v_list)}
 
 
 def increasing_attr(pop: str, attr, v0, dv, nr_steps, dur_step):
@@ -155,15 +169,18 @@ def increasing_attr(pop: str, attr, v0, dv, nr_steps, dur_step):
             dictionary containing:
 
             - attr_list (list): list of attribute values for each step simulation
+            - v_arr (np.array): array of attribute values for each time step
     """
     attr_list = []
     v = v0
+    v_list = []
     for _ in range(nr_steps):
         attr_list.append(v)
-        attr_sim(pop, {attr: v}, t=dur_step)
+        attr_list_dict = attr_sim(pop, {attr: v}, t=dur_step)
+        v_list.extend(attr_list_dict[attr])
         v += dv
 
-    return {"attr_list": attr_list}
+    return {"attr_list": attr_list, "v_arr": np.array(v_list)}
 
 
 def current_step(pop: str, t1=500, t2=500, a1=0, a2=100):
@@ -188,8 +205,13 @@ def current_step(pop: str, t1=500, t2=500, a1=0, a2=100):
             dictionary containing:
 
             - duration (int): duration of the simulation
+            - current_arr (np.array): array of current values for each time step
     """
-    return attribute_step(pop, "I_app", t1=t1, t2=t2, v1=a1, v2=a2)
+    attribute_step_ret = attribute_step(pop, "I_app", t1=t1, t2=t2, v1=a1, v2=a2)
+    return {
+        "duration": attribute_step_ret["duration"],
+        "current_arr": attribute_step_ret["v_arr"],
+    }
 
 
 def current_stim(pop: str, t=500, a=100):
@@ -206,8 +228,13 @@ def current_stim(pop: str, t=500, a=100):
             duration in ms
         a (int):
             current amplitude
+
+    Returns:
+        current_arr (np.array):
+            array of current values for each time step
     """
-    attr_sim(pop, {"I_app": a}, t=t)
+    attr_list_dict = attr_sim(pop, {"I_app": a}, t=t)
+    return np.array(attr_list_dict["I_app"])
 
 
 def current_ramp(pop: str, a0, a1, dur, n):
@@ -239,13 +266,18 @@ def current_ramp(pop: str, a0, a1, dur, n):
 
             - da (int): current step size
             - dur_stim (int): duration of one stimulation
+            - current_arr (np.array): array of current values for each time step
 
     Raises:
         ValueError: if resulting duration of one stimulation is not divisible by the
             simulation time step without remainder
     """
     attr_ramp_return = attr_ramp(pop, "I_app", a0, a1, dur, n)
-    return {"da": attr_ramp_return["dv"], "dur_stim": attr_ramp_return["dur_stim"]}
+    return {
+        "da": attr_ramp_return["dv"],
+        "dur_stim": attr_ramp_return["dur_stim"],
+        "current_arr": attr_ramp_return["v_arr"],
+    }
 
 
 def increasing_current(pop: str, a0, da, nr_steps, dur_step):
@@ -272,9 +304,13 @@ def increasing_current(pop: str, a0, da, nr_steps, dur_step):
             dictionary containing:
 
             - current_list (list): list of current amplitudes for each stimulation
+            - current_arr (np.array): array of current values for each time step
     """
     increasing_attr_return = increasing_attr(pop, "I_app", a0, da, nr_steps, dur_step)
-    return {"current_list": increasing_attr_return["attr_list"]}
+    return {
+        "current_list": increasing_attr_return["attr_list"],
+        "current_arr": increasing_attr_return["v_arr"],
+    }
 
 
 class SimulationEvents:
@@ -534,9 +570,8 @@ class SimulationEvents:
         """
         ### loop to check if model trigger got active
         for model_trigger in self.model_trigger_list:
-            if (
-                int(get_population(model_trigger).decision[0]) == -1
-            ):  ### TODO this is not generalized yet, only works if the model_trigger populations have the variable decision which is set to -1 if the model trigger is active
+            ### TODO this is not generalized yet, only works if the model_trigger populations have the variable decision which is set to -1 if the model trigger is active
+            if int(get_population(model_trigger).decision[0]) == -1:
                 ### -1 means got active
                 ### find the events triggerd by the model_trigger and run them
                 for event in self.event_list:
