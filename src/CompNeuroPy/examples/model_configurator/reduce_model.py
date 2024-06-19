@@ -16,7 +16,6 @@ from ANNarchy import (
 from ANNarchy.core import ConnectorMethods
 import numpy as np
 from CompNeuroPy import model_functions as mf
-from CompNeuroPy.generate_model import generate_model
 from typingchecker import check_types
 import inspect
 from CompNeuroPy import CompNeuroModel
@@ -691,7 +690,7 @@ class _CreateReducedModel:
             ### create equations
             equations = [
                 f"""
-                incoming_spikes_{proj_name} = number_synapses_{proj_name} * sum(spikeprob_{vals['pre_name']}) + Normal(0, 1)*sqrt(number_synapses_{proj_name} * sum(spikeprob_{vals['pre_name']}) * (1 - sum(spikeprob_{vals['pre_name']}))) : min=0, max=number_synapses_{proj_name}
+                incoming_spikes_{proj_name} = round(number_synapses_{proj_name} * sum(spikeprob_{vals['pre_name']}) + Normal(0, 1)*sqrt(number_synapses_{proj_name} * sum(spikeprob_{vals['pre_name']}) * (1 - sum(spikeprob_{vals['pre_name']})))) : min=0, max=number_synapses_{proj_name}
             """
                 for proj_name, vals in projection_dict.items()
             ]

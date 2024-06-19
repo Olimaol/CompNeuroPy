@@ -4,7 +4,6 @@ from ANNarchy import (
     setup,
     simulate,
     get_population,
-    get_projection,
     dt,
 )
 from CompNeuroPy.neuron_models import (
@@ -12,20 +11,14 @@ from CompNeuroPy.neuron_models import (
     Izhikevich2003NoisyBaseSNR,
 )
 from CompNeuroPy import (
-    generate_model,
-    Monitors,
-    plot_recordings,
-    my_raster_plot,
+    CompNeuroModel,
     CompNeuroMonitors,
     PlotRecordings,
+    my_raster_plot,
 )
 from CompNeuroPy.examples.model_configurator.model_configurator_cnp import (
     ModelConfigurator,
 )
-from CompNeuroPy.examples.model_configurator.model_configurator_cnp_old import (
-    model_configurator,
-)
-import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -293,7 +286,7 @@ if __name__ == "__main__":
     ### create model which should be configurated
     ### create or compile have no effect
     setup(dt=0.1)
-    model = generate_model(
+    model = CompNeuroModel(
         model_creation_function=BGM_part_function,
         model_kwargs={"params": params},
         name="BGM_part_model",
@@ -360,7 +353,7 @@ if __name__ == "__main__":
         "stn": 30,
         "gpe": 50,
         "snr": 60,
-        "thal": 5,
+        "thal": 20,
     }
     do_not_config_list = ["cor_exc", "cor_inh"]
 
@@ -373,7 +366,7 @@ if __name__ == "__main__":
         print_guide=True,
         I_app_variable="I_app",
         cache=True,
-        clear_cache=False,
+        clear_cache=True,
         log_file="model_configurator.log",
     )
 
@@ -416,81 +409,60 @@ if __name__ == "__main__":
     model_conf.set_base()
 
     ### do a test simulation
-    mon = Monitors(
+    mon = CompNeuroMonitors(
         {
             "cor_exc": ["spike"],
             "cor_inh": ["spike"],
-            "stn": ["spike", "g_ampa", "g_gaba"],
-            "gpe": ["spike", "g_ampa", "g_gaba"],
-            "snr": ["spike", "g_ampa", "g_gaba"],
-            "thal": ["spike", "g_ampa", "g_gaba"],
+            "stn": ["spike"],
+            "gpe": ["spike"],
+            "snr": ["spike"],
+            "thal": ["spike"],
         }
     )
-    get_population("cor_exc").rates = target_firing_rate_dict["cor_exc"]
-    get_population("cor_inh").rates = target_firing_rate_dict["cor_inh"]
+    ### initial simulation
     simulate(1000)
     mon.start()
+    ### first simulation with default inputs
     simulate(4000)
     get_population("cor_exc").rates = 0
-    get_population("cor_inh").rates = 0
+    ### second simulation with changed inputs
     simulate(2000)
 
     ### get recordings
     recordings = mon.get_recordings()
     recording_times = mon.get_recording_times()
 
-    stn_g_ampa = recordings[0]["stn;g_ampa"]
-    stn_g_gaba = recordings[0]["stn;g_gaba"]
-    cor_spike = recordings[0]["cor_exc;spike"]
-    cor_spike_arr = np.zeros(stn_g_ampa.shape[0])
-    t, n = my_raster_plot(cor_spike)
-    values, counts = np.unique(t - 10000, return_counts=True)
-    t = values.astype(int)
-    cor_spike_arr[t] = counts
-    plt.figure(figsize=(6.4, 4.8 * 2))
-    plt.subplot(211)
-    plt.ylabel("g_ampa")
-    plt.plot(stn_g_ampa[:, 0], "k.")
-    plt.subplot(212)
-    plt.ylabel("g_gaba")
-    plt.plot(stn_g_gaba[:, 0], "k.")
-    plt.tight_layout()
-    plt.savefig("stn_input_model.png", dpi=300)
-    plt.close("all")
-
     ### print rates
     for pop_name in model.populations:
         spike_dict = recordings[0][f"{pop_name};spike"]
         t, n = my_raster_plot(spike_dict)
         nr_spikes_1st = np.sum(
-            (t > int(round(1000 / dt(), 0))) * (t < int(round(5000 / dt(), 0)))
+            (t > int(round(1000 / dt()))) * (t < int(round(5000 / dt())))
         )
-        nr_spikes_2nd = np.sum((t > int(round(5000 / dt(), 0))))
+        nr_spikes_2nd = np.sum((t > int(round(5000 / dt()))))
         rate_1st = nr_spikes_1st / (4 * params[f"{pop_name}.size"])
         rate_2nd = nr_spikes_2nd / (2 * params[f"{pop_name}.size"])
         print(f"pop_name: {pop_name}, rate_1st: {rate_1st}, rate_2nd: {rate_2nd}")
 
     ### plot recordings
-    plot_recordings(
+    PlotRecordings(
         figname="model_recordings.png",
         recordings=recordings,
         recording_times=recording_times,
         chunk=0,
-        shape=(5, 3),
-        plan=[
-            "1;cor_exc;spike;hybrid",
-            "2;cor_inh;spike;hybrid",
-            "4;stn;spike;hybrid",
-            "5;stn;g_ampa;line",
-            "6;stn;g_gaba;line",
-            "7;gpe;spike;hybrid",
-            "8;gpe;g_ampa;line",
-            "9;gpe;g_gaba;line",
-            "10;snr;spike;hybrid",
-            "11;snr;g_ampa;line",
-            "12;snr;g_gaba;line",
-            "13;thal;spike;hybrid",
-            "14;thal;g_ampa;line",
-            "15;thal;g_gaba;line",
-        ],
+        shape=(len(model.populations), 1),
+        plan={
+            "position": list(range(1, len(model.populations) + 1)),
+            "compartment": model.populations,
+            "variable": ["spike"] * len(model.populations),
+            "format": ["hybrid"] * len(model.populations),
+        },
     )
+
+    """
+    TODO: there is a systematic error with Thal
+    - somehow it is above its target firing rate after optimization
+    - before the optimization the weights seem to be correctly set in the reduced model
+    TODO: compare normal and reduced model: do they behave the same?
+    - I think this needs to be done exctly before the get_base optimization
+    """

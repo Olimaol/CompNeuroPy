@@ -6,6 +6,8 @@ from CompNeuroPy import extra_functions as ef
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy import analysis_functions as af
 
+from CompNeuroPy.examples.model_configurator.reduce_model import _CreateReducedModel
+
 from ANNarchy import (
     Population,
     Projection,
@@ -1414,15 +1416,69 @@ class ModelConfigurator:
         ### analyze the given model, create model before analyzing, then clear ANNarchy
         self._analyze_model = AnalyzeModel(model=self._model)
         ### create the CompNeuroModel object for the reduced model (the model itself is
-        ### not created yet)
-        self._model_reduced = CreateReducedModel(
-            model=self._model,
-            analyze_model=self._analyze_model,
-            reduced_size=100,
-            do_create=False,
-            do_compile=False,
-            verbose=True,
+        ### not created yet) TODO: tmp change to old _CreateReducedModel, does this work for thal?
+        # self._model_reduced = CreateReducedModel(
+        #     model=self._model,
+        #     analyze_model=self._analyze_model,
+        #     reduced_size=100,
+        #     do_create=False,
+        #     do_compile=False,
+        #     verbose=True,
+        # )
+        self._model_reduced = _CreateReducedModel(
+            model=model, reduced_size=100, do_create=False, do_compile=False
         )
+
+        # ### TODO: tmp compare the reduced model with the normal model, normal model part
+        # mf.cnp_clear(functions=False, constants=False)
+        # self._model.create()
+        # mon = CompNeuroMonitors(
+        #     mon_dict={pop_name: ["spike"] for pop_name in self._model.populations}
+        # )
+        # mon.start()
+        # simulate(5000)
+        # recordings = mon.get_recordings()
+        # recording_times = mon.get_recording_times()
+        # af.PlotRecordings(
+        #     figname="tmp_compare_normal.png",
+        #     recordings=recordings,
+        #     recording_times=recording_times,
+        #     shape=(len(self._model.populations), 1),
+        #     plan={
+        #         "position": list(range(1, len(self._model.populations) + 1)),
+        #         "compartment": self._model.populations,
+        #         "variable": ["spike"] * len(self._model.populations),
+        #         "format": ["hybrid"] * len(self._model.populations),
+        #     },
+        # )
+        # ### TODO: tmp compare the reduced model with the normal model, reduced model part
+        # mf.cnp_clear(functions=False, constants=False)
+        # self._model_reduced.model_reduced.create()
+        # mon = CompNeuroMonitors(
+        #     mon_dict={
+        #         f"{pop_name}_reduced": ["spike"] for pop_name in self._model.populations
+        #     }
+        # )
+        # mon.start()
+        # simulate(5000)
+        # recordings = mon.get_recordings()
+        # recording_times = mon.get_recording_times()
+        # af.PlotRecordings(
+        #     figname="tmp_compare_reduced.png",
+        #     recordings=recordings,
+        #     recording_times=recording_times,
+        #     shape=(len(self._model.populations), 1),
+        #     plan={
+        #         "position": list(range(1, len(self._model.populations) + 1)),
+        #         "compartment": [
+        #             f"{pop_name}_reduced" for pop_name in self._model.populations
+        #         ],
+        #         "variable": ["spike"] * len(self._model.populations),
+        #         "format": ["hybrid"] * len(self._model.populations),
+        #     },
+        # )
+        # quit()
+
         ### try to load the cached variables
         if clear_cache:
             sf.clear_dir(".model_config_cache")
@@ -1543,7 +1599,7 @@ class ModelConfigurator:
         rates.
         """
         ### initialize the normal model + compile the model
-        self._init_model_with_fitted_base(base_dict=self._base_dict)
+        self._init_model_with_fitted_base()
 
         ### record spikes of the do_not_config populations
         mon = CompNeuroMonitors(
@@ -1630,7 +1686,8 @@ class ModelConfigurator:
         ### clear ANNarchy and create the normal model
         mf.cnp_clear(functions=False, constants=False)
         self._model.create(do_compile=False)
-        ### set the initial variables of the neurons
+        ### set the initial variables of the neurons #TODO small problem = init sampler
+        ### initializes the neurons in resting-state, but here they get an input current
         for pop_name, init_sampler in self._init_sampler.init_sampler_dict.items():
             init_sampler.set_init_variables(get_population(pop_name))
         ### set the baseline currents
@@ -1688,15 +1745,15 @@ class Minimize:
                 return True
             return (np.max(error_list[-n:]) - np.min(error_list[-n:])) > tol
 
-        ### TODO not check if error is small enough but if the change of the error
-        ### converges, for this, check the mean of the last 10 error changes
+        ### run until the error does not change anymore or the maximum number of
+        ### iterations is reached, also break if the error is small enough
         while it < max_it and error_changed(error_list, tol_convergence):
             print("\n\nnext iteration")
             y_old = y
             y = func(x)
             dx_list.append(x - x_old)
             dy_list.append(y - y_old)
-            ### TODO if x did not change much, use the previous gradient again
+            ### TODO if x did not change much, use the previous gradient again, but maybe not a good idea, or at least not easy to implement, sicne gradient depends on all inputs
             print(f"x: {x}")
             print(f"y: {y}")
             x_list.append(x)
@@ -1715,60 +1772,27 @@ class Minimize:
             error_list.append(np.mean(np.abs(error)))
             print(f"error_list: {error_list}\n")
             ### if the error sign changed:
-            ### - TODO check if error is larger as before, if yes -> use again the previous x, if use previous x also compute current y
+            ### - check if error is larger as before
+            ###   - if yes -> check if error is also larger than tolerance
+            ###     - if yes -> use again the previous x and compute current y again
             ### - we calculate (as usual) a new gradient
             ### - we reduce alpha, so this time the step is smaller
             error_increased = np.abs(error) > np.abs(error_old)
-            x[error_sign_changed & error_increased] = x_old[
-                error_sign_changed & error_increased
-            ]
-            if np.any(error_sign_changed & error_increased):
+            error_is_large = np.abs(error) > tol_error
+            change_x = error_sign_changed & error_increased & error_is_large
+            x[change_x] = x_old[change_x]
+            if np.any(change_x):
                 y = func(x)
-
-                # TODO I do not understand this example, this message was printed but x did not change
-                # next iteration
-                # x: [12.56441496 40.92615539 18.96717589 90.30010779]
-                # y: [30.00888889 59.99777778 50.01333333 96.85333333]
-                # error_sign_changed: [False False False False]
-                # error_list: [23.759444444444448, 2.517777777777779, 78.90388888888889, 22.96944444444445]
-
-                # x_plus: [13.56441496 40.92615539 18.96717589 90.30010779]
-                # y_plus: [32.22222222 60.10888889 50.08666667 97.41111111]
-
-                # x_plus: [12.56441496 42.92615539 18.96717589 90.30010779]
-                # y_plus: [30.00888889 62.06666667 50.01333333 91.96666667]
-
-                # x_plus: [12.56441496 40.92615539 19.96717589 90.30010779]
-                # y_plus: [30.00888889 59.89333333 51.14666667 96.79333333]
-
-                # x_plus: [ 12.56441496  40.92615539  18.96717589 132.96677446]
-                # y_plus: [ 30.00888889  59.99777778  50.01333333 214.46666667]
-
-                # delta_y: [-8.88888889e-03  2.22222222e-03 -1.33333333e-02 -9.18533333e+01]
-                # grad:
-                # [[ 2.21333333e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00]
-                # [ 1.11111111e-01  2.06888889e+00 -1.04444444e-01  0.00000000e+00]
-                # [ 7.33333333e-02  0.00000000e+00  1.13333333e+00  0.00000000e+00]
-                # [ 5.57777778e-01 -4.88666667e+00 -6.00000000e-02  1.17613333e+02]]
-                # Solution vector x: [-4.01606426e-03  7.08996344e-04 -1.15048429e-02 -7.80934579e-01]
-                # delta_y from solution: [-8.88888889e-03  2.22222222e-03 -1.33333333e-02 -9.18533333e+01]
-
-                # next iteration
-                # x: [12.56200532 40.92757338 18.96027299 76.97215765]
-                # y: [30.01333333 60.00444444 50.00444444 61.82444444]
-                # error_sign_changed: [False  True False False]
-                # error_list: [23.759444444444448, 2.517777777777779, 78.90388888888889, 22.96944444444445, 14.211666666666666]
-
-                # some errors changed sign and increased
-                # x: [12.56200532 40.92615539 18.96027299 76.97215765]
-                # y: [30.01333333 60.02       50.00444444 61.86      ]
-
-                print("some errors changed sign and increased")
+                print(
+                    "some errors changed sign, increased, and are larger than tolerance"
+                )
                 print(f"x: {x}")
                 print(f"y: {y}\n")
                 x_list.append(x)
                 y_list.append(y)
                 it_list.append(it)
+            ### reduce alpha for the inputs where the error sign changed
+            ### for the others alpha reaches 1
             alpha[error_sign_changed] /= 2
             alpha[~error_sign_changed] += (1 - alpha[~error_sign_changed]) / 5
             ### calculate the gradient i.e. change of the output values for each input
@@ -1856,7 +1880,7 @@ class Minimize:
             plt.ylabel(f"dy{idx}/dx{idx}")
         plt.xlabel("x")
         plt.tight_layout()
-        plt.savefig("dy_dx_asugehend_x.png")
+        plt.savefig("dy_dx_ausgehend_x.png")
 
 
 class GetBase:
@@ -1917,6 +1941,77 @@ class GetBase:
                     )
 
     def _prepare_get_base(self):
+        ### TODO I compare here reduced model with normal model and yes, in the reduced model, the thalamus rate is lower... but why
+        ### if snr is silent --> no diff in thalamus rate between reduced and normal model --> the snr-->thal input is not reduced well
+        ### its strange that the thalamus neurons in the reduced model seem to have all the same g_ampa... but why
+        ### it should be different since the population calculating the conductance has different number synapses and uses random numbers for incoming spikes
+        ### it is actually different, but more similiar then in the normal model
+        ### I think the implementation actually works as epected but the replacement of the binomial distribution with the normal distribution for calculating incoming spikes does not work well here
+        ### because the spike probabilities are low
+        ### FOUND PROBLEM: I had to round the incoming spikes to the nearest integer, the binomial distribution to approximate was around n=10, p=0.01 --> many zeros few ones, with the not-rounded normal distribution you got many values between 0 and 1 --> more then 0 --> higher conductance
+        ### TODO tmp test, compare normal and reduced model, reduced model part
+        ### clear and create model
+        mf.cnp_clear(functions=False, constants=False)
+        self._model_normal.create()
+        ### create monitors
+        mon_dict = {}
+        plot_position_list = []
+        plot_compartment_list = []
+        plot_variable_list = []
+        plot_format_list = []
+        for idx, pop_name in enumerate(self._model_normal.populations):
+            mon_dict[pop_name] = []
+            if True:
+                mon_dict[pop_name].append("spike")
+                plot_position_list.append(3 * idx + 1)
+                plot_compartment_list.append(pop_name)
+                plot_variable_list.append("spike")
+                plot_format_list.append("hybrid")
+            if "g_gaba" in get_population(pop_name).variables:
+                mon_dict[pop_name].append("g_gaba")
+                plot_position_list.append(3 * idx + 2)
+                plot_compartment_list.append(pop_name)
+                plot_variable_list.append("g_gaba")
+                plot_format_list.append("line")
+            if "g_ampa" in get_population(pop_name).variables:
+                mon_dict[pop_name].append("g_ampa")
+                plot_position_list.append(3 * idx + 3)
+                plot_compartment_list.append(pop_name)
+                plot_variable_list.append("g_ampa")
+                plot_format_list.append("line")
+        mon = CompNeuroMonitors(mon_dict=mon_dict)
+        ### initialize the populations with the init sampler
+        for pop_name in self._pop_names_config:
+            self._init_sampler.get(pop_name=pop_name).set_init_variables(
+                get_population(pop_name)
+            )
+        ### set the weights
+        for proj_name, weight in self._weight_dicts.weight_dict.items():
+            setattr(get_projection(proj_name), "w", weight)
+        ### simulate
+        mon.start()
+        get_population("thal").I_app = 20
+        simulate(5000)
+        ### plot
+        recordings = mon.get_recordings()
+        recording_times = mon.get_recording_times()
+        af.PlotRecordings(
+            figname="tmp_compare_normal.png",
+            recordings=recordings,
+            recording_times=recording_times,
+            shape=(len(self._model_normal.populations), 3),
+            plan={
+                "position": plot_position_list,
+                "compartment": plot_compartment_list,
+                "variable": plot_variable_list,
+                "format": plot_format_list,
+            },
+        )
+        print(
+            "thal rate:", len(raster_plot(recordings[0]["thal;spike"])[0]) / (5 * 100)
+        )
+        print("snr rate:", len(raster_plot(recordings[0]["snr;spike"])[0]) / (5 * 100))
+
         ### clear ANNarchy
         mf.cnp_clear(functions=False, constants=False)
         ### create and compile the model
@@ -1929,6 +2024,55 @@ class GetBase:
                 for pop_name in self._model_normal.populations
             }
         )
+        ### TODO: tmp monitors to compare normal and reduced model
+        mon_dict = {}
+        plot_position_list = []
+        plot_compartment_list = []
+        plot_variable_list = []
+        plot_format_list = []
+        for idx, pop_name in enumerate(self._model_normal.populations):
+            mon_dict[f"{pop_name}_reduced"] = []
+            if True:
+                mon_dict[f"{pop_name}_reduced"].append("spike")
+                plot_position_list.append(3 * idx + 1)
+                plot_compartment_list.append(f"{pop_name}_reduced")
+                plot_variable_list.append("spike")
+                plot_format_list.append("hybrid")
+            if "g_gaba" in get_population(f"{pop_name}_reduced").variables:
+                mon_dict[f"{pop_name}_reduced"].append("g_gaba")
+                plot_position_list.append(3 * idx + 2)
+                plot_compartment_list.append(f"{pop_name}_reduced")
+                plot_variable_list.append("g_gaba")
+                plot_format_list.append("line")
+            if "g_ampa" in get_population(f"{pop_name}_reduced").variables:
+                mon_dict[f"{pop_name}_reduced"].append("g_ampa")
+                plot_position_list.append(3 * idx + 3)
+                plot_compartment_list.append(f"{pop_name}_reduced")
+                plot_variable_list.append("g_ampa")
+                plot_format_list.append("line")
+
+            # if f"{pop_name}_spike_collecting_aux" in self._model_reduced.populations:
+            #     mon_dict[f"{pop_name}_spike_collecting_aux"] = ["r"]
+            #     plot_position_list.append(5 * idx + 3)
+            #     plot_compartment_list.append(f"{pop_name}_spike_collecting_aux")
+            #     plot_variable_list.append("r")
+            #     plot_format_list.append("line")
+
+            # if f"{pop_name}_ampa_aux" in self._model_reduced.populations:
+            #     mon_dict[f"{pop_name}_ampa_aux"] = ["r"]
+            #     plot_position_list.append(5 * idx + 4)
+            #     plot_compartment_list.append(f"{pop_name}_ampa_aux")
+            #     plot_variable_list.append("r")
+            #     plot_format_list.append("line")
+
+            # if f"{pop_name}_gaba_aux" in self._model_reduced.populations:
+            #     mon_dict[f"{pop_name}_gaba_aux"] = ["r"]
+            #     plot_position_list.append(5 * idx + 5)
+            #     plot_compartment_list.append(f"{pop_name}_gaba_aux")
+            #     plot_variable_list.append("r")
+            #     plot_format_list.append("line")
+        ### TODO record incoming_spikes_proj_name of snr__thal of the thal input aux population
+        mon = CompNeuroMonitors(mon_dict=mon_dict)
         ### create the experiment
         self._exp = self.MyExperiment(monitors=mon)
         ### initialize all populations with the init sampler
@@ -1950,6 +2094,39 @@ class GetBase:
             self._ub.append(self._max_syn.get(pop_name=pop_name).I_app)
             self._x0.append(0.0)
 
+        ### TODO tmp test, compare normal and reduced model, reduced model part
+        ### simulate
+        mon.start()
+        get_population("thal_reduced").I_app = 20
+        simulate(5000)
+        ### plot
+        recordings = mon.get_recordings()
+        recording_times = mon.get_recording_times()
+        af.PlotRecordings(
+            figname="tmp_compare_reduced.png",
+            recordings=recordings,
+            recording_times=recording_times,
+            shape=(len(self._model_normal.populations), 3),
+            plan={
+                "position": plot_position_list,
+                "compartment": plot_compartment_list,
+                "variable": plot_variable_list,
+                "format": plot_format_list,
+            },
+        )
+        print(
+            "thal rate:",
+            len(raster_plot(recordings[0]["thal_reduced;spike"])[0]) / (5 * 100),
+        )
+        print(
+            "snr rate:",
+            len(raster_plot(recordings[0]["snr_reduced;spike"])[0]) / (5 * 100),
+        )
+        print(self._model_reduced.populations)
+        print(recordings[0]["gpe_reduced;g_ampa"][:, 0])
+        print(recordings[0]["gpe_reduced;g_ampa"][:, 1])
+        quit()
+
     def _get_base(self):
         """
         Perform the optimization to find the base currents for the target firing rates.
@@ -1967,7 +2144,7 @@ class GetBase:
             lb=np.array(self._lb),
             ub=np.array(self._ub),
             tol_error=1,
-            tol_convergence=0.1,
+            tol_convergence=0.01,
             max_it=20,
         )
 
@@ -1980,46 +2157,6 @@ class GetBase:
             for idx, pop_name in enumerate(self._pop_names_config)
         }
         return base_dict
-
-    def _objective_function_deap(self, population):
-        """
-        Objective function wrapper for the DeapCma optimization.
-
-        Args:
-            population (list):
-                List of individuals with input currents for each model population
-
-        Returns:
-            loss_list (list):
-                List of losses for each individual of the population
-        """
-        loss_list = []
-        ### the population is a list of individuals which are lists of parameters
-        for individual in population:
-            loss_of_individual = self._objective_function(I_app_list=individual)
-            loss_list.append((loss_of_individual,))
-        return loss_list
-
-    def _objective_function(self, I_app_list: list[float]):
-        """
-        Objective function to minimize the difference between the target firing rates and
-        the firing rates of the model with the given input currents.
-
-        Args:
-            I_app_list (list[float]):
-                List with the input currents for each population
-
-        Returns:
-            diff (float):
-                Difference between the target firing rates and the firing rates of the
-                model with the given input currents
-        """
-        ### get the firing rates of the model with the given input currents
-        rate_arr = self._get_firing_rate(I_app_list)
-        ### calculate the difference between the target firing rates and the firing rates
-        ### of the model with the given input currents
-        diff = self._target_firing_rate_arr - rate_arr
-        return np.sum(diff**2)
 
     def _get_firing_rate(self, I_app_list: list[float]):
         ### convert the I_app_list to a dict
@@ -2038,7 +2175,9 @@ class GetBase:
             ### for the spike dict we need the "_reduced" suffix
             spike_dict = results.recordings[0][f"{pop_name}_reduced;spike"]
             t, _ = raster_plot(spike_dict)
-            ### only take spikes after the first 500 ms
+            ### only take spikes after the first 500 ms, because the neurons are
+            ### initialized in resting-state and with an input current there can be
+            ### drastic activity changes at the beginning
             t = t[t > 500]
             nbr_spikes = len(t)
             ### divide number of spikes by the number of neurons and the duration in s

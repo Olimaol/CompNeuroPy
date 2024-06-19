@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import scipy.stats as stats
 
 # Parameters
-n = 15  # number of trials
-p = 0.95  # probability of success
+n = 10  # number of trials
+p = 0.01  # probability of success
 N = 10000  # number of samples
 
 # Generate data samples
@@ -13,14 +13,14 @@ mean = n * p
 std_dev = np.sqrt(n * p * (1 - p))
 normal_sample = np.random.normal(mean, std_dev, N)
 
-### scale normal sample above mean and below mean
-normal_sample_original = normal_sample.copy()
-normal_sample[normal_sample_original >= mean] = (
-    normal_sample_original[normal_sample_original >= mean] * 1.1
-)
-normal_sample[normal_sample_original < mean] = (
-    normal_sample_original[normal_sample_original < mean] * 0.9
-)
+# ### scale normal sample above mean and below mean
+# normal_sample_original = normal_sample.copy()
+# normal_sample[normal_sample_original >= mean] = (
+#     normal_sample_original[normal_sample_original >= mean] * 1.1
+# )
+# normal_sample[normal_sample_original < mean] = (
+#     normal_sample_original[normal_sample_original < mean] * 0.9
+# )
 
 ### round and clip the normal sample
 normal_sample = np.round(normal_sample)
@@ -66,7 +66,16 @@ plt.hist(
     bins=n + 1,
     range=(-0.5, n + 0.5),
     density=True,
-    alpha=0.6,
+    alpha=0.5,
+    color="b",
+    label="Binomial",
+)
+plt.hist(
+    binomial_sample,
+    bins=n * 50,
+    range=(-0.5, n + 0.5),
+    density=True,
+    alpha=0.5,
     color="b",
     label="Binomial",
 )
@@ -82,7 +91,16 @@ plt.hist(
     bins=n + 1,
     range=(-0.5, n + 0.5),
     density=True,
-    alpha=0.6,
+    alpha=0.5,
+    color="r",
+    label="Normal",
+)
+plt.hist(
+    normal_sample,
+    bins=n * 50,
+    range=(-0.5, n + 0.5),
+    density=True,
+    alpha=0.5,
     color="r",
     label="Normal",
 )
