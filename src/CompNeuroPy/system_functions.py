@@ -562,7 +562,7 @@ class Logger:
                     print("Logger file:", file=f)
         return cls._instance
 
-    def log(self, txt):
+    def log(self, txt, verbose=False):
         """
         Log the given text to the log file. Only if the log file was given during
         the first initialization.
@@ -570,7 +570,11 @@ class Logger:
         Args:
             txt (str):
                 Text to be logged
+            verbose (bool, optional):
+                Whether to print the text. Default: False.
         """
+        if verbose:
+            print(txt)
         if self._log_file is None:
             return
 

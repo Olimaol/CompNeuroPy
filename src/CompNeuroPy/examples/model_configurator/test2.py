@@ -2,31 +2,44 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as stats
 
-# Parameters
-n = 10  # number of trials
-p = 0.01  # probability of success
-N = 10000  # number of samples
+n_arr = np.arange(10, 1000, 10)
+p_arr = np.array([0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999])
 
-# Generate data samples
-binomial_sample = np.random.binomial(n, p, N)
-mean = n * p
-std_dev = np.sqrt(n * p * (1 - p))
-normal_sample = np.random.normal(mean, std_dev, N)
+### TODO I have the problem that for very small p the normal distribution is not a good
+### approximation of the binomial distribution.
+### I think one can shift the mean and scale the standard deviation depending on the p
+### and n values. I will try to optimize the shift and scale for each n and p value.
+shift_mean_bounds = [-1, 1]
+scale_std_bounds = [0.5, 2]
 
-# ### scale normal sample above mean and below mean
-# normal_sample_original = normal_sample.copy()
-# normal_sample[normal_sample_original >= mean] = (
-#     normal_sample_original[normal_sample_original >= mean] * 1.1
-# )
-# normal_sample[normal_sample_original < mean] = (
-#     normal_sample_original[normal_sample_original < mean] * 0.9
-# )
+for n in n_arr:
+    for p in p_arr:
+        # set n and p
+        # then optimize shift of mean
+        # Parameters
+        # number of samples
+        N = 10000
 
-### round and clip the normal sample
-normal_sample = np.round(normal_sample)
-normal_sample[normal_sample < 0] = 0
-normal_sample[normal_sample > n] = n
+        # Generate data samples
+        binomial_sample = np.random.binomial(n, p, N)
+        mean = n * p
+        std_dev = np.sqrt(n * p * (1 - p))
+        normal_sample = np.random.normal(mean, std_dev, N)
 
+        ### round and clip the normal sample
+        normal_sample = np.round(normal_sample)
+        normal_sample[normal_sample < 0] = 0
+        normal_sample[normal_sample > n] = n
+
+        print(np.histogram(binomial_sample, bins=n + 1, range=(-0.5, n + 0.5))[0])
+        print(np.histogram(normal_sample, bins=n + 1, range=(-0.5, n + 0.5))[0])
+        diff = (
+            np.histogram(binomial_sample, bins=n + 1, range=(-0.5, n + 0.5))[0]
+            - np.histogram(normal_sample, bins=n + 1, range=(-0.5, n + 0.5))[0]
+        )
+        error = np.sum(np.abs(diff))
+
+quit()
 
 # Statistical comparison
 # Calculate descriptive statistics
@@ -57,55 +70,35 @@ print(f"Root Mean Squared Difference: {rmsd}")
 
 
 # Visual comparison
-plt.figure(figsize=(12, 6))
+plt.figure(figsize=(12, 10))
 
 # Histogram of binomial sample
-plt.subplot(1, 2, 1)
 plt.hist(
     binomial_sample,
-    bins=n + 1,
-    range=(-0.5, n + 0.5),
+    bins=plot_max + 1,
+    range=(-0.5, plot_max + 0.5),
     density=True,
     alpha=0.5,
     color="b",
     label="Binomial",
 )
 plt.hist(
-    binomial_sample,
-    bins=n * 50,
-    range=(-0.5, n + 0.5),
+    normal_sample,
+    bins=plot_max + 1,
+    range=(-0.5, plot_max + 0.5),
     density=True,
     alpha=0.5,
-    color="b",
-    label="Binomial",
+    color="r",
+    label="Normal",
 )
-plt.xlim(-0.5, n + 0.5)
-plt.title("Binomial Distribution")
-plt.xlabel("Value")
-plt.ylabel("Frequency")
+# set the y ticks every 0.1
+plt.yticks(np.arange(0, 1.1, 0.1))
+plt.grid()
 
-# Histogram of normal sample
-plt.subplot(1, 2, 2)
-plt.hist(
-    normal_sample,
-    bins=n + 1,
-    range=(-0.5, n + 0.5),
-    density=True,
-    alpha=0.5,
-    color="r",
-    label="Normal",
-)
-plt.hist(
-    normal_sample,
-    bins=n * 50,
-    range=(-0.5, n + 0.5),
-    density=True,
-    alpha=0.5,
-    color="r",
-    label="Normal",
-)
-plt.xlim(-0.5, n + 0.5)
-plt.title("Normal Distribution")
+plt.legend()
+plt.ylim(0, 1)
+plt.xlim(-0.5, plot_max + 0.5)
+plt.title("Binomial Distribution")
 plt.xlabel("Value")
 plt.ylabel("Frequency")
 
