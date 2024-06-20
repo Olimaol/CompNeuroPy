@@ -4,10 +4,6 @@ from CompNeuroPy.monitors import CompNeuroMonitors
 from CompNeuroPy import model_functions as mf
 from CompNeuroPy import extra_functions as ef
 from CompNeuroPy import system_functions as sf
-from CompNeuroPy import analysis_functions as af
-
-from CompNeuroPy.examples.model_configurator.reduce_model import _CreateReducedModel
-
 from ANNarchy import (
     Population,
     Projection,
@@ -17,45 +13,19 @@ from ANNarchy import (
     Network,
     get_projection,
     dt,
-    parallel_run,
     simulate,
-    reset,
     Neuron,
-    simulate_until,
-    Uniform,
-    get_current_step,
-    projections,
-    populations,
     Binomial,
     CurrentInjection,
     raster_plot,
     set_seed,
 )
-
 from ANNarchy.core import ConnectorMethods
-
-# from ANNarchy.core.Global import _network
 import numpy as np
-from scipy.interpolate import interp1d, interpn
-from scipy.signal import find_peaks, argrelmin, argrelextrema
+from scipy.signal import argrelmin
 import matplotlib.pyplot as plt
 import inspect
-import textwrap
-import os
-import itertools
-from tqdm import tqdm
-import multiprocessing
-import importlib.util
-from time import time, strftime
-import datetime
-from sympy import symbols, Symbol, sympify, solve
-from hyperopt import fmin, tpe, hp
-import pandas as pd
-from scipy.stats import poisson
-from ANNarchy.extensions.bold import BoldMonitor
-from sklearn.linear_model import LinearRegression
 import sympy as sp
-from scipy.optimize import minimize, Bounds
 
 
 class ArrSampler:
@@ -1408,7 +1378,8 @@ class ModelConfigurator:
         self._do_not_config_list = do_not_config_list
         self._target_firing_rate_dict = target_firing_rate_dict
         self._base_dict = None
-        self._figure_folder = "model_conf_figures"  ### TODO add this to figures
+        ### TODO add this to figures
+        self._figure_folder = "model_conf_figures"
         ### create the figure folder
         sf.create_dir(self._figure_folder)
         ### initialize logger
@@ -1416,68 +1387,15 @@ class ModelConfigurator:
         ### analyze the given model, create model before analyzing, then clear ANNarchy
         self._analyze_model = AnalyzeModel(model=self._model)
         ### create the CompNeuroModel object for the reduced model (the model itself is
-        ### not created yet) TODO: tmp change to old _CreateReducedModel, does this work for thal?
-        # self._model_reduced = CreateReducedModel(
-        #     model=self._model,
-        #     analyze_model=self._analyze_model,
-        #     reduced_size=100,
-        #     do_create=False,
-        #     do_compile=False,
-        #     verbose=True,
-        # )
-        self._model_reduced = _CreateReducedModel(
-            model=model, reduced_size=100, do_create=False, do_compile=False
+        ### not created yet)
+        self._model_reduced = CreateReducedModel(
+            model=self._model,
+            analyze_model=self._analyze_model,
+            reduced_size=100,
+            do_create=False,
+            do_compile=False,
+            verbose=True,
         )
-
-        # ### TODO: tmp compare the reduced model with the normal model, normal model part
-        # mf.cnp_clear(functions=False, constants=False)
-        # self._model.create()
-        # mon = CompNeuroMonitors(
-        #     mon_dict={pop_name: ["spike"] for pop_name in self._model.populations}
-        # )
-        # mon.start()
-        # simulate(5000)
-        # recordings = mon.get_recordings()
-        # recording_times = mon.get_recording_times()
-        # af.PlotRecordings(
-        #     figname="tmp_compare_normal.png",
-        #     recordings=recordings,
-        #     recording_times=recording_times,
-        #     shape=(len(self._model.populations), 1),
-        #     plan={
-        #         "position": list(range(1, len(self._model.populations) + 1)),
-        #         "compartment": self._model.populations,
-        #         "variable": ["spike"] * len(self._model.populations),
-        #         "format": ["hybrid"] * len(self._model.populations),
-        #     },
-        # )
-        # ### TODO: tmp compare the reduced model with the normal model, reduced model part
-        # mf.cnp_clear(functions=False, constants=False)
-        # self._model_reduced.model_reduced.create()
-        # mon = CompNeuroMonitors(
-        #     mon_dict={
-        #         f"{pop_name}_reduced": ["spike"] for pop_name in self._model.populations
-        #     }
-        # )
-        # mon.start()
-        # simulate(5000)
-        # recordings = mon.get_recordings()
-        # recording_times = mon.get_recording_times()
-        # af.PlotRecordings(
-        #     figname="tmp_compare_reduced.png",
-        #     recordings=recordings,
-        #     recording_times=recording_times,
-        #     shape=(len(self._model.populations), 1),
-        #     plan={
-        #         "position": list(range(1, len(self._model.populations) + 1)),
-        #         "compartment": [
-        #             f"{pop_name}_reduced" for pop_name in self._model.populations
-        #         ],
-        #         "variable": ["spike"] * len(self._model.populations),
-        #         "format": ["hybrid"] * len(self._model.populations),
-        #     },
-        # )
-        # quit()
 
         ### try to load the cached variables
         if clear_cache:
@@ -1852,6 +1770,7 @@ class Minimize:
         y_arr = np.array(y_list)
         it_arr = np.array(it_list)
 
+        ### TODO remove or make this optimal (for debugging), also the prints above
         plt.close("all")
         plt.figure()
         for idx in range(4):
@@ -1866,21 +1785,6 @@ class Minimize:
         plt.xlabel("iteration")
         plt.tight_layout()
         plt.savefig("optimization.png")
-
-        plt.close("all")
-        plt.figure()
-        dx_arr = x_arr[1:] - x_arr[:-1]
-        dx_ausgehend_von = x_arr[:-1]
-        dy_arr = y_arr[1:] - y_arr[:-1]
-        dy_ausgehend_von = y_arr[:-1]
-        for idx in range(4):
-            ax = plt.subplot(4, 1, idx + 1)
-            ### plot the x values
-            plt.plot(dx_ausgehend_von[:, idx], dy_arr[:, idx] / dx_arr[:, idx])
-            plt.ylabel(f"dy{idx}/dx{idx}")
-        plt.xlabel("x")
-        plt.tight_layout()
-        plt.savefig("dy_dx_ausgehend_x.png")
 
 
 class GetBase:
@@ -1941,77 +1845,6 @@ class GetBase:
                     )
 
     def _prepare_get_base(self):
-        ### TODO I compare here reduced model with normal model and yes, in the reduced model, the thalamus rate is lower... but why
-        ### if snr is silent --> no diff in thalamus rate between reduced and normal model --> the snr-->thal input is not reduced well
-        ### its strange that the thalamus neurons in the reduced model seem to have all the same g_ampa... but why
-        ### it should be different since the population calculating the conductance has different number synapses and uses random numbers for incoming spikes
-        ### it is actually different, but more similiar then in the normal model
-        ### I think the implementation actually works as epected but the replacement of the binomial distribution with the normal distribution for calculating incoming spikes does not work well here
-        ### because the spike probabilities are low
-        ### FOUND PROBLEM: I had to round the incoming spikes to the nearest integer, the binomial distribution to approximate was around n=10, p=0.01 --> many zeros few ones, with the not-rounded normal distribution you got many values between 0 and 1 --> more then 0 --> higher conductance
-        ### TODO tmp test, compare normal and reduced model, reduced model part
-        ### clear and create model
-        mf.cnp_clear(functions=False, constants=False)
-        self._model_normal.create()
-        ### create monitors
-        mon_dict = {}
-        plot_position_list = []
-        plot_compartment_list = []
-        plot_variable_list = []
-        plot_format_list = []
-        for idx, pop_name in enumerate(self._model_normal.populations):
-            mon_dict[pop_name] = []
-            if True:
-                mon_dict[pop_name].append("spike")
-                plot_position_list.append(3 * idx + 1)
-                plot_compartment_list.append(pop_name)
-                plot_variable_list.append("spike")
-                plot_format_list.append("hybrid")
-            if "g_gaba" in get_population(pop_name).variables:
-                mon_dict[pop_name].append("g_gaba")
-                plot_position_list.append(3 * idx + 2)
-                plot_compartment_list.append(pop_name)
-                plot_variable_list.append("g_gaba")
-                plot_format_list.append("line")
-            if "g_ampa" in get_population(pop_name).variables:
-                mon_dict[pop_name].append("g_ampa")
-                plot_position_list.append(3 * idx + 3)
-                plot_compartment_list.append(pop_name)
-                plot_variable_list.append("g_ampa")
-                plot_format_list.append("line")
-        mon = CompNeuroMonitors(mon_dict=mon_dict)
-        ### initialize the populations with the init sampler
-        for pop_name in self._pop_names_config:
-            self._init_sampler.get(pop_name=pop_name).set_init_variables(
-                get_population(pop_name)
-            )
-        ### set the weights
-        for proj_name, weight in self._weight_dicts.weight_dict.items():
-            setattr(get_projection(proj_name), "w", weight)
-        ### simulate
-        mon.start()
-        get_population("thal").I_app = 20
-        simulate(5000)
-        ### plot
-        recordings = mon.get_recordings()
-        recording_times = mon.get_recording_times()
-        af.PlotRecordings(
-            figname="tmp_compare_normal.png",
-            recordings=recordings,
-            recording_times=recording_times,
-            shape=(len(self._model_normal.populations), 3),
-            plan={
-                "position": plot_position_list,
-                "compartment": plot_compartment_list,
-                "variable": plot_variable_list,
-                "format": plot_format_list,
-            },
-        )
-        print(
-            "thal rate:", len(raster_plot(recordings[0]["thal;spike"])[0]) / (5 * 100)
-        )
-        print("snr rate:", len(raster_plot(recordings[0]["snr;spike"])[0]) / (5 * 100))
-
         ### clear ANNarchy
         mf.cnp_clear(functions=False, constants=False)
         ### create and compile the model
@@ -2024,55 +1857,6 @@ class GetBase:
                 for pop_name in self._model_normal.populations
             }
         )
-        ### TODO: tmp monitors to compare normal and reduced model
-        mon_dict = {}
-        plot_position_list = []
-        plot_compartment_list = []
-        plot_variable_list = []
-        plot_format_list = []
-        for idx, pop_name in enumerate(self._model_normal.populations):
-            mon_dict[f"{pop_name}_reduced"] = []
-            if True:
-                mon_dict[f"{pop_name}_reduced"].append("spike")
-                plot_position_list.append(3 * idx + 1)
-                plot_compartment_list.append(f"{pop_name}_reduced")
-                plot_variable_list.append("spike")
-                plot_format_list.append("hybrid")
-            if "g_gaba" in get_population(f"{pop_name}_reduced").variables:
-                mon_dict[f"{pop_name}_reduced"].append("g_gaba")
-                plot_position_list.append(3 * idx + 2)
-                plot_compartment_list.append(f"{pop_name}_reduced")
-                plot_variable_list.append("g_gaba")
-                plot_format_list.append("line")
-            if "g_ampa" in get_population(f"{pop_name}_reduced").variables:
-                mon_dict[f"{pop_name}_reduced"].append("g_ampa")
-                plot_position_list.append(3 * idx + 3)
-                plot_compartment_list.append(f"{pop_name}_reduced")
-                plot_variable_list.append("g_ampa")
-                plot_format_list.append("line")
-
-            # if f"{pop_name}_spike_collecting_aux" in self._model_reduced.populations:
-            #     mon_dict[f"{pop_name}_spike_collecting_aux"] = ["r"]
-            #     plot_position_list.append(5 * idx + 3)
-            #     plot_compartment_list.append(f"{pop_name}_spike_collecting_aux")
-            #     plot_variable_list.append("r")
-            #     plot_format_list.append("line")
-
-            # if f"{pop_name}_ampa_aux" in self._model_reduced.populations:
-            #     mon_dict[f"{pop_name}_ampa_aux"] = ["r"]
-            #     plot_position_list.append(5 * idx + 4)
-            #     plot_compartment_list.append(f"{pop_name}_ampa_aux")
-            #     plot_variable_list.append("r")
-            #     plot_format_list.append("line")
-
-            # if f"{pop_name}_gaba_aux" in self._model_reduced.populations:
-            #     mon_dict[f"{pop_name}_gaba_aux"] = ["r"]
-            #     plot_position_list.append(5 * idx + 5)
-            #     plot_compartment_list.append(f"{pop_name}_gaba_aux")
-            #     plot_variable_list.append("r")
-            #     plot_format_list.append("line")
-        ### TODO record incoming_spikes_proj_name of snr__thal of the thal input aux population
-        mon = CompNeuroMonitors(mon_dict=mon_dict)
         ### create the experiment
         self._exp = self.MyExperiment(monitors=mon)
         ### initialize all populations with the init sampler
@@ -2093,39 +1877,6 @@ class GetBase:
             self._lb.append(-self._max_syn.get(pop_name=pop_name).I_app)
             self._ub.append(self._max_syn.get(pop_name=pop_name).I_app)
             self._x0.append(0.0)
-
-        ### TODO tmp test, compare normal and reduced model, reduced model part
-        ### simulate
-        mon.start()
-        get_population("thal_reduced").I_app = 20
-        simulate(5000)
-        ### plot
-        recordings = mon.get_recordings()
-        recording_times = mon.get_recording_times()
-        af.PlotRecordings(
-            figname="tmp_compare_reduced.png",
-            recordings=recordings,
-            recording_times=recording_times,
-            shape=(len(self._model_normal.populations), 3),
-            plan={
-                "position": plot_position_list,
-                "compartment": plot_compartment_list,
-                "variable": plot_variable_list,
-                "format": plot_format_list,
-            },
-        )
-        print(
-            "thal rate:",
-            len(raster_plot(recordings[0]["thal_reduced;spike"])[0]) / (5 * 100),
-        )
-        print(
-            "snr rate:",
-            len(raster_plot(recordings[0]["snr_reduced;spike"])[0]) / (5 * 100),
-        )
-        print(self._model_reduced.populations)
-        print(recordings[0]["gpe_reduced;g_ampa"][:, 0])
-        print(recordings[0]["gpe_reduced;g_ampa"][:, 1])
-        quit()
 
     def _get_base(self):
         """
@@ -2674,7 +2425,7 @@ class CreateReducedModel:
             ### create equations
             equations = [
                 f"""
-                incoming_spikes_{proj_name} = number_synapses_{proj_name} * sum(spikeprob_{vals['pre_name']}) + Normal(0, 1)*sqrt(number_synapses_{proj_name} * sum(spikeprob_{vals['pre_name']}) * (1 - sum(spikeprob_{vals['pre_name']}))) : min=0, max=number_synapses_{proj_name}
+                incoming_spikes_{proj_name} = round(number_synapses_{proj_name} * sum(spikeprob_{vals['pre_name']}) + Normal(0, 1)*sqrt(number_synapses_{proj_name} * sum(spikeprob_{vals['pre_name']}) * (1 - sum(spikeprob_{vals['pre_name']})))) : min=0, max=number_synapses_{proj_name}
             """
                 for proj_name, vals in projection_dict.items()
             ]

@@ -458,11 +458,3 @@ if __name__ == "__main__":
             "format": ["hybrid"] * len(model.populations),
         },
     )
-
-    """
-    TODO: there is a systematic error with Thal
-    - somehow it is above its target firing rate after optimization
-    - before the optimization the weights seem to be correctly set in the reduced model
-    TODO: compare normal and reduced model: do they behave the same?
-    - I think this needs to be done exctly before the get_base optimization
-    """
