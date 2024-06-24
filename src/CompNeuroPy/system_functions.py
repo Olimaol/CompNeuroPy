@@ -1,13 +1,16 @@
 import os
 import traceback
 import shutil
-from time import time
+from time import time, sleep
 import pickle
 from functools import wraps
-from joblib import Parallel, delayed
 import inspect
 import subprocess
 import textwrap
+import concurrent.futures
+import signal
+from typing import List
+import threading
 
 
 def clear_dir(path):
@@ -245,10 +248,79 @@ def run_script_parallel(
     n_jobs = min(n_jobs, len(args_list))
 
     ### run the script in parallel
-    Parallel(n_jobs=n_jobs)(
-        delayed(os.system)(f"python {script_path} {' '.join(args)}")
-        for args in args_list
+    runner = _ScriptRunner(
+        script_path=script_path, num_workers=n_jobs, args_list=args_list
     )
+    runner.run()
+
+
+class _ScriptRunner:
+    def __init__(self, script_path: str, num_workers: int, args_list: List[List[str]]):
+        self.script_path = script_path
+        self.args_list = args_list
+        self.num_workers = num_workers
+        self.processes = []
+        self.executor = None
+        self.error_flag = threading.Event()
+
+    def run_script(self, args: List[str]):
+        """
+        Run the script with the given arguments.
+
+        Args:
+            args (List[str]):
+                List of arguments to pass to the script.
+        """
+        process = subprocess.Popen(
+            ["python", self.script_path] + args,
+        )
+        self.processes.append(process)
+
+        process.wait()
+        # Check if the process returned an error
+        if process.returncode != 0:
+            self.error_flag.set()
+            return -1
+
+    def signal_handler(self, sig, frame):
+        """
+        Signal handler to terminate all running processes and shutdown the executor.
+        """
+        # need a small sleep here, otherwise a single new process is started, don't know why
+        sleep(0.01)
+        # Terminate all running processes
+        for process in self.processes:
+            if process.poll() is None:
+                process.terminate()
+        # Shutdown the executor
+        if self.executor:
+            self.executor.shutdown(wait=False, cancel_futures=True)
+        # Exit the program
+        exit(1)
+
+    def run(self):
+        """
+        Run the script with the given arguments in parallel.
+        """
+        # Register the signal handler for SIGINT (Ctrl+C)
+        signal.signal(signal.SIGINT, self.signal_handler)
+        # Create a thread pool executor with the specified number of workers
+        self.executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=self.num_workers
+        )
+        # Submit the tasks to the executor
+        try:
+            futures = [
+                self.executor.submit(self.run_script, args) for args in self.args_list
+            ]
+            # Wait for all futures to complete
+            while any(f.running() for f in futures):
+                # Check if an error occurred in any of the threads
+                if self.error_flag.is_set():
+                    self.signal_handler(None, None)
+                    break
+        finally:
+            self.executor.shutdown(wait=True)
 
 
 def _is_git_repo():
