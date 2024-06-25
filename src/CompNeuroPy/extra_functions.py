@@ -727,10 +727,11 @@ class DeapCma:
         learn_rate_factor: float = 1,
         damping_factor: float = 1,
         verbose: bool = False,
-        plot_file: None | str = "logbook.png",
+        plot_file: None | str = None,
         cma_params_dict: dict = {},
         source_solutions: list[tuple[np.ndarray, float]] = [],
         hard_bounds: bool = False,
+        display_progress_bar: bool = True,
     ):
         """
 
@@ -763,7 +764,7 @@ class DeapCma:
                 Whether or not to print details. By default False.
             plot_file (None | str, optional):
                 File to save the deap plot to. If not given here, it has to be given in
-                the run function. By default "logbook.png".
+                the run function. By default None.
             cma_params_dict (dict, optional):
                 Parameters for the deap cma strategy (deap.cma.Strategy). See [here](https://deap.readthedocs.io/en/master/api/algo.html#deap.cma.Strategy) for more
                 details
@@ -776,6 +777,8 @@ class DeapCma:
             hard_bounds (bool, optional):
                 Whether or not to use hard bounds (parmeters are clipped to lower and
                 upper bounds). By default False.
+            display_progress_bar (bool, optional):
+                Whether or not to display a progress bar. By default True.
         """
         ### store attributes
         self.max_evals = max_evals
@@ -792,6 +795,7 @@ class DeapCma:
         self.cma_params_dict = cma_params_dict
         self.source_solutions = source_solutions
         self.hard_bounds = hard_bounds
+        self.display_progress_bar = display_progress_bar
 
         ### prepare the optimization
         self.deap_dict = self._prepare()
@@ -994,6 +998,10 @@ class DeapCma:
         best["deap_pop"] = pop
         best["best_fitness"] = best_fitness
 
+        ### skip plotting if plot_file is None
+        if plot_file is None:
+            return best
+
         ### plot logbook with logaritmic y-axis
         fig, ax = plt.subplots(figsize=(10, 5))
         ax.set_yscale("log")
@@ -1006,6 +1014,7 @@ class DeapCma:
         fig.tight_layout()
         sf.create_dir("/".join(plot_file.split("/")[:-1]))
         fig.savefig(plot_file, dpi=300)
+        plt.close(fig)
 
         return best
 
@@ -1059,8 +1068,10 @@ class DeapCma:
         ### define progress bar
         if verbose:
             progress_bar = range(ngen)
-        else:
+        elif self.display_progress_bar:
             progress_bar = tqdm(range(ngen), total=ngen, unit="gen")
+        else:
+            progress_bar = range(ngen)
         early_stop = False
 
         ### loop over generations
@@ -1115,7 +1126,7 @@ class DeapCma:
                 print("")
 
             ### update progress bar with current best loss
-            if not verbose:
+            if not verbose and self.display_progress_bar:
                 progress_bar.set_postfix_str(
                     f"best loss: {halloffame[0].fitness.values[0]:.5f}"
                 )

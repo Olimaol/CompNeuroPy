@@ -2,6 +2,271 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as stats
 from CompNeuroPy import DeapCma, save_variables, load_variables
+from scipy.optimize import minimize, Bounds
+from scipy.interpolate import griddata
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from scipy.optimize import curve_fit
+
+
+def mean_shift_regression(n, p):
+    x0 = n
+    x1 = p
+    return (
+        -0.122
+        + -0.000 * 1
+        + -0.001 * x0
+        + 0.257 * x1
+        + 0.000 * x0**2
+        + 0.003 * x0 * x1
+        + 0.847 * x1**2
+        + 0.000 * x0**3
+        + -0.000 * x0**2 * x1
+        + -0.001 * x0 * x1**2
+        + -3.413 * x1**3
+        + -0.000 * x0**4
+        + 0.000 * x0**3 * x1
+        + -0.000 * x0**2 * x1**2
+        + 0.001 * x0 * x1**3
+        + 2.644 * x1**4
+    )
+
+
+def std_scale_regression(n, p):
+    x0 = n
+    x1 = p
+    return (
+        1.218
+        + -0.000 * 1
+        + 0.001 * x0
+        + -4.365 * x1
+        + -0.000 * x0**2
+        + -0.001 * x0 * x1
+        + 16.631 * x1**2
+        + 0.000 * x0**3
+        + 0.000 * x0**2 * x1
+        + 0.001 * x0 * x1**2
+        + -25.130 * x1**3
+        + -0.000 * x0**4
+        + -0.000 * x0**3 * x1
+        + -0.000 * x0**2 * x1**2
+        + -0.001 * x0 * x1**3
+        + 12.968 * x1**4
+    )
+
+
+def gauss_1d(x, amp, mean, sig):
+    return amp * np.exp(-((x - mean) ** 2) / (2 * sig**2))
+
+
+def plot_2d_curve_fit_regression(
+    x, y, z, sample_weight=None, vmin=None, vmax=None, grid_size=100
+):
+    """
+    Plots a 2D color-coded image of the data with curve_fit regression and prints the regression equation.
+
+    Parameters:
+    - x: list or array of x coordinates
+    - y: list or array of y coordinates
+    - z: list or array of z values corresponding to the (x, y) coordinates
+    - grid_size: size of the grid for plotting (default: 100)
+    """
+    # Check if sample_weight is provided and does not contain zeros
+    if sample_weight is not None and 0 in sample_weight:
+        raise ValueError("Sample weight cannot contain zeros.")
+
+    # Normalize x and y and keep the transformation for later
+    x_mean = np.mean(x)
+    x_std = np.std(x)
+    y_mean = np.mean(y)
+    y_std = np.std(y)
+    x = (x - x_mean) / x_std
+    y = (y - y_mean) / y_std
+
+    # Fit the curve_fit regression model
+    def curve_fit_func(X, p0, p1, p2, p3, p4, p5, p6, p7):
+        x, y = X
+        return (
+            p0 * np.exp(p1 + p2 * x + p3 * y + p4 * x * y + p5 * x**2 + p6 * y**2) + p7
+        )
+
+    def curve_fit_evaluate_function(population):
+        loss_list = []
+        ### the population is a list of individuals which are lists of parameters
+        for individual in population:
+            loss_of_individual = curve_fit_objective_function(individual)
+            loss_list.append((loss_of_individual,))
+        return loss_list
+
+    def curve_fit_objective_function(individual):
+        is_data = curve_fit_func((x, y), *individual)
+        target_data = z
+        return np.sum((is_data - target_data) ** 2)
+
+    # popt, pcov = curve_fit(
+    #     curve_fit_func,
+    #     (x, y),
+    #     z,
+    #     p0=[-0.3, 0, -1, -1, -1],
+    #     sigma=1 / sample_weight if sample_weight is not None else None,
+    #     absolute_sigma=False,
+    # )
+    param_names = ["p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7"]
+    deap_cma = DeapCma(
+        lower=np.array([-10] * len(param_names)),
+        upper=np.array([10] * len(param_names)),
+        evaluate_function=curve_fit_evaluate_function,
+        param_names=param_names,
+        hard_bounds=False,
+        display_progress_bar=False,
+    )
+
+    ### run the optimization
+    best_fitness = 1e9
+    for _ in range(100):
+        deap_cma_result = deap_cma.run(max_evals=1000)
+        if deap_cma_result["best_fitness"] < best_fitness:
+            best_fitness = deap_cma_result["best_fitness"]
+            popt = [deap_cma_result[param_name] for param_name in param_names]
+
+    # Create grid for plotting
+    xi = np.linspace(min(x), max(x), grid_size)
+    yi = np.linspace(min(y), max(y), grid_size)
+    xi, yi = np.meshgrid(xi, yi)
+    zi = curve_fit_func((xi, yi), *popt)
+
+    # Unnormalize the grid
+    xi = xi * x_std + x_mean
+    yi = yi * y_std + y_mean
+
+    # Unnormalize the original data
+    x = x * x_std + x_mean
+    y = y * y_std + y_mean
+
+    # Plot the regression surface
+    if vmin is None:
+        vmin = np.min(z)
+    if vmax is None:
+        vmax = np.max(z)
+    plt.contourf(xi, yi, zi, levels=100, cmap="viridis")
+    plt.scatter(
+        x,
+        y,
+        c=z,
+        cmap="viridis",
+        vmin=vmin,
+        vmax=vmax,
+        edgecolor="k",
+        marker="o",
+        s=(
+            40 * np.array(sample_weight) / np.max(sample_weight)
+            if sample_weight
+            else None
+        ),
+    )
+
+
+def plot_2d_regression_image(
+    x, y, z, sample_weight=None, vmin=None, vmax=None, degree=2, grid_size=100
+):
+    """
+    Plots a 2D color-coded image of the data with polynomial regression and plots the regression equation.
+
+    Parameters:
+    - x: list or array of x coordinates
+    - y: list or array of y coordinates
+    - z: list or array of z values corresponding to the (x, y) coordinates
+    - degree: degree of the polynomial regression (default: 2)
+    - grid_size: size of the grid for plotting (default: 100)
+    """
+    # Prepare the data for polynomial regression
+    X = np.array([x, y]).T
+    poly = PolynomialFeatures(degree)
+    X_poly = poly.fit_transform(X)
+
+    # Perform the polynomial regression
+    model = LinearRegression()
+    model.fit(
+        X_poly,
+        z,
+        sample_weight=sample_weight if sample_weight is not None else None,
+    )
+
+    # Create a grid for plotting the regression surface
+    xi = np.linspace(min(x), max(x), grid_size)
+    yi = np.linspace(min(y), max(y), grid_size)
+    xi, yi = np.meshgrid(xi, yi)
+    X_grid = np.c_[xi.ravel(), yi.ravel()]
+    X_grid_poly = poly.transform(X_grid)
+    zi = model.predict(X_grid_poly).reshape(xi.shape)
+
+    # Plot the regression surface
+    if vmin is None:
+        vmin = np.min(z)
+    if vmax is None:
+        vmax = np.max(z)
+    plt.contourf(xi, yi, zi, levels=100, cmap="viridis", vmin=vmin, vmax=vmax)
+
+    # Plot the original data points, scaled by the sample weight
+    plt.scatter(
+        x,
+        y,
+        c=z,
+        cmap="viridis",
+        vmin=vmin,
+        vmax=vmax,
+        edgecolor="k",
+        marker="o",
+        s=(
+            40 * np.array(sample_weight) / np.max(sample_weight)
+            if sample_weight
+            else None
+        ),
+    )
+
+    # Print the regression equation
+    coefs = model.coef_
+    intercept = model.intercept_
+    terms = poly.get_feature_names_out()
+    equation = " + ".join([f"{coefs[i]:.3f}*{terms[i]}" for i in range(len(coefs))])
+    equation = f"{intercept:.3f} + " + equation
+    print(f"Regression equation:\n{equation}")
+
+
+def plot_2d_interpolated_image(
+    x, y, z, vmin=None, vmax=None, grid_size=100, method="linear"
+):
+    """
+    Plots a 2D color-coded image of the data with interpolation and extrapolation.
+
+    Parameters:
+    - x: list or array of x coordinates
+    - y: list or array of y coordinates
+    - z: list or array of z values corresponding to the (x, y) coordinates
+    - grid_size: size of the interpolation grid (default: 100)
+    - method: interpolation method, options are 'linear', 'nearest', 'cubic' (default: 'linear')
+    """
+    # Define the grid for interpolation
+    xi = np.linspace(min(x), max(x), grid_size)
+    yi = np.linspace(min(y), max(y), grid_size)
+    xi, yi = np.meshgrid(xi, yi)
+
+    # Perform the interpolation
+    zi = griddata((x, y), z, (xi, yi), method=method)
+
+    print(f"max interpolated: {np.max(zi)}")
+
+    # Plot the interpolated data
+    if vmin is None:
+        vmin = np.min(z)
+    if vmax is None:
+        vmax = np.max(z)
+    plt.contourf(xi, yi, zi, levels=100, cmap="viridis", vmin=vmin, vmax=vmax)
+
+    # plot scatter plot of original data
+    plt.scatter(
+        x, y, c=z, cmap="viridis", vmin=vmin, vmax=vmax, edgecolor="k", marker="o"
+    )
 
 
 def generate_samples(n, p, m, mean_shift=0, std_scale=1):
@@ -38,6 +303,11 @@ def objective_function(mean_shift, std_scale):
     return error
 
 
+def objective_function_for_minimize(x):
+    # print(f"P: {P}, N: {N}, mean_shift: {x[0]}, std_scale: {x[1]}")
+    return objective_function(mean_shift=x[0], std_scale=x[1])
+
+
 def evaluate_function(population):
     loss_list = []
     ### the population is a list of individuals which are lists of parameters
@@ -49,13 +319,45 @@ def evaluate_function(population):
     return loss_list
 
 
-n_arr = np.linspace(10, 1000, 20, dtype=int)
-p_arr = np.array([0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999])
+def logarithmic_distribution(start, end, num_points):
+    """
+    Generate a list of logarithmically spaced points between a start and end point.
+
+    Parameters:
+    start (float): The starting point of the distribution.
+    end (float): The ending point of the distribution.
+    num_points (int): The number of points to generate.
+
+    Returns:
+    list: A list of logarithmically spaced points.
+    """
+    if start <= 0 or end <= 0:
+        raise ValueError("Start and end points must be positive numbers.")
+    if num_points < 2:
+        raise ValueError("Number of points must be at least 2.")
+
+    # Create an array of logarithmically spaced points
+    log_start = np.log10(start)
+    log_end = np.log10(end)
+    log_points = np.linspace(log_start, log_end, num_points)
+    points = np.power(10, log_points)
+
+    return points
+
 
 ### TODO I have the problem that for very small p the normal distribution is not a good
 ### approximation of the binomial distribution.
 ### I think one can shift the mean and scale the standard deviation depending on the p
 ### and n values. I will try to optimize the shift and scale for each n and p value.
+
+OPTIMIZE = False
+USE_REGRESSION = False
+PLOT_OPTIMIZED = True
+PLOT_REGRESSION = False
+
+### 1st optimize mean shift and std scale for each n and p value
+n_arr = logarithmic_distribution(10, 1000, 20).astype(int)
+p_arr = logarithmic_distribution(0.001, 0.1, 10)
 
 ### bounds for optimized parameters
 shift_mean_bounds = [-1, 1]
@@ -64,125 +366,519 @@ lb = np.array([shift_mean_bounds[0], scale_std_bounds[0]])
 ub = np.array([shift_mean_bounds[1], scale_std_bounds[1]])
 # number of samples
 M = 10000
-OPTIMIZE = False
+
+### 1st get errors for all n and p values without optimization
+p_list = []
+n_list = []
+error_list = []
+for p in p_arr:
+    for n in n_arr:
+        ### set the global variables probability of success and number of trials
+        P = p
+        N = n
+
+        ### get the error without optimization
+        error = objective_function(mean_shift=0, std_scale=1)
+        error_list.append(error)
+
+        ### store the results
+        p_list.append(p)
+        n_list.append(n)
+
+### save variables
+save_variables(
+    variable_list=[
+        p_list,
+        n_list,
+        error_list,
+    ],
+    name_list=[
+        "p_list",
+        "n_list",
+        "error_list",
+    ],
+    path="data_optimize_binomial_normal",
+)
+
+### 2nd optimize mean shift and std scale for each n and p value and get improved error
 if OPTIMIZE:
-    p_list = []
-    n_list = []
-    mean_shift_list = []
-    std_scale_list = []
-    error_list = []
-    error_improved_list = []
-    for p in p_arr:
-        for n in n_arr:
-            ### set the global variables probability of success and number of trials
-            P = p
-            N = n
-
-            ### get the error without optimization
-            error = objective_function(mean_shift=0, std_scale=1)
-            error_list.append(error)
-
-            ### create an instance of the DeapCma class
-            deap_cma = DeapCma(
-                lower=lb,
-                upper=ub,
-                evaluate_function=evaluate_function,
-                param_names=["mean_shift", "std_scale"],
-                hard_bounds=True,
-            )
-
-            ### run the optimization
-            deap_cma_result = deap_cma.run(max_evals=1000)
-
-            ### get the optimized parameters and best error
-            mean_shift = deap_cma_result["mean_shift"]
-            std_scale = deap_cma_result["std_scale"]
-            error = deap_cma_result["best_fitness"]
-
-            ### store the results
-            p_list.append(p)
-            n_list.append(n)
-            error_improved_list.append(error)
-            mean_shift_list.append(mean_shift)
-            std_scale_list.append(std_scale)
-
-    ### save variables
-    save_variables(
-        variable_list=[
-            p_list,
-            n_list,
-            mean_shift_list,
-            std_scale_list,
-            error_list,
-            error_improved_list,
-        ],
-        name_list=[
-            "p_list",
-            "n_list",
-            "mean_shift_list",
-            "std_scale_list",
-            "error_list",
-            "error_improved_list",
-        ],
-        path="data_optimize_binomial_normal",
-    )
-else:
     loaded_variables = load_variables(
         name_list=[
             "p_list",
             "n_list",
-            "mean_shift_list",
-            "std_scale_list",
             "error_list",
-            "error_improved_list",
         ],
         path="data_optimize_binomial_normal",
     )
     p_list = loaded_variables["p_list"]
     n_list = loaded_variables["n_list"]
+    error_list = loaded_variables["error_list"]
+    mean_shift_list = []
+    std_scale_list = []
+    error_improved_list = []
+    for p, n in zip(p_list, n_list):
+        ### set the global variables probability of success and number of trials
+        P = p
+        N = n
+
+        # ### optimize the mean shift and standard deviation scale using scipy minimize
+        # result = minimize(
+        #     objective_function_for_minimize,
+        #     x0=[0, 1],
+        #     bounds=Bounds(lb, ub),
+        #     method="Nelder-Mead",
+        # )
+        # mean_shift = result.x[0]
+        # std_scale = result.x[1]
+        # error_improved = result.fun
+
+        ### create an instance of the DeapCma class
+        deap_cma = DeapCma(
+            lower=lb,
+            upper=ub,
+            evaluate_function=evaluate_function,
+            param_names=["mean_shift", "std_scale"],
+            hard_bounds=True,
+        )
+
+        ### run the optimization
+        deap_cma_result = deap_cma.run(max_evals=1000)
+
+        ### get the optimized parameters and best error
+        mean_shift = deap_cma_result["mean_shift"]
+        std_scale = deap_cma_result["std_scale"]
+        error_improved = deap_cma_result["best_fitness"]
+
+        ### store the results
+        error_improved_list.append(error_improved)
+        mean_shift_list.append(mean_shift)
+        std_scale_list.append(std_scale)
+
+    ### save variables
+    save_variables(
+        variable_list=[
+            mean_shift_list,
+            std_scale_list,
+            error_improved_list,
+        ],
+        name_list=[
+            "mean_shift_list",
+            "std_scale_list",
+            "error_improved_list",
+        ],
+        path="data_optimize_binomial_normal",
+    )
+
+
+### 3rd use regression for mean shift and std scale and recalculate the improved error
+if USE_REGRESSION:
+    ### load the optimized parameters and corresponding original and optimized errors
+    loaded_variables = load_variables(
+        name_list=[
+            "p_list",
+            "n_list",
+        ],
+        path="data_optimize_binomial_normal",
+    )
+    p_list = loaded_variables["p_list"]
+    n_list = loaded_variables["n_list"]
+
+    ### use regression equations to recalculate mean shift and std scale
+    mean_shift_reg_list = []
+    std_scale_reg_list = []
+    error_improved_reg_list = []
+    for p, n in zip(p_list, n_list):
+        ### set the global variables probability of success and number of trials
+        P = p
+        N = n
+
+        ### get the optimized parameters and best error
+        mean_shift = mean_shift_regression(n, p)
+        std_scale = std_scale_regression(n, p)
+        error_improved = objective_function(mean_shift=mean_shift, std_scale=std_scale)
+
+        ### store the results
+        error_improved_reg_list.append(error_improved)
+        mean_shift_reg_list.append(mean_shift)
+        std_scale_reg_list.append(std_scale)
+
+    ### save variables
+    save_variables(
+        variable_list=[
+            mean_shift_reg_list,
+            std_scale_reg_list,
+            error_improved_reg_list,
+        ],
+        name_list=[
+            "mean_shift_reg_list",
+            "std_scale_reg_list",
+            "error_improved_reg_list",
+        ],
+        path="data_optimize_binomial_normal",
+    )
+
+### 4th plot the original error
+# original error -> interpolation plot
+loaded_variables = load_variables(
+    name_list=[
+        "p_list",
+        "n_list",
+        "error_list",
+    ],
+    path="data_optimize_binomial_normal",
+)
+p_list = loaded_variables["p_list"]
+n_list = loaded_variables["n_list"]
+error_list = loaded_variables["error_list"]
+plt.figure(figsize=(6.4 * 2, 4.8 * 2))
+plt.subplot(1, 1, 1)
+plot_2d_interpolated_image(
+    x=n_list, y=p_list, z=error_list, vmin=0, vmax=np.max(error_list)
+)
+plt.colorbar()
+plt.xlabel("n")
+plt.ylabel("p")
+plt.title(f"Error original\n(max: {np.max(error_list)})")
+plt.tight_layout()
+plt.savefig("test2_01_error_original.png", dpi=300)
+
+### 5th plot the optimized error with optimized mean shift and std scale
+if PLOT_OPTIMIZED:
+    # fitting improved error -> interpolation plot
+    # fitting improvement -> interpolation plot
+    # fitting mean shift -> regression plot
+    # fitting std scale -> regression plot
+    loaded_variables = load_variables(
+        name_list=[
+            "error_improved_list",
+            "mean_shift_list",
+            "std_scale_list",
+        ],
+        path="data_optimize_binomial_normal",
+    )
+    error_improved_list = loaded_variables["error_improved_list"]
     mean_shift_list = loaded_variables["mean_shift_list"]
     std_scale_list = loaded_variables["std_scale_list"]
-    error_list = loaded_variables["error_list"]
+    error_change_arr = np.array(error_improved_list) - np.array(error_list)
+    improvement_arr = -np.clip(error_change_arr, None, 0)
+    improvement_arr_norm = improvement_arr / np.max(improvement_arr)
+
+    ### scale the mean shift and std scale by the error improvement
+    mean_shift_list = np.array(mean_shift_list) * improvement_arr_norm
+    std_scale_list = (
+        np.array(std_scale_list) * improvement_arr_norm + (1 - improvement_arr_norm) * 1
+    )
+
+    plt.figure(figsize=(6.4 * 2, 4.8 * 2 * 4))
+    plt.subplot(4, 1, 1)
+    plot_2d_interpolated_image(
+        x=n_list,
+        y=p_list,
+        z=error_improved_list,
+        vmin=0,
+        vmax=np.max(error_improved_list),
+    )
+    plt.colorbar()
+    plt.xlabel("n")
+    plt.ylabel("p")
+    plt.title(f"Error optimized\n(max: {np.max(error_improved_list)})")
+    plt.subplot(4, 1, 2)
+    plot_2d_interpolated_image(
+        x=n_list,
+        y=p_list,
+        z=error_change_arr,
+        vmin=-np.max(np.abs(error_change_arr)),
+        vmax=np.max(np.abs(error_change_arr)),
+    )
+    plt.colorbar()
+    plt.xlabel("n")
+    plt.ylabel("p")
+    plt.title("Error improvement")
+    plt.subplot(4, 1, 3)
+    plot_2d_curve_fit_regression(
+        x=n_list,
+        y=p_list,
+        z=mean_shift_list,
+        vmin=-np.max(np.abs(mean_shift_list)),
+        vmax=np.max(np.abs(mean_shift_list)),
+        # sample_weight=-np.clip(error_change_arr, None, 0)
+        # + 0.01 * np.max(improvement_arr),
+        # degree=5,
+    )
+    plt.colorbar()
+    plt.xlabel("n")
+    plt.ylabel("p")
+    plt.title("Mean shift")
+    plt.subplot(4, 1, 4)
+    plot_2d_curve_fit_regression(
+        x=n_list,
+        y=p_list,
+        z=std_scale_list,
+        vmin=1 - np.max(1 - np.array(std_scale_list)),
+        vmax=1 + np.max(np.array(std_scale_list) - 1),
+        # sample_weight=-np.clip(error_change_arr, None, 0)
+        # + 0.01 * np.max(improvement_arr),
+        # degree=5,
+    )
+    plt.colorbar()
+    plt.xlabel("n")
+    plt.ylabel("p")
+    plt.title("Standard deviation scale")
+    plt.tight_layout()
+    plt.savefig("test2_02_error_optimized.png", dpi=300)
+
+### 6th plot the regression error with regressed mean shift and std scale and compare it
+### with the optimized error
+if PLOT_REGRESSION:
+    # regression improved error -> interpolation plot
+    # regression improvement -> interpolation plot
+    # regression mean shift -> regression plot
+    # regression std scale -> regression plot
+    loaded_variables = load_variables(
+        name_list=[
+            "error_improved_list",
+            "mean_shift_list",
+            "std_scale_list",
+            "error_improved_reg_list",
+            "mean_shift_reg_list",
+            "std_scale_reg_list",
+        ],
+        path="data_optimize_binomial_normal",
+    )
     error_improved_list = loaded_variables["error_improved_list"]
+    mean_shift_list = loaded_variables["mean_shift_list"]
+    std_scale_list = loaded_variables["std_scale_list"]
+    error_improved_reg_list = loaded_variables["error_improved_reg_list"]
+    mean_shift_reg_list = loaded_variables["mean_shift_reg_list"]
+    std_scale_reg_list = loaded_variables["std_scale_reg_list"]
 
+    plt.figure(figsize=(6.4 * 2, 4.8 * 2 * 4))
+    plt.subplot(4, 1, 1)
+    plot_2d_interpolated_image(
+        x=n_list,
+        y=p_list,
+        z=error_improved_reg_list,
+        vmin=0,
+        vmax=np.max(error_improved_reg_list),
+    )
+    plt.colorbar()
+    plt.xlabel("n")
+    plt.ylabel("p")
+    plt.title(f"Error optimized\n(max: {np.max(error_improved_reg_list)})")
+    plt.subplot(4, 1, 2)
+    plot_2d_interpolated_image(
+        x=n_list,
+        y=p_list,
+        z=np.array(error_improved_reg_list) - np.array(error_list),
+        vmin=-np.max(np.abs(np.array(error_improved_reg_list) - np.array(error_list))),
+        vmax=np.max(np.abs(np.array(error_improved_reg_list) - np.array(error_list))),
+    )
+    plt.colorbar()
+    plt.xlabel("n")
+    plt.ylabel("p")
+    plt.title("Error improvement")
+    plt.subplot(4, 1, 3)
+    plot_2d_regression_image(
+        x=n_list,
+        y=p_list,
+        z=mean_shift_reg_list,
+        sample_weight=error_list,
+        vmin=-np.max(np.abs(mean_shift_reg_list)),
+        vmax=np.max(np.abs(mean_shift_reg_list)),
+        degree=4,
+    )
+    plt.colorbar()
+    plt.xlabel("n")
+    plt.ylabel("p")
+    plt.title("Mean shift")
+    plt.subplot(4, 1, 4)
+    plot_2d_regression_image(
+        x=n_list,
+        y=p_list,
+        z=std_scale_reg_list,
+        sample_weight=error_list,
+        vmin=1 - np.max(1 - np.array(std_scale_reg_list)),
+        vmax=1 + np.max(np.array(std_scale_reg_list) - 1),
+        degree=4,
+    )
+    plt.colorbar()
+    plt.xlabel("n")
+    plt.ylabel("p")
+    plt.title("Standard deviation scale")
+    plt.tight_layout()
+    plt.savefig("test2_03_error_regression.png", dpi=300)
 
+    # difference fitting/regression improved error -> interpolation plot
+    # difference fitting/regression improvement -> interpolation plot
+    # difference fitting/regression mean shift -> interpolation plot
+    # difference fitting/regression std scale -> interpolation plot
+    plt.figure(figsize=(6.4 * 2, 4.8 * 2 * 4))
+    plt.subplot(4, 1, 1)
+    plot_2d_interpolated_image(
+        x=n_list,
+        y=p_list,
+        z=np.array(error_improved_list) - np.array(error_improved_reg_list),
+        vmin=-np.max(
+            np.abs(np.array(error_improved_list) - np.array(error_improved_reg_list))
+        ),
+        vmax=np.max(
+            np.abs(np.array(error_improved_list) - np.array(error_improved_reg_list))
+        ),
+    )
+    plt.colorbar()
+    plt.xlabel("n")
+    plt.ylabel("p")
+    plt.title("Error difference between optimized and regression")
+    plt.subplot(4, 1, 2)
+    plot_2d_interpolated_image(
+        x=n_list,
+        y=p_list,
+        z=np.array(error_improved_list)
+        - np.array(error_list)
+        - np.array(error_improved_reg_list)
+        + np.array(error_list),
+        vmin=-np.max(
+            np.abs(
+                np.array(error_improved_list)
+                - np.array(error_list)
+                - np.array(error_improved_reg_list)
+                + np.array(error_list)
+            )
+        ),
+        vmax=np.max(
+            np.abs(
+                np.array(error_improved_list)
+                - np.array(error_list)
+                - np.array(error_improved_reg_list)
+                + np.array(error_list)
+            )
+        ),
+    )
+    plt.colorbar()
+    plt.xlabel("n")
+    plt.ylabel("p")
+    plt.title("Error improvement difference between optimized and regression")
+    plt.subplot(4, 1, 3)
+    plot_2d_interpolated_image(
+        x=n_list,
+        y=p_list,
+        z=np.array(mean_shift_list) - np.array(mean_shift_reg_list),
+        vmin=-np.max(np.abs(np.array(mean_shift_list) - np.array(mean_shift_reg_list))),
+        vmax=np.max(np.abs(np.array(mean_shift_list) - np.array(mean_shift_reg_list))),
+    )
+    plt.colorbar()
+    plt.xlabel("n")
+    plt.ylabel("p")
+    plt.title("Mean shift difference between optimized and regression")
+    plt.subplot(4, 1, 4)
+    plot_2d_interpolated_image(
+        x=n_list,
+        y=p_list,
+        z=np.array(std_scale_list) - np.array(std_scale_reg_list),
+        vmin=-np.max(np.abs(np.array(std_scale_list) - np.array(std_scale_reg_list))),
+        vmax=np.max(np.abs(np.array(std_scale_list) - np.array(std_scale_reg_list))),
+    )
+    plt.colorbar()
+    plt.xlabel("n")
+    plt.ylabel("p")
+    plt.title("Standard deviation scale difference between optimized and regression")
+    plt.tight_layout()
+    plt.savefig("test2_04_error_difference.png", dpi=300)
+
+quit()
 # Plot the error as a function of p and n as a heatmap
-plt.figure(figsize=(12, 10))
+plt.figure(figsize=(20, 15))
 ### scatter plot with max from error_list and error_improved_list
 plt.subplot(2, 2, 1)
+
+plot_2d_interpolated_image(
+    x=n_list,
+    y=p_list,
+    z=error_list,
+    vmin=0,
+    vmax=np.max(error_list + error_improved_list),
+)
+print(np.max(error_list + error_improved_list))
 plt.scatter(
     n_list,
     p_list,
     c=error_list,
     cmap="viridis",
     vmin=0,
-    vmax=np.max([error_list, error_improved_list]),
+    vmax=np.max(error_list + error_improved_list),
+    edgecolor="k",
+    marker="o",
 )
 plt.colorbar()
 plt.xlabel("n")
 plt.ylabel("p")
-plt.title("Error original")
+plt.title(f"Error original\n(max: {np.max(error_list)})")
 plt.subplot(2, 2, 2)
+plot_2d_interpolated_image(
+    x=n_list,
+    y=p_list,
+    z=error_improved_list,
+    vmin=0,
+    vmax=np.max(error_list + error_improved_list),
+)
 plt.scatter(
     n_list,
     p_list,
     c=error_improved_list,
     cmap="viridis",
     vmin=0,
-    vmax=np.max([error_list, error_improved_list]),
+    vmax=np.max(error_list + error_improved_list),
+    edgecolor="k",
+    marker="o",
 )
 plt.colorbar()
 plt.xlabel("n")
 plt.ylabel("p")
-plt.title("Error optimized")
+plt.title(f"Error optimized\n(max: {np.max(error_improved_list)})")
 plt.subplot(2, 2, 3)
-plt.scatter(n_list, p_list, c=mean_shift_list, cmap="viridis")
+plot_2d_regression_image(
+    x=n_list,
+    y=p_list,
+    z=mean_shift_list,
+    sample_weight=error_list,
+    vmin=-np.max(np.abs(mean_shift_list)),
+    vmax=np.max(np.abs(mean_shift_list)),
+    degree=4,
+)
+plt.scatter(
+    n_list,
+    p_list,
+    c=mean_shift_list,
+    cmap="viridis",
+    vmin=-np.max(np.abs(mean_shift_list)),
+    vmax=np.max(np.abs(mean_shift_list)),
+    edgecolor="k",
+    marker="o",
+)
 plt.colorbar()
 plt.xlabel("n")
 plt.ylabel("p")
 plt.title("Mean shift")
 plt.subplot(2, 2, 4)
-plt.scatter(n_list, p_list, c=std_scale_list, cmap="viridis")
+plot_2d_regression_image(
+    x=n_list,
+    y=p_list,
+    z=std_scale_list,
+    sample_weight=error_list,
+    vmin=1 - np.max(1 - np.array(std_scale_list)),
+    vmax=1 + np.max(np.array(std_scale_list) - 1),
+    degree=4,
+)
+plt.scatter(
+    n_list,
+    p_list,
+    c=std_scale_list,
+    cmap="viridis",
+    vmin=1 - np.max(1 - np.array(std_scale_list)),
+    vmax=1 + np.max(np.array(std_scale_list) - 1),
+    edgecolor="k",
+    marker="o",
+)
 plt.colorbar()
 plt.xlabel("n")
 plt.ylabel("p")
