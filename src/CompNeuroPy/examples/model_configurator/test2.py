@@ -16,47 +16,113 @@ from tqdm import tqdm
 def mean_shift_regression(n, p):
     x0 = n
     x1 = p
-    return (
-        -0.122
-        + -0.000 * 1
-        + -0.001 * x0
-        + 0.257 * x1
-        + 0.000 * x0**2
-        + 0.003 * x0 * x1
-        + 0.847 * x1**2
-        + 0.000 * x0**3
-        + -0.000 * x0**2 * x1
-        + -0.001 * x0 * x1**2
-        + -3.413 * x1**3
-        + -0.000 * x0**4
-        + 0.000 * x0**3 * x1
-        + -0.000 * x0**2 * x1**2
-        + 0.001 * x0 * x1**3
-        + 2.644 * x1**4
+
+    p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14 = (
+        1.176321040012159,
+        -6.429595249324671,
+        -6.804798904871692,
+        21.915210556787986,
+        61.64443550309026,
+        27.70993009301549,
+        -27.95654152965883,
+        44.87058003864243,
+        -63.817886336670654,
+        -40.65337691430986,
+        12.246014608429185,
+        -101.39842049962134,
+        55.18658444426345,
+        3.6975636800782237,
+        19.531732368721627,
     )
+
+    x0_min = 10
+    x0_max = 1000
+    x0_norm = (x0 - x0_min) / (x0_max - x0_min)
+    x1_min = 0.001
+    x1_max = 0.1
+    x1_norm = (x1 - x1_min) / (x1_max - x1_min)
+    z_min = -0.34886991656269
+    z_max = 0.03020699313695153
+
+    z_norm = np.clip(
+        (
+            p0
+            + p1 * x0_norm
+            + p2 * x1_norm
+            + p3 * x0_norm**2
+            + p4 * x0_norm * x1_norm
+            + p5 * x1_norm**2
+            + p6 * x0_norm**3
+            + p7 * x0_norm**2 * x1_norm
+            + p8 * x0_norm * x1_norm**2
+            + p9 * x1_norm**3
+            + p10 * x0_norm**4
+            + p11 * x0_norm**3 * x1_norm
+            + p12 * x0_norm**2 * x1_norm**2
+            + p13 * x0_norm * x1_norm**3
+            + p14 * x1_norm**4
+        )
+        ** 3,
+        0,
+        1,
+    )
+    return z_norm * (z_max - z_min) + z_min
 
 
 def std_scale_regression(n, p):
     x0 = n
     x1 = p
-    return (
-        1.218
-        + -0.000 * 1
-        + 0.001 * x0
-        + -4.365 * x1
-        + -0.000 * x0**2
-        + -0.001 * x0 * x1
-        + 16.631 * x1**2
-        + 0.000 * x0**3
-        + 0.000 * x0**2 * x1
-        + 0.001 * x0 * x1**2
-        + -25.130 * x1**3
-        + -0.000 * x0**4
-        + -0.000 * x0**3 * x1
-        + -0.000 * x0**2 * x1**2
-        + -0.001 * x0 * x1**3
-        + 12.968 * x1**4
+
+    p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14 = (
+        0.320502224444166,
+        6.699870528297452,
+        6.935907486422781,
+        -22.52956657500412,
+        108.421673456727,
+        -30.088834608939973,
+        29.237548128991747,
+        -1172.785284855411,
+        -1027.3975831574996,
+        58.67858836080429,
+        -14.043681478309374,
+        1174.4693590015047,
+        -3413.5816408185233,
+        1307.2105954815152,
+        -44.03158341787127,
     )
+
+    x0_min = 10
+    x0_max = 1000
+    x0_norm = (x0 - x0_min) / (x0_max - x0_min)
+    x1_min = 0.001
+    x1_max = 0.1
+    x1_norm = (x1 - x1_min) / (x1_max - x1_min)
+    z_min = 0.9710804893692282
+    z_max = 1.6265889931274558
+
+    z_norm = np.clip(
+        (
+            p0
+            + p1 * x0_norm
+            + p2 * x1_norm
+            + p3 * x0_norm**2
+            + p4 * x0_norm * x1_norm
+            + p5 * x1_norm**2
+            + p6 * x0_norm**3
+            + p7 * x0_norm**2 * x1_norm
+            + p8 * x0_norm * x1_norm**2
+            + p9 * x1_norm**3
+            + p10 * x0_norm**4
+            + p11 * x0_norm**3 * x1_norm
+            + p12 * x0_norm**2 * x1_norm**2
+            + p13 * x0_norm * x1_norm**3
+            + p14 * x1_norm**4
+        )
+        ** 3,
+        0,
+        1,
+    )
+    return z_norm * (z_max - z_min) + z_min
 
 
 def gauss_1d(x, amp, mean, sig):
@@ -99,15 +165,21 @@ def plot_2d_curve_fit_regression(
         p3,
         p4,
         p5,
-        # p6,
-        # p7,
-        # p8,
-        # p9,
-        # p10,
-        # p11,
-        # p12,
-        # p13,
-        # p14,
+        p6,
+        p7,
+        p8,
+        p9,
+        p10,
+        p11,
+        p12,
+        p13,
+        p14,
+        p15,
+        p16,
+        p17,
+        p18,
+        p19,
+        p20,
     ):
         x0, x1 = X
         ### 2D polynomial with certain degree
@@ -119,15 +191,21 @@ def plot_2d_curve_fit_regression(
                 + p3 * x0**2
                 + p4 * x0 * x1
                 + p5 * x1**2
-                # + p6 * x0**3
-                # + p7 * x0**2 * x1
-                # + p8 * x0 * x1**2
-                # + p9 * x1**3
-                # + p10 * x0**4
-                # + p11 * x0**3 * x1
-                # + p12 * x0**2 * x1**2
-                # + p13 * x0 * x1**3
-                # + p14 * x1**4
+                + p6 * x0**3
+                + p7 * x0**2 * x1
+                + p8 * x0 * x1**2
+                + p9 * x1**3
+                + p10 * x0**4
+                + p11 * x0**3 * x1
+                + p12 * x0**2 * x1**2
+                + p13 * x0 * x1**3
+                + p14 * x1**4
+                + p15 * x0**5
+                + p16 * x0**4 * x1
+                + p17 * x0**3 * x1**2
+                + p18 * x0**2 * x1**3
+                + p19 * x0 * x1**4
+                + p20 * x1**5
             )
             ** 3,
             np.min(z),
@@ -164,20 +242,26 @@ def plot_2d_curve_fit_regression(
         "p3",
         "p4",
         "p5",
-        # "p6",
-        # "p7",
-        # "p8",
-        # "p9",
-        # "p10",
-        # "p11",
-        # "p12",
-        # "p13",
-        # "p14",
+        "p6",
+        "p7",
+        "p8",
+        "p9",
+        "p10",
+        "p11",
+        "p12",
+        "p13",
+        "p14",
+        "p15",
+        "p16",
+        "p17",
+        "p18",
+        "p19",
+        "p20",
     ]
     ### run the optimization, get popt
     best_fitness = 1e9
     ### create progress bar showing the best fitness
-    progress_bar = tqdm(range(100), total=100)
+    progress_bar = tqdm(range(10), total=10)
     for _ in progress_bar:
         deap_cma = DeapCma(
             lower=np.array([-1] * len(param_names)),
@@ -256,6 +340,12 @@ def plot_2d_curve_fit_regression(
             else None
         ),
     )
+
+    ### print the regression equation and data normalization
+    print(f"popt: {popt}")
+    print(f"x_max: {x_max}, x_min: {x_min}")
+    print(f"y_max: {y_max}, y_min: {y_min}")
+    print(f"z_max: {z_max}, z_min: {z_min}")
 
 
 def plot_2d_regression_image(
@@ -374,6 +464,12 @@ def plot_2d_interpolated_image(
         x, y, c=z, cmap="viridis", vmin=vmin, vmax=vmax, edgecolor="k", marker="o"
     )
 
+    # find local extrema of the surface using scipy
+    from scipy.signal import argrelextrema
+
+    # find local maxima
+    maxima = argrelextrema(zi, np.greater, axis=None)
+
 
 def generate_samples(n, p, m, mean_shift=0, std_scale=1):
     # Generate data samples
@@ -457,8 +553,8 @@ def logarithmic_distribution(start, end, num_points):
 ### and n values. I will try to optimize the shift and scale for each n and p value.
 
 OPTIMIZE = False
+PLOT_OPTIMIZED = False
 USE_REGRESSION = False
-PLOT_OPTIMIZED = True
 PLOT_REGRESSION = False
 
 ### 1st optimize mean shift and std scale for each n and p value
@@ -808,28 +904,24 @@ if PLOT_REGRESSION:
     plt.ylabel("p")
     plt.title("Error improvement")
     plt.subplot(4, 1, 3)
-    plot_2d_regression_image(
+    plot_2d_interpolated_image(
         x=n_list,
         y=p_list,
         z=mean_shift_reg_list,
-        sample_weight=error_list,
         vmin=-np.max(np.abs(mean_shift_reg_list)),
         vmax=np.max(np.abs(mean_shift_reg_list)),
-        degree=4,
     )
     plt.colorbar()
     plt.xlabel("n")
     plt.ylabel("p")
     plt.title("Mean shift")
     plt.subplot(4, 1, 4)
-    plot_2d_regression_image(
+    plot_2d_interpolated_image(
         x=n_list,
         y=p_list,
         z=std_scale_reg_list,
-        sample_weight=error_list,
         vmin=1 - np.max(1 - np.array(std_scale_reg_list)),
         vmax=1 + np.max(np.array(std_scale_reg_list) - 1),
-        degree=4,
     )
     plt.colorbar()
     plt.xlabel("n")
