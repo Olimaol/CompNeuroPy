@@ -8,6 +8,10 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from scipy.optimize import curve_fit
 
+from sklearn.pipeline import make_pipeline
+from sklearn.metrics import mean_squared_error
+from tqdm import tqdm
+
 
 def mean_shift_regression(n, p):
     x0 = n
@@ -75,19 +79,59 @@ def plot_2d_curve_fit_regression(
     if sample_weight is not None and 0 in sample_weight:
         raise ValueError("Sample weight cannot contain zeros.")
 
-    # Normalize x and y and keep the transformation for later
-    x_mean = np.mean(x)
-    x_std = np.std(x)
-    y_mean = np.mean(y)
-    y_std = np.std(y)
-    x = (x - x_mean) / x_std
-    y = (y - y_mean) / y_std
+    # Normalize x, y, and z and keep the transformation for later
+    x_max = np.max(x)
+    x_min = np.min(x)
+    y_max = np.max(y)
+    y_min = np.min(y)
+    z_max = np.max(z)
+    z_min = np.min(z)
+    x = (x - x_min) / (x_max - x_min)
+    y = (y - y_min) / (y_max - y_min)
+    z = (z - z_min) / (z_max - z_min)
 
     # Fit the curve_fit regression model
-    def curve_fit_func(X, p0, p1, p2, p3, p4, p5, p6, p7):
-        x, y = X
-        return (
-            p0 * np.exp(p1 + p2 * x + p3 * y + p4 * x * y + p5 * x**2 + p6 * y**2) + p7
+    def curve_fit_func(
+        X,
+        p0,
+        p1,
+        p2,
+        p3,
+        p4,
+        p5,
+        # p6,
+        # p7,
+        # p8,
+        # p9,
+        # p10,
+        # p11,
+        # p12,
+        # p13,
+        # p14,
+    ):
+        x0, x1 = X
+        ### 2D polynomial with certain degree
+        return np.clip(
+            (
+                p0
+                + p1 * x0
+                + p2 * x1
+                + p3 * x0**2
+                + p4 * x0 * x1
+                + p5 * x1**2
+                # + p6 * x0**3
+                # + p7 * x0**2 * x1
+                # + p8 * x0 * x1**2
+                # + p9 * x1**3
+                # + p10 * x0**4
+                # + p11 * x0**3 * x1
+                # + p12 * x0**2 * x1**2
+                # + p13 * x0 * x1**3
+                # + p14 * x1**4
+            )
+            ** 3,
+            np.min(z),
+            np.max(z),
         )
 
     def curve_fit_evaluate_function(population):
@@ -103,31 +147,79 @@ def plot_2d_curve_fit_regression(
         target_data = z
         return np.sum((is_data - target_data) ** 2)
 
+    # ### do opt with scipy curve_fit
     # popt, pcov = curve_fit(
     #     curve_fit_func,
     #     (x, y),
     #     z,
-    #     p0=[-0.3, 0, -1, -1, -1],
     #     sigma=1 / sample_weight if sample_weight is not None else None,
     #     absolute_sigma=False,
     # )
-    param_names = ["p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7"]
-    deap_cma = DeapCma(
-        lower=np.array([-10] * len(param_names)),
-        upper=np.array([10] * len(param_names)),
-        evaluate_function=curve_fit_evaluate_function,
-        param_names=param_names,
-        hard_bounds=False,
-        display_progress_bar=False,
-    )
 
-    ### run the optimization
+    ### do opt with deap cma
+    param_names = [
+        "p0",
+        "p1",
+        "p2",
+        "p3",
+        "p4",
+        "p5",
+        # "p6",
+        # "p7",
+        # "p8",
+        # "p9",
+        # "p10",
+        # "p11",
+        # "p12",
+        # "p13",
+        # "p14",
+    ]
+    ### run the optimization, get popt
     best_fitness = 1e9
-    for _ in range(100):
-        deap_cma_result = deap_cma.run(max_evals=1000)
+    ### create progress bar showing the best fitness
+    progress_bar = tqdm(range(100), total=100)
+    for _ in progress_bar:
+        deap_cma = DeapCma(
+            lower=np.array([-1] * len(param_names)),
+            upper=np.array([1] * len(param_names)),
+            evaluate_function=curve_fit_evaluate_function,
+            param_names=param_names,
+            hard_bounds=False,
+            display_progress_bar=False,
+        )
+        deap_cma_result = deap_cma.run(max_evals=2000)
         if deap_cma_result["best_fitness"] < best_fitness:
             best_fitness = deap_cma_result["best_fitness"]
             popt = [deap_cma_result[param_name] for param_name in param_names]
+        progress_bar.set_description(f"Best Fitness: {best_fitness}")
+
+    # ### solve polynomial using linalg
+    # x0 = x
+    # x1 = y
+    # n_samples = len(x0)
+    # X = np.column_stack(
+    #     [
+    #         np.ones(n_samples),
+    #         x0,
+    #         x1,
+    #         x0**2,
+    #         x0 * x1,
+    #         x1**2,
+    #         x0**3,
+    #         x0**2 * x1,
+    #         x0 * x1**2,
+    #         x1**3,
+    #         x0**4,
+    #         x0**3 * x1,
+    #         x0**2 * x1**2,
+    #         x0 * x1**3,
+    #         x1**4,
+    #     ]
+    # )
+
+    # # Solve the least squares problem
+    # coefficients, residuals, rank, s = np.linalg.lstsq(X, z, rcond=None)
+    # popt = coefficients
 
     # Create grid for plotting
     xi = np.linspace(min(x), max(x), grid_size)
@@ -135,20 +227,20 @@ def plot_2d_curve_fit_regression(
     xi, yi = np.meshgrid(xi, yi)
     zi = curve_fit_func((xi, yi), *popt)
 
-    # Unnormalize the grid
-    xi = xi * x_std + x_mean
-    yi = yi * y_std + y_mean
-
-    # Unnormalize the original data
-    x = x * x_std + x_mean
-    y = y * y_std + y_mean
+    # Unnormalize the data
+    xi = xi * (x_max - x_min) + x_min
+    yi = yi * (y_max - y_min) + y_min
+    zi = zi * (z_max - z_min) + z_min
+    x = x * (x_max - x_min) + x_min
+    y = y * (y_max - y_min) + y_min
+    z = z * (z_max - z_min) + z_min
 
     # Plot the regression surface
     if vmin is None:
         vmin = np.min(z)
     if vmax is None:
         vmax = np.max(z)
-    plt.contourf(xi, yi, zi, levels=100, cmap="viridis")
+    plt.contourf(xi, yi, zi, levels=100, cmap="viridis", vmin=vmin, vmax=vmax)
     plt.scatter(
         x,
         y,
@@ -179,26 +271,45 @@ def plot_2d_regression_image(
     - degree: degree of the polynomial regression (default: 2)
     - grid_size: size of the grid for plotting (default: 100)
     """
-    # Prepare the data for polynomial regression
-    X = np.array([x, y]).T
-    poly = PolynomialFeatures(degree)
-    X_poly = poly.fit_transform(X)
+    # Normalize x and y and keep the transformation for later
+    x_mean = np.mean(x)
+    x_std = np.std(x)
+    x_max = np.max(x)
+    x_min = np.min(x)
+    y_mean = np.mean(y)
+    y_std = np.std(y)
+    y_max = np.max(y)
+    y_min = np.min(y)
+    x = (x - x_min) / (x_max - x_min)
+    y = (y - y_min) / (y_max - y_min)
 
-    # Perform the polynomial regression
-    model = LinearRegression()
-    model.fit(
-        X_poly,
+    # Prepare the data for polynomial regression
+    X = np.column_stack((x, y))
+    # Create a polynomial regression pipeline
+    polynomial_model = make_pipeline(PolynomialFeatures(degree), LinearRegression())
+
+    # Fit the model
+    polynomial_model.fit(
+        X,
         z,
-        sample_weight=sample_weight if sample_weight is not None else None,
+        linearregression__sample_weight=(
+            sample_weight if sample_weight is not None else None
+        ),
     )
 
-    # Create a grid for plotting the regression surface
+    # Predict new values for the surface plot
     xi = np.linspace(min(x), max(x), grid_size)
     yi = np.linspace(min(y), max(y), grid_size)
     xi, yi = np.meshgrid(xi, yi)
-    X_grid = np.c_[xi.ravel(), yi.ravel()]
-    X_grid_poly = poly.transform(X_grid)
-    zi = model.predict(X_grid_poly).reshape(xi.shape)
+    Xi = np.column_stack((xi.ravel(), yi.ravel()))
+    zi = polynomial_model.predict(Xi)
+    zi = zi.reshape(xi.shape)
+
+    # Unnormalize the x,y values
+    xi = xi * (x_max - x_min) + x_min
+    yi = yi * (y_max - y_min) + y_min
+    x = x * (x_max - x_min) + x_min
+    y = y * (y_max - y_min) + y_min
 
     # Plot the regression surface
     if vmin is None:
@@ -225,12 +336,7 @@ def plot_2d_regression_image(
     )
 
     # Print the regression equation
-    coefs = model.coef_
-    intercept = model.intercept_
-    terms = poly.get_feature_names_out()
-    equation = " + ".join([f"{coefs[i]:.3f}*{terms[i]}" for i in range(len(coefs))])
-    equation = f"{intercept:.3f} + " + equation
-    print(f"Regression equation:\n{equation}")
+    # TODO
 
 
 def plot_2d_interpolated_image(
@@ -564,13 +670,13 @@ if PLOT_OPTIMIZED:
     improvement_arr_norm = improvement_arr / np.max(improvement_arr)
 
     ### scale the mean shift and std scale by the error improvement
-    mean_shift_list = np.array(mean_shift_list) * improvement_arr_norm
-    std_scale_list = (
-        np.array(std_scale_list) * improvement_arr_norm + (1 - improvement_arr_norm) * 1
-    )
+    ### --> only keep the transformations which improve the error
+    alpha = improvement_arr_norm
+    mean_shift_list = alpha * np.array(mean_shift_list) + (1 - alpha) * 0
+    std_scale_list = alpha * np.array(std_scale_list) + (1 - alpha) * 1
 
-    plt.figure(figsize=(6.4 * 2, 4.8 * 2 * 4))
-    plt.subplot(4, 1, 1)
+    plt.figure(figsize=(6.4 * 2 * 2, 4.8 * 2 * 4))
+    plt.subplot(4, 2, 1)
     plot_2d_interpolated_image(
         x=n_list,
         y=p_list,
@@ -582,7 +688,7 @@ if PLOT_OPTIMIZED:
     plt.xlabel("n")
     plt.ylabel("p")
     plt.title(f"Error optimized\n(max: {np.max(error_improved_list)})")
-    plt.subplot(4, 1, 2)
+    plt.subplot(4, 2, 3)
     plot_2d_interpolated_image(
         x=n_list,
         y=p_list,
@@ -594,7 +700,31 @@ if PLOT_OPTIMIZED:
     plt.xlabel("n")
     plt.ylabel("p")
     plt.title("Error improvement")
-    plt.subplot(4, 1, 3)
+    plt.subplot(4, 2, 5)
+    plot_2d_interpolated_image(
+        x=n_list,
+        y=p_list,
+        z=mean_shift_list,
+        vmin=-np.max(np.abs(mean_shift_list)),
+        vmax=np.max(np.abs(mean_shift_list)),
+    )
+    plt.colorbar()
+    plt.xlabel("n")
+    plt.ylabel("p")
+    plt.title("Mean shift")
+    plt.subplot(4, 2, 7)
+    plot_2d_interpolated_image(
+        x=n_list,
+        y=p_list,
+        z=std_scale_list,
+        vmin=1 - np.max(1 - np.array(std_scale_list)),
+        vmax=1 + np.max(np.array(std_scale_list) - 1),
+    )
+    plt.colorbar()
+    plt.xlabel("n")
+    plt.ylabel("p")
+    plt.title("Standard deviation scale")
+    plt.subplot(4, 2, 6)
     plot_2d_curve_fit_regression(
         x=n_list,
         y=p_list,
@@ -603,13 +733,13 @@ if PLOT_OPTIMIZED:
         vmax=np.max(np.abs(mean_shift_list)),
         # sample_weight=-np.clip(error_change_arr, None, 0)
         # + 0.01 * np.max(improvement_arr),
-        # degree=5,
+        # degree=3,
     )
     plt.colorbar()
     plt.xlabel("n")
     plt.ylabel("p")
-    plt.title("Mean shift")
-    plt.subplot(4, 1, 4)
+    plt.title("Mean shift regression")
+    plt.subplot(4, 2, 8)
     plot_2d_curve_fit_regression(
         x=n_list,
         y=p_list,
@@ -618,12 +748,12 @@ if PLOT_OPTIMIZED:
         vmax=1 + np.max(np.array(std_scale_list) - 1),
         # sample_weight=-np.clip(error_change_arr, None, 0)
         # + 0.01 * np.max(improvement_arr),
-        # degree=5,
+        # degree=3,
     )
     plt.colorbar()
     plt.xlabel("n")
     plt.ylabel("p")
-    plt.title("Standard deviation scale")
+    plt.title("Standard deviation scale regression")
     plt.tight_layout()
     plt.savefig("test2_02_error_optimized.png", dpi=300)
 
