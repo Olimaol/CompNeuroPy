@@ -133,7 +133,8 @@ def log_normal_1d(x, amp, mean, sig):
     return (amp / x) * np.exp(-((np.log(x) - mean) ** 2) / (2 * sig**2))
 
 
-deap_opt_path = "test2_deap_opt/"
+deap_opt_regress_path = "test2_deap_opt_regress/"
+deap_opt_transform_path = "test2_deap_opt_transform/"
 
 
 def curve_fit_func(
@@ -248,14 +249,14 @@ def plot_2d_curve_fit_regression(
     # Fit the curve_fit regression model
     ### do opt with deap cma in other script
     save_variables(
-        name_list=["x", "y", "z"], variable_list=[x, y, z], path=deap_opt_path
+        name_list=["x", "y", "z"], variable_list=[x, y, z], path=deap_opt_regress_path
     )
-    n_jobs = 4
-    n_runs = 5 * n_jobs
+    n_jobs = 15
+    n_runs = 100 * n_jobs
     args_list = [[f"{parallel_id}"] for parallel_id in range(n_runs)]
     run_script_parallel(
-        script_path="test2_deap_opt.py",
-        n_jobs=4,
+        script_path="test2_deap_opt_regress.py",
+        n_jobs=n_jobs,
         args_list=args_list,
     )
     ### get best parameters
@@ -263,13 +264,13 @@ def plot_2d_curve_fit_regression(
     best_parallel_id = 0
     for parallel_id in range(n_runs):
         loaded_variables = load_variables(
-            name_list=[f"best_fitness_{parallel_id}"], path=deap_opt_path
+            name_list=[f"best_fitness_{parallel_id}"], path=deap_opt_regress_path
         )
         if loaded_variables[f"best_fitness_{parallel_id}"] < best_fitness:
             best_fitness = loaded_variables[f"best_fitness_{parallel_id}"]
             best_parallel_id = parallel_id
     loaded_variables = load_variables(
-        name_list=[f"popt_{best_parallel_id}"], path=deap_opt_path
+        name_list=[f"popt_{best_parallel_id}"], path=deap_opt_regress_path
     )
     popt = loaded_variables[f"popt_{best_parallel_id}"]
 
@@ -449,7 +450,7 @@ def generate_samples(n, p, m, mean_shift=0, std_scale=1):
     return binomial_sample, normal_sample
 
 
-def get_error_of_samples(binomial_sample, normal_sample, m):
+def get_error_of_samples(binomial_sample, normal_sample, n, m):
     diff = (
         np.histogram(binomial_sample, bins=n + 1, range=(-0.5, n + 0.5))[0]
         - np.histogram(normal_sample, bins=n + 1, range=(-0.5, n + 0.5))[0]
@@ -457,31 +458,15 @@ def get_error_of_samples(binomial_sample, normal_sample, m):
     return np.sum(np.abs(diff)) / (2 * m)
 
 
-def objective_function(mean_shift, std_scale):
+def objective_function(mean_shift, std_scale, n, p, m):
     # Generate data samples
     binomial_sample, normal_sample = generate_samples(
-        n=N, p=P, m=M, mean_shift=mean_shift, std_scale=std_scale
+        n=n, p=p, m=m, mean_shift=mean_shift, std_scale=std_scale
     )
 
     # Calculate error
-    error = get_error_of_samples(binomial_sample, normal_sample, m=M)
+    error = get_error_of_samples(binomial_sample, normal_sample, n=n, m=M)
     return error
-
-
-def objective_function_for_minimize(x):
-    # print(f"P: {P}, N: {N}, mean_shift: {x[0]}, std_scale: {x[1]}")
-    return objective_function(mean_shift=x[0], std_scale=x[1])
-
-
-def evaluate_function(population):
-    loss_list = []
-    ### the population is a list of individuals which are lists of parameters
-    for individual in population:
-        loss_of_individual = objective_function(
-            mean_shift=individual[0], std_scale=individual[1]
-        )
-        loss_list.append((loss_of_individual,))
-    return loss_list
 
 
 def logarithmic_distribution(start, end, num_points):
@@ -514,8 +499,11 @@ def logarithmic_distribution(start, end, num_points):
 ### approximation of the binomial distribution.
 ### I think one can shift the mean and scale the standard deviation depending on the p
 ### and n values. I will try to optimize the shift and scale for each n and p value.
+
+# number of samples
+M = 10000
 if __name__ == "__main__":
-    OPTIMIZE = False
+    OPTIMIZE = True
     PLOT_OPTIMIZED = True
     USE_REGRESSION = False
     PLOT_REGRESSION = False
@@ -524,26 +512,14 @@ if __name__ == "__main__":
     n_arr = logarithmic_distribution(10, 1000, 20).astype(int)
     p_arr = logarithmic_distribution(0.001, 0.1, 10)
 
-    ### bounds for optimized parameters
-    shift_mean_bounds = [-1, 1]
-    scale_std_bounds = [0.5, 2]
-    lb = np.array([shift_mean_bounds[0], scale_std_bounds[0]])
-    ub = np.array([shift_mean_bounds[1], scale_std_bounds[1]])
-    # number of samples
-    M = 10000
-
     ### 1st get errors for all n and p values without optimization
     p_list = []
     n_list = []
     error_list = []
     for p in p_arr:
         for n in n_arr:
-            ### set the global variables probability of success and number of trials
-            P = p
-            N = n
-
             ### get the error without optimization
-            error = objective_function(mean_shift=0, std_scale=1)
+            error = objective_function(mean_shift=0, std_scale=1, n=n, p=p, m=M)
             error_list.append(error)
 
             ### store the results
@@ -582,37 +558,47 @@ if __name__ == "__main__":
         std_scale_list = []
         error_improved_list = []
         for p, n in zip(p_list, n_list):
-            ### set the global variables probability of success and number of trials
-            P = p
-            N = n
-
-            # ### optimize the mean shift and standard deviation scale using scipy minimize
-            # result = minimize(
-            #     objective_function_for_minimize,
-            #     x0=[0, 1],
-            #     bounds=Bounds(lb, ub),
-            #     method="Nelder-Mead",
-            # )
-            # mean_shift = result.x[0]
-            # std_scale = result.x[1]
-            # error_improved = result.fun
-
-            ### create an instance of the DeapCma class
-            deap_cma = DeapCma(
-                lower=lb,
-                upper=ub,
-                evaluate_function=evaluate_function,
-                param_names=["mean_shift", "std_scale"],
-                hard_bounds=True,
+            ### save p and n to be availyble in optimization script
+            save_variables(
+                variable_list=[p, n],
+                name_list=["p", "n"],
+                path=deap_opt_transform_path,
             )
+            ### run optimization
+            n_jobs = 15
+            n_runs = 100 * n_jobs
+            args_list = [[f"{parallel_id}"] for parallel_id in range(n_runs)]
+            run_script_parallel(
+                script_path="test2_deap_opt_transform.py",
+                n_jobs=n_jobs,
+                args_list=args_list,
+            )
+            ### get best parameters
+            best_fitness = 1e6
+            best_parallel_id = 0
+            for parallel_id in range(n_runs):
+                loaded_variables = load_variables(
+                    name_list=[
+                        f"error_improved_{parallel_id}",
+                    ],
+                    path=deap_opt_transform_path,
+                )
+                error_improved = loaded_variables[f"error_improved_{parallel_id}"]
 
-            ### run the optimization
-            deap_cma_result = deap_cma.run(max_evals=1000)
-
-            ### get the optimized parameters and best error
-            mean_shift = deap_cma_result["mean_shift"]
-            std_scale = deap_cma_result["std_scale"]
-            error_improved = deap_cma_result["best_fitness"]
+                if error_improved < best_fitness:
+                    best_fitness = error_improved
+                    best_parallel_id = parallel_id
+            loaded_variables = load_variables(
+                name_list=[
+                    f"mean_shift_{best_parallel_id}",
+                    f"std_scale_{best_parallel_id}",
+                    f"error_improved_{best_parallel_id}",
+                ],
+                path=deap_opt_transform_path,
+            )
+            mean_shift = loaded_variables[f"mean_shift_{best_parallel_id}"]
+            std_scale = loaded_variables[f"std_scale_{best_parallel_id}"]
+            error_improved = loaded_variables[f"error_improved_{best_parallel_id}"]
 
             ### store the results
             error_improved_list.append(error_improved)
@@ -652,15 +638,11 @@ if __name__ == "__main__":
         std_scale_reg_list = []
         error_improved_reg_list = []
         for p, n in zip(p_list, n_list):
-            ### set the global variables probability of success and number of trials
-            P = p
-            N = n
-
             ### get the optimized parameters and best error
             mean_shift = mean_shift_regression(n, p)
             std_scale = std_scale_regression(n, p)
             error_improved = objective_function(
-                mean_shift=mean_shift, std_scale=std_scale
+                mean_shift=mean_shift, std_scale=std_scale, n=n, p=p, m=M
             )
 
             ### store the results
@@ -725,6 +707,11 @@ if __name__ == "__main__":
         error_improved_list = loaded_variables["error_improved_list"]
         mean_shift_list = loaded_variables["mean_shift_list"]
         std_scale_list = loaded_variables["std_scale_list"]
+        ### TODO tmp
+        error_improved_list = np.random.rand(len(error_improved_list))
+        mean_shift_list = np.random.rand(len(mean_shift_list))
+        std_scale_list = np.random.rand(len(std_scale_list))
+        ### TODO tmp
         error_change_arr = np.array(error_improved_list) - np.array(error_list)
         improvement_arr = -np.clip(error_change_arr, None, 0)
         improvement_arr_norm = improvement_arr / np.max(improvement_arr)

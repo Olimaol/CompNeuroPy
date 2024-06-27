@@ -1,6 +1,6 @@
 from CompNeuroPy import DeapCma, load_variables, save_variables
 import numpy as np
-from test2 import deap_opt_path, curve_fit_func
+from test2 import deap_opt_regress_path, curve_fit_func
 import sys
 
 # Load the variables
@@ -10,7 +10,7 @@ variables = load_variables(
         "y",
         "z",
     ],
-    path=deap_opt_path,
+    path=deap_opt_regress_path,
 )
 x = variables["x"]
 y = variables["y"]
@@ -87,5 +87,5 @@ popt = [deap_cma_result[param_name] for param_name in param_names]
 save_variables(
     name_list=[f"popt_{sys.argv[1]}", f"best_fitness_{sys.argv[1]}"],
     variable_list=[popt, deap_cma_result["best_fitness"]],
-    path=deap_opt_path,
+    path=deap_opt_regress_path,
 )
