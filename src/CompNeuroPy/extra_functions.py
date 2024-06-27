@@ -1102,7 +1102,12 @@ class DeapCma:
                 halloffame.update(population)
 
             ### Update the strategy with the evaluated individuals
-            toolbox.update(population)
+            try:
+                toolbox.update(population)
+            except:
+                ### stop if update fails
+                early_stop = True
+                break
 
             ### Stop if diagD is too small
             if np.min(strategy.diagD) < 1e-5:
