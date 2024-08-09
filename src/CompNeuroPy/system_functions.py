@@ -11,6 +11,7 @@ import concurrent.futures
 import signal
 from typing import List
 import threading
+import sys
 
 
 def clear_dir(path):
@@ -334,6 +335,11 @@ def _is_git_repo():
         return False
 
 
+def _timeout_handler(signum, frame):
+    print("\nTime's up! No response received. Exiting the program.")
+    sys.exit()
+
+
 def create_data_raw_folder(
     folder_name: str,
     **kwargs,
@@ -385,7 +391,30 @@ def create_data_raw_folder(
     """
     ### check if folder already exists
     if os.path.isdir(folder_name):
-        raise FileExistsError(f"{folder_name} already exists")
+        print(f"'{folder_name}' already exists.")
+
+        # Set the signal for timeout
+        signal.signal(signal.SIGALRM, _timeout_handler)
+        while True:
+
+            signal.alarm(60)
+            user_input = input(
+                "Do you want to (q)uit or (d)elete the folder and continue? "
+            ).lower()
+            signal.alarm(0)
+
+            if user_input == "q":
+                print("Exiting the program.")
+                raise FileExistsError(f"'{folder_name}' already exists")
+            elif user_input == "d":
+                print(f"Deleting '{folder_name}' and continuing.")
+                shutil.rmtree(folder_name)
+                break
+            else:
+                print(
+                    "Invalid input. Please enter 'q' to quit or 'd' to delete and continue."
+                )
+
     ### create folder
     create_dir(folder_name)
 
