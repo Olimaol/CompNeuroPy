@@ -17,3 +17,4 @@ dist/
 *.pkl
 *json
 *.log
+*test2_data*/
