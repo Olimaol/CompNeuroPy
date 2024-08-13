@@ -8,6 +8,7 @@ from CompNeuroPy import (
     run_script_parallel,
     create_data_raw_folder,
     create_dir,
+    RNG,
 )
 from scipy.optimize import minimize, Bounds
 from scipy.interpolate import griddata
@@ -141,7 +142,6 @@ def log_normal_1d(x, amp, mean, sig):
 
 
 deap_opt_regress_path = "test2_deap_opt_regress/"
-deap_opt_transform_path = "test2_deap_opt_transform/"
 
 
 def curve_fit_func(
@@ -410,14 +410,25 @@ def plot_2d_interpolated_image(
     x, y, z, vmin=None, vmax=None, grid_size=100, method="linear"
 ):
     """
-    Plots a 2D color-coded image of the data with interpolation and extrapolation.
+    Plots a 2D color-coded image of "D grid data.
 
-    Parameters:
-    - x: list or array of x coordinates
-    - y: list or array of y coordinates
-    - z: list or array of z values corresponding to the (x, y) coordinates
-    - grid_size: size of the interpolation grid (default: 100)
-    - method: interpolation method, options are 'linear', 'nearest', 'cubic' (default: 'linear')
+    Args:
+        x (array):
+            The x-coordinates of the data points.
+        y (array):
+            The y-coordinates of the data points.
+        z (array):
+            The z-values corresponding to the (x, y) coordinates.
+        vmin (float, optional):
+            The minimum value for the color scale. If not provided, the minimum value of
+            z is used.
+        vmax (float):
+            The maximum value for the color scale. If not provided, the maximum value of
+            z is used.
+        grid_size (int):
+            The size of the grid for plotting (default: 100).
+        method (str):
+            The interpolation method to use (default: "linear").
     """
     # Define the grid for interpolation
     xi = np.linspace(min(x), max(x), grid_size)
@@ -442,7 +453,7 @@ def plot_2d_interpolated_image(
     )
 
 
-def generate_samples(n, p, s, mean_shift=0, std_scale=1):
+def generate_samples(n, p, mean_shift=0, std_scale=1):
     """
     Generate samples of a binomial and a normal distribution. The normal distribution is
     generated to best approximate the binomial distribution. Further the normal
@@ -453,18 +464,16 @@ def generate_samples(n, p, s, mean_shift=0, std_scale=1):
             The number of trials of the binomial distribution.
         p (float):
             The probability of success of the binomial distribution.
-        s (int):
-            The sample size for both distributions.
         mean_shift (float):
             The shift of the mean of the normal distribution.
         std_scale (float):
             The scaling of the standard deviation of the normal distribution.
     """
     # Generate data samples
-    binomial_sample = np.random.binomial(n, p, s)
+    binomial_sample = RNG(seed=SEED).rng.binomial(n, p, S)
     mean = n * p
     std_dev = np.sqrt(n * p * (1 - p))
-    normal_sample = np.random.normal(mean + mean_shift, std_dev * std_scale, s)
+    normal_sample = RNG(seed=SEED).rng.normal(mean + mean_shift, std_dev * std_scale, S)
 
     ### round and clip the normal sample
     normal_sample = np.round(normal_sample)
@@ -493,7 +502,54 @@ def get_difference_of_samples(binomial_sample, normal_sample, n):
     return np.sum(np.abs(diff)) / (2 * len(binomial_sample))
 
 
-def difference_binomial_normal(mean_shift, std_scale, n, p, s):
+def difference_binomial_normal_optimize(n, p):
+    print(f"Optimize for n={n}, p={p}")
+    ### save p and n to be availyble in optimization script
+    save_variables(
+        variable_list=[p, n],
+        name_list=["p", "n"],
+        path=OPTIMIZE_FOLDER,
+    )
+    ### run optimization
+    args_list = [[f"{parallel_id}"] for parallel_id in range(N_RUNS)]
+    run_script_parallel(
+        script_path="test2_deap_opt_transform.py",
+        n_jobs=N_JOBS,
+        args_list=args_list,
+    )
+    ### get best mean_shift and std_scale by loading all optimizations and check best
+    ### fitness
+    best_fitness = 1e6
+    best_parallel_id = 0
+    for parallel_id in range(N_RUNS):
+        loaded_variables = load_variables(
+            name_list=[
+                f"error_opt_{parallel_id}",
+            ],
+            path=OPTIMIZE_FOLDER,
+        )
+        error_opt = loaded_variables[f"error_opt_{parallel_id}"]
+        print(f"n={n}, p={p}, error_opt_{parallel_id}: {error_opt}")
+        if error_opt < best_fitness:
+            best_fitness = error_opt
+            best_parallel_id = parallel_id
+
+    loaded_variables = load_variables(
+        name_list=[
+            f"mean_shift_opt_{best_parallel_id}",
+            f"std_scale_opt_{best_parallel_id}",
+            f"error_opt_{best_parallel_id}",
+        ],
+        path=OPTIMIZE_FOLDER,
+    )
+    mean_shift_opt = loaded_variables[f"mean_shift_opt_{best_parallel_id}"]
+    std_scale_opt = loaded_variables[f"std_scale_opt_{best_parallel_id}"]
+    error_opt = loaded_variables[f"error_opt_{best_parallel_id}"]
+
+    return mean_shift_opt, std_scale_opt, error_opt
+
+
+def difference_binomial_normal(mean_shift, std_scale, n, p):
     """
     Calculate the difference between samples of a binomial and a normal distribution.
     The binomial distribution is generated with parameters n and p.
@@ -509,12 +565,10 @@ def difference_binomial_normal(mean_shift, std_scale, n, p, s):
             The number of trials of the binomial distribution.
         p (float):
             The probability of success of the binomial distribution.
-        s (int):
-            The sample size for both distributions.
     """
     # Generate data samples
     binomial_sample, normal_sample = generate_samples(
-        n=n, p=p, s=s, mean_shift=mean_shift, std_scale=std_scale
+        n=n, p=p, mean_shift=mean_shift, std_scale=std_scale
     )
 
     # Calculate difference
@@ -553,6 +607,160 @@ def logarithmic_arange(start, end, num_points):
     return points
 
 
+def plot_optimize():
+    """
+    Plot the difference between the binomial and normal distribution for various n and
+    p values. Further plots the optimized mean_shift and std_scale values. Load the data
+    from the OPTIMIZE_FOLDER and save the plot to the PLOTS_FOLDER.
+    """
+    ### load the data
+    loaded_variables = load_variables(
+        name_list=[
+            "p_list",
+            "n_list",
+            "mean_shift_opt_list",
+            "std_scale_opt_list",
+            "diff_opt_list",
+        ],
+        path=OPTIMIZE_FOLDER,
+    )
+    ### plot the data
+    plt.figure(figsize=(6.4 * 2, 4.8 * 2 * 3))
+    for idx, title, key in [
+        (1, "Mean Shift optimized", "mean_shift_opt_list"),
+        (2, "Std Scale optimized", "std_scale_opt_list"),
+        (3, "Difference optimized", "diff_opt_list"),
+    ]:
+        plt.subplot(3, 1, idx)
+        plot_2d_interpolated_image(
+            x=loaded_variables["n_list"],
+            y=loaded_variables["p_list"],
+            z=loaded_variables[key],
+            vmin=0,
+            vmax=np.max(loaded_variables[key]),
+        )
+        plt.colorbar()
+        plt.xlabel("n")
+        plt.ylabel("p")
+        plt.title(f"{title}\n(max: {np.max(loaded_variables[key])})")
+    plt.tight_layout()
+    create_dir(PLOTS_FOLDER)
+    plt.savefig(f"{PLOTS_FOLDER}/difference_optimized.png", dpi=300)
+
+
+def plot_compare_original():
+    """
+    Plot the difference between the binomial and normal distribution for various n and
+    p values. Load the data from the COMPARE_ORIGINAL_FOLDER and save the plot to the
+    PLOTS_FOLDER.
+    """
+    ### load the data
+    loaded_variables = load_variables(
+        name_list=[
+            "p_list",
+            "n_list",
+            "diff_list",
+        ],
+        path=COMPARE_ORIGINAL_FOLDER,
+    )
+    ### plot the data
+    plt.figure(figsize=(6.4 * 2, 4.8 * 2))
+    plt.subplot(1, 1, 1)
+    plot_2d_interpolated_image(
+        x=loaded_variables["n_list"],
+        y=loaded_variables["p_list"],
+        z=loaded_variables["diff_list"],
+        vmin=0,
+        vmax=np.max(loaded_variables["diff_list"]),
+    )
+    plt.colorbar()
+    plt.xlabel("n")
+    plt.ylabel("p")
+    plt.title(f"Difference original\n(max: {np.max(loaded_variables['diff_list'])})")
+    plt.tight_layout()
+    create_dir(PLOTS_FOLDER)
+    plt.savefig(f"{PLOTS_FOLDER}/difference_original.png", dpi=300)
+
+
+def compare_with_or_without_optimization():
+    """
+    Compare the difference between the binomial and normal distribution for various n and
+    p values with and without optimization. Save the data to the COMPARE_ORIGINAL_FOLDER
+    and OPTIMIZE_FOLDER.
+    """
+    ### create the save folder(s)
+    if COMPARE_ORIGINAL:
+        create_data_raw_folder(
+            COMPARE_ORIGINAL_FOLDER,
+        )
+    if OPTIMIZE:
+        create_data_raw_folder(
+            OPTIMIZE_FOLDER,
+        )
+
+    ### create the n/p pairs
+    n_arr = logarithmic_arange(*N_VALUES).astype(int)
+    p_arr = logarithmic_arange(*P_VALUES)
+
+    ### get difference between binomial and normal distribution for each n/p pair
+    p_list = []
+    n_list = []
+    diff_original_list = []
+    mean_shift_opt_list = []
+    std_scale_opt_list = []
+    diff_opt_list = []
+    for p in p_arr:
+        for n in n_arr:
+            p_list.append(p)
+            n_list.append(n)
+            if COMPARE_ORIGINAL:
+                ### get the error without optimization
+                error = difference_binomial_normal(mean_shift=0, std_scale=1, n=n, p=p)
+                diff_original_list.append(error)
+            if OPTIMIZE:
+                ### get the error with optimization
+                mean_shift_opt, std_scale_opt, error_opt = (
+                    difference_binomial_normal_optimize(n=n, p=p)
+                )
+                mean_shift_opt_list.append(mean_shift_opt)
+                std_scale_opt_list.append(std_scale_opt)
+                diff_opt_list.append(error_opt)
+
+    ### save variables
+    if COMPARE_ORIGINAL:
+        save_variables(
+            variable_list=[
+                p_list,
+                n_list,
+                diff_original_list,
+            ],
+            name_list=[
+                "p_list",
+                "n_list",
+                "diff_list",
+            ],
+            path=COMPARE_ORIGINAL_FOLDER,
+        )
+    if OPTIMIZE:
+        save_variables(
+            variable_list=[
+                p_list,
+                n_list,
+                mean_shift_opt_list,
+                std_scale_opt_list,
+                diff_opt_list,
+            ],
+            name_list=[
+                "p_list",
+                "n_list",
+                "mean_shift_opt_list",
+                "std_scale_opt_list",
+                "diff_opt_list",
+            ],
+            path=OPTIMIZE_FOLDER,
+        )
+
+
 ### TODO I have the problem that for very small p the normal distribution is not a good
 ### approximation of the binomial distribution.
 ### I think one can shift the mean and scale the standard deviation depending on the p
@@ -566,8 +774,15 @@ PLOT_COMPARE_ORIGINAL = True
 PLOT_OPTIMIZE = True
 PLOT_REGRESS = True
 COMPARE_ORIGINAL_FOLDER = "test2_data_compare_original"
+OPTIMIZE_FOLDER = "test2_data_optimize"
 PLOTS_FOLDER = "test2_plots"
 S = 10000
+SEED = 1234
+N_VALUES = [10, 1000, 2]  # 20]
+P_VALUES = [0.001, 0.1, 2]  # 10]
+N_JOBS = 2
+N_RUNS = 100 * N_JOBS
+
 
 if __name__ == "__main__":
 
@@ -578,85 +793,14 @@ if __name__ == "__main__":
     # 3rd make a 2D regression for the optimized mean shift and std scale, get mean_shift_regress(n, p) and std_scale_regress(n, p), save: the optimized parameters of the regression equations
     # 4th plot: (1) error depending on n and p, (2) optimized mean shift and std scale depending on n and p and corresponding error improvement, (3) regressed mean shift and std scale depending on n and p and corresponding error improvement
 
-    if COMPARE_ORIGINAL:  # TODO implement seed for rng
-        ### create the save folder
-        folder_name = create_data_raw_folder(
-            COMPARE_ORIGINAL_FOLDER,
-            COMPARE_ORIGINAL=COMPARE_ORIGINAL,
-            OPTIMIZE=OPTIMIZE,
-            REGRESS=REGRESS,
-            PLOT_COMPARE_ORIGINAL=PLOT_COMPARE_ORIGINAL,
-            PLOT_OPTIMIZE=PLOT_OPTIMIZE,
-            PLOT_REGRESS=PLOT_REGRESS,
-            COMPARE_ORIGINAL_FOLDER=COMPARE_ORIGINAL_FOLDER,
-            PLOTS_FOLDER=PLOTS_FOLDER,
-            S=S,
-        )
-
-        ### create the n/p pairs
-        n_arr = logarithmic_arange(10, 1000, 20).astype(int)
-        p_arr = logarithmic_arange(0.001, 0.1, 10)
-
-        ### get difference between binomial and normal distribution for each n/p pair
-        p_list = []
-        n_list = []
-        diff_list = []
-        for p in p_arr:
-            for n in n_arr:
-                ### get the error without optimization
-                error = difference_binomial_normal(
-                    mean_shift=0, std_scale=1, n=n, p=p, s=S
-                )
-                diff_list.append(error)
-
-                ### store the results
-                p_list.append(p)
-                n_list.append(n)
-
-        ### save variables
-        save_variables(
-            variable_list=[
-                p_list,
-                n_list,
-                diff_list,
-            ],
-            name_list=[
-                "p_list",
-                "n_list",
-                "diff_list",
-            ],
-            path=folder_name,
-        )
+    if COMPARE_ORIGINAL or OPTIMIZE:
+        compare_with_or_without_optimization()
 
     if PLOT_COMPARE_ORIGINAL:
-        ### load the data
-        loaded_variables = load_variables(
-            name_list=[
-                "p_list",
-                "n_list",
-                "diff_list",
-            ],
-            path=COMPARE_ORIGINAL_FOLDER,
-        )
-        ### plot the data
-        plt.figure(figsize=(6.4 * 2, 4.8 * 2))
-        plt.subplot(1, 1, 1)
-        plot_2d_interpolated_image(
-            x=loaded_variables["n_list"],
-            y=loaded_variables["p_list"],
-            z=loaded_variables["diff_list"],
-            vmin=0,
-            vmax=np.max(loaded_variables["diff_list"]),
-        )
-        plt.colorbar()
-        plt.xlabel("n")
-        plt.ylabel("p")
-        plt.title(
-            f"Difference original\n(max: {np.max(loaded_variables['diff_list'])})"
-        )
-        plt.tight_layout()
-        create_dir(PLOTS_FOLDER)
-        plt.savefig(f"{PLOTS_FOLDER}/difference_original.png", dpi=300)
+        plot_compare_original()
+
+    if PLOT_OPTIMIZE:
+        plot_optimize()
 
     quit()
 
@@ -733,7 +877,7 @@ if __name__ == "__main__":
             save_variables(
                 variable_list=[p, n],
                 name_list=["p", "n"],
-                path=deap_opt_transform_path,
+                path=OPTIMIZE_FOLDER,
             )
             ### run optimization
             n_jobs = 15
@@ -752,7 +896,7 @@ if __name__ == "__main__":
                     name_list=[
                         f"error_improved_{parallel_id}",
                     ],
-                    path=deap_opt_transform_path,
+                    path=OPTIMIZE_FOLDER,
                 )
                 error_improved = loaded_variables[f"error_improved_{parallel_id}"]
 
@@ -765,7 +909,7 @@ if __name__ == "__main__":
                     f"std_scale_{best_parallel_id}",
                     f"error_improved_{best_parallel_id}",
                 ],
-                path=deap_opt_transform_path,
+                path=OPTIMIZE_FOLDER,
             )
             mean_shift = loaded_variables[f"mean_shift_{best_parallel_id}"]
             std_scale = loaded_variables[f"std_scale_{best_parallel_id}"]
