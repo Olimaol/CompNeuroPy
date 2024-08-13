@@ -119,6 +119,12 @@ class CompNeuroExp:
         reset_kwargs["synapses"] = synapses
         reset_kwargs["monitors"] = True
 
+        if synapses is True and projections is False:
+            print(
+                "Warning: synapses=True and projections=False, projections are automatically set to True!"
+            )
+            reset_kwargs["projections"] = True
+
         ### reset CompNeuroMonitors and ANNarchy model
         if self.monitors is not None:
             ### there are monitors, therefore use theri reset function
@@ -126,7 +132,17 @@ class CompNeuroExp:
             ### after reset, set the state of the model to the stored state
             if model_state and self._model_state is not None and model is True:
                 ### if parameters=False, they are not set
-                mf._set_all_attributes(self._model_state, parameters=parameters)
+                mf._set_all_attributes(
+                    {
+                        "populations": (
+                            self._model_state["populations"] if populations else {}
+                        ),
+                        "projections": (
+                            self._model_state["projections"] if projections else {}
+                        ),
+                    },
+                    parameters=parameters,
+                )
         elif model is True:
             if parameters is False:
                 ### if parameters=False, get parameters before reset and set them after

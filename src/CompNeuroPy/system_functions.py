@@ -399,20 +399,20 @@ def create_data_raw_folder(
 
             signal.alarm(60)
             user_input = input(
-                "Do you want to (q)uit or (d)elete the folder and continue? "
+                "You want to delete the folder and continue? (y/n)"
             ).lower()
             signal.alarm(0)
 
-            if user_input == "q":
+            if user_input == "n":
                 print("Exiting the program.")
                 raise FileExistsError(f"'{folder_name}' already exists")
-            elif user_input == "d":
+            elif user_input == "y":
                 print(f"Deleting '{folder_name}' and continuing.")
                 shutil.rmtree(folder_name)
                 break
             else:
                 print(
-                    "Invalid input. Please enter 'q' to quit or 'd' to delete and continue."
+                    "Invalid input. Please enter 'y' to delete the folder or 'n' to exit."
                 )
 
     ### create folder
