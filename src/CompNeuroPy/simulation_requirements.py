@@ -1,4 +1,4 @@
-from ANNarchy import get_population, Population
+from CompNeuroPy import ann
 
 
 class ReqPopHasAttr:
@@ -31,7 +31,7 @@ class ReqPopHasAttr:
         """
         for attr_name in self.attr_name_list:
             for pop_name in self.pop_name_list:
-                pop: Population = get_population(pop_name)
+                pop: ann.Population = ann.get_population(pop_name)
                 if not (attr_name in pop.attributes):
                     raise ValueError(
                         "Population "

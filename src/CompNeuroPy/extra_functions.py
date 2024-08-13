@@ -19,7 +19,7 @@ from deap import base
 from deap import creator
 from deap import tools
 from deap import cma
-from ANNarchy import Neuron, Population, simulate, setup, get_population
+from CompNeuroPy import ann
 from sympy import symbols, Symbol, solve, sympify, Eq, lambdify, factor
 from scipy.interpolate import griddata
 from scipy.optimize import brentq
@@ -1158,7 +1158,7 @@ class VClampParamSearch:
     @check_types()
     def __init__(
         self,
-        neuron_model: Neuron,
+        neuron_model: ann.Neuron,
         equations: str = """
         C*dv/dt = k*(v - v_r)*(v - v_t) - u + I
         du/dt = a*(b*(v - v_r) - u)
@@ -1380,7 +1380,7 @@ class VClampParamSearch:
         )
         ### also add the external current variable
         parameters = parameters + "\n" + f"{self.external_current_var} = 0"
-        neuron_mondel = Neuron(
+        neuron_mondel = ann.Neuron(
             parameters=parameters,
             equations=self.equations + "\nr=0",
         )
@@ -1700,14 +1700,14 @@ class VClampParamSearch:
         ### simulate both models at the same time
         ### for pop_normal nothing happens (resting state)
         ### for pop_clamp the voltage is set to v_0 and then to v_step for each neuron
-        get_population("pop_clamp").v = self._v_0_arr
-        simulate(duration)
-        get_population("pop_clamp").v = self._v_step_arr
-        simulate(self._timestep)
-        I_clamp_inst_arr = get_population("pop_clamp").I_clamp
-        simulate(duration - self._timestep)
-        I_clamp_hold_arr = get_population("pop_clamp").I_clamp
-        v_rest = get_population("pop_normal").v[0]
+        ann.get_population("pop_clamp").v = self._v_0_arr
+        ann.simulate(duration)
+        ann.get_population("pop_clamp").v = self._v_step_arr
+        ann.simulate(self._timestep)
+        I_clamp_inst_arr = ann.get_population("pop_clamp").I_clamp
+        ann.simulate(duration - self._timestep)
+        I_clamp_hold_arr = ann.get_population("pop_clamp").I_clamp
+        v_rest = ann.get_population("pop_normal").v[0]
 
         ### get unique values of v_step and their indices
         v_step_unique, v_step_unique_idx = np.unique(
@@ -1859,10 +1859,10 @@ class VClampParamSearch:
                 model containing the population with the voltage clamped neuron model
         """
         ### setup ANNarchy
-        setup(dt=self._timestep, seed=1234)
+        ann.setup(dt=self._timestep, seed=1234)
         ### create a population with the normal neuron model
         model_normal = CompNeuroModel(
-            model_creation_function=lambda: Population(
+            model_creation_function=lambda: ann.Population(
                 1, self._neuron_model, name="pop_normal"
             ),
             name="model_normal",
@@ -1870,7 +1870,7 @@ class VClampParamSearch:
         )
         ### create a population with the voltage clamped neuron model
         model_clamp = CompNeuroModel(
-            model_creation_function=lambda: Population(
+            model_creation_function=lambda: ann.Population(
                 len(self._v_0_arr), self._neuron_model_clamp, name="pop_clamp"
             ),
             name="model_clamp",
@@ -1879,7 +1879,7 @@ class VClampParamSearch:
 
         return model_normal, model_clamp
 
-    def _get_neuron_model_attributes(self, neuron_model: Neuron):
+    def _get_neuron_model_attributes(self, neuron_model: ann.Neuron):
         """
         Get a list of the attributes (parameters and variables) of the given neuron
         model.
@@ -1896,7 +1896,7 @@ class VClampParamSearch:
             attributes.append(var["name"])
         return attributes
 
-    def _get_neuron_model_arguments(self, neuron_model: Neuron):
+    def _get_neuron_model_arguments(self, neuron_model: ann.Neuron):
         """
         Get a dictionary of the initial arguments of the given neuron model.
 
@@ -1909,7 +1909,7 @@ class VClampParamSearch:
                 dictionary of the initial arguments of the given neuron model
         """
         ### get the names of the arguments of a Neuron class
-        init_arguments_name_list = list(Neuron.__init__.__code__.co_varnames)
+        init_arguments_name_list = list(ann.Neuron.__init__.__code__.co_varnames)
         init_arguments_name_list.remove("self")
         init_arguments_name_list.remove("name")
         init_arguments_name_list.remove("description")
@@ -1942,7 +1942,7 @@ class VClampParamSearch:
         init_arguments_dict["equations"] = "\n".join(equations_line_split_list)
 
         ### create neuron model with new equations
-        neuron_model_clamp = Neuron(**init_arguments_dict)
+        neuron_model_clamp = ann.Neuron(**init_arguments_dict)
 
         if self.verbose:
             print(f"Neuron model with voltage clamp equations:\n{neuron_model_clamp}")

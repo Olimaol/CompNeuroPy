@@ -1,15 +1,6 @@
 from CompNeuroPy import analysis_functions as af
 from CompNeuroPy import model_functions as mf
-from ANNarchy import (
-    get_time,
-    reset,
-    dt,
-    Monitor,
-    get_population,
-    get_projection,
-    populations,
-    projections,
-)
+from CompNeuroPy import ann
 import numpy as np
 from typingchecker import check_types
 from scipy.interpolate import interp1d
@@ -168,7 +159,7 @@ class CompNeuroMonitors:
                     self.timings[key]["start"].append(0)
                 else:
                     self.timings[key]["start"].append(
-                        np.round(get_time(), af.get_number_of_decimals(dt()))
+                        np.round(ann.get_time(), af.get_number_of_decimals(ann.dt()))
                     )
 
         ### reset model
@@ -177,7 +168,7 @@ class CompNeuroMonitors:
                 ### if parameters=False, get parameters before reset and set them after
                 ### reset
                 parameters_dict = mf._get_all_parameters()
-            reset(populations, projections, synapses, monitors, net_id=net_id)
+            ann.reset(populations, projections, synapses, monitors, net_id=net_id)
             if parameters is False:
                 ### if parameters=False, set parameters after reset
                 mf._set_all_parameters(parameters_dict)
@@ -342,7 +333,7 @@ class CompNeuroMonitors:
                 self.timings[compartment]["stop"]
             ):
                 ### was started/resumed but never stoped after --> use current time for stop time
-                self.timings[compartment]["stop"].append(get_time())
+                self.timings[compartment]["stop"].append(ann.get_time())
             ### calculate the idx of the recorded arrays which correspond to the timings and remove 'currently_paused'
             ### get for each start-stop pair the corrected start stop timings (when teh values were actually recorded, depends on period and timestep)
             ### and also get the number of recorded values for start-stop pair
@@ -368,13 +359,13 @@ class CompNeuroMonitors:
             temp_timings[compartment] = {
                 "start": {
                     "ms": np.round(
-                        start_time_arr, af.get_number_of_decimals(dt())
+                        start_time_arr, af.get_number_of_decimals(ann.dt())
                     ).tolist(),
                     "idx": start_idx,
                 },
                 "stop": {
                     "ms": np.round(
-                        stop_time_arr, af.get_number_of_decimals(dt())
+                        stop_time_arr, af.get_number_of_decimals(ann.dt())
                     ).tolist(),
                     "idx": stop_idx,
                 },
@@ -416,13 +407,13 @@ class CompNeuroMonitors:
             )
             ### check if compartment is pop
             if compartmentType == "pop":
-                mon[compartment] = Monitor(
-                    get_population(compartment), val, start=False, period=period
+                mon[compartment] = ann.Monitor(
+                    ann.get_population(compartment), val, start=False, period=period
                 )
             ### check if compartment is proj
             if compartmentType == "proj":
-                mon[compartment] = Monitor(
-                    get_projection(compartment), val, start=False, period=period
+                mon[compartment] = ann.Monitor(
+                    ann.get_projection(compartment), val, start=False, period=period
                 )
         return mon
 
@@ -474,7 +465,7 @@ class CompNeuroMonitors:
                     if len(timings[compartment_name]["start"]) <= len(
                         timings[compartment_name]["stop"]
                     ):
-                        timings[compartment_name]["start"].append(get_time())
+                        timings[compartment_name]["start"].append(ann.get_time())
             return timings
 
     def _pause_monitors(self, compartment_list, mon, timings=None):
@@ -510,7 +501,7 @@ class CompNeuroMonitors:
                 timings[key]["currently_paused"] = True
                 ### never make pause longer than start, this can be caused if pause is called multiple times without start in between
                 if len(timings[key]["stop"]) < len(timings[key]["start"]):
-                    timings[key]["stop"].append(get_time())
+                    timings[key]["stop"].append(ann.get_time())
                 ### if pause is directly called after start --> start == stop --> remove these entries, this is no actual period
                 if (
                     len(timings[key]["stop"]) == len(timings[key]["start"])
@@ -544,14 +535,14 @@ class CompNeuroMonitors:
             compartment_type, compartment, period = self._unpack_mon_dict_keys(key)
             recordings[f"{compartment};period"] = period
             if compartment_type == "pop":
-                pop = get_population(compartment)
+                pop = ann.get_population(compartment)
                 parameter_dict = {
                     param_name: getattr(pop, param_name)
                     for param_name in pop.parameters
                 }
                 recordings[f"{compartment};parameter_dict"] = parameter_dict
             if compartment_type == "proj":
-                proj = get_projection(compartment)
+                proj = ann.get_projection(compartment)
                 parameter_dict = {
                     param_name: getattr(proj, param_name)
                     for param_name in proj.parameters
@@ -560,7 +551,7 @@ class CompNeuroMonitors:
             for val_val in val:
                 temp = mon[compartment].get(val_val)
                 recordings[f"{compartment};{val_val}"] = temp
-        recordings["dt"] = dt()
+        recordings["dt"] = ann.dt()
         return recordings
 
     def _unpack_mon_dict_keys(self, s: str, warning: bool = False):
@@ -590,8 +581,8 @@ class CompNeuroMonitors:
         compartment_name = splitted_s[0]
 
         ### get type
-        pop_list = [pop.name for pop in populations()]
-        proj_list = [proj.name for proj in projections()]
+        pop_list = [pop.name for pop in ann.populations()]
+        proj_list = [proj.name for proj in ann.projections()]
         if compartment_name in pop_list and compartment_name in proj_list:
             ### raise error because name is in both lists
             print(
@@ -607,13 +598,13 @@ class CompNeuroMonitors:
         if len(splitted_s) == 2:
             period = float(splitted_s[1])
         else:
-            period = {"pop": dt(), "proj": dt() * 1000}[compartment_type]
+            period = {"pop": ann.dt(), "proj": ann.dt() * 1000}[compartment_type]
             ### print warning for compartment_type proj
             if compartment_type == "proj" and warning:
                 print(
                     f"WARNING CompNeuroMonitors: no period provided for projection {compartment_name}, period set to {period} ms"
                 )
-        period = round(period / dt()) * dt()
+        period = round(period / ann.dt()) * ann.dt()
 
         return compartment_type, compartment_name, period
 

@@ -1,14 +1,6 @@
 import numpy as np
-from ANNarchy import get_population, get_projection
-from ANNarchy.core.Random import (
-    Uniform,
-    DiscreteUniform,
-    Normal,
-    LogNormal,
-    Exponential,
-    Gamma,
-)
-from CompNeuroPy import CompNeuroModel
+from CompNeuroPy import ann, ann_Random
+from CompNeuroPy.generate_model import CompNeuroModel
 import csv
 import os
 import importlib
@@ -146,12 +138,12 @@ class BGM(CompNeuroModel):
         populations_new = []
         for pop_name in self.populations:
             populations_new.append(pop_name + self._name_appendix_to_add)
-            get_population(pop_name).name = pop_name + self._name_appendix_to_add
+            ann.get_population(pop_name).name = pop_name + self._name_appendix_to_add
         self.populations = populations_new
         projections_new = []
         for proj_name in self.projections:
             projections_new.append(proj_name + self._name_appendix_to_add)
-            get_projection(proj_name).name = proj_name + self._name_appendix_to_add
+            ann.get_projection(proj_name).name = proj_name + self._name_appendix_to_add
         self.projections = projections_new
         ### rename parameter keys except general
         params_new = {}
@@ -229,7 +221,7 @@ class BGM(CompNeuroModel):
             ### if param_object is a pop in network
             if param_object in self.populations:
                 ### and the param_name is an attribute of the pop --> set param of pop
-                if param_name in vars(get_population(param_object))["attributes"]:
+                if param_name in vars(ann.get_population(param_object))["attributes"]:
                     ### if parameter values are given as distribution --> get numpy array
                     if isinstance(param_val, str):
                         if (
@@ -240,9 +232,21 @@ class BGM(CompNeuroModel):
                             or "Exponential" in param_val
                             or "Gamma" in param_val
                         ):
-                            distribution = eval(param_val)
+                            param_val_tmp = param_val
+                            for distribution in [
+                                "Uniform",
+                                "DiscreteUniform",
+                                "Normal",
+                                "LogNormal",
+                                "Exponential",
+                                "Gamma",
+                            ]:
+                                param_val_tmp = param_val_tmp.replace(
+                                    distribution, "ann_Random." + distribution
+                                )
+                            distribution = eval(param_val_tmp)
                             param_val = distribution.get_values(
-                                shape=get_population(param_object).geometry
+                                shape=ann.get_population(param_object).geometry
                             )
                     self.set_param(
                         compartment=param_object,
@@ -287,7 +291,7 @@ class BGM(CompNeuroModel):
                             compartment=param_object,
                             parameter_name="rates_noise",
                             parameter_value=self._rng.normal(
-                                mean, sd, get_population(param_object).size
+                                mean, sd, ann.get_population(param_object).size
                             ),
                         )
                     else:
@@ -296,7 +300,7 @@ class BGM(CompNeuroModel):
                             parameter_name="rates_noise",
                             parameter_value=mean,
                         )
-                elif param_name in vars(get_population(param_object))["attributes"]:
+                elif param_name in vars(ann.get_population(param_object))["attributes"]:
                     ### noise parameters which are actual attributes of the pop are simply set
                     self.set_param(
                         compartment=param_object,
@@ -395,7 +399,7 @@ class BGM(CompNeuroModel):
             if (
                 param_object in self.projections
                 and not (param_name in already_set_params[param_object])
-                and param_name in vars(get_projection(param_object))["attributes"]
+                and param_name in vars(ann.get_projection(param_object))["attributes"]
             ):
                 self.set_param(
                     compartment=param_object,
@@ -468,12 +472,12 @@ class BGM(CompNeuroModel):
 
     def _needed_imports(self):
         for import_val in [
-            Uniform,
-            DiscreteUniform,
-            Normal,
-            LogNormal,
-            Exponential,
-            Gamma,
+            ann_Random.Uniform,
+            ann_Random.DiscreteUniform,
+            ann_Random.Normal,
+            ann_Random.LogNormal,
+            ann_Random.Exponential,
+            ann_Random.Gamma,
             importlib,
         ]:
             print(import_val)

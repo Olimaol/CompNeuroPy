@@ -1,11 +1,4 @@
-from ANNarchy import (
-    simulate,
-    get_population,
-    dt,
-    simulate_until,
-    get_current_step,
-    get_time,
-)
+from CompNeuroPy import ann
 from CompNeuroPy import analysis_functions as af
 import numpy as np
 from typing import Callable
@@ -33,22 +26,24 @@ def attr_sim(pop: str, attr_dict, t=500):
 
     ### save prev attr
     v_prev_dict = {
-        attr: getattr(get_population(pop), attr) for attr in attr_dict.keys()
+        attr: getattr(ann.get_population(pop), attr) for attr in attr_dict.keys()
     }
 
     ### set attributes
     for attr, v in attr_dict.items():
-        setattr(get_population(pop), attr, v)
+        setattr(ann.get_population(pop), attr, v)
 
     ### simulate
-    simulate(t)
+    ann.simulate(t)
 
     ### reset attributes to previous values
     for attr, v in v_prev_dict.items():
-        setattr(get_population(pop), attr, v)
+        setattr(ann.get_population(pop), attr, v)
 
     ### return the values for the attribute for each time step
-    attr_list_dict = {attr: [v] * int(round(t / dt())) for attr, v in attr_dict.items()}
+    attr_list_dict = {
+        attr: [v] * int(round(t / ann.dt())) for attr, v in attr_dict.items()
+    }
     return attr_list_dict
 
 
@@ -125,12 +120,12 @@ def attr_ramp(pop: str, attr, v0, v1, dur, n):
             simulation time step without remainder
     """
 
-    if (dur / n) / dt() % 1 != 0:
+    if (dur / n) / ann.dt() % 1 != 0:
         raise ValueError(
             "ERROR current_ramp: dur/n should result in a duration (for a single stimulation) which is divisible by the simulation time step (without remainder)\ncurrent duration = "
             + str(dur / n)
             + ", timestep = "
-            + str(dt())
+            + str(ann.dt())
             + "!\n"
         )
 
@@ -478,7 +473,7 @@ class SimulationEvents:
         ### (otherwise run would need to be called at time 0)
         for event in self.event_list:
             if event.onset is not None:
-                event.onset = get_current_step() + event.onset
+                event.onset = ann.get_current_step() + event.onset
 
         ### check if there are events which have no onset and are not triggered by other
         ### events and have no model_trigger --> they would never start
@@ -493,7 +488,7 @@ class SimulationEvents:
                 and event.model_trigger is None
                 and event.name not in triggered_events
             ):
-                event.onset = get_current_step()
+                event.onset = ann.get_current_step()
                 if self.verbose:
                     print(event.name, "set onset to start of run")
 
@@ -519,22 +514,23 @@ class SimulationEvents:
                 print("check_triggers:", self.model_trigger_list)
             if len(self.model_trigger_list) > 1:
                 ### multiple model triggers
-                simulate_until(
+                ann.simulate_until(
                     max_duration=next_events_time,
                     population=[
-                        get_population(pop_name) for pop_name in self.model_trigger_list
+                        ann.get_population(pop_name)
+                        for pop_name in self.model_trigger_list
                     ],
                     operator="or",
                 )
             elif len(self.model_trigger_list) > 0:
                 ### a single model trigger
-                simulate_until(
+                ann.simulate_until(
                     max_duration=next_events_time,
-                    population=get_population(self.model_trigger_list[0]),
+                    population=ann.get_population(self.model_trigger_list[0]),
                 )
             else:
                 ### no model_triggers
-                simulate(next_events_time)
+                ann.simulate(next_events_time)
 
         ### after run finishes initialize again
         self._initialize()
@@ -554,7 +550,7 @@ class SimulationEvents:
             event_run = False
             for event in self.event_list:
                 if (
-                    event.onset == get_current_step()
+                    event.onset == ann.get_current_step()
                     and not (event.name in self.run_event_list)
                     and event._check_requirements()
                 ):
@@ -571,7 +567,7 @@ class SimulationEvents:
         ### loop to check if model trigger got active
         for model_trigger in self.model_trigger_list:
             ### TODO this is not generalized yet, only works if the model_trigger populations have the variable decision which is set to -1 if the model trigger is active
-            if int(get_population(model_trigger).decision[0]) == -1:
+            if int(ann.get_population(model_trigger).decision[0]) == -1:
                 ### -1 means got active
                 ### find the events triggerd by the model_trigger and run them
                 for event in self.event_list:
@@ -598,12 +594,12 @@ class SimulationEvents:
                 continue
             ### check if onset in the future and nearest
             if (
-                event.onset > get_current_step()
-                and (event.onset - get_current_step()) < next_event_time
+                event.onset > ann.get_current_step()
+                and (event.onset - ann.get_current_step()) < next_event_time
             ):
-                next_event_time = event.onset - get_current_step()
+                next_event_time = event.onset - ann.get_current_step()
         ### return difference (simulation duration until nearest next event) in ms, round to full timesteps
-        return round(next_event_time * dt(), af.get_number_of_decimals(dt()))
+        return round(next_event_time * ann.dt(), af.get_number_of_decimals(ann.dt()))
 
     def _get_model_trigger_list(self):
         """
@@ -686,10 +682,10 @@ class SimulationEvents:
             if self._check_requirements():
                 ### run the event
                 if self.trial_procedure.verbose:
-                    print("run event:", self.name, get_time())
+                    print("run event:", self.name, ann.get_time())
                 ### for events which are triggered by model --> set onset
                 if self.onset == None:
-                    self.onset = get_current_step()
+                    self.onset = ann.get_current_step()
                 ### run the effect
                 if self.effect is not None:
                     self.effect()

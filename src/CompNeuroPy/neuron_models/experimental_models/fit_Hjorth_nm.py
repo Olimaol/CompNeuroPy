@@ -1,10 +1,10 @@
-from ANNarchy import Neuron
+from CompNeuroPy import ann
 
 ### Fit neuron model for ChIN based on electrophysiological recordings from Hjorth et al. (2020)
 ### Hjorth, J. J. J., Kozlov, A., Carannante, I., Frost Nylén, J., Lindroos, R., Johansson, Y., Tokarska, A., Dorst, M. C., Suryanarayana, S. M., Silberberg, G., Hellgren Kotaleski, J., & Grillner, S. (2020). The microcircuits of striatum in silico. Proceedings of the National Academy of Sciences, 117(17), 9554–9565. https://doi.org/10.1073/pnas.2000671117
 
 
-_Izhikevich2007_Hjorth_2020_ChIN1 = Neuron(
+_Izhikevich2007_Hjorth_2020_ChIN1 = ann.Neuron(
     parameters="""
         C      = 0 : population # pF
         k      = 0 : population #
@@ -36,7 +36,7 @@ _Izhikevich2007_Hjorth_2020_ChIN1 = Neuron(
 )
 
 
-_Izhikevich2007_Hjorth_2020_ChIN2 = Neuron(
+_Izhikevich2007_Hjorth_2020_ChIN2 = ann.Neuron(
     parameters="""
         C      = 0 : population # pF
         k      = 0 : population #
@@ -70,7 +70,7 @@ _Izhikevich2007_Hjorth_2020_ChIN2 = Neuron(
 )
 
 
-_Izhikevich2007_Hjorth_2020_ChIN3 = Neuron(
+_Izhikevich2007_Hjorth_2020_ChIN3 = ann.Neuron(
     parameters="""
         C      = 0 : population # pF
         k      = 0 : population #
@@ -109,7 +109,7 @@ _Izhikevich2007_Hjorth_2020_ChIN3 = Neuron(
 )
 
 
-_Izhikevich2007_Hjorth_2020_ChIN4 = Neuron(
+_Izhikevich2007_Hjorth_2020_ChIN4 = ann.Neuron(
     parameters="""
         C      = 0 : population # pF
         k      = 0 : population #
@@ -144,7 +144,7 @@ _Izhikevich2007_Hjorth_2020_ChIN4 = Neuron(
 )
 
 
-_Izhikevich2007_Hjorth_2020_ChIN5 = Neuron(
+_Izhikevich2007_Hjorth_2020_ChIN5 = ann.Neuron(
     parameters="""
         C      = 0 : population # pF
         k      = 0 : population #
@@ -179,7 +179,7 @@ _Izhikevich2007_Hjorth_2020_ChIN5 = Neuron(
 )
 
 
-_Izhikevich2007_Hjorth_2020_ChIN6 = Neuron(
+_Izhikevich2007_Hjorth_2020_ChIN6 = ann.Neuron(
     parameters="""
         C      = 0 : population # pF
         k      = 0 : population #
@@ -219,7 +219,7 @@ _Izhikevich2007_Hjorth_2020_ChIN6 = Neuron(
 )
 
 
-_Izhikevich2007_Hjorth_2020_ChIN7 = Neuron(
+_Izhikevich2007_Hjorth_2020_ChIN7 = ann.Neuron(
     parameters="""
         C      = 0 : population # pF
         k      = 0 : population #
@@ -257,7 +257,7 @@ _Izhikevich2007_Hjorth_2020_ChIN7 = Neuron(
 )
 
 
-_Izhikevich2007_Hjorth_2020_ChIN8 = Neuron(
+_Izhikevich2007_Hjorth_2020_ChIN8 = ann.Neuron(
     parameters="""
         C      = 0 : population # pF
         k      = 0 : population #
@@ -299,7 +299,7 @@ _Izhikevich2007_Hjorth_2020_ChIN8 = Neuron(
 )
 
 
-_Izhikevich2007_Hjorth_2020_ChIN9 = Neuron(
+_Izhikevich2007_Hjorth_2020_ChIN9 = ann.Neuron(
     parameters="""
         C      = 0 : population # pF
         k      = 0 : population #
@@ -341,7 +341,7 @@ _Izhikevich2007_Hjorth_2020_ChIN9 = Neuron(
 )
 
 
-_Izhikevich2007_Hjorth_2020_ChIN10 = Neuron(
+_Izhikevich2007_Hjorth_2020_ChIN10 = ann.Neuron(
     parameters="""
         C      = 0 : population # pF
         k      = 0 : population #

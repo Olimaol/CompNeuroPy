@@ -1,4 +1,4 @@
-from ANNarchy import Neuron
+from CompNeuroPy import ann
 
 
 ### Hodgkin Huxley like neuron models
@@ -273,7 +273,7 @@ class _CorbitStrings:
         """
 
 
-class _HHneuron(Neuron):
+class _HHneuron(ann.Neuron):
     """
     PREDEFINED
 

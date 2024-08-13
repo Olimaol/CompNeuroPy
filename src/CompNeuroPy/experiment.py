@@ -1,4 +1,4 @@
-from ANNarchy import reset
+from CompNeuroPy import ann
 from CompNeuroPy.monitors import RecordingTimes
 from CompNeuroPy.monitors import CompNeuroMonitors
 from CompNeuroPy import model_functions as mf
@@ -150,7 +150,7 @@ class CompNeuroExp:
                 parameters_dict = mf._get_all_parameters()
             ### there are no monitors, but model should be resetted, therefore use
             ### ANNarchy's reset function
-            reset(**reset_kwargs)
+            ann.reset(**reset_kwargs)
             if parameters is False:
                 ### if parameters=False, set parameters after reset
                 mf._set_all_parameters(parameters_dict)

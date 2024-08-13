@@ -1,7 +1,7 @@
-from ANNarchy import Synapse
+from CompNeuroPy import ann
 
 
-class FactorSynapse(Synapse):
+class FactorSynapse(ann.Synapse):
     """
     Synapse which scales the transmitted value by a specified factor. Factor is
     equivalent to the connection weight if weight==1.

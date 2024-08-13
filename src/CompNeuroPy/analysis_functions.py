@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
-from ANNarchy import raster_plot, dt, inter_spike_interval, coefficient_of_variation
+from CompNeuroPy import ann
 import warnings
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy import extra_functions as ef
@@ -27,9 +27,9 @@ def my_raster_plot(spikes: dict):
         n (array):
             ranks of the neurons
     """
-    t, n = raster_plot(spikes)
+    t, n = ann.raster_plot(spikes)
     np.zeros(10)
-    t = np.round(t / dt(), 0).astype(int)
+    t = np.round(t / ann.dt(), 0).astype(int)
     return t, n
 
 
@@ -357,7 +357,7 @@ def _get_pop_rate_old(spikes, duration, dt=1, t_start=0, t_smooth_ms=-1):
     duration_init = duration
     temp_duration = duration + t_start
 
-    t, n = raster_plot(spikes)
+    t, n = ann.raster_plot(spikes)
     if len(t) > 1:  # check if there are spikes in population at all
         if t_smooth_ms == -1:
             ISIs = []
@@ -1562,7 +1562,7 @@ class PlotRecordings:
         ### set title
         plt.title(f"Interspike interval histogram {compartment} ({len(data)})")
         ### get interspike intervals
-        interspike_intervals_list = inter_spike_interval(spikes=data)
+        interspike_intervals_list = ann.inter_spike_interval(spikes=data)
         ### plot histogram
         plt.hist(
             interspike_intervals_list,
@@ -1590,7 +1590,7 @@ class PlotRecordings:
         ### set title
         plt.title(f"Coefficient of variation histogram {compartment} ({len(data)})")
         ### get coefficient of variation
-        coefficient_of_variation_dict = coefficient_of_variation(
+        coefficient_of_variation_dict = ann.coefficient_of_variation(
             spikes=data,
             per_neuron=True,
         )

@@ -1,17 +1,4 @@
-from ANNarchy import (
-    Neuron,
-    Population,
-    dt,
-    add_function,
-    Projection,
-    get_population,
-    Constant,
-    Synapse,
-    projections,
-    populations,
-    get_projection,
-)
-from ANNarchy.core import ConnectorMethods
+from CompNeuroPy import ann, ann_ConnectorMethods
 import numpy as np
 from CompNeuroPy import model_functions as mf
 from CompNeuroPy.generate_model import CompNeuroModel
@@ -19,18 +6,18 @@ from typingchecker import check_types
 import inspect
 
 _connector_methods_dict = {
-    "One-to-One": ConnectorMethods.connect_one_to_one,
-    "All-to-All": ConnectorMethods.connect_all_to_all,
-    "Gaussian": ConnectorMethods.connect_gaussian,
-    "Difference-of-Gaussian": ConnectorMethods.connect_dog,
-    "Random": ConnectorMethods.connect_fixed_probability,
-    "Random Convergent": ConnectorMethods.connect_fixed_number_pre,
-    "Random Divergent": ConnectorMethods.connect_fixed_number_post,
-    "User-defined": ConnectorMethods.connect_with_func,
-    "MatrixMarket": ConnectorMethods.connect_from_matrix_market,
-    "Connectivity matrix": ConnectorMethods.connect_from_matrix,
-    "Sparse connectivity matrix": ConnectorMethods.connect_from_sparse,
-    "From File": ConnectorMethods.connect_from_file,
+    "One-to-One": ann_ConnectorMethods.connect_one_to_one,
+    "All-to-All": ann_ConnectorMethods.connect_all_to_all,
+    "Gaussian": ann_ConnectorMethods.connect_gaussian,
+    "Difference-of-Gaussian": ann_ConnectorMethods.connect_dog,
+    "Random": ann_ConnectorMethods.connect_fixed_probability,
+    "Random Convergent": ann_ConnectorMethods.connect_fixed_number_pre,
+    "Random Divergent": ann_ConnectorMethods.connect_fixed_number_post,
+    "User-defined": ann_ConnectorMethods.connect_with_func,
+    "MatrixMarket": ann_ConnectorMethods.connect_from_matrix_market,
+    "Connectivity matrix": ann_ConnectorMethods.connect_from_matrix,
+    "Sparse connectivity matrix": ann_ConnectorMethods.connect_from_sparse,
+    "From File": ann_ConnectorMethods.connect_from_file,
 }
 
 
@@ -54,10 +41,10 @@ class _CreateDBSmodel:
 
     def __init__(
         self,
-        stimulated_population: Population,
-        excluded_populations_list: list[Population],
-        passing_fibres_list: list[Projection],
-        axon_rate_amp: float | dict[Population | str, float],
+        stimulated_population: ann.Population,
+        excluded_populations_list: list[ann.Population],
+        passing_fibres_list: list[ann.Projection],
+        axon_rate_amp: float | dict[ann.Population | str, float],
     ) -> None:
         """
         Prepare model for DBS stimulation
@@ -89,21 +76,22 @@ class _CreateDBSmodel:
         self.recreate_model()
 
         ### get variables containing Populations and Projections
-        self.stimulated_population: Population = get_population(
+        self.stimulated_population: ann.Population = ann.get_population(
             self.stimulated_population_name
         )
-        self.excluded_populations_list: list[Population] = [
-            get_population(pop_name) for pop_name in self.excluded_populations_name_list
+        self.excluded_populations_list: list[ann.Population] = [
+            ann.get_population(pop_name)
+            for pop_name in self.excluded_populations_name_list
         ]
-        self.passing_fibres_list: list[Projection] = [
-            get_projection(proj_name) for proj_name in self.passing_fibres_name_list
+        self.passing_fibres_list: list[ann.Projection] = [
+            ann.get_projection(proj_name) for proj_name in self.passing_fibres_name_list
         ]
         if isinstance(self.axon_rate_amp, type(None)):
             ### self.axon_rate_amp is None --> use the axon_rate_amp_pop_name_list and axon_rate_amp_value_list to create the dict
-            self.axon_rate_amp: dict[Population | str, float] = {
+            self.axon_rate_amp: dict[ann.Population | str, float] = {
                 ### key is either a Populaiton or the string "default"
                 (
-                    get_population(pop_name[4:])
+                    ann.get_population(pop_name[4:])
                     if pop_name.startswith("pop;")
                     else pop_name
                 ): axon_rate_amp_val
@@ -114,10 +102,10 @@ class _CreateDBSmodel:
 
     def analyze_model(
         self,
-        stimulated_population: Population,
-        excluded_populations_list: list[Population],
-        passing_fibres_list: list[Projection],
-        axon_rate_amp: float | dict[Population | str, float],
+        stimulated_population: ann.Population,
+        excluded_populations_list: list[ann.Population],
+        passing_fibres_list: list[ann.Projection],
+        axon_rate_amp: float | dict[ann.Population | str, float],
     ):
         """
         Analyze the model to be able to recreate it.
@@ -152,7 +140,7 @@ class _CreateDBSmodel:
             self.axon_rate_amp_pop_name_list = [
                 (
                     f"pop;{axon_rate_amp_key.name}"
-                    if isinstance(axon_rate_amp_key, Population)
+                    if isinstance(axon_rate_amp_key, ann.Population)
                     else axon_rate_amp_key
                 )
                 for axon_rate_amp_key in axon_rate_amp.keys()
@@ -192,8 +180,8 @@ class _CreateDBSmodel:
             projection_name_list (list):
                 List of all projection names
         """
-        population_name_list: list[str] = [pop.name for pop in populations()]
-        projection_name_list: list[str] = [proj.name for proj in projections()]
+        population_name_list: list[str] = [pop.name for pop in ann.populations()]
+        projection_name_list: list[str] = [proj.name for proj in ann.projections()]
 
         return population_name_list, projection_name_list
 
@@ -210,18 +198,18 @@ class _CreateDBSmodel:
 
         ### for loop over all populations
         for pop_name in self.population_name_list:
-            pop: Population = get_population(pop_name)
+            pop: ann.Population = ann.get_population(pop_name)
             ### get the neuron model attributes (parameters/variables)
             neuron_model_attr_dict[pop.name] = pop.init
             ### get a dict of all paramters of the __init__ function of the Neuron
-            init_params = inspect.signature(Neuron.__init__).parameters
+            init_params = inspect.signature(ann.Neuron.__init__).parameters
             neuron_model_init_parameter_dict[pop.name] = {
                 param: getattr(pop.neuron_type, param)
                 for param in init_params
                 if param != "self"
             }
             ### get a dict of all paramters of the __init__ function of the Population
-            init_params = inspect.signature(Population.__init__).parameters
+            init_params = inspect.signature(ann.Population.__init__).parameters
             pop_init_parameter_dict[pop.name] = {
                 param: getattr(pop, param)
                 for param in init_params
@@ -253,18 +241,18 @@ class _CreateDBSmodel:
 
         ### loop over all projections
         for proj_name in self.projection_name_list:
-            proj: Projection = get_projection(proj_name)
+            proj: ann.Projection = ann.get_projection(proj_name)
             ### get the synapse model attributes (parameters/variables)
             synapse_model_attr_dict[proj.name] = proj.init
             ### get a dict of all paramters of the __init__ function of the Synapse
-            init_params = inspect.signature(Synapse.__init__).parameters
+            init_params = inspect.signature(ann.Synapse.__init__).parameters
             synapse_init_parameter_dict[proj.name] = {
                 param: getattr(proj.synapse_type, param)
                 for param in init_params
                 if param != "self"
             }
             ### get a dict of all paramters of the __init__ function of the Projection
-            init_params = inspect.signature(Projection.__init__).parameters
+            init_params = inspect.signature(ann.Projection.__init__).parameters
             proj_init_parameter_dict[proj_name] = {
                 param: getattr(proj, param)
                 for param in init_params
@@ -304,7 +292,7 @@ class _CreateDBSmodel:
             pre_post_pop_name_dict,
         )
 
-    def get_connector_parameters(self, proj: Projection):
+    def get_connector_parameters(self, proj: ann.Projection):
         """
         Get the parameters of the given connector function.
 
@@ -430,7 +418,7 @@ class _CreateDBSmodel:
             neuron_model_init_parameter_dict
         )
         ### create the new neuron model
-        neuron_model_new = Neuron(**neuron_model_init_parameter_dict)
+        neuron_model_new = ann.Neuron(**neuron_model_init_parameter_dict)
 
         ### 2nd recreate the population
         ### get the stored parameters of the __init__ function of the Population
@@ -438,7 +426,7 @@ class _CreateDBSmodel:
         ### replace the neuron model with the new neuron model
         pop_init_parameter_dict["neuron"] = neuron_model_new
         ### create the new population
-        pop_new = Population(**pop_init_parameter_dict)
+        pop_new = ann.Population(**pop_init_parameter_dict)
 
         ### 3rd set the parameters and variables of the population's neurons
         ### get the stored parameters and variables
@@ -707,20 +695,20 @@ class _CreateDBSmodel:
             synapse_init_parameter_dict,
         )
         ### create the new synapse model
-        synapse_new = Synapse(**synapse_init_parameter_dict)
+        synapse_new = ann.Synapse(**synapse_init_parameter_dict)
 
         ### 2nd recreate projection
         ### replace the synapse model with the new synapse model
         proj_init_parameter_dict["synapse"] = synapse_new
         ### replace pre and post to new populations
-        proj_init_parameter_dict["pre"] = get_population(
+        proj_init_parameter_dict["pre"] = ann.get_population(
             self.pre_post_pop_name_dict[proj_name][0]
         )
-        proj_init_parameter_dict["post"] = get_population(
+        proj_init_parameter_dict["post"] = ann.get_population(
             self.pre_post_pop_name_dict[proj_name][1]
         )
         ### create the new projection
-        proj_new = Projection(**proj_init_parameter_dict)
+        proj_new = ann.Projection(**proj_init_parameter_dict)
 
         ### 3rd connect the projection with the connector function
         ### get the connector function
@@ -884,10 +872,10 @@ class _CreateDBSmodelcnp(_CreateDBSmodel):
     def __init__(
         self,
         model: CompNeuroModel,
-        stimulated_population: Population,
-        excluded_populations_list: list[Population],
-        passing_fibres_list: list[Projection],
-        axon_rate_amp: float | dict[Population | str, float],
+        stimulated_population: ann.Population,
+        excluded_populations_list: list[ann.Population],
+        passing_fibres_list: list[ann.Projection],
+        axon_rate_amp: float | dict[ann.Population | str, float],
     ) -> None:
         """
         Prepare model for DBS stimulation.
@@ -998,22 +986,22 @@ class DBSstimulator:
     @check_types()
     def __init__(
         self,
-        stimulated_population: Population,
+        stimulated_population: ann.Population,
         population_proportion: float = 1.0,
-        excluded_populations_list: list[Population] = [],
+        excluded_populations_list: list[ann.Population] = [],
         dbs_depolarization: float = 0.0,
         orthodromic: bool = False,
         antidromic: bool = False,
         efferents: bool = False,
         afferents: bool = False,
         passing_fibres: bool = False,
-        passing_fibres_list: list[Projection] = [],
+        passing_fibres_list: list[ann.Projection] = [],
         passing_fibres_strength: float | list[float] = 1.0,
         sum_branches: bool = True,
         dbs_pulse_frequency_Hz: float = 130.0,
         dbs_pulse_width_us: float = 300.0,
         axon_spikes_per_pulse: float = 1.0,
-        axon_rate_amp: float | dict[Population | str, float] = 1.0,
+        axon_rate_amp: float | dict[ann.Population | str, float] = 1.0,
         seed: int | None = None,
         auto_implement: bool = False,
         model: CompNeuroModel | None = None,
@@ -1206,13 +1194,13 @@ class DBSstimulator:
                 Frequency of the DBS pulse in Hz
         """
         # pulse frequency:
-        Constant("dbs_pulse_frequency_Hz", dbs_pulse_frequency_Hz)
+        ann.Constant("dbs_pulse_frequency_Hz", dbs_pulse_frequency_Hz)
         # pulse width:
         # Neumant et al.. 2023: 60us but Meier et al. 2022: 300us... 60us = 0.06ms is very small for ANNarchy simulations
-        Constant("dbs_pulse_width_us", self.dbs_pulse_width_us)
+        ann.Constant("dbs_pulse_width_us", self.dbs_pulse_width_us)
 
         ### add global function for DBS pulse
-        add_function(
+        ann.add_function(
             "pulse(time_ms) = ite(modulo(time_ms*1000, 1000000./dbs_pulse_frequency_Hz) < dbs_pulse_width_us, 1., 0.)"
         )
 
@@ -1230,7 +1218,7 @@ class DBSstimulator:
                 Probability of axon spikes per timestep during DBS pulse
         """
         return np.clip(
-            (axon_spikes_per_pulse * 1000 * dt() / self.dbs_pulse_width_us), 0, 1
+            (axon_spikes_per_pulse * 1000 * ann.dt() / self.dbs_pulse_width_us), 0, 1
         )
 
     def _set_depolarization(self, dbs_depolarization: float | None = None):
@@ -1247,7 +1235,7 @@ class DBSstimulator:
             dbs_depolarization = self.dbs_depolarization
 
         ### set depolarization of population
-        for pop in populations():
+        for pop in ann.populations():
             if pop == self.stimulated_population:
                 pop.dbs_depolarization = dbs_depolarization
             else:
@@ -1263,7 +1251,7 @@ class DBSstimulator:
         passing_fibres_strength: float | list[float] | None = None,
         sum_branches: bool | None = None,
         axon_spikes_per_pulse: float | None = None,
-        axon_rate_amp: float | dict[Population | str, float] | None = None,
+        axon_rate_amp: float | dict[ann.Population | str, float] | None = None,
     ):
         """
         Set axon spikes forwarding orthodromic
@@ -1386,7 +1374,7 @@ class DBSstimulator:
         """
         Deactivate axon spikes forwarding for both orthodromic and antidromic.
         """
-        for pop in populations():
+        for pop in ann.populations():
             ### deactivate axon spike genearation for all populations
             pop.prob_axon_spike = 0
             pop.axon_rate_amp = 0
@@ -1395,7 +1383,7 @@ class DBSstimulator:
             pop.antidromic_prob = 0
 
         ### deactivate orthodromic transmission for all projections
-        for proj in projections():
+        for proj in ann.projections():
             proj.axon_transmission = 0
             proj.p_axon_spike_trans = 0
 
@@ -1406,7 +1394,7 @@ class DBSstimulator:
         passing_fibres: bool,
         passing_fibres_strength: list[float],
         axon_spikes_per_pulse: float,
-        axon_rate_amp: dict[Population | str, float],
+        axon_rate_amp: dict[ann.Population | str, float],
     ):
         """
         Set orthodromic axon spikes forwarding.
@@ -1437,7 +1425,7 @@ class DBSstimulator:
         """
         if efferents:
             ### activate all efferent projections
-            projection_list = projections(pre=self.stimulated_population)
+            projection_list = ann.projections(pre=self.stimulated_population)
             for proj in projection_list:
                 ### skip excluded populations
                 if proj.post in self.excluded_populations_list:
@@ -1459,7 +1447,7 @@ class DBSstimulator:
 
         if afferents:
             ### activate all afferent projections
-            projection_list = projections(post=self.stimulated_population)
+            projection_list = ann.projections(post=self.stimulated_population)
             for proj in projection_list:
                 ### skip excluded populations
                 if proj.pre in self.excluded_populations_list:
@@ -1542,7 +1530,7 @@ class DBSstimulator:
         if afferents:
             ### activate all afferent projections, i.e. all presynaptic populations of stimulated population
             ### get presynaptic projections
-            projection_list = projections(post=self.stimulated_population)
+            projection_list = ann.projections(post=self.stimulated_population)
             ### get presynaptic populations from projections
             presyn_pop_list = []
             presyn_pop_name_list = []
@@ -1632,7 +1620,7 @@ class DBSstimulator:
         passing_fibres_strength: float | list[float] | None = None,
         sum_branches: bool | None = None,
         axon_spikes_per_pulse: float | None = None,
-        axon_rate_amp: float | dict[Population | str, float] | None = None,
+        axon_rate_amp: float | dict[ann.Population | str, float] | None = None,
         seed: int | None = None,
     ):
         """
@@ -1744,7 +1732,7 @@ class DBSstimulator:
             dbs_on_array = self._create_dbs_on_array(population_proportion, seed)
 
         ### set DBS on for all populations
-        for pop in populations():
+        for pop in ann.populations():
             ### of the stimulated population only the specified proportion is affected by DBS
             if pop == self.stimulated_population:
                 pop.dbs_on = dbs_on_array
@@ -1756,7 +1744,7 @@ class DBSstimulator:
         Deactivate DBS.
         """
         ### set DBS off for all populations
-        for pop in populations():
+        for pop in ann.populations():
             pop.dbs_on = 0
             pop.prob_axon_spike = 0
             pop.axon_rate_amp = 0
@@ -1777,13 +1765,13 @@ class DBSstimulator:
                 List of pointers to populations and projections of the new model
         """
         ### update pointers
-        pointer_list_new: list[Population | Projection] = []
+        pointer_list_new: list[ann.Population | ann.Projection] = []
         for pointer in pointer_list:
             compartment_name = pointer.name
-            if isinstance(pointer, Population):
-                pointer_list_new.append(get_population(compartment_name))
-            elif isinstance(pointer, Projection):
-                pointer_list_new.append(get_projection(compartment_name))
+            if isinstance(pointer, ann.Population):
+                pointer_list_new.append(ann.get_population(compartment_name))
+            elif isinstance(pointer, ann.Projection):
+                pointer_list_new.append(ann.get_projection(compartment_name))
             else:
                 raise TypeError(
                     f"Pointer {pointer} is neither a Population nor a Projection"

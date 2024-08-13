@@ -1,3 +1,40 @@
+### ANNarchy
+import os
+import sys
+from contextlib import contextmanager
+
+
+@contextmanager
+def suppress_stdout():
+    """
+    Suppresses the print output of a function
+
+    Example:
+        ```python
+        with suppress_stdout():
+            print("this will not be printed")
+        ```
+    """
+    with open(os.devnull, "w") as devnull:
+        old_stdout = sys.stdout
+        sys.stdout = devnull
+        try:
+            yield
+        finally:
+            sys.stdout = old_stdout
+
+
+with suppress_stdout():
+    import ANNarchy as ann
+    from ANNarchy.core import ConnectorMethods as ann_ConnectorMethods
+
+    if ann.__version__ >= "4.8":
+        from ANNarchy.intern.NetworkManager import NetworkManager as ann_NetworkManager
+    else:
+        from ANNarchy.core import Global as ann_Global
+
+    from ANNarchy.core import Random as ann_Random
+
 ### functions
 from CompNeuroPy.analysis_functions import (
     my_raster_plot,

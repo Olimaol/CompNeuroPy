@@ -1,18 +1,12 @@
-from ANNarchy import (
-    compile,
-    populations,
-    projections,
-    clear,
-)
-from ANNarchy import __version__ as ANNarchy_version
+from CompNeuroPy import ann
 import os
 from CompNeuroPy import system_functions as sf
 from CompNeuroPy.generate_model import CompNeuroModel
 
-if ANNarchy_version >= "4.8":
-    from ANNarchy.intern.NetworkManager import NetworkManager
+if ann.__version__ >= "4.8":
+    from CompNeuroPy import ann_NetworkManager as NetworkManager
 else:
-    from ANNarchy.core import Global
+    from CompNeuroPy import ann_Global as Global
 
 
 def compile_in_folder(folder_name, net=None, clean=False, silent=False):
@@ -33,7 +27,7 @@ def compile_in_folder(folder_name, net=None, clean=False, silent=False):
     """
     sf.create_dir("annarchy_folders/" + folder_name, print_info=False)
     if isinstance(net, type(None)):
-        compile("annarchy_folders/" + folder_name, clean=clean, silent=silent)
+        ann.compile("annarchy_folders/" + folder_name, clean=clean, silent=silent)
     else:
         net.compile("annarchy_folders/" + folder_name, clean=clean, silent=silent)
     if os.getcwd().split("/")[-1] == "annarchy_folders":
@@ -48,7 +42,7 @@ def annarchy_compiled(net_id=0):
         net_id (int, optional):
             Network ID. Default: 0.
     """
-    if ANNarchy_version >= "4.8":
+    if ann.__version__ >= "4.8":
         return NetworkManager().is_compiled(net_id)
     else:
         return Global._network[net_id]["compiled"]
@@ -64,8 +58,8 @@ def get_full_model():
             population and projection names, respectively.
     """
     return {
-        "populations": [pop.name for pop in populations()],
-        "projections": [proj.name for proj in projections()],
+        "populations": [pop.name for pop in ann.populations()],
+        "projections": [proj.name for proj in ann.projections()],
     }
 
 
@@ -83,7 +77,9 @@ def cnp_clear(functions=True, neurons=True, synapses=True, constants=True):
         constants (bool, optional):
             If True, all constants are cleared. Default: True.
     """
-    clear(functions=functions, neurons=neurons, synapses=synapses, constants=constants)
+    ann.clear(
+        functions=functions, neurons=neurons, synapses=synapses, constants=constants
+    )
     for model_name in CompNeuroModel._initialized_models.keys():
         CompNeuroModel._initialized_models[model_name] = False
     for model_name in CompNeuroModel._compiled_models.keys():
@@ -115,14 +111,14 @@ def _get_all_attributes(compartment_list: list[str]):
         ):
             raise ValueError(f"Compartment {compartment} not found in model")
     ### get attributes of populations
-    for pop in populations():
+    for pop in ann.populations():
         if pop.name not in compartment_list:
             continue
         attributes["populations"][pop.name] = {
             param_name: getattr(pop, param_name) for param_name in pop.attributes
         }
     ### get attributes of projections
-    for proj in projections():
+    for proj in ann.projections():
         if proj.name not in compartment_list:
             continue
         attributes["projections"][proj.name] = {
@@ -143,7 +139,7 @@ def _set_all_attributes(attributes: dict, parameters: bool):
             If True, set parameters and variables, else only set variables.
     """
     ### set attributes of populations
-    for pop in populations():
+    for pop in ann.populations():
         ### skip populations which are not in attributes
         if pop.name not in attributes["populations"].keys():
             continue
@@ -153,7 +149,7 @@ def _set_all_attributes(attributes: dict, parameters: bool):
                 continue
             setattr(pop, param_name, param_value)
     ### set attributes of projections
-    for proj in projections():
+    for proj in ann.projections():
         ### skip projections which are not in attributes
         if proj.name not in attributes["projections"].keys():
             continue
@@ -177,11 +173,11 @@ def _get_all_parameters():
         "populations": {},
         "projections": {},
     }
-    for pop in populations():
+    for pop in ann.populations():
         parameters["populations"][pop.name] = {
             param_name: getattr(pop, param_name) for param_name in pop.parameters
         }
-    for proj in projections():
+    for proj in ann.projections():
         parameters["projections"][proj.name] = {
             param_name: getattr(proj, param_name) for param_name in proj.parameters
         }
@@ -197,9 +193,9 @@ def _set_all_parameters(parameters):
             Dictionary with keys "populations" and "projections" and values dicts of
             parameters of populations and projections, respectively.
     """
-    for pop in populations():
+    for pop in ann.populations():
         for param_name, param_value in parameters["populations"][pop.name].items():
             setattr(pop, param_name, param_value)
-    for proj in projections():
+    for proj in ann.projections():
         for param_name, param_value in parameters["projections"][proj.name].items():
             setattr(proj, param_name, param_value)
