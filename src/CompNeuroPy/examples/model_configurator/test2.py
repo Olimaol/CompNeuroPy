@@ -1,7 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as stats
-from CompNeuroPy import DeapCma, save_variables, load_variables, run_script_parallel
+from CompNeuroPy import (
+    DeapCma,
+    save_variables,
+    load_variables,
+    run_script_parallel,
+    create_data_raw_folder,
+    create_dir,
+)
 from scipy.optimize import minimize, Bounds
 from scipy.interpolate import griddata
 from sklearn.preprocessing import PolynomialFeatures
@@ -435,12 +442,29 @@ def plot_2d_interpolated_image(
     )
 
 
-def generate_samples(n, p, m, mean_shift=0, std_scale=1):
+def generate_samples(n, p, s, mean_shift=0, std_scale=1):
+    """
+    Generate samples of a binomial and a normal distribution. The normal distribution is
+    generated to best approximate the binomial distribution. Further the normal
+    distribution is shifted by mean_shift and scaled by std_scale.
+
+    Args:
+        n (int):
+            The number of trials of the binomial distribution.
+        p (float):
+            The probability of success of the binomial distribution.
+        s (int):
+            The sample size for both distributions.
+        mean_shift (float):
+            The shift of the mean of the normal distribution.
+        std_scale (float):
+            The scaling of the standard deviation of the normal distribution.
+    """
     # Generate data samples
-    binomial_sample = np.random.binomial(n, p, m)
+    binomial_sample = np.random.binomial(n, p, s)
     mean = n * p
     std_dev = np.sqrt(n * p * (1 - p))
-    normal_sample = np.random.normal(mean + mean_shift, std_dev * std_scale, m)
+    normal_sample = np.random.normal(mean + mean_shift, std_dev * std_scale, s)
 
     ### round and clip the normal sample
     normal_sample = np.round(normal_sample)
@@ -450,36 +474,70 @@ def generate_samples(n, p, m, mean_shift=0, std_scale=1):
     return binomial_sample, normal_sample
 
 
-def get_error_of_samples(binomial_sample, normal_sample, n, m):
+def get_difference_of_samples(binomial_sample, normal_sample, n):
+    """
+    Calculate the difference between samples of a binomial and a normal distribution.
+
+    Args:
+        binomial_sample (array):
+            The sample of the binomial distribution.
+        normal_sample (array):
+            The sample of the normal distribution.
+        n (int):
+            The number of trials of the binomial distribution.
+    """
     diff = (
         np.histogram(binomial_sample, bins=n + 1, range=(-0.5, n + 0.5))[0]
         - np.histogram(normal_sample, bins=n + 1, range=(-0.5, n + 0.5))[0]
     )
-    return np.sum(np.abs(diff)) / (2 * m)
+    return np.sum(np.abs(diff)) / (2 * len(binomial_sample))
 
 
-def objective_function(mean_shift, std_scale, n, p, m):
+def difference_binomial_normal(mean_shift, std_scale, n, p, s):
+    """
+    Calculate the difference between samples of a binomial and a normal distribution.
+    The binomial distribution is generated with parameters n and p.
+    The normal distribution is generated to best approximate the binomial distribution.
+    Further the normal distribution is shifted by mean_shift and scaled by std_scale.
+
+    Args:
+        mean_shift (float):
+            The shift of the mean of the normal distribution.
+        std_scale (float):
+            The scaling of the standard deviation of the normal distribution.
+        n (int):
+            The number of trials of the binomial distribution.
+        p (float):
+            The probability of success of the binomial distribution.
+        s (int):
+            The sample size for both distributions.
+    """
     # Generate data samples
     binomial_sample, normal_sample = generate_samples(
-        n=n, p=p, m=m, mean_shift=mean_shift, std_scale=std_scale
+        n=n, p=p, s=s, mean_shift=mean_shift, std_scale=std_scale
     )
 
-    # Calculate error
-    error = get_error_of_samples(binomial_sample, normal_sample, n=n, m=M)
-    return error
+    # Calculate difference
+    diff = get_difference_of_samples(binomial_sample, normal_sample, n=n)
+    return diff
 
 
-def logarithmic_distribution(start, end, num_points):
+def logarithmic_arange(start, end, num_points):
     """
-    Generate a list of logarithmically spaced points between a start and end point.
+    Generate a list of logarithmically spaced points between a start and end point. The
+    smaller side of the range is denser with points.
 
-    Parameters:
-    start (float): The starting point of the distribution.
-    end (float): The ending point of the distribution.
-    num_points (int): The number of points to generate.
+    Args:
+        start (float):
+            The starting point of the distribution.
+        end (float):
+            The ending point of the distribution.
+        num_points (int):
+            The number of points to generate.
 
     Returns:
-    list: A list of logarithmically spaced points.
+        points (list):
+            A list of logarithmically spaced points.
     """
     if start <= 0 or end <= 0:
         raise ValueError("Start and end points must be positive numbers.")
@@ -500,17 +558,116 @@ def logarithmic_distribution(start, end, num_points):
 ### I think one can shift the mean and scale the standard deviation depending on the p
 ### and n values. I will try to optimize the shift and scale for each n and p value.
 
-# number of samples
-M = 10000
+### global paramters
+COMPARE_ORIGINAL = True
+OPTIMIZE = True
+REGRESS = True
+PLOT_COMPARE_ORIGINAL = True
+PLOT_OPTIMIZE = True
+PLOT_REGRESS = True
+COMPARE_ORIGINAL_FOLDER = "test2_data_compare_original"
+PLOTS_FOLDER = "test2_plots"
+S = 10000
+
 if __name__ == "__main__":
-    OPTIMIZE = True
+
+    ### TODO: restructure this thing
+
+    # 1st compare binomial and normal samples for various n and p values, save: p_list, n_list and diff_list
+    # 2nd optimize mean shift and std scale for each n and p value and get improved error, save: mean_shift_list, std_scale_list and error_improved_list
+    # 3rd make a 2D regression for the optimized mean shift and std scale, get mean_shift_regress(n, p) and std_scale_regress(n, p), save: the optimized parameters of the regression equations
+    # 4th plot: (1) error depending on n and p, (2) optimized mean shift and std scale depending on n and p and corresponding error improvement, (3) regressed mean shift and std scale depending on n and p and corresponding error improvement
+
+    if COMPARE_ORIGINAL:  # TODO implement seed for rng
+        ### create the save folder
+        folder_name = create_data_raw_folder(
+            COMPARE_ORIGINAL_FOLDER,
+            COMPARE_ORIGINAL=COMPARE_ORIGINAL,
+            OPTIMIZE=OPTIMIZE,
+            REGRESS=REGRESS,
+            PLOT_COMPARE_ORIGINAL=PLOT_COMPARE_ORIGINAL,
+            PLOT_OPTIMIZE=PLOT_OPTIMIZE,
+            PLOT_REGRESS=PLOT_REGRESS,
+            COMPARE_ORIGINAL_FOLDER=COMPARE_ORIGINAL_FOLDER,
+            PLOTS_FOLDER=PLOTS_FOLDER,
+            S=S,
+        )
+
+        ### create the n/p pairs
+        n_arr = logarithmic_arange(10, 1000, 20).astype(int)
+        p_arr = logarithmic_arange(0.001, 0.1, 10)
+
+        ### get difference between binomial and normal distribution for each n/p pair
+        p_list = []
+        n_list = []
+        diff_list = []
+        for p in p_arr:
+            for n in n_arr:
+                ### get the error without optimization
+                error = difference_binomial_normal(
+                    mean_shift=0, std_scale=1, n=n, p=p, s=S
+                )
+                diff_list.append(error)
+
+                ### store the results
+                p_list.append(p)
+                n_list.append(n)
+
+        ### save variables
+        save_variables(
+            variable_list=[
+                p_list,
+                n_list,
+                diff_list,
+            ],
+            name_list=[
+                "p_list",
+                "n_list",
+                "diff_list",
+            ],
+            path=folder_name,
+        )
+
+    if PLOT_COMPARE_ORIGINAL:
+        ### load the data
+        loaded_variables = load_variables(
+            name_list=[
+                "p_list",
+                "n_list",
+                "diff_list",
+            ],
+            path=COMPARE_ORIGINAL_FOLDER,
+        )
+        ### plot the data
+        plt.figure(figsize=(6.4 * 2, 4.8 * 2))
+        plt.subplot(1, 1, 1)
+        plot_2d_interpolated_image(
+            x=loaded_variables["n_list"],
+            y=loaded_variables["p_list"],
+            z=loaded_variables["diff_list"],
+            vmin=0,
+            vmax=np.max(loaded_variables["diff_list"]),
+        )
+        plt.colorbar()
+        plt.xlabel("n")
+        plt.ylabel("p")
+        plt.title(
+            f"Difference original\n(max: {np.max(loaded_variables['diff_list'])})"
+        )
+        plt.tight_layout()
+        create_dir(PLOTS_FOLDER)
+        plt.savefig(f"{PLOTS_FOLDER}/difference_original.png", dpi=300)
+
+    quit()
+
+    OPTIMIZE = False
     PLOT_OPTIMIZED = True
     USE_REGRESSION = False
     PLOT_REGRESSION = False
 
     ### 1st optimize mean shift and std scale for each n and p value
-    n_arr = logarithmic_distribution(10, 1000, 20).astype(int)
-    p_arr = logarithmic_distribution(0.001, 0.1, 10)
+    n_arr = logarithmic_arange(10, 1000, 20).astype(int)
+    p_arr = logarithmic_arange(0.001, 0.1, 10)
 
     ### 1st get errors for all n and p values without optimization
     p_list = []
@@ -540,6 +697,20 @@ if __name__ == "__main__":
         ],
         path="data_optimize_binomial_normal",
     )
+
+    ### plot the original error
+    # original error -> interpolation plot
+    plt.figure(figsize=(6.4 * 2, 4.8 * 2))
+    plt.subplot(1, 1, 1)
+    plot_2d_interpolated_image(
+        x=n_list, y=p_list, z=error_list, vmin=0, vmax=np.max(error_list)
+    )
+    plt.colorbar()
+    plt.xlabel("n")
+    plt.ylabel("p")
+    plt.title(f"Error original\n(max: {np.max(error_list)})")
+    plt.tight_layout()
+    plt.savefig("test2_01_error_original.png", dpi=300)
 
     ### 2nd optimize mean shift and std scale for each n and p value and get improved error
     if OPTIMIZE:
@@ -620,77 +791,8 @@ if __name__ == "__main__":
             path="data_optimize_binomial_normal",
         )
 
-    ### 3rd use regression for mean shift and std scale and recalculate the improved error
-    if USE_REGRESSION:
-        ### load the optimized parameters and corresponding original and optimized errors
-        loaded_variables = load_variables(
-            name_list=[
-                "p_list",
-                "n_list",
-            ],
-            path="data_optimize_binomial_normal",
-        )
-        p_list = loaded_variables["p_list"]
-        n_list = loaded_variables["n_list"]
-
-        ### use regression equations to recalculate mean shift and std scale
-        mean_shift_reg_list = []
-        std_scale_reg_list = []
-        error_improved_reg_list = []
-        for p, n in zip(p_list, n_list):
-            ### get the optimized parameters and best error
-            mean_shift = mean_shift_regression(n, p)
-            std_scale = std_scale_regression(n, p)
-            error_improved = objective_function(
-                mean_shift=mean_shift, std_scale=std_scale, n=n, p=p, m=M
-            )
-
-            ### store the results
-            error_improved_reg_list.append(error_improved)
-            mean_shift_reg_list.append(mean_shift)
-            std_scale_reg_list.append(std_scale)
-
-        ### save variables
-        save_variables(
-            variable_list=[
-                mean_shift_reg_list,
-                std_scale_reg_list,
-                error_improved_reg_list,
-            ],
-            name_list=[
-                "mean_shift_reg_list",
-                "std_scale_reg_list",
-                "error_improved_reg_list",
-            ],
-            path="data_optimize_binomial_normal",
-        )
-
-    ### 4th plot the original error
-    # original error -> interpolation plot
-    loaded_variables = load_variables(
-        name_list=[
-            "p_list",
-            "n_list",
-            "error_list",
-        ],
-        path="data_optimize_binomial_normal",
-    )
-    p_list = loaded_variables["p_list"]
-    n_list = loaded_variables["n_list"]
-    error_list = loaded_variables["error_list"]
-    plt.figure(figsize=(6.4 * 2, 4.8 * 2))
-    plt.subplot(1, 1, 1)
-    plot_2d_interpolated_image(
-        x=n_list, y=p_list, z=error_list, vmin=0, vmax=np.max(error_list)
-    )
-    plt.colorbar()
-    plt.xlabel("n")
-    plt.ylabel("p")
-    plt.title(f"Error original\n(max: {np.max(error_list)})")
-    plt.tight_layout()
-    plt.savefig("test2_01_error_original.png", dpi=300)
-
-    ### 5th plot the optimized error with optimized mean shift and std scale
+    ### 4th plot the optimized error with optimized mean shift and std scale
+    ### also calculate the ŕegression for the optimized mean shift and std scale
     if PLOT_OPTIMIZED:
         # fitting improved error -> interpolation plot
         # fitting improvement -> interpolation plot
@@ -707,11 +809,11 @@ if __name__ == "__main__":
         error_improved_list = loaded_variables["error_improved_list"]
         mean_shift_list = loaded_variables["mean_shift_list"]
         std_scale_list = loaded_variables["std_scale_list"]
-        ### TODO tmp
-        error_improved_list = np.random.rand(len(error_improved_list))
-        mean_shift_list = np.random.rand(len(mean_shift_list))
-        std_scale_list = np.random.rand(len(std_scale_list))
-        ### TODO tmp
+        # ### TODO tmp
+        # error_improved_list = np.random.rand(len(error_improved_list))
+        # mean_shift_list = np.random.rand(len(mean_shift_list))
+        # std_scale_list = np.random.rand(len(std_scale_list))
+        # ### TODO tmp
         error_change_arr = np.array(error_improved_list) - np.array(error_list)
         improvement_arr = -np.clip(error_change_arr, None, 0)
         improvement_arr_norm = improvement_arr / np.max(improvement_arr)
@@ -807,7 +909,52 @@ if __name__ == "__main__":
         plt.tight_layout()
         plt.savefig("test2_02_error_optimized.png", dpi=300)
 
-    ### 6th plot the regression error with regressed mean shift and std scale and compare it
+    ### 3rd use regression for mean shift and std scale and recalculate the improved error
+    if USE_REGRESSION:
+        ### load the optimized parameters and corresponding original and optimized errors
+        loaded_variables = load_variables(
+            name_list=[
+                "p_list",
+                "n_list",
+            ],
+            path="data_optimize_binomial_normal",
+        )
+        p_list = loaded_variables["p_list"]
+        n_list = loaded_variables["n_list"]
+
+        ### use regression equations to recalculate mean shift and std scale
+        mean_shift_reg_list = []
+        std_scale_reg_list = []
+        error_improved_reg_list = []
+        for p, n in zip(p_list, n_list):
+            ### get the optimized parameters and best error
+            mean_shift = mean_shift_regression(n, p)
+            std_scale = std_scale_regression(n, p)
+            error_improved = objective_function(
+                mean_shift=mean_shift, std_scale=std_scale, n=n, p=p, m=M
+            )
+
+            ### store the results
+            error_improved_reg_list.append(error_improved)
+            mean_shift_reg_list.append(mean_shift)
+            std_scale_reg_list.append(std_scale)
+
+        ### save variables
+        save_variables(
+            variable_list=[
+                mean_shift_reg_list,
+                std_scale_reg_list,
+                error_improved_reg_list,
+            ],
+            name_list=[
+                "mean_shift_reg_list",
+                "std_scale_reg_list",
+                "error_improved_reg_list",
+            ],
+            path="data_optimize_binomial_normal",
+        )
+
+    ### 5th plot the regression error with regressed mean shift and std scale and compare it
     ### with the optimized error
     if PLOT_REGRESSION:
         # regression improved error -> interpolation plot

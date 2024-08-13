@@ -371,6 +371,10 @@ def create_data_raw_folder(
         **kwargs (Any, optional):
             Global variables of the caller script.
 
+    Returns:
+        folder_name (str):
+            Name of the created folder.
+
     Example:
         ```python
         from CompNeuroPy import create_data_raw_folder
@@ -609,6 +613,7 @@ def create_data_raw_folder(
             f.write("# CompNeuroPy was installed locally with commit:\n")
             compneuropy_commit = compneuropy_git_log[0].replace("\n", "")
             f.write(f"# {compneuropy_commit}")
+    return folder_name
 
 
 def _find_folder_with_prefix(base_path, prefix):
