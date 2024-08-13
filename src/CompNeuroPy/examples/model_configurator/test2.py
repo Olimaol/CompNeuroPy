@@ -19,6 +19,7 @@ from scipy.optimize import curve_fit
 from sklearn.pipeline import make_pipeline
 from sklearn.metrics import mean_squared_error
 from tqdm import tqdm
+import itertools
 
 
 def mean_shift_regression(n, p):
@@ -144,83 +145,33 @@ def log_normal_1d(x, amp, mean, sig):
 deap_opt_regress_path = "test2_deap_opt_regress/"
 
 
-def curve_fit_func(
+def regression_func(
     X,
-    g0,
-    g1,
-    g2,
-    g3,
-    g4,
-    g5,
-    g6,
-    g7,
-    g8,
-    g9,
-    g10,
-    g11,
-    g12,
-    g13,
-    g14,
-    p0,
-    # p1,
-    # p2,
-    # p3,
-    # p4,
-    # p5,
-    # p6,
-    # p7,
-    # p8,
-    # p9,
-    # p10,
-    # p11,
-    # p12,
-    # p13,
-    # p14,
-    # p15,
-    # p16,
-    # p17,
-    # p18,
-    # p19,
-    # p20,
+    *args,
 ):
-    x0, x1 = X
+    """
+    A 2D regression function.
+
+    Args:
+        X (array):
+            The x (X[0]) and y (X[1]) coordinates.
+        *args:
+            The parameters of the regression function.
+
+    Returns:
+        float:
+            The z(x,y) value(s) of the regression function.
+    """
+    x, y = X
 
     ### 2D polynomial with certain degree
     return np.clip(
-        p0
-        + gauss_1d(
-            (
-                x0
-                # p0
-                # + p1 * x0
-                # + p2 * x1
-                # + p3 * x0**2
-                # + p4 * x0 * x1
-                # + p5 * x1**2
-                # + p6 * x0**3
-                # + p7 * x0**2 * x1
-                # + p8 * x0 * x1**2
-                # + p9 * x1**3
-                # + p10 * x0**4
-                # + p11 * x0**3 * x1
-                # + p12 * x0**2 * x1**2
-                # + p13 * x0 * x1**3
-                # + p14 * x1**4
-                # + p15 * x0**5
-                # + p16 * x0**4 * x1
-                # + p17 * x0**3 * x1**2
-                # + p18 * x0**2 * x1**3
-                # + p19 * x0 * x1**4
-                # + p20 * x1**5
-            ),
-            amp=g0,
-            mean=g1,
-            sig=g2,
-        )
-        + gauss_1d(x1, amp=g3, mean=g4, sig=g5)
-        + gauss_1d(x0 * x1, amp=g6, mean=g7, sig=g8)
-        + gauss_1d(x0**2 * x1, amp=g9, mean=g10, sig=g11)
-        + gauss_1d(x0 * x1**2, amp=g12, mean=g13, sig=g14),
+        args[0]
+        + gauss_1d(x, amp=args[1], mean=args[2], sig=args[3])
+        + gauss_1d(y, amp=args[4], mean=args[5], sig=args[6])
+        + gauss_1d(x * y, amp=args[7], mean=args[8], sig=args[9])
+        + gauss_1d(x**2 * y, amp=args[10], mean=args[11], sig=args[12])
+        + gauss_1d(x * y**2, amp=args[13], mean=args[14], sig=args[15]),
         -1e20,
         1e20,
     )
@@ -503,7 +454,28 @@ def get_difference_of_samples(binomial_sample, normal_sample, n):
 
 
 def difference_binomial_normal_optimize(n, p):
-    print(f"Optimize for n={n}, p={p}")
+    """
+    Calculate the difference between samples of a binomial and a normal distribution.
+    The binomial distribution is generated with parameters n and p.
+    The normal distribution is generated to best approximate the binomial distribution.
+    Further the normal distribution is shifted by mean_shift and scaled by std_scale.
+    Both are optimized to minimize the difference between the binomial and normal
+    distribution.
+
+    Args:
+        n (int):
+            The number of trials of the binomial distribution.
+        p (float):
+            The probability of success of the binomial distribution.
+
+    Returns:
+        mean_shift_opt (float):
+            The shift of the mean of the normal distribution.
+        std_scale_opt (float):
+            The scaling of the standard deviation of the normal distribution.
+        error_opt (float):
+            The difference between the binomial and normal distribution.
+    """
     ### save p and n to be availyble in optimization script
     save_variables(
         variable_list=[p, n],
@@ -511,7 +483,7 @@ def difference_binomial_normal_optimize(n, p):
         path=OPTIMIZE_FOLDER,
     )
     ### run optimization
-    args_list = [[f"{parallel_id}"] for parallel_id in range(N_RUNS)]
+    args_list = [[f"{parallel_id}"] for parallel_id in range(N_RUNS_OPT_PER_PAIR)]
     run_script_parallel(
         script_path="test2_deap_opt_transform.py",
         n_jobs=N_JOBS,
@@ -521,7 +493,7 @@ def difference_binomial_normal_optimize(n, p):
     ### fitness
     best_fitness = 1e6
     best_parallel_id = 0
-    for parallel_id in range(N_RUNS):
+    for parallel_id in range(N_RUNS_OPT_PER_PAIR):
         loaded_variables = load_variables(
             name_list=[
                 f"error_opt_{parallel_id}",
@@ -529,7 +501,6 @@ def difference_binomial_normal_optimize(n, p):
             path=OPTIMIZE_FOLDER,
         )
         error_opt = loaded_variables[f"error_opt_{parallel_id}"]
-        print(f"n={n}, p={p}, error_opt_{parallel_id}: {error_opt}")
         if error_opt < best_fitness:
             best_fitness = error_opt
             best_parallel_id = parallel_id
@@ -549,6 +520,46 @@ def difference_binomial_normal_optimize(n, p):
     return mean_shift_opt, std_scale_opt, error_opt
 
 
+def difference_binomial_normal_regress(n, p):
+    """
+    Calculate the difference between samples of a binomial and a normal distribution.
+    The binomial distribution is generated with parameters n and p.
+    The normal distribution is generated to best approximate the binomial distribution.
+    Further the normal distribution is shifted by mean_shift and scaled by std_scale.
+    Both are obtained from the regression of the optimized mean_shift and std_scale.
+
+    Args:
+        n (int):
+            The number of trials of the binomial distribution.
+        p (float):
+            The probability of success of the binomial distribution.
+
+    Returns:
+        mean_shift_regress (float):
+            The shift of the mean of the normal distribution.
+        std_scale_regress (float):
+            The scaling of the standard deviation of the normal distribution.
+        error_regress (float):
+            The difference between the binomial and normal distribution.
+    """
+    ### load parameters for regression
+    loaded_variables = load_variables(
+        name_list=[
+            "popt_mean_shift",
+            "popt_std_scale",
+        ],
+        path=REGRESS_FOLDER,
+    )
+
+    mean_shift_regress = regression_func((n, p), *loaded_variables["popt_mean_shift"])
+    std_scale_regress = regression_func((n, p), *loaded_variables["popt_std_scale"])
+    error_regress = difference_binomial_normal(
+        mean_shift=mean_shift_regress, std_scale=std_scale_regress, n=n, p=p
+    )
+
+    return mean_shift_regress, std_scale_regress, error_regress
+
+
 def difference_binomial_normal(mean_shift, std_scale, n, p):
     """
     Calculate the difference between samples of a binomial and a normal distribution.
@@ -565,6 +576,10 @@ def difference_binomial_normal(mean_shift, std_scale, n, p):
             The number of trials of the binomial distribution.
         p (float):
             The probability of success of the binomial distribution.
+
+    Returns:
+        diff (float):
+            The difference between the binomial and normal distribution.
     """
     # Generate data samples
     binomial_sample, normal_sample = generate_samples(
@@ -607,29 +622,48 @@ def logarithmic_arange(start, end, num_points):
     return points
 
 
-def plot_optimize():
+def plot_with_transformation(mode: str):
     """
     Plot the difference between the binomial and normal distribution for various n and
     p values. Further plots the optimized mean_shift and std_scale values. Load the data
     from the OPTIMIZE_FOLDER and save the plot to the PLOTS_FOLDER.
+
+    Args:
+        mode (str):
+            Either 'opt' or 'regress'
     """
+    if mode not in ["opt", "regress"]:
+        raise ValueError("Mode must be either 'opt' or 'regress'.")
+
     ### load the data
     loaded_variables = load_variables(
         name_list=[
             "p_list",
             "n_list",
-            "mean_shift_opt_list",
-            "std_scale_opt_list",
-            "diff_opt_list",
+            f"mean_shift_{mode}_list",
+            f"std_scale_{mode}_list",
+            f"diff_{mode}_list",
         ],
-        path=OPTIMIZE_FOLDER,
+        path=OPTIMIZE_FOLDER if mode == "opt" else REGRESS_FOLDER,
     )
     ### plot the data
     plt.figure(figsize=(6.4 * 2, 4.8 * 2 * 3))
     for idx, title, key in [
-        (1, "Mean Shift optimized", "mean_shift_opt_list"),
-        (2, "Std Scale optimized", "std_scale_opt_list"),
-        (3, "Difference optimized", "diff_opt_list"),
+        (
+            1,
+            "Mean Shift optimized" if mode == "opt" else "Mean Shift regressed",
+            f"mean_shift_{mode}_list",
+        ),
+        (
+            2,
+            "Std Scale optimized" if mode == "opt" else "Std Scale regressed",
+            f"std_scale_{mode}_list",
+        ),
+        (
+            3,
+            "Difference optimized" if mode == "opt" else "Difference regressed",
+            f"diff_{mode}_list",
+        ),
     ]:
         plt.subplot(3, 1, idx)
         plot_2d_interpolated_image(
@@ -645,7 +679,14 @@ def plot_optimize():
         plt.title(f"{title}\n(max: {np.max(loaded_variables[key])})")
     plt.tight_layout()
     create_dir(PLOTS_FOLDER)
-    plt.savefig(f"{PLOTS_FOLDER}/difference_optimized.png", dpi=300)
+    plt.savefig(
+        (
+            f"{PLOTS_FOLDER}/difference_optimized.png"
+            if mode == "opt"
+            else f"{PLOTS_FOLDER}/difference_regressed.png"
+        ),
+        dpi=300,
+    )
 
 
 def plot_compare_original():
@@ -682,25 +723,17 @@ def plot_compare_original():
     plt.savefig(f"{PLOTS_FOLDER}/difference_original.png", dpi=300)
 
 
-def compare_with_or_without_optimization():
+def compare_normal_binomial(compare_original, optimize, regress):
     """
     Compare the difference between the binomial and normal distribution for various n and
-    p values with and without optimization. Save the data to the COMPARE_ORIGINAL_FOLDER
-    and OPTIMIZE_FOLDER.
+    p values with and without optimization or regression.
     """
-    ### create the save folder(s)
-    if COMPARE_ORIGINAL:
-        create_data_raw_folder(
-            COMPARE_ORIGINAL_FOLDER,
-        )
-    if OPTIMIZE:
-        create_data_raw_folder(
-            OPTIMIZE_FOLDER,
-        )
 
     ### create the n/p pairs
     n_arr = logarithmic_arange(*N_VALUES).astype(int)
     p_arr = logarithmic_arange(*P_VALUES)
+    ### get all possible combinations of n and p
+    np_pair_arr = list(itertools.product(n_arr, p_arr))
 
     ### get difference between binomial and normal distribution for each n/p pair
     p_list = []
@@ -709,25 +742,39 @@ def compare_with_or_without_optimization():
     mean_shift_opt_list = []
     std_scale_opt_list = []
     diff_opt_list = []
-    for p in p_arr:
-        for n in n_arr:
-            p_list.append(p)
-            n_list.append(n)
-            if COMPARE_ORIGINAL:
-                ### get the error without optimization
-                error = difference_binomial_normal(mean_shift=0, std_scale=1, n=n, p=p)
-                diff_original_list.append(error)
-            if OPTIMIZE:
-                ### get the error with optimization
-                mean_shift_opt, std_scale_opt, error_opt = (
-                    difference_binomial_normal_optimize(n=n, p=p)
-                )
-                mean_shift_opt_list.append(mean_shift_opt)
-                std_scale_opt_list.append(std_scale_opt)
-                diff_opt_list.append(error_opt)
+    mean_shift_regress_list = []
+    std_scale_regress_list = []
+    diff_regress_list = []
+    progress_bar = tqdm(
+        np_pair_arr,
+        desc=f"Compare {['','original'][int(compare_original)]} {['','optimized'][int(optimize)]} {['','regression'][int(regress)]}",
+    )
+    for n, p in progress_bar:
+        p_list.append(p)
+        n_list.append(n)
+        if compare_original:
+            ### get the error without optimization
+            error = difference_binomial_normal(mean_shift=0, std_scale=1, n=n, p=p)
+            diff_original_list.append(error)
+        if optimize:
+            ### get the error with optimization
+            mean_shift_opt, std_scale_opt, error_opt = (
+                difference_binomial_normal_optimize(n=n, p=p)
+            )
+            mean_shift_opt_list.append(mean_shift_opt)
+            std_scale_opt_list.append(std_scale_opt)
+            diff_opt_list.append(error_opt)
+        if regress:
+            ### get the error with the regression
+            mean_shift_regress, std_scale_regress, error_regress = (
+                difference_binomial_normal_regress(n=n, p=p)
+            )
+            mean_shift_regress_list.append(mean_shift_regress)
+            std_scale_regress_list.append(std_scale_regress)
+            diff_regress_list.append(error_regress)
 
     ### save variables
-    if COMPARE_ORIGINAL:
+    if compare_original:
         save_variables(
             variable_list=[
                 p_list,
@@ -741,7 +788,7 @@ def compare_with_or_without_optimization():
             ],
             path=COMPARE_ORIGINAL_FOLDER,
         )
-    if OPTIMIZE:
+    if optimize:
         save_variables(
             variable_list=[
                 p_list,
@@ -759,6 +806,89 @@ def compare_with_or_without_optimization():
             ],
             path=OPTIMIZE_FOLDER,
         )
+    if regress:
+        save_variables(
+            variable_list=[
+                p_list,
+                n_list,
+                mean_shift_regress_list,
+                std_scale_regress_list,
+                diff_regress_list,
+            ],
+            name_list=[
+                "p_list",
+                "n_list",
+                "mean_shift_regress_list",
+                "std_scale_regress_list",
+                "diff_regress_list",
+            ],
+            path=REGRESS_FOLDER,
+        )
+
+
+def get_regression_parameters():
+    """
+    Get the regression parameters for the mean shift and std scale. Save the parameters
+    to the REGRESS_FOLDER.
+
+    Returns:
+        popt_mean_shift (array):
+            The optimized parameters for the mean shift regression.
+        popt_std_scale (array):
+            The optimized parameters for the std scale regression.
+    """
+    args_list = [[f"{parallel_id}"] for parallel_id in range(N_RUNS_REGRESS)]
+    run_script_parallel(
+        script_path="test2_deap_opt_regress.py",
+        n_jobs=N_JOBS,
+        args_list=args_list,
+    )
+    ### get best parameters for regression of mean_shift and std_scale
+    best_fitness_mean_shift = 1e6
+    best_fitness_std_scale = 1e6
+    best_parallel_id_mean_shift = 0
+    best_parallel_id_std_scale = 0
+    for parallel_id in range(N_RUNS_REGRESS):
+        loaded_variables = load_variables(
+            name_list=[
+                f"best_fitness_mean_shift_{parallel_id}",
+                f"best_fitness_std_scale_{parallel_id}",
+            ],
+            path=REGRESS_FOLDER,
+        )
+        if (
+            loaded_variables[f"best_fitness_mean_shift_{parallel_id}"]
+            < best_fitness_mean_shift
+        ):
+            best_fitness_mean_shift = loaded_variables[
+                f"best_fitness_mean_shift_{parallel_id}"
+            ]
+            best_parallel_id_mean_shift = parallel_id
+        if (
+            loaded_variables[f"best_fitness_std_scale_{parallel_id}"]
+            < best_fitness_std_scale
+        ):
+            best_fitness_std_scale = loaded_variables[
+                f"best_fitness_std_scale_{parallel_id}"
+            ]
+            best_parallel_id_std_scale = parallel_id
+    # load best of mean_shift
+    loaded_variables = load_variables(
+        name_list=[f"popt_mean_shift_{best_parallel_id_mean_shift}"],
+        path=REGRESS_FOLDER,
+    )
+    popt_mean_shift = loaded_variables[f"popt_mean_shift_{best_parallel_id_mean_shift}"]
+    # load best of std_scale
+    loaded_variables = load_variables(
+        name_list=[f"popt_std_scale_{best_parallel_id_std_scale}"], path=REGRESS_FOLDER
+    )
+    popt_std_scale = loaded_variables[f"popt_std_scale_{best_parallel_id_std_scale}"]
+
+    save_variables(
+        variable_list=[popt_mean_shift, popt_std_scale],
+        name_list=["popt_mean_shift", "popt_std_scale"],
+        path=REGRESS_FOLDER,
+    )
 
 
 ### TODO I have the problem that for very small p the normal distribution is not a good
@@ -769,19 +899,64 @@ def compare_with_or_without_optimization():
 ### global paramters
 COMPARE_ORIGINAL = True
 OPTIMIZE = True
-REGRESS = True
+REGRESS = False
 PLOT_COMPARE_ORIGINAL = True
 PLOT_OPTIMIZE = True
-PLOT_REGRESS = True
+PLOT_REGRESS = False
 COMPARE_ORIGINAL_FOLDER = "test2_data_compare_original"
 OPTIMIZE_FOLDER = "test2_data_optimize"
+REGRESS_FOLDER = "test2_data_regress"
 PLOTS_FOLDER = "test2_plots"
 S = 10000
 SEED = 1234
-N_VALUES = [10, 1000, 2]  # 20]
-P_VALUES = [0.001, 0.1, 2]  # 10]
+N_VALUES = [10, 1000, 3]  # 20]
+P_VALUES = [0.001, 0.1, 3]  # 10]
 N_JOBS = 2
-N_RUNS = 100 * N_JOBS
+N_RUNS_OPT_PER_PAIR = 1  # * N_JOBS
+N_RUNS_REGRESS = 1
+N_PARAMS_REGRESS = 16
+
+
+def preprocess_p_n_for_regress(n, p):
+    """
+    Normalize n and p values before regression.
+
+    Args:
+        n (int or array):
+            The number of trials of the binomial distribution.
+        p (float or array):
+            The probability of success of the binomial distribution.
+
+    Returns:
+        n_pre_processed (float or array):
+            The normalized n value(s) which can be used for regression.
+        p_pre_processed (float or array):
+            The normalized p value(s) which can be used for regression.
+    """
+    n_pre_processed = (n - N_MIN) / (N_MAX - N_MIN)
+    p_pre_processed = (p - P_MIN) / (P_MAX - P_MIN)
+    return n_pre_processed, p_pre_processed
+
+
+def post_process_p_n_for_regression(n_pre_processed, p_pre_processed):
+    """
+    Post-process the n and p values after regression.
+
+    Args:
+        n_pre_processed (float or array):
+            The normalized n value(s) which were used for regression.
+        p_pre_processed (float or array):
+            The normalized p value(s) which were used for regression.
+
+    Returns:
+        n (int or array):
+            The original n value(s).
+        p (float or array):
+            The original p value(s).
+    """
+    n = n_pre_processed * (N_MAX - N_MIN) + N_MIN
+    p = p_pre_processed * (P_MAX - P_MIN) + P_MIN
+    return n, p
 
 
 if __name__ == "__main__":
@@ -793,14 +968,103 @@ if __name__ == "__main__":
     # 3rd make a 2D regression for the optimized mean shift and std scale, get mean_shift_regress(n, p) and std_scale_regress(n, p), save: the optimized parameters of the regression equations
     # 4th plot: (1) error depending on n and p, (2) optimized mean shift and std scale depending on n and p and corresponding error improvement, (3) regressed mean shift and std scale depending on n and p and corresponding error improvement
 
-    if COMPARE_ORIGINAL or OPTIMIZE:
-        compare_with_or_without_optimization()
+    ### create the save folder(s)
+    if COMPARE_ORIGINAL:
+        create_data_raw_folder(
+            COMPARE_ORIGINAL_FOLDER,
+        )
+    if OPTIMIZE:
+        create_data_raw_folder(
+            OPTIMIZE_FOLDER,
+        )
+    if REGRESS:
+        create_data_raw_folder(
+            REGRESS_FOLDER,
+        )
 
+    ### compare with and without optimization
+    compare_normal_binomial(
+        compare_original=COMPARE_ORIGINAL, optimize=OPTIMIZE, regress=False
+    )
+
+    ### compare with regression (must compare original and with optimization first)
+    if REGRESS:
+        # prepare the pre-processing and post-processing of the data for the regression
+        loaded_variables_opt = load_variables(
+            name_list=[
+                "p_list",
+                "n_list",
+                "mean_shift_opt_list",
+                "std_scale_opt_list",
+                "diff_opt_list",
+            ],
+            path=OPTIMIZE_FOLDER,
+        )
+        loaded_variables = load_variables(
+            name_list=[
+                "diff_list",
+            ],
+            path=COMPARE_ORIGINAL_FOLDER,
+        )
+        p_arr = np.array(loaded_variables_opt["p_list"])
+        n_arr = np.array(loaded_variables_opt["n_list"])
+        mean_shift_opt_arr = np.array(loaded_variables_opt["mean_shift_opt_list"])
+        std_scale_opt_arr = np.array(loaded_variables_opt["std_scale_opt_list"])
+        diff_opt_arr = np.array(loaded_variables_opt["diff_opt_list"])
+        diff_arr = np.array(loaded_variables["diff_list"])
+
+        ### TODO: create global variables which can be used for pre-processing and post-processing for the regression
+
+        ### get how much the difference improved (decreased) by the optimized mean shift
+        ### and std scale values
+        diff_improvement_arr = -np.clip(
+            np.array(diff_opt_list) - np.array(diff_list), None, 0
+        )
+        diff_improvement_arr = diff_improvement_arr / np.max(diff_improvement_arr)
+
+        ### scale the mean shift and std scale by the difference improvement
+        ### --> only keep the transformations which improve the difference
+        ### if there is no improvement mean shift and std scale are closer to 0 and 1
+        mean_shift_opt_arr = (
+            diff_improvement_arr * np.array(mean_shift_opt_list)
+            + (1 - diff_improvement_arr) * 0
+        )
+        std_scale_opt_arr = (
+            diff_improvement_arr * np.array(std_scale_opt_list)
+            + (1 - diff_improvement_arr) * 1
+        )
+
+        ### the mean shift is mostly 0 and at some positions negative, multiply it by -1
+        mean_shift_opt_arr = -mean_shift_opt_arr
+
+        # Normalize the data used for regression
+        mean_shift_opt_max = np.max(mean_shift_opt_arr)
+        mean_shift_opt_min = np.min(mean_shift_opt_arr)
+        std_scale_opt_max = np.max(std_scale_opt_arr)
+        std_scale_opt_min = np.min(std_scale_opt_arr)
+        p_max = np.max(p_arr)
+        p_min = np.min(p_arr)
+        n_max = np.max(n_arr)
+        n_min = np.min(n_arr)
+
+        mean_shift_opt_arr_for_regress = (
+            mean_shift_opt_arr - np.min(mean_shift_opt_arr)
+        ) / (np.max(mean_shift_opt_arr) - np.min(mean_shift_opt_arr))
+        y = (y - y_min) / (y_max - y_min)
+        z = (z - z_min) / (z_max - z_min)
+
+        get_regression_parameters()
+        compare_normal_binomial(compare_original=False, optimize=False, regress=True)
+
+    ### plot the results
     if PLOT_COMPARE_ORIGINAL:
         plot_compare_original()
 
     if PLOT_OPTIMIZE:
-        plot_optimize()
+        plot_with_transformation(mode="opt")
+
+    if PLOT_REGRESS:
+        plot_with_transformation(mode="regress")
 
     quit()
 
