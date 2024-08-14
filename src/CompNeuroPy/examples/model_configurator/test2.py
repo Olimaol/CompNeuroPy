@@ -147,15 +147,18 @@ deap_opt_regress_path = "test2_deap_opt_regress/"
 
 def regression_func(
     X,
-    *args,
+    denormalize: None | str,
+    args: list,
 ):
     """
     A 2D regression function.
 
     Args:
         X (array):
-            The x (X[0]) and y (X[1]) coordinates.
-        *args:
+            The x (X[0]) and y (X[1]) coordinates. Needs to be normalized.
+        denormalize (None | str):
+            The variable name to denormalize the calculated values.
+        args (list):
             The parameters of the regression function.
 
     Returns:
@@ -165,7 +168,7 @@ def regression_func(
     x, y = X
 
     ### 2D polynomial with certain degree
-    return np.clip(
+    ret = np.clip(
         args[0]
         + gauss_1d(x, amp=args[1], mean=args[2], sig=args[3])
         + gauss_1d(y, amp=args[4], mean=args[5], sig=args[6])
@@ -175,6 +178,13 @@ def regression_func(
         -1e20,
         1e20,
     )
+
+    ### denormalize the calculated values, during regression optimization the target
+    ### values are normalized
+    if denormalize is not None:
+        ret = post_process_for_regression(var_value=ret, var_name=denormalize)
+
+    return ret
 
 
 def plot_2d_curve_fit_regression(
@@ -550,9 +560,18 @@ def difference_binomial_normal_regress(n, p):
         ],
         path=REGRESS_FOLDER,
     )
-
-    mean_shift_regress = regression_func((n, p), *loaded_variables["popt_mean_shift"])
-    std_scale_regress = regression_func((n, p), *loaded_variables["popt_std_scale"])
+    ### regression was optimized with normalized data thus need to normalize the data
+    ### here too and after regression denormalize the results
+    n = preprocess_for_regress(var_value=n, var_name="n")
+    p = preprocess_for_regress(var_value=p, var_name="p")
+    mean_shift_regress = regression_func(
+        X=(n, p), denormalize="mean_shift", args=loaded_variables["popt_mean_shift"]
+    )
+    std_scale_regress = regression_func(
+        X=(n, p), denormalize="std_scale", args=loaded_variables["popt_std_scale"]
+    )
+    n = post_process_for_regression(var_value=n, var_name="n")
+    p = post_process_for_regression(var_value=p, var_name="p")
     error_regress = difference_binomial_normal(
         mean_shift=mean_shift_regress, std_scale=std_scale_regress, n=n, p=p
     )
@@ -728,6 +747,8 @@ def compare_normal_binomial(compare_original, optimize, regress):
     Compare the difference between the binomial and normal distribution for various n and
     p values with and without optimization or regression.
     """
+    if not compare_original and not optimize and not regress:
+        return
 
     ### create the n/p pairs
     n_arr = logarithmic_arange(*N_VALUES).astype(int)
@@ -772,6 +793,10 @@ def compare_normal_binomial(compare_original, optimize, regress):
             mean_shift_regress_list.append(mean_shift_regress)
             std_scale_regress_list.append(std_scale_regress)
             diff_regress_list.append(error_regress)
+
+    print(mean_shift_regress_list)
+    print(std_scale_regress_list)
+    print(diff_regress_list)
 
     ### save variables
     if compare_original:
@@ -899,64 +924,94 @@ def get_regression_parameters():
 ### global paramters
 COMPARE_ORIGINAL = True
 OPTIMIZE = True
-REGRESS = False
+REGRESS = True
 PLOT_COMPARE_ORIGINAL = True
 PLOT_OPTIMIZE = True
-PLOT_REGRESS = False
+PLOT_REGRESS = True
 COMPARE_ORIGINAL_FOLDER = "test2_data_compare_original"
 OPTIMIZE_FOLDER = "test2_data_optimize"
 REGRESS_FOLDER = "test2_data_regress"
 PLOTS_FOLDER = "test2_plots"
 S = 10000
 SEED = 1234
-N_VALUES = [10, 1000, 3]  # 20]
-P_VALUES = [0.001, 0.1, 3]  # 10]
-N_JOBS = 2
-N_RUNS_OPT_PER_PAIR = 1  # * N_JOBS
-N_RUNS_REGRESS = 1
+N_VALUES = [10, 1000, 20]
+P_VALUES = [0.001, 0.1, 10]
+N_JOBS = 15
+N_RUNS_OPT_PER_PAIR = 100 * N_JOBS
+N_RUNS_REGRESS = 15
 N_PARAMS_REGRESS = 16
 
 
-def preprocess_p_n_for_regress(n, p):
+def preprocess_for_regress(var_value, var_name):
     """
-    Normalize n and p values before regression.
+    Normalize variable values before regression.
 
     Args:
-        n (int or array):
-            The number of trials of the binomial distribution.
-        p (float or array):
-            The probability of success of the binomial distribution.
+        var_value (float or array):
+            The original value(s) of the variable.
+        var_name (str):
+            The name of the variable.
 
     Returns:
-        n_pre_processed (float or array):
-            The normalized n value(s) which can be used for regression.
-        p_pre_processed (float or array):
-            The normalized p value(s) which can be used for regression.
+        var_value_processed (float or array):
+            The normalized value(s) of the variable ready for regression.
     """
-    n_pre_processed = (n - N_MIN) / (N_MAX - N_MIN)
-    p_pre_processed = (p - P_MIN) / (P_MAX - P_MIN)
-    return n_pre_processed, p_pre_processed
+    ### load the dicts for normalization
+    loaded_variables = load_variables(
+        name_list=[
+            "min_dict",
+            "max_dict",
+        ],
+        path=REGRESS_FOLDER,
+    )
+    min_dict = loaded_variables["min_dict"]
+    max_dict = loaded_variables["max_dict"]
+
+    ### do calculations
+    var_value_processed = (var_value - min_dict[var_name]) / (
+        max_dict[var_name] - min_dict[var_name]
+    )
+    if var_name == "mean_shift":
+        var_value_processed = -var_value_processed
+    return var_value_processed
 
 
-def post_process_p_n_for_regression(n_pre_processed, p_pre_processed):
+def post_process_for_regression(var_value, var_name):
     """
-    Post-process the n and p values after regression.
+    Denormalize variable values after regression.
 
     Args:
-        n_pre_processed (float or array):
-            The normalized n value(s) which were used for regression.
-        p_pre_processed (float or array):
-            The normalized p value(s) which were used for regression.
+        var_value (float or array):
+            The normalized value(s) of the variable.
+        var_name (str):
+            The name of the variable.
 
     Returns:
-        n (int or array):
-            The original n value(s).
-        p (float or array):
-            The original p value(s).
+        var_value_processed (float or array):
+            The original value(s) of the variable after denormalization.
     """
-    n = n_pre_processed * (N_MAX - N_MIN) + N_MIN
-    p = p_pre_processed * (P_MAX - P_MIN) + P_MIN
-    return n, p
+    ### load the dicts for normalization
+    loaded_variables = load_variables(
+        name_list=[
+            "min_dict",
+            "max_dict",
+        ],
+        path=REGRESS_FOLDER,
+    )
+    min_dict = loaded_variables["min_dict"]
+    max_dict = loaded_variables["max_dict"]
+
+    ### do calculations
+    if var_name == "mean_shift":
+        var_value = -var_value
+
+    var_value_processed = (
+        var_value * (max_dict[var_name] - min_dict[var_name]) + min_dict[var_name]
+    )
+
+    if var_name == "n":
+        var_value_processed = int(np.round(var_value_processed))
+    return var_value_processed
 
 
 if __name__ == "__main__":
@@ -989,7 +1044,7 @@ if __name__ == "__main__":
 
     ### compare with regression (must compare original and with optimization first)
     if REGRESS:
-        # prepare the pre-processing and post-processing of the data for the regression
+        ### prepare the pre-processing and post-processing of the data for the regression
         loaded_variables_opt = load_variables(
             name_list=[
                 "p_list",
@@ -1013,46 +1068,61 @@ if __name__ == "__main__":
         diff_opt_arr = np.array(loaded_variables_opt["diff_opt_list"])
         diff_arr = np.array(loaded_variables["diff_list"])
 
-        ### TODO: create global variables which can be used for pre-processing and post-processing for the regression
-
+        ### Transform mean_shift_opt and std_scale_opt for regression
         ### get how much the difference improved (decreased) by the optimized mean shift
         ### and std scale values
-        diff_improvement_arr = -np.clip(
-            np.array(diff_opt_list) - np.array(diff_list), None, 0
-        )
+        diff_improvement_arr = -np.clip(diff_opt_arr - diff_arr, None, 0)
         diff_improvement_arr = diff_improvement_arr / np.max(diff_improvement_arr)
 
         ### scale the mean shift and std scale by the difference improvement
         ### --> only keep the transformations which improve the difference
         ### if there is no improvement mean shift and std scale are closer to 0 and 1
         mean_shift_opt_arr = (
-            diff_improvement_arr * np.array(mean_shift_opt_list)
-            + (1 - diff_improvement_arr) * 0
+            diff_improvement_arr * mean_shift_opt_arr + (1 - diff_improvement_arr) * 0
         )
         std_scale_opt_arr = (
-            diff_improvement_arr * np.array(std_scale_opt_list)
-            + (1 - diff_improvement_arr) * 1
+            diff_improvement_arr * std_scale_opt_arr + (1 - diff_improvement_arr) * 1
         )
 
-        ### the mean shift is mostly 0 and at some positions negative, multiply it by -1
-        mean_shift_opt_arr = -mean_shift_opt_arr
+        ### save the trasnformed mean shift and std scale values for regression
+        save_variables(
+            variable_list=[
+                mean_shift_opt_arr,
+                std_scale_opt_arr,
+            ],
+            name_list=[
+                "mean_shift_opt_for_regress_arr",
+                "std_scale_opt_for_regress_arr",
+            ],
+            path=REGRESS_FOLDER,
+        )
 
-        # Normalize the data used for regression
-        mean_shift_opt_max = np.max(mean_shift_opt_arr)
-        mean_shift_opt_min = np.min(mean_shift_opt_arr)
-        std_scale_opt_max = np.max(std_scale_opt_arr)
-        std_scale_opt_min = np.min(std_scale_opt_arr)
-        p_max = np.max(p_arr)
-        p_min = np.min(p_arr)
-        n_max = np.max(n_arr)
-        n_min = np.min(n_arr)
+        ### create global variables which can be used for pre-processing and
+        ### post-processing for the regression
+        min_dict = {}
+        max_dict = {}
+        min_dict["n"] = np.min(n_arr)
+        min_dict["p"] = np.min(p_arr)
+        max_dict["n"] = np.max(n_arr)
+        max_dict["p"] = np.max(p_arr)
+        min_dict["mean_shift"] = np.min(mean_shift_opt_arr)
+        min_dict["std_scale"] = np.min(std_scale_opt_arr)
+        max_dict["mean_shift"] = np.max(mean_shift_opt_arr)
+        max_dict["std_scale"] = np.max(std_scale_opt_arr)
+        ### save the dicts
+        save_variables(
+            variable_list=[
+                min_dict,
+                max_dict,
+            ],
+            name_list=[
+                "min_dict",
+                "max_dict",
+            ],
+            path=REGRESS_FOLDER,
+        )
 
-        mean_shift_opt_arr_for_regress = (
-            mean_shift_opt_arr - np.min(mean_shift_opt_arr)
-        ) / (np.max(mean_shift_opt_arr) - np.min(mean_shift_opt_arr))
-        y = (y - y_min) / (y_max - y_min)
-        z = (z - z_min) / (z_max - z_min)
-
+        ### do the regression
         get_regression_parameters()
         compare_normal_binomial(compare_original=False, optimize=False, regress=True)
 
