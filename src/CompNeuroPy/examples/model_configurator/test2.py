@@ -479,7 +479,9 @@ def plot_with_transformation(mode: str):
         plt.colorbar()
         plt.xlabel("n")
         plt.ylabel("p")
-        plt.title(f"{title}\n(max: {np.max(loaded_variables[key])})")
+        plt.title(
+            f"{title}\n(min: {np.min(loaded_variables[key])}, max: {np.max(loaded_variables[key])})"
+        )
     plt.tight_layout()
     create_dir(PLOTS_FOLDER)
     plt.savefig(
@@ -519,7 +521,9 @@ def plot_compare_original():
     plt.colorbar()
     plt.xlabel("n")
     plt.ylabel("p")
-    plt.title(f"Difference original\n(max: {np.max(loaded_variables['diff_list'])})")
+    plt.title(
+        f"Difference original\n(min: {np.min(loaded_variables['diff_list'])}, max: {np.max(loaded_variables['diff_list'])})"
+    )
     plt.tight_layout()
     create_dir(PLOTS_FOLDER)
     plt.savefig(f"{PLOTS_FOLDER}/difference_original.png", dpi=300)
@@ -717,6 +721,10 @@ def get_regression_parameters():
     )
     popt_std_scale = loaded_variables[f"popt_std_scale_{best_parallel_id_std_scale}"]
 
+    print("finished regressions")
+    print(f"best fitness for mean_shift: {best_fitness_mean_shift}")
+    print(f"best fitness for std_scale: {best_fitness_std_scale}")
+
     save_variables(
         variable_list=[popt_mean_shift, popt_std_scale],
         name_list=["popt_mean_shift", "popt_std_scale"],
@@ -735,7 +743,7 @@ def preprocess_for_regress(var_value, var_name):
             The name of the variable.
 
     Returns:
-        var_value_processed (float or array):
+        var_value (float or array):
             The normalized value(s) of the variable ready for regression.
     """
     ### load the dicts for normalization
@@ -748,7 +756,6 @@ def preprocess_for_regress(var_value, var_name):
     )
     min_value = loaded_variables["min_dict"][var_name]
     max_value = loaded_variables["max_dict"][var_name]
-    var_value_processed = var_value
 
     ### do calculations
     if var_name == "mean_shift":
@@ -756,13 +763,13 @@ def preprocess_for_regress(var_value, var_name):
         ### coordinates (I think they are not important)
         ### make mean shift look like std_scale
         ### skip mean shift and also vmin and vmax, then rescale to 0 and 1
-        var_value_processed = -var_value_processed
-        var_value_processed = np.clip(var_value_processed, 0, None)
+        var_value = -var_value
+        var_value = np.clip(var_value, 0, None)
         max_value = np.max(-np.array([min_value, max_value]))
         min_value = 0
 
-    var_value_processed = (var_value - min_value) / (max_value - min_value)
-    return var_value_processed
+    var_value = (var_value - min_value) / (max_value - min_value)
+    return var_value
 
 
 def post_process_for_regression(var_value, var_name):
@@ -776,7 +783,7 @@ def post_process_for_regression(var_value, var_name):
             The name of the variable.
 
     Returns:
-        var_value_processed (float or array):
+        var_value (float or array):
             The original value(s) of the variable after denormalization.
     """
     ### load the dicts for normalization
@@ -797,14 +804,14 @@ def post_process_for_regression(var_value, var_name):
         min_value = 0
 
     ### do calculations
-    var_value_processed = var_value * (max_value - min_value) + min_value
+    var_value = var_value * (max_value - min_value) + min_value
 
     if var_name == "mean_shift":
         var_value = -var_value
 
     if var_name == "n":
-        var_value_processed = int(np.round(var_value_processed))
-    return var_value_processed
+        var_value = int(np.round(var_value))
+    return var_value
 
 
 ### TODO I have the problem that for very small p the normal distribution is not a good
@@ -834,7 +841,7 @@ N_JOBS = 2
 N_RUNS_OPT_PER_PAIR = 100 * N_JOBS
 N_RUNS_REGRESS = 15
 N_PARAMS_REGRESS = 16
-SCALE_FOR_REGRESSION = True
+SCALE_ERROR_FOR_REGRESSION = True
 
 
 if __name__ == "__main__":
@@ -888,41 +895,15 @@ if __name__ == "__main__":
         diff_opt_arr = np.array(loaded_variables_opt["diff_opt_list"])
         diff_arr = np.array(loaded_variables["diff_list"])
 
-        if SCALE_FOR_REGRESSION:
-            ### Transform mean_shift_opt and std_scale_opt for regression
-            ### get how much the difference improved (decreased) by the optimized mean shift
-            ### and std scale values
-            diff_improvement_arr = -np.clip(diff_opt_arr - diff_arr, None, 0)
-            diff_improvement_arr = diff_improvement_arr / np.max(diff_improvement_arr)
-            # ### scale the mean shift and std scale by the original difference the larger the difference the mor important the transformation
-            # diff_improvement_arr = np.absolute(diff_arr) / np.max(np.absolute(diff_arr))
+        if SCALE_ERROR_FOR_REGRESSION:
+            ### get array to weight the error for the regression depending on the
+            ### improvement (reduction) of the difference by the optimization
+            weight_error_arr = -np.clip(diff_opt_arr - diff_arr, None, 0)
+            weight_error_arr = (weight_error_arr / np.max(weight_error_arr)) + 1.0
+        else:
+            weight_error_arr = np.ones_like(diff_opt_arr)
 
-            ### scale the mean shift and std scale by the difference improvement
-            ### --> only keep the transformations which improve the difference
-            ### if there is no improvement mean shift and std scale are closer to 0 and 1
-            mean_shift_opt_arr = (
-                diff_improvement_arr * mean_shift_opt_arr
-                + (1 - diff_improvement_arr) * 0
-            )
-            std_scale_opt_arr = (
-                diff_improvement_arr * std_scale_opt_arr
-                + (1 - diff_improvement_arr) * 1
-            )
-
-        ### save the trasnformed mean shift and std scale values for regression
-        save_variables(
-            variable_list=[
-                mean_shift_opt_arr,
-                std_scale_opt_arr,
-            ],
-            name_list=[
-                "mean_shift_opt_for_regress_arr",
-                "std_scale_opt_for_regress_arr",
-            ],
-            path=REGRESS_FOLDER,
-        )
-
-        ### create global variables which can be used for pre-processing and
+        ### create variables which can be used for pre-processing and
         ### post-processing for the regression
         min_dict = {}
         max_dict = {}
@@ -934,15 +915,18 @@ if __name__ == "__main__":
         min_dict["std_scale"] = np.min(std_scale_opt_arr)
         max_dict["mean_shift"] = np.max(mean_shift_opt_arr)
         max_dict["std_scale"] = np.max(std_scale_opt_arr)
-        ### save the dicts
+
+        ### save the variables prepared for the regression
         save_variables(
             variable_list=[
                 min_dict,
                 max_dict,
+                weight_error_arr,
             ],
             name_list=[
                 "min_dict",
                 "max_dict",
+                "weight_error_arr",
             ],
             path=REGRESS_FOLDER,
         )

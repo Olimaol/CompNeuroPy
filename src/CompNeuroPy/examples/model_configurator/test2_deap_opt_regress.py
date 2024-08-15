@@ -10,45 +10,51 @@ from test2 import (
 import sys
 
 
-def regression_evaluate_function(population, X, z):
+def regression_evaluate_function(population, X, z, weights):
     loss_list = []
     ### the population is a list of individuals which are lists of parameters
     for individual in population:
         loss_of_individual = regression_objective_function(
-            individual=individual, X=X, z=z
+            individual=individual, X=X, z=z, weights=weights
         )
         loss_list.append((loss_of_individual,))
     return loss_list
 
 
-def regression_objective_function(individual, X, z):
+def regression_objective_function(individual, X, z, weights):
     is_data = regression_func(X=X, denormalize=None, args=individual)
     target_data = z
-    return np.sum((is_data - target_data) ** 2)
+    error_arr = (is_data - target_data) ** 2
+    ### weight the error array
+    error_arr = error_arr * weights
+    return np.sum(error_arr)
 
 
 if __name__ == "__main__":
-    ### Load the p and n variables for regression from the previous optimization
+    ### Load the p, n, mean_shift and std_scale variables for regression from the
+    ### previous optimization
     loaded_variables = load_variables(
         name_list=[
             "p_list",
             "n_list",
+            "mean_shift_opt_list",
+            "std_scale_opt_list",
         ],
         path=OPTIMIZE_FOLDER,
     )
     p_arr = np.array(loaded_variables["p_list"])
     n_arr = np.array(loaded_variables["n_list"])
-    ### Load the mean_shift and std_scale variables for regression prepared before
-    ### regression
+    mean_shift_opt_arr = np.array(loaded_variables["mean_shift_opt_list"])
+    std_scale_opt_arr = np.array(loaded_variables["std_scale_opt_list"])
+
+    ### Load the weight_error array to weight the regression errors
     loaded_variables = load_variables(
         name_list=[
-            "mean_shift_opt_for_regress_arr",
-            "std_scale_opt_for_regress_arr",
+            "weight_error_arr",
         ],
         path=REGRESS_FOLDER,
     )
-    mean_shift_opt_arr = loaded_variables["mean_shift_opt_for_regress_arr"]
-    std_scale_opt_arr = loaded_variables["std_scale_opt_for_regress_arr"]
+    weight_error_arr = np.array(loaded_variables["weight_error_arr"])
 
     ### normalize the data before regression
     n_arr = preprocess_for_regress(var_value=n_arr, var_name="n")
@@ -65,16 +71,16 @@ if __name__ == "__main__":
         lower=np.array([-1] * N_PARAMS_REGRESS),
         upper=np.array([1] * N_PARAMS_REGRESS),
         evaluate_function=lambda population: regression_evaluate_function(
-            population=population, X=(n_arr, p_arr), z=mean_shift_opt_arr
+            population=population,
+            X=(n_arr, p_arr),
+            z=mean_shift_opt_arr,
+            weights=weight_error_arr,
         ),
         hard_bounds=False,
         display_progress_bar=False,
     )
     deap_cma_result = deap_cma.run(max_evals=2000)
     popt = [deap_cma_result[f"param{param_id}"] for param_id in range(N_PARAMS_REGRESS)]
-    print(
-        f"finished regression of mean_shift, best fitness: {deap_cma_result['best_fitness']}"
-    )
 
     # Save the variables
     save_variables(
@@ -91,16 +97,16 @@ if __name__ == "__main__":
         lower=np.array([-1] * N_PARAMS_REGRESS),
         upper=np.array([1] * N_PARAMS_REGRESS),
         evaluate_function=lambda population: regression_evaluate_function(
-            population=population, X=(n_arr, p_arr), z=std_scale_opt_arr
+            population=population,
+            X=(n_arr, p_arr),
+            z=std_scale_opt_arr,
+            weights=weight_error_arr,
         ),
         hard_bounds=False,
         display_progress_bar=False,
     )
     deap_cma_result = deap_cma.run(max_evals=2000)
     popt = [deap_cma_result[f"param{param_id}"] for param_id in range(N_PARAMS_REGRESS)]
-    print(
-        f"finished regression of std_scale, best fitness: {deap_cma_result['best_fitness']}"
-    )
 
     # Save the variables
     save_variables(
