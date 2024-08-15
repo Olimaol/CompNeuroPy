@@ -31,30 +31,31 @@ def regression_objective_function(individual, X, z, weights):
 
 
 if __name__ == "__main__":
-    ### Load the p, n, mean_shift and std_scale variables for regression from the
+    ### Load the p, n variables for regression from the
     ### previous optimization
     loaded_variables = load_variables(
         name_list=[
             "p_list",
             "n_list",
-            "mean_shift_opt_list",
-            "std_scale_opt_list",
         ],
         path=OPTIMIZE_FOLDER,
     )
     p_arr = np.array(loaded_variables["p_list"])
     n_arr = np.array(loaded_variables["n_list"])
-    mean_shift_opt_arr = np.array(loaded_variables["mean_shift_opt_list"])
-    std_scale_opt_arr = np.array(loaded_variables["std_scale_opt_list"])
 
-    ### Load the weight_error array to weight the regression errors
+    ### Load mean_shift and std_scale values and the weight_error array to weight the
+    ### regression errors
     loaded_variables = load_variables(
         name_list=[
             "weight_error_arr",
+            "mean_shift_opt_arr_for_regress",
+            "std_scale_opt_arr_for_regress",
         ],
         path=REGRESS_FOLDER,
     )
     weight_error_arr = np.array(loaded_variables["weight_error_arr"])
+    mean_shift_opt_arr = np.array(loaded_variables["mean_shift_opt_arr_for_regress"])
+    std_scale_opt_arr = np.array(loaded_variables["std_scale_opt_arr_for_regress"])
 
     ### normalize the data before regression
     n_arr = preprocess_for_regress(var_value=n_arr, var_name="n")

@@ -827,7 +827,7 @@ MIXED = False
 PLOT_COMPARE_ORIGINAL = True
 PLOT_OPTIMIZE = True
 PLOT_REGRESS = True
-PLOT_MIXED = True
+PLOT_MIXED = False
 COMPARE_ORIGINAL_FOLDER = "test2_data_compare_original"
 OPTIMIZE_FOLDER = "test2_data_optimize"
 REGRESS_FOLDER = "test2_data_regress"
@@ -842,6 +842,7 @@ N_RUNS_OPT_PER_PAIR = 100 * N_JOBS
 N_RUNS_REGRESS = 15
 N_PARAMS_REGRESS = 16
 SCALE_ERROR_FOR_REGRESSION = True
+KEEP_ONLY_IMPROVEMENTS = True
 
 
 if __name__ == "__main__":
@@ -903,6 +904,11 @@ if __name__ == "__main__":
         else:
             weight_error_arr = np.ones_like(diff_opt_arr)
 
+        if KEEP_ONLY_IMPROVEMENTS:
+            ### keep only the improvements
+            mean_shift_opt_arr[diff_opt_arr >= diff_arr] = 0
+            std_scale_opt_arr[diff_opt_arr >= diff_arr] = 1
+
         ### create variables which can be used for pre-processing and
         ### post-processing for the regression
         min_dict = {}
@@ -922,11 +928,15 @@ if __name__ == "__main__":
                 min_dict,
                 max_dict,
                 weight_error_arr,
+                mean_shift_opt_arr,
+                std_scale_opt_arr,
             ],
             name_list=[
                 "min_dict",
                 "max_dict",
                 "weight_error_arr",
+                "mean_shift_opt_arr_for_regress",
+                "std_scale_opt_arr_for_regress",
             ],
             path=REGRESS_FOLDER,
         )
