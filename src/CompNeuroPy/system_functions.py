@@ -10,6 +10,7 @@ import textwrap
 import concurrent.futures
 import signal
 from typing import List
+from types import ModuleType
 import threading
 import sys
 
@@ -342,6 +343,8 @@ def _timeout_handler(signum, frame):
 
 def create_data_raw_folder(
     folder_name: str,
+    parameter_module: ModuleType | None = None,
+    parameter_dict: dict | None = None,
     **kwargs,
 ):
     """
@@ -356,7 +359,8 @@ def create_data_raw_folder(
     This function stores the following information in a file called "__data_raw_meta__"
     in the created folder:
         - the name of the python script which created the data raw
-        - the global variables of the python script given as kwargs
+        - the global variables of the python script given as parameter_module,
+          parameter_dict, and kwargs
         - the conda environment
         - the pip requirements
         - the git log of ANNarchy and CompNeuroPy if they are installed locally
@@ -368,8 +372,12 @@ def create_data_raw_folder(
         folder_name (str):
             Name of the folder to create.
 
-        **kwargs (Any, optional):
-            Global variables of the caller script.
+        parameter_module (ModuleType, optional):
+            Module containing parameters as upper case constants. Default: None.
+
+        parameter_dict (dict, optional):
+            Dictionary containing parameters to store as parameter name - value pairs.
+            Default: None.
 
     Returns:
         folder_name (str):
@@ -378,6 +386,10 @@ def create_data_raw_folder(
     Example:
         ```python
         from CompNeuroPy import create_data_raw_folder
+        import parameter_module as params
+
+        # this is a parameter
+        params.A = 10
 
         ### define global variables
         var1 = 1
@@ -387,9 +399,8 @@ def create_data_raw_folder(
         ### call the function
         create_data_raw_folder(
             "my_data_raw_folder",
-            var1=var1,
-            var2=var2,
-            var3=var3,
+            parameter_module=params,
+            parameter_dict={"var1": var1, "var2": var2, "var3": var3},
         )
         ```
     """
@@ -572,11 +583,27 @@ def create_data_raw_folder(
             f"{''.join(git_strings)}"
             f"# with the following global variables:\n"
         )
-        for key, value in kwargs.items():
-            if isinstance(value, str):
-                f.write(f"{key} = '{value}'\n")
-            else:
-                f.write(f"{key} = {value}\n")
+        # store parameters from parameter_module, parameter_dict, and kwargs
+        if parameter_module is not None:
+            for key, value in vars(parameter_module).items():
+                if not (key.isupper()):
+                    continue
+                if isinstance(value, str):
+                    f.write(f"{key} = '{value}'\n")
+                else:
+                    f.write(f"{key} = {value}\n")
+        if parameter_dict is not None:
+            for key, value in parameter_dict.items():
+                if isinstance(value, str):
+                    f.write(f"{key} = '{value}'\n")
+                else:
+                    f.write(f"{key} = {value}\n")
+        if kwargs:
+            for key, value in kwargs.items():
+                if isinstance(value, str):
+                    f.write(f"{key} = '{value}'\n")
+                else:
+                    f.write(f"{key} = {value}\n")
         f.write("\n")
         f.write(
             "# ##########################################################################\n"
