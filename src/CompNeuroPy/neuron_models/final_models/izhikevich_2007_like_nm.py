@@ -1,4 +1,4 @@
-from ANNarchy import Neuron
+from CompNeuroPy import ann
 import re
 
 ### Izhikevich (2007)-like neuron model templates
@@ -93,7 +93,7 @@ def _set_init(equations, init):
 ############################################################################################
 
 
-class Izhikevich2007(Neuron):
+class Izhikevich2007(ann.Neuron):
     """
     TEMPLATE
 
@@ -187,7 +187,7 @@ class Izhikevich2007(Neuron):
         self._instantiated.append(True)
 
 
-class Izhikevich2007RecCur(Neuron):
+class Izhikevich2007RecCur(ann.Neuron):
     """
     TEMPLATE
 
@@ -293,7 +293,7 @@ class Izhikevich2007RecCur(Neuron):
         self._instantiated.append(True)
 
 
-class Izhikevich2007VoltageClamp(Neuron):
+class Izhikevich2007VoltageClamp(ann.Neuron):
     """
     TEMPLATE
 
@@ -394,7 +394,7 @@ class Izhikevich2007VoltageClamp(Neuron):
         self._instantiated.append(True)
 
 
-class Izhikevich2007Syn(Neuron):
+class Izhikevich2007Syn(ann.Neuron):
     """
     TEMPLATE
 
@@ -512,7 +512,7 @@ class Izhikevich2007Syn(Neuron):
         self._instantiated.append(True)
 
 
-class Izhikevich2007NoisyAmpa(Neuron):
+class Izhikevich2007NoisyAmpa(ann.Neuron):
     """
     TEMPLATE
 
@@ -640,7 +640,7 @@ class Izhikevich2007NoisyAmpa(Neuron):
         self._instantiated.append(True)
 
 
-class Izhikevich2007NoisyBase(Neuron):
+class Izhikevich2007NoisyBase(ann.Neuron):
     """
     TEMPLATE
 
@@ -774,7 +774,7 @@ class Izhikevich2007NoisyBase(Neuron):
         self._instantiated.append(True)
 
 
-class Izhikevich2007FsiNoisyAmpa(Neuron):
+class Izhikevich2007FsiNoisyAmpa(ann.Neuron):
     """
     TEMPLATE
 
@@ -908,7 +908,7 @@ class Izhikevich2007FsiNoisyAmpa(Neuron):
         self._instantiated.append(True)
 
 
-class Izhikevich2007CorbitFsiNoisyAmpa(Neuron):
+class Izhikevich2007CorbitFsiNoisyAmpa(ann.Neuron):
     """
     TEMPLATE
 
@@ -1066,7 +1066,7 @@ class Izhikevich2007CorbitFsiNoisyAmpa(Neuron):
         self._instantiated.append(True)
 
 
-class Izhikevich2007CorbitFsiNoisyBase(Neuron):
+class Izhikevich2007CorbitFsiNoisyBase(ann.Neuron):
     """
     TEMPLATE
 
@@ -1232,7 +1232,7 @@ class Izhikevich2007CorbitFsiNoisyBase(Neuron):
         self._instantiated.append(True)
 
 
-class Izhikevich2007NoisyAmpaOscillating(Neuron):
+class Izhikevich2007NoisyAmpaOscillating(ann.Neuron):
     """
     TEMPLATE
 
@@ -1372,7 +1372,7 @@ class Izhikevich2007NoisyAmpaOscillating(Neuron):
         self._instantiated.append(True)
 
 
-class IzhikevichGolomb(Neuron):
+class IzhikevichGolomb(ann.Neuron):
     """
     PREDEFINED
 

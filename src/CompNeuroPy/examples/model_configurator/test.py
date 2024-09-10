@@ -18,7 +18,6 @@ from ANNarchy import (
 from CompNeuroPy import (
     CompNeuroMonitors,
     PlotRecordings,
-    interactive_plot,
     timing_decorator,
     annarchy_compiled,
     CompNeuroModel,
@@ -38,9 +37,9 @@ from CompNeuroPy.examples.model_configurator.reduce_model import _CreateReducedM
 setup(dt=0.1)
 
 
-CONNECTION_PROB = 0.01
+CONNECTION_PROB = 0.6
 WEIGHTS = 0.1
-POP_PRE_SIZE = 1000
+POP_PRE_SIZE = 100
 POP_POST_SIZE = 100
 POP_REDUCED_SIZE = 100
 
@@ -153,9 +152,9 @@ if __name__ == "__main__":
     ### run simulation
     start = time.time()
     simulate(50.0)
-    get_population("pop_pre1").rates = 1000.0
+    get_population("pop_pre1").rates = 30.0
     simulate(50.0)
-    get_population("pop_pre2").rates = 1000.0
+    get_population("pop_pre2").rates = 30.0
     simulate(100.0)
     print("simulate time:", time.time() - start)
     recordings_normal = monitors.get_recordings()
@@ -165,9 +164,8 @@ if __name__ == "__main__":
     print("reduced model")
     ### create model
     model = _CreateReducedModel(
-        model=model, reduced_size=POP_REDUCED_SIZE
+        model=model, reduced_size=POP_REDUCED_SIZE, do_create=True, do_compile=True
     ).model_reduced
-    model.compile(warn=False)
     ### create monitors
     mon_dict = {
         "pop_pre1_reduced": ["spike"],
@@ -188,9 +186,9 @@ if __name__ == "__main__":
     ### run simulation
     start = time.time()
     simulate(50.0)
-    get_population("pop_pre1_reduced").rates = 1000.0
+    get_population("pop_pre1_reduced").rates = 30.0
     simulate(50.0)
-    get_population("pop_pre2_reduced").rates = 1000.0
+    get_population("pop_pre2_reduced").rates = 30.0
     simulate(100.0)
     print("simulate time:", time.time() - start)
     recordings_reduced = monitors.get_recordings()
@@ -220,7 +218,7 @@ if __name__ == "__main__":
                 "hybrid",
                 "hybrid",
                 "hybrid",
-                "line_mean",
+                "line",
             ],
         },
     )
@@ -256,7 +254,7 @@ if __name__ == "__main__":
                 "hybrid",
                 "hybrid",
                 "hybrid",
-                "line_mean",
+                "line",
                 "line_mean",
                 "line_mean",
                 "line_mean",

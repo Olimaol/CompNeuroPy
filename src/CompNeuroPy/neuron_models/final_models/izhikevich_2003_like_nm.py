@@ -1,10 +1,10 @@
-from ANNarchy import Neuron
+from CompNeuroPy import ann
 
 ### Izhikevich (2003)-like neuron model templates
 ### based on: Izhikevich, E. M. (2003). Simple model of spiking neurons. IEEE Transactions on Neural Networks, 14(6), 1569–1572. https://doi.org/10.1109/TNN.2003.820440
 
 
-class Izhikevich2003FixedNoisyAmpa(Neuron):
+class Izhikevich2003FixedNoisyAmpa(ann.Neuron):
     """
     TEMPLATE
 
@@ -104,7 +104,7 @@ class Izhikevich2003FixedNoisyAmpa(Neuron):
         self._instantiated.append(True)
 
 
-class Izhikevich2003NoisyAmpa(Neuron):
+class Izhikevich2003NoisyAmpa(ann.Neuron):
     """
     TEMPLATE
 
@@ -215,7 +215,7 @@ class Izhikevich2003NoisyAmpa(Neuron):
         self._instantiated.append(True)
 
 
-class Izhikevich2003NoisyAmpaNonlin(Neuron):
+class Izhikevich2003NoisyAmpaNonlin(ann.Neuron):
     """
     TEMPLATE
 
@@ -336,7 +336,7 @@ class Izhikevich2003NoisyAmpaNonlin(Neuron):
         self._instantiated.append(True)
 
 
-class Izhikevich2003NoisyAmpaOscillating(Neuron):
+class Izhikevich2003NoisyAmpaOscillating(ann.Neuron):
     """
     TEMPLATE
 
@@ -458,7 +458,7 @@ class Izhikevich2003NoisyAmpaOscillating(Neuron):
         self._instantiated.append(True)
 
 
-class Izhikevich2003NoisyBaseSNR(Neuron):
+class Izhikevich2003NoisyBaseSNR(ann.Neuron):
     """
     TEMPLATE
 
@@ -603,7 +603,7 @@ class Izhikevich2003NoisyBaseSNR(Neuron):
         self._instantiated.append(True)
 
 
-class Izhikevich2003NoisyBase(Neuron):
+class Izhikevich2003NoisyBase(ann.Neuron):
     """
     TEMPLATE
 
@@ -724,7 +724,7 @@ class Izhikevich2003NoisyBase(Neuron):
         self._instantiated.append(True)
 
 
-class Izhikevich2003NoisyBaseNonlin(Neuron):
+class Izhikevich2003NoisyBaseNonlin(ann.Neuron):
     """
     TEMPLATE
 

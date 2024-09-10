@@ -4,7 +4,6 @@ from ANNarchy import (
     setup,
     simulate,
     get_population,
-    get_projection,
     dt,
 )
 from CompNeuroPy.neuron_models import (
@@ -12,20 +11,15 @@ from CompNeuroPy.neuron_models import (
     Izhikevich2003NoisyBaseSNR,
 )
 from CompNeuroPy import (
-    generate_model,
-    Monitors,
-    plot_recordings,
-    my_raster_plot,
+    CompNeuroModel,
     CompNeuroMonitors,
     PlotRecordings,
+    my_raster_plot,
+    cnp_clear,
 )
 from CompNeuroPy.examples.model_configurator.model_configurator_cnp import (
     ModelConfigurator,
 )
-from CompNeuroPy.examples.model_configurator.model_configurator_cnp_old import (
-    model_configurator,
-)
-import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -63,7 +57,7 @@ def BGM_part_function(params):
             tau_gaba=params["stn.tau_gaba"],
             E_ampa=params["stn.E_ampa"],
             E_gaba=params["stn.E_gaba"],
-            noise=0,
+            noise=1,
             tau_power=10,
             snr_target=4,
             rate_noise=100,
@@ -84,7 +78,7 @@ def BGM_part_function(params):
             tau_gaba=params["snr.tau_gaba"],
             E_ampa=params["snr.E_ampa"],
             E_gaba=params["snr.E_gaba"],
-            noise=0,
+            noise=1,
             tau_power=10,
             snr_target=4,
             rate_noise=100,
@@ -105,7 +99,7 @@ def BGM_part_function(params):
             tau_gaba=params["gpe.tau_gaba"],
             E_ampa=params["gpe.E_ampa"],
             E_gaba=params["gpe.E_gaba"],
-            noise=0,
+            noise=1,
             tau_power=10,
             snr_target=4,
             rate_noise=100,
@@ -126,7 +120,7 @@ def BGM_part_function(params):
             tau_gaba=params["thal.tau_gaba"],
             E_ampa=params["thal.E_ampa"],
             E_gaba=params["thal.E_gaba"],
-            noise=0,
+            noise=1,
             tau_power=10,
             snr_target=4,
             rate_noise=100,
@@ -222,16 +216,16 @@ if __name__ == "__main__":
     params = {}
     #######   POPULATIONS PARAMETERS   ######
     ### cortex / input populations
-    params["cor_exc.size"] = 100
+    params["cor_exc.size"] = 1000
     params["cor_exc.tau_up"] = 10
     params["cor_exc.tau_down"] = 30
     params["cor_exc.rates"] = 15
-    params["cor_inh.size"] = 100
+    params["cor_inh.size"] = 1000
     params["cor_inh.tau_up"] = 10
     params["cor_inh.tau_down"] = 30
     params["cor_inh.rates"] = 30
     ### BG Populations
-    params["snr.size"] = 100
+    params["snr.size"] = 1000
     params["snr.a"] = 0.005
     params["snr.b"] = 0.585
     params["snr.c"] = -65
@@ -243,7 +237,7 @@ if __name__ == "__main__":
     params["snr.tau_gaba"] = 10
     params["snr.E_ampa"] = 0
     params["snr.E_gaba"] = -90
-    params["stn.size"] = 50
+    params["stn.size"] = 1000
     params["stn.a"] = 0.005
     params["stn.b"] = 0.265
     params["stn.c"] = -65
@@ -255,7 +249,7 @@ if __name__ == "__main__":
     params["stn.tau_gaba"] = 10
     params["stn.E_ampa"] = 0
     params["stn.E_gaba"] = -90
-    params["gpe.size"] = 100
+    params["gpe.size"] = 1000
     params["gpe.a"] = params["snr.a"]  # 0.039191890241715294
     params["gpe.b"] = params["snr.b"]  # 0.000548238111291427
     params["gpe.c"] = params["snr.c"]  # -49.88014418530518
@@ -267,7 +261,7 @@ if __name__ == "__main__":
     params["gpe.tau_gaba"] = 10
     params["gpe.E_ampa"] = 0
     params["gpe.E_gaba"] = -90
-    params["thal.size"] = 100
+    params["thal.size"] = 1000
     params["thal.a"] = 0.02
     params["thal.b"] = 0.2
     params["thal.c"] = -65
@@ -293,63 +287,13 @@ if __name__ == "__main__":
     ### create model which should be configurated
     ### create or compile have no effect
     setup(dt=0.1)
-    model = generate_model(
+    model = CompNeuroModel(
         model_creation_function=BGM_part_function,
         model_kwargs={"params": params},
         name="BGM_part_model",
         description="Part of a BGM circuit",
         do_create=False,
     )
-
-    # model.create()
-    # mon = CompNeuroMonitors(
-    #     {
-    #         pop_name: [
-    #             "I_noise",
-    #             "I_signal",
-    #             "I",
-    #             "power_I_signal",
-    #             "spike",
-    #         ]
-    #         for pop_name in ["stn"]
-    #     }
-    # )
-    # mon.start()
-
-    # simulate(500)
-    # get_population("stn").I_app = 10
-    # simulate(500)
-
-    # recordings = mon.get_recordings()
-    # recording_times = mon.get_recording_times()
-
-    # PlotRecordings(
-    #     recordings=recordings,
-    #     recording_times=recording_times,
-    #     chunk=0,
-    #     shape=(5, 1),
-    #     plan={
-    #         "position": list(range(1, 5 + 1)),
-    #         "compartment": ["stn"] * 5,
-    #         "variable": [
-    #             "I_noise",
-    #             "I_signal",
-    #             "I",
-    #             "power_I_signal",
-    #             "spike",
-    #         ],
-    #         "format": [
-    #             "line",
-    #             "line",
-    #             "line",
-    #             "line",
-    #             "hybrid",
-    #         ],
-    #     },
-    #     figname="model_recordings_noise.png",
-    #     # time_lim=(495, 505),
-    # )
-    # quit()
 
     ### model configurator should get target resting-state firing rates for the
     ### model populations one wants to configure and their afferents as input
@@ -360,7 +304,7 @@ if __name__ == "__main__":
         "stn": 30,
         "gpe": 50,
         "snr": 60,
-        "thal": 5,
+        "thal": 20,
     }
     do_not_config_list = ["cor_exc", "cor_inh"]
 
@@ -368,22 +312,23 @@ if __name__ == "__main__":
     model_conf = ModelConfigurator(
         model=model,
         target_firing_rate_dict=target_firing_rate_dict,
-        max_psp=0.7,
+        max_psp=5.0,
+        v_tol=1.0,
         do_not_config_list=do_not_config_list,
-        print_guide=True,
-        I_app_variable="I_app",
         cache=True,
         clear_cache=False,
         log_file="model_configurator.log",
+        verbose=True,
+        do_plot=False,
     )
 
     ### set syn load
     model_conf.set_syn_load(
         syn_load_dict={
-            "stn": {"ampa": 1.0, "gaba": 1.0},
-            "snr": {"ampa": 1.0, "gaba": 1.0},
-            "gpe": {"ampa": 1.0},
-            "thal": {"gaba": 1.0},
+            "stn": {"ampa": 1.0, "gaba": 0.0},
+            "snr": {"ampa": 1.0, "gaba": 0.0},
+            "gpe": {"ampa": 0.0},
+            "thal": {"gaba": 0.0},
         },
         syn_contribution_dict={
             "stn": {"ampa": {"cor_exc__stn": 1.0}, "gaba": {"cor_inh__stn": 1.0}},
@@ -409,88 +354,168 @@ if __name__ == "__main__":
     #     }
     # )
 
-    I_base_dict = model_conf.get_base()
+    I_base_dict = {
+        "stn": -67.26137607678399,
+        "snr": -159.42154403510528,
+        "gpe": 20.259671890303633,
+        "thal": 7.695960857828326,
+    }  # model_conf.get_base()
     print("I_base:")
     print(I_base_dict)
 
-    model_conf.set_base()
+    model_conf.set_base(base_dict=I_base_dict)
 
     ### do a test simulation
-    mon = Monitors(
-        {
-            "cor_exc": ["spike"],
-            "cor_inh": ["spike"],
-            "stn": ["spike", "g_ampa", "g_gaba"],
-            "gpe": ["spike", "g_ampa", "g_gaba"],
-            "snr": ["spike", "g_ampa", "g_gaba"],
-            "thal": ["spike", "g_ampa", "g_gaba"],
-        }
-    )
-    get_population("cor_exc").rates = target_firing_rate_dict["cor_exc"]
-    get_population("cor_inh").rates = target_firing_rate_dict["cor_inh"]
+    mon_dict = {
+        "cor_exc": ["spike"],
+        "cor_inh": ["spike"],
+        "stn": ["spike", "g_ampa"],
+        "gpe": ["spike"],
+        "snr": ["spike", "g_ampa"],
+        "thal": ["spike"],
+    }
+    mon = CompNeuroMonitors(mon_dict)
+    position_list = []
+    compartment_list = []
+    variable_list = []
+    format_list = []
+    for idx, pop_name in enumerate(model.populations):
+        for key, val in mon_dict.items():
+            if pop_name in key:
+                if "spike" in val:
+                    position_list.append(3 * model.populations.index(pop_name) + 1)
+                    compartment_list.append(key)
+                    variable_list.append("spike")
+                    format_list.append("hybrid")
+                if "g_ampa" in val:
+                    position_list.append(3 * model.populations.index(pop_name) + 2)
+                    compartment_list.append(key)
+                    variable_list.append("g_ampa")
+                    format_list.append("line")
+                if "r" in val:
+                    position_list.append(3 * model.populations.index(pop_name) + 3)
+                    compartment_list.append(key)
+                    variable_list.append("r")
+                    format_list.append("line")
+    ### initial simulation
     simulate(1000)
     mon.start()
+    ### first simulation with default inputs
     simulate(4000)
     get_population("cor_exc").rates = 0
-    get_population("cor_inh").rates = 0
+    ### second simulation with changed inputs
     simulate(2000)
 
     ### get recordings
     recordings = mon.get_recordings()
     recording_times = mon.get_recording_times()
 
-    stn_g_ampa = recordings[0]["stn;g_ampa"]
-    stn_g_gaba = recordings[0]["stn;g_gaba"]
-    cor_spike = recordings[0]["cor_exc;spike"]
-    cor_spike_arr = np.zeros(stn_g_ampa.shape[0])
-    t, n = my_raster_plot(cor_spike)
-    values, counts = np.unique(t - 10000, return_counts=True)
-    t = values.astype(int)
-    cor_spike_arr[t] = counts
-    plt.figure(figsize=(6.4, 4.8 * 2))
-    plt.subplot(211)
-    plt.ylabel("g_ampa")
-    plt.plot(stn_g_ampa[:, 0], "k.")
-    plt.subplot(212)
-    plt.ylabel("g_gaba")
-    plt.plot(stn_g_gaba[:, 0], "k.")
-    plt.tight_layout()
-    plt.savefig("stn_input_model.png", dpi=300)
-    plt.close("all")
-
     ### print rates
     for pop_name in model.populations:
         spike_dict = recordings[0][f"{pop_name};spike"]
         t, n = my_raster_plot(spike_dict)
         nr_spikes_1st = np.sum(
-            (t > int(round(1000 / dt(), 0))) * (t < int(round(5000 / dt(), 0)))
+            (t > int(round(1000 / dt()))) * (t < int(round(5000 / dt())))
         )
-        nr_spikes_2nd = np.sum((t > int(round(5000 / dt(), 0))))
-        rate_1st = nr_spikes_1st / (4 * params[f"{pop_name}.size"])
-        rate_2nd = nr_spikes_2nd / (2 * params[f"{pop_name}.size"])
+        nr_spikes_2nd = np.sum((t > int(round(5000 / dt()))))
+        rate_1st = nr_spikes_1st / (4 * get_population(pop_name).size)
+        rate_2nd = nr_spikes_2nd / (2 * get_population(pop_name).size)
         print(f"pop_name: {pop_name}, rate_1st: {rate_1st}, rate_2nd: {rate_2nd}")
 
     ### plot recordings
-    plot_recordings(
+    PlotRecordings(
         figname="model_recordings.png",
         recordings=recordings,
         recording_times=recording_times,
         chunk=0,
-        shape=(5, 3),
-        plan=[
-            "1;cor_exc;spike;hybrid",
-            "2;cor_inh;spike;hybrid",
-            "4;stn;spike;hybrid",
-            "5;stn;g_ampa;line",
-            "6;stn;g_gaba;line",
-            "7;gpe;spike;hybrid",
-            "8;gpe;g_ampa;line",
-            "9;gpe;g_gaba;line",
-            "10;snr;spike;hybrid",
-            "11;snr;g_ampa;line",
-            "12;snr;g_gaba;line",
-            "13;thal;spike;hybrid",
-            "14;thal;g_ampa;line",
-            "15;thal;g_gaba;line",
-        ],
+        shape=(len(model.populations), 3),
+        plan={
+            "position": position_list,
+            "compartment": compartment_list,
+            "variable": variable_list,
+            "format": format_list,
+        },
+    )
+
+    ### clear ANNarchy, create the reduced model, set the weights for the reduced model
+    ### and the baselines and then compare the results
+    cnp_clear()
+    create_reduced_model = model_conf._model_reduced
+    create_reduced_model.model_reduced.create()
+    create_reduced_model.set_weights(weight_dict=model_conf._weight_dicts.weight_dict)
+    for pop_name, I_app in I_base_dict.items():
+        get_population(f"{pop_name}_reduced").I_app = I_app
+
+    mon_dict = {
+        "cor_exc_reduced": ["spike"],
+        "cor_exc_spike_collecting_aux": ["r"],
+        "cor_inh_reduced": ["spike"],
+        "stn_reduced": ["spike", "g_ampa"],
+        "gpe_reduced": ["spike"],
+        "snr_reduced": ["spike", "g_ampa"],
+        "thal_reduced": ["spike"],
+    }
+    mon = CompNeuroMonitors(mon_dict)
+    position_list = []
+    compartment_list = []
+    variable_list = []
+    format_list = []
+    counter = 0
+    for idx, pop_name in enumerate(model.populations):
+        for key, val in mon_dict.items():
+            if pop_name in key:
+                if "spike" in val:
+                    position_list.append(3 * model.populations.index(pop_name) + 1)
+                    compartment_list.append(key)
+                    variable_list.append("spike")
+                    format_list.append("hybrid")
+                if "g_ampa" in val:
+                    position_list.append(3 * model.populations.index(pop_name) + 2)
+                    compartment_list.append(key)
+                    variable_list.append("g_ampa")
+                    format_list.append("line")
+                if "r" in val:
+                    position_list.append(3 * model.populations.index(pop_name) + 3)
+                    compartment_list.append(key)
+                    variable_list.append("r")
+                    format_list.append("line")
+    ### initial simulation
+    simulate(1000)
+    mon.start()
+    ### first simulation with default inputs
+    simulate(4000)
+    get_population("cor_exc_reduced").rates = 0
+    ### second simulation with changed inputs
+    simulate(2000)
+
+    ### get recordings
+    recordings = mon.get_recordings()
+    recording_times = mon.get_recording_times()
+
+    ### print rates
+    population_list = [f"{pop_name}_reduced" for pop_name in model.populations]
+    for pop_name in population_list:
+        spike_dict = recordings[0][f"{pop_name};spike"]
+        t, n = my_raster_plot(spike_dict)
+        nr_spikes_1st = np.sum(
+            (t > int(round(1000 / dt()))) * (t < int(round(5000 / dt())))
+        )
+        nr_spikes_2nd = np.sum((t > int(round(5000 / dt()))))
+        rate_1st = nr_spikes_1st / (4 * get_population(pop_name).size)
+        rate_2nd = nr_spikes_2nd / (2 * get_population(pop_name).size)
+        print(f"pop_name: {pop_name}, rate_1st: {rate_1st}, rate_2nd: {rate_2nd}")
+
+    ### plot recordings
+    PlotRecordings(
+        figname="model_recordings_reduced.png",
+        recordings=recordings,
+        recording_times=recording_times,
+        chunk=0,
+        shape=(len(population_list), 3),
+        plan={
+            "position": position_list,
+            "compartment": compartment_list,
+            "variable": variable_list,
+            "format": format_list,
+        },
     )

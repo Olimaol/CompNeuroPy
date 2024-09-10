@@ -1,10 +1,10 @@
-from ANNarchy import Neuron
+from CompNeuroPy import ann
 
 ### Fit neuron model for FSI neurons from Corbit et al. (2016)
 ### Corbit, V. L., Whalen, T. C., Zitelli, K. T., Crilly, S. Y., Rubin, J. E., & Gittis, A. H. (2016). Pallidostriatal Projections Promote β Oscillations in a Dopamine-Depleted Biophysical Network Model. Journal of Neuroscience, 36(20), 5556–5571. https://doi.org/10.1523/JNEUROSCI.0339-16.2016
 
 
-_Izhikevich2007_Corbit = Neuron(
+_Izhikevich2007_Corbit = ann.Neuron(
     parameters="""
         C      = 0 : population # pF
         k      = 0 : population #
@@ -36,7 +36,7 @@ _Izhikevich2007_Corbit = Neuron(
 )
 
 
-_Izhikevich2007_Corbit2 = Neuron(
+_Izhikevich2007_Corbit2 = ann.Neuron(
     parameters="""
         C      = 0 : population # pF
         k      = 0 : population #
@@ -66,7 +66,7 @@ _Izhikevich2007_Corbit2 = Neuron(
 )
 
 
-_Izhikevich2007_Corbit3 = Neuron(
+_Izhikevich2007_Corbit3 = ann.Neuron(
     parameters="""
         C      = 0 : population # pF
         k      = 0 : population #
@@ -100,7 +100,7 @@ _Izhikevich2007_Corbit3 = Neuron(
 )
 
 
-_Izhikevich2007_Corbit4 = Neuron(
+_Izhikevich2007_Corbit4 = ann.Neuron(
     parameters="""
         C      = 0 : population # pF
         k      = 0 : population #
@@ -129,7 +129,7 @@ _Izhikevich2007_Corbit4 = Neuron(
 )
 
 
-_Izhikevich2007_Corbit5 = Neuron(
+_Izhikevich2007_Corbit5 = ann.Neuron(
     parameters="""
         C      = 0 : population # pF
         k      = 0 : population #
@@ -164,7 +164,7 @@ _Izhikevich2007_Corbit5 = Neuron(
 )
 
 
-_Izhikevich2007_Corbit6 = Neuron(
+_Izhikevich2007_Corbit6 = ann.Neuron(
     parameters="""
         C      = 0 : population # ATTENTION! H&H model is myF/cm^2 --> here also myF/cm^2 and not pF --> current also myA/cm^2 and not pA
         k      = 0 : population #
@@ -194,7 +194,7 @@ _Izhikevich2007_Corbit6 = Neuron(
 )
 
 
-_Izhikevich2007_Corbit7 = Neuron(
+_Izhikevich2007_Corbit7 = ann.Neuron(
     parameters="""
         C      = 0 : population # pF
         k      = 0 : population #
@@ -222,7 +222,7 @@ _Izhikevich2007_Corbit7 = Neuron(
 )
 
 
-_Izhikevich2007_Corbit8 = Neuron(
+_Izhikevich2007_Corbit8 = ann.Neuron(
     parameters="""
         C      = 0 : population # ATTENTION! H&H model is myF/cm^2 --> here also myF/cm^2 and not pF --> current also myF/cm^2 and not pA
         k      = 0 : population #
@@ -256,7 +256,7 @@ _Izhikevich2007_Corbit8 = Neuron(
 )
 
 
-_Izhikevich2007_Corbit9 = Neuron(
+_Izhikevich2007_Corbit9 = ann.Neuron(
     parameters="""
         C      = 0 : population # ATTENTION! H&H model is myF/cm^2 --> here also myF/cm^2 and not pF --> current also myF/cm^2 and not pA
         k      = 0 : population #
@@ -287,7 +287,7 @@ _Izhikevich2007_Corbit9 = Neuron(
     description="Based on Izhikevich2007 adjusted to fit Corbit FSI neuron model. Adjusted version should be able to produce late spiking and non-linear f-I curve. Combination of Corbit6 and Corbit8 without parameter d, but x ",
 )
 
-_Izhikevich2007_Corbit10 = Neuron(
+_Izhikevich2007_Corbit10 = ann.Neuron(
     parameters="""
         ### base parameters
         C               = 1.083990339534819   : population # yF/cm^2
@@ -334,7 +334,7 @@ _Izhikevich2007_Corbit10 = Neuron(
     name="_Izhikevich2007_Corbit10",
     description="Simple neuron model equations from Izhikevich (2007) adjusted version to fit the striatal FSI neuron model from Corbit et al. (2016) should be able to produce late spiking.",
 )
-_Izhikevich2007_Corbit11 = Neuron(
+_Izhikevich2007_Corbit11 = ann.Neuron(
     parameters="""
         ### base parameters
         C               = 0
@@ -384,7 +384,7 @@ _Izhikevich2007_Corbit11 = Neuron(
     description="Simple neuron model equations from Izhikevich (2007) adjusted version to fit the striatal FSI neuron model from Corbit et al. (2016) should be able to produce late spiking.",
 )
 
-_Izhikevich2007_Corbit12 = Neuron(
+_Izhikevich2007_Corbit12 = ann.Neuron(
     parameters="""
         ### base parameters
         C               = 0
@@ -433,7 +433,7 @@ _Izhikevich2007_Corbit12 = Neuron(
     description="Simple neuron model equations from Izhikevich (2007) adjusted version to fit the striatal FSI neuron model from Corbit et al. (2016) should be able to produce late spiking.",
 )
 
-_Izhikevich2007_Corbit13 = Neuron(
+_Izhikevich2007_Corbit13 = ann.Neuron(
     parameters="""
         ### base parameters
         C               = 0

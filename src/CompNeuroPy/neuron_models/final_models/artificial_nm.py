@@ -1,10 +1,9 @@
-from ANNarchy import Neuron
-
+from CompNeuroPy import ann
 
 ### artificial neuron models
 
 
-class IntegratorNeuron(Neuron):
+class IntegratorNeuron(ann.Neuron):
     """
     TEMPLATE
 
@@ -96,7 +95,7 @@ class IntegratorNeuron(Neuron):
         self._instantiated.append(True)
 
 
-class IntegratorNeuronSimple(Neuron):
+class IntegratorNeuronSimple(ann.Neuron):
     """
     TEMPLATE
 
@@ -177,7 +176,7 @@ class IntegratorNeuronSimple(Neuron):
         self._instantiated.append(True)
 
 
-class PoissonNeuron(Neuron):
+class PoissonNeuron(ann.Neuron):
     """
     TEMPLATE
 
@@ -224,7 +223,7 @@ class PoissonNeuron(Neuron):
         self._instantiated.append(True)
 
 
-class PoissonNeuronUpDown(Neuron):
+class PoissonNeuronUpDown(ann.Neuron):
     """
     TEMPLATE
 
@@ -276,7 +275,7 @@ class PoissonNeuronUpDown(Neuron):
         self._instantiated.append(True)
 
 
-class PoissonNeuronSin(Neuron):
+class PoissonNeuronSin(ann.Neuron):
     """
     TEMPLATE
 

@@ -1,4 +1,4 @@
-from ANNarchy import Population, Projection
+from CompNeuroPy import ann
 from CompNeuroPy.neuron_models import (
     poisson_neuron_up_down,
     Izhikevich2007_noisy_AMPA,
@@ -24,50 +24,52 @@ def BGM_v01(self):
     """
     #######   POPULATIONS   ######
     ### cortex / input populations
-    cor_go = Population(
+    cor_go = ann.Population(
         self.params["cor_go.size"], poisson_neuron_up_down, name="cor_go"
     )
-    cor_pause = Population(
+    cor_pause = ann.Population(
         self.params["cor_pause.size"], poisson_neuron_up_down, name="cor_pause"
     )
-    cor_stop = Population(
+    cor_stop = ann.Population(
         self.params["cor_stop.size"], poisson_neuron_up_down, name="cor_stop"
     )
     ### Str Populations
-    str_d1 = Population(
+    str_d1 = ann.Population(
         self.params["str_d1.size"], Izhikevich2007_noisy_AMPA, name="str_d1"
     )
-    str_d2 = Population(
+    str_d2 = ann.Population(
         self.params["str_d2.size"], Izhikevich2007_noisy_AMPA, name="str_d2"
     )
-    str_fsi = Population(
+    str_fsi = ann.Population(
         self.params["str_fsi.size"], Izhikevich2007_fsi_noisy_AMPA, name="str_fsi"
     )
     ### BG Populations
-    stn = Population(self.params["stn.size"], Izhikevich2003_noisy_AMPA, name="stn")
-    snr = Population(self.params["snr.size"], Izhikevich2003_noisy_AMPA, name="snr")
-    gpe_proto = Population(
+    stn = ann.Population(self.params["stn.size"], Izhikevich2003_noisy_AMPA, name="stn")
+    snr = ann.Population(self.params["snr.size"], Izhikevich2003_noisy_AMPA, name="snr")
+    gpe_proto = ann.Population(
         self.params["gpe_proto.size"],
         Izhikevich2003_flexible_noisy_AMPA,
         name="gpe_proto",
     )
-    gpe_arky = Population(
+    gpe_arky = ann.Population(
         self.params["gpe_arky.size"],
         Izhikevich2003_flexible_noisy_AMPA,
         name="gpe_arky",
     )
-    gpe_cp = Population(
+    gpe_cp = ann.Population(
         self.params["gpe_cp.size"], Izhikevich2003_flexible_noisy_AMPA, name="gpe_cp"
     )
-    thal = Population(self.params["thal.size"], Izhikevich2003_noisy_AMPA, name="thal")
+    thal = ann.Population(
+        self.params["thal.size"], Izhikevich2003_noisy_AMPA, name="thal"
+    )
     ### integrator Neurons
-    integrator_go = Population(
+    integrator_go = ann.Population(
         self.params["integrator_go.size"],
         integrator_neuron,
         stop_condition="decision>=0 : any",
         name="integrator_go",
     )
-    integrator_stop = Population(
+    integrator_stop = ann.Population(
         self.params["integrator_stop.size"],
         integrator_neuron,
         stop_condition="decision>=0 : any",
@@ -76,28 +78,28 @@ def BGM_v01(self):
 
     ######   PROJECTIONS   ######
     ### cortex go output
-    cor_go__str_d1 = Projection(
+    cor_go__str_d1 = ann.Projection(
         pre=cor_go,
         post=str_d1,
         target="ampa",
         synapse=factor_synapse,
         name="cor_go__str_d1",
     )
-    cor_go__str_d2 = Projection(
+    cor_go__str_d2 = ann.Projection(
         pre=cor_go,
         post=str_d2,
         target="ampa",
         synapse=factor_synapse,
         name="cor_go__str_d2",
     )
-    cor_go__str_fsi = Projection(
+    cor_go__str_fsi = ann.Projection(
         pre=cor_go,
         post=str_fsi,
         target="ampa",
         synapse=factor_synapse,
         name="cor_go__str_fsi",
     )
-    cor_go__thal = Projection(
+    cor_go__thal = ann.Projection(
         pre=cor_go,
         post=thal,
         target="ampa",
@@ -105,14 +107,14 @@ def BGM_v01(self):
         name="cor_go__thal",
     )
     ### cortex stop output
-    cor_stop__gpe_arky = Projection(
+    cor_stop__gpe_arky = ann.Projection(
         pre=cor_stop,
         post=gpe_arky,
         target="ampa",
         synapse=factor_synapse,
         name="cor_stop__gpe_arky",
     )
-    cor_stop__gpe_cp = Projection(
+    cor_stop__gpe_cp = ann.Projection(
         pre=cor_stop,
         post=gpe_cp,
         target="ampa",
@@ -120,7 +122,7 @@ def BGM_v01(self):
         name="cor_stop__gpe_cp",
     )
     ### cortex pause output
-    cor_pause__stn = Projection(
+    cor_pause__stn = ann.Projection(
         pre=cor_pause,
         post=stn,
         target="ampa",
@@ -128,24 +130,24 @@ def BGM_v01(self):
         name="cor_pause__stn",
     )
     ### str d1 output
-    str_d1__snr = Projection(
+    str_d1__snr = ann.Projection(
         pre=str_d1, post=snr, target="gaba", synapse=factor_synapse, name="str_d1__snr"
     )
-    str_d1__gpe_cp = Projection(
+    str_d1__gpe_cp = ann.Projection(
         pre=str_d1,
         post=gpe_cp,
         target="gaba",
         synapse=factor_synapse,
         name="str_d1__gpe_cp",
     )
-    str_d1__str_d1 = Projection(
+    str_d1__str_d1 = ann.Projection(
         pre=str_d1,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="str_d1__str_d1",
     )
-    str_d1__str_d2 = Projection(
+    str_d1__str_d2 = ann.Projection(
         pre=str_d1,
         post=str_d2,
         target="gaba",
@@ -153,35 +155,35 @@ def BGM_v01(self):
         name="str_d1__str_d2",
     )
     ### str d2 output
-    str_d2__gpe_proto = Projection(
+    str_d2__gpe_proto = ann.Projection(
         pre=str_d2,
         post=gpe_proto,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__gpe_proto",
     )
-    str_d2__gpe_arky = Projection(
+    str_d2__gpe_arky = ann.Projection(
         pre=str_d2,
         post=gpe_arky,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__gpe_arky",
     )
-    str_d2__gpe_cp = Projection(
+    str_d2__gpe_cp = ann.Projection(
         pre=str_d2,
         post=gpe_cp,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__gpe_cp",
     )
-    str_d2__str_d1 = Projection(
+    str_d2__str_d1 = ann.Projection(
         pre=str_d2,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__str_d1",
     )
-    str_d2__str_d2 = Projection(
+    str_d2__str_d2 = ann.Projection(
         pre=str_d2,
         post=str_d2,
         target="gaba",
@@ -189,21 +191,21 @@ def BGM_v01(self):
         name="str_d2__str_d2",
     )
     ### str fsi output
-    str_fsi__str_d1 = Projection(
+    str_fsi__str_d1 = ann.Projection(
         pre=str_fsi,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="str_fsi__str_d1",
     )
-    str_fsi__str_d2 = Projection(
+    str_fsi__str_d2 = ann.Projection(
         pre=str_fsi,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse,
         name="str_fsi__str_d2",
     )
-    str_fsi__str_fsi = Projection(
+    str_fsi__str_fsi = ann.Projection(
         pre=str_fsi,
         post=str_fsi,
         target="gaba",
@@ -211,56 +213,56 @@ def BGM_v01(self):
         name="str_fsi__str_fsi",
     )
     ### stn output
-    stn__snr = Projection(
+    stn__snr = ann.Projection(
         pre=stn, post=snr, target="ampa", synapse=factor_synapse, name="stn__snr"
     )
-    stn__gpe_proto = Projection(
+    stn__gpe_proto = ann.Projection(
         pre=stn,
         post=gpe_proto,
         target="ampa",
         synapse=factor_synapse,
         name="stn__gpe_proto",
     )
-    stn__gpe_arky = Projection(
+    stn__gpe_arky = ann.Projection(
         pre=stn,
         post=gpe_arky,
         target="ampa",
         synapse=factor_synapse,
         name="stn__gpe_arky",
     )
-    stn__gpe_cp = Projection(
+    stn__gpe_cp = ann.Projection(
         pre=stn, post=gpe_cp, target="ampa", synapse=factor_synapse, name="stn__gpe_cp"
     )
     ### gpe proto output
-    gpe_proto__stn = Projection(
+    gpe_proto__stn = ann.Projection(
         pre=gpe_proto,
         post=stn,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__stn",
     )
-    gpe_proto__snr = Projection(
+    gpe_proto__snr = ann.Projection(
         pre=gpe_proto,
         post=snr,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__snr",
     )
-    gpe_proto__gpe_arky = Projection(
+    gpe_proto__gpe_arky = ann.Projection(
         pre=gpe_proto,
         post=gpe_arky,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__gpe_arky",
     )
-    gpe_proto__gpe_cp = Projection(
+    gpe_proto__gpe_cp = ann.Projection(
         pre=gpe_proto,
         post=gpe_cp,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__gpe_cp",
     )
-    gpe_proto__str_fsi = Projection(
+    gpe_proto__str_fsi = ann.Projection(
         pre=gpe_proto,
         post=str_fsi,
         target="gaba",
@@ -268,35 +270,35 @@ def BGM_v01(self):
         name="gpe_proto__str_fsi",
     )
     ### gpe arky output
-    gpe_arky__str_d1 = Projection(
+    gpe_arky__str_d1 = ann.Projection(
         pre=gpe_arky,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__str_d1",
     )
-    gpe_arky__str_d2 = Projection(
+    gpe_arky__str_d2 = ann.Projection(
         pre=gpe_arky,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__str_d2",
     )
-    gpe_arky__str_fsi = Projection(
+    gpe_arky__str_fsi = ann.Projection(
         pre=gpe_arky,
         post=str_fsi,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__str_fsi",
     )
-    gpe_arky__gpe_proto = Projection(
+    gpe_arky__gpe_proto = ann.Projection(
         pre=gpe_arky,
         post=gpe_proto,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__gpe_proto",
     )
-    gpe_arky__gpe_cp = Projection(
+    gpe_arky__gpe_cp = ann.Projection(
         pre=gpe_arky,
         post=gpe_cp,
         target="gaba",
@@ -304,42 +306,42 @@ def BGM_v01(self):
         name="gpe_arky__gpe_cp",
     )
     ### gpe cp output
-    gpe_cp__str_d1 = Projection(
+    gpe_cp__str_d1 = ann.Projection(
         pre=gpe_cp,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__str_d1",
     )
-    gpe_cp__str_d2 = Projection(
+    gpe_cp__str_d2 = ann.Projection(
         pre=gpe_cp,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__str_d2",
     )
-    gpe_cp__str_fsi = Projection(
+    gpe_cp__str_fsi = ann.Projection(
         pre=gpe_cp,
         post=str_fsi,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__str_fsi",
     )
-    gpe_cp__gpe_proto = Projection(
+    gpe_cp__gpe_proto = ann.Projection(
         pre=gpe_cp,
         post=gpe_proto,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__gpe_proto",
     )
-    gpe_cp__gpe_arky = Projection(
+    gpe_cp__gpe_arky = ann.Projection(
         pre=gpe_cp,
         post=gpe_arky,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__gpe_arky",
     )
-    gpe_cp__integrator_stop = Projection(
+    gpe_cp__integrator_stop = ann.Projection(
         pre=gpe_cp,
         post=integrator_stop,
         target="ampa",
@@ -347,32 +349,32 @@ def BGM_v01(self):
         name="gpe_cp__integrator_stop",
     )
     ### snr output
-    snr__thal = Projection(
+    snr__thal = ann.Projection(
         pre=snr, post=thal, target="gaba", synapse=factor_synapse, name="snr__thal"
     )
     ### thal output
-    thal__integrator_go = Projection(
+    thal__integrator_go = ann.Projection(
         pre=thal,
         post=integrator_go,
         target="ampa",
         synapse=factor_synapse,
         name="thal__integrator_go",
     )
-    thal__str_d1 = Projection(
+    thal__str_d1 = ann.Projection(
         pre=thal,
         post=str_d1,
         target="ampa",
         synapse=factor_synapse,
         name="thal__str_d1",
     )
-    thal__str_d2 = Projection(
+    thal__str_d2 = ann.Projection(
         pre=thal,
         post=str_d2,
         target="ampa",
         synapse=factor_synapse,
         name="thal__str_d2",
     )
-    thal__str_fsi = Projection(
+    thal__str_fsi = ann.Projection(
         pre=thal,
         post=str_fsi,
         target="ampa",
@@ -390,52 +392,54 @@ def BGM_v02(self):
     """
     #######   POPULATIONS   ######
     ### cortex / input populations
-    cor_go = Population(
+    cor_go = ann.Population(
         self.params["cor_go.size"], poisson_neuron_up_down, name="cor_go"
     )
-    cor_pause = Population(
+    cor_pause = ann.Population(
         self.params["cor_pause.size"], poisson_neuron_up_down, name="cor_pause"
     )
-    cor_stop = Population(
+    cor_stop = ann.Population(
         self.params["cor_stop.size"], poisson_neuron_up_down, name="cor_stop"
     )
     ### Str Populations
-    str_d1 = Population(
+    str_d1 = ann.Population(
         self.params["str_d1.size"], Izhikevich2007_noisy_AMPA, name="str_d1"
     )
-    str_d2 = Population(
+    str_d2 = ann.Population(
         self.params["str_d2.size"], Izhikevich2007_noisy_AMPA, name="str_d2"
     )
-    str_fsi = Population(
+    str_fsi = ann.Population(
         self.params["str_fsi.size"],
         Izhikevich2007_Corbit_FSI_noisy_AMPA,
         name="str_fsi",
     )
     ### BG Populations
-    stn = Population(self.params["stn.size"], Izhikevich2003_noisy_AMPA, name="stn")
-    snr = Population(self.params["snr.size"], Izhikevich2003_noisy_AMPA, name="snr")
-    gpe_proto = Population(
+    stn = ann.Population(self.params["stn.size"], Izhikevich2003_noisy_AMPA, name="stn")
+    snr = ann.Population(self.params["snr.size"], Izhikevich2003_noisy_AMPA, name="snr")
+    gpe_proto = ann.Population(
         self.params["gpe_proto.size"],
         Izhikevich2003_flexible_noisy_AMPA,
         name="gpe_proto",
     )
-    gpe_arky = Population(
+    gpe_arky = ann.Population(
         self.params["gpe_arky.size"],
         Izhikevich2003_flexible_noisy_AMPA,
         name="gpe_arky",
     )
-    gpe_cp = Population(
+    gpe_cp = ann.Population(
         self.params["gpe_cp.size"], Izhikevich2003_flexible_noisy_AMPA, name="gpe_cp"
     )
-    thal = Population(self.params["thal.size"], Izhikevich2003_noisy_AMPA, name="thal")
+    thal = ann.Population(
+        self.params["thal.size"], Izhikevich2003_noisy_AMPA, name="thal"
+    )
     ### integrator Neurons
-    integrator_go = Population(
+    integrator_go = ann.Population(
         self.params["integrator_go.size"],
         integrator_neuron,
         stop_condition="decision>=0 : any",
         name="integrator_go",
     )
-    integrator_stop = Population(
+    integrator_stop = ann.Population(
         self.params["integrator_stop.size"],
         integrator_neuron,
         stop_condition="decision>=0 : any",
@@ -444,28 +448,28 @@ def BGM_v02(self):
 
     ######   PROJECTIONS   ######
     ### cortex go output
-    cor_go__str_d1 = Projection(
+    cor_go__str_d1 = ann.Projection(
         pre=cor_go,
         post=str_d1,
         target="ampa",
         synapse=factor_synapse,
         name="cor_go__str_d1",
     )
-    cor_go__str_d2 = Projection(
+    cor_go__str_d2 = ann.Projection(
         pre=cor_go,
         post=str_d2,
         target="ampa",
         synapse=factor_synapse,
         name="cor_go__str_d2",
     )
-    cor_go__str_fsi = Projection(
+    cor_go__str_fsi = ann.Projection(
         pre=cor_go,
         post=str_fsi,
         target="ampa",
         synapse=factor_synapse,
         name="cor_go__str_fsi",
     )
-    cor_go__thal = Projection(
+    cor_go__thal = ann.Projection(
         pre=cor_go,
         post=thal,
         target="ampa",
@@ -473,14 +477,14 @@ def BGM_v02(self):
         name="cor_go__thal",
     )
     ### cortex stop output
-    cor_stop__gpe_arky = Projection(
+    cor_stop__gpe_arky = ann.Projection(
         pre=cor_stop,
         post=gpe_arky,
         target="ampa",
         synapse=factor_synapse,
         name="cor_stop__gpe_arky",
     )
-    cor_stop__gpe_cp = Projection(
+    cor_stop__gpe_cp = ann.Projection(
         pre=cor_stop,
         post=gpe_cp,
         target="ampa",
@@ -488,7 +492,7 @@ def BGM_v02(self):
         name="cor_stop__gpe_cp",
     )
     ### cortex pause output
-    cor_pause__stn = Projection(
+    cor_pause__stn = ann.Projection(
         pre=cor_pause,
         post=stn,
         target="ampa",
@@ -496,24 +500,24 @@ def BGM_v02(self):
         name="cor_pause__stn",
     )
     ### str d1 output
-    str_d1__snr = Projection(
+    str_d1__snr = ann.Projection(
         pre=str_d1, post=snr, target="gaba", synapse=factor_synapse, name="str_d1__snr"
     )
-    str_d1__gpe_cp = Projection(
+    str_d1__gpe_cp = ann.Projection(
         pre=str_d1,
         post=gpe_cp,
         target="gaba",
         synapse=factor_synapse,
         name="str_d1__gpe_cp",
     )
-    str_d1__str_d1 = Projection(
+    str_d1__str_d1 = ann.Projection(
         pre=str_d1,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="str_d1__str_d1",
     )
-    str_d1__str_d2 = Projection(
+    str_d1__str_d2 = ann.Projection(
         pre=str_d1,
         post=str_d2,
         target="gaba",
@@ -521,35 +525,35 @@ def BGM_v02(self):
         name="str_d1__str_d2",
     )
     ### str d2 output
-    str_d2__gpe_proto = Projection(
+    str_d2__gpe_proto = ann.Projection(
         pre=str_d2,
         post=gpe_proto,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__gpe_proto",
     )
-    str_d2__gpe_arky = Projection(
+    str_d2__gpe_arky = ann.Projection(
         pre=str_d2,
         post=gpe_arky,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__gpe_arky",
     )
-    str_d2__gpe_cp = Projection(
+    str_d2__gpe_cp = ann.Projection(
         pre=str_d2,
         post=gpe_cp,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__gpe_cp",
     )
-    str_d2__str_d1 = Projection(
+    str_d2__str_d1 = ann.Projection(
         pre=str_d2,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__str_d1",
     )
-    str_d2__str_d2 = Projection(
+    str_d2__str_d2 = ann.Projection(
         pre=str_d2,
         post=str_d2,
         target="gaba",
@@ -557,21 +561,21 @@ def BGM_v02(self):
         name="str_d2__str_d2",
     )
     ### str fsi output
-    str_fsi__str_d1 = Projection(
+    str_fsi__str_d1 = ann.Projection(
         pre=str_fsi,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="str_fsi__str_d1",
     )
-    str_fsi__str_d2 = Projection(
+    str_fsi__str_d2 = ann.Projection(
         pre=str_fsi,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse,
         name="str_fsi__str_d2",
     )
-    str_fsi__str_fsi = Projection(
+    str_fsi__str_fsi = ann.Projection(
         pre=str_fsi,
         post=str_fsi,
         target="gaba",
@@ -579,56 +583,56 @@ def BGM_v02(self):
         name="str_fsi__str_fsi",
     )
     ### stn output
-    stn__snr = Projection(
+    stn__snr = ann.Projection(
         pre=stn, post=snr, target="ampa", synapse=factor_synapse, name="stn__snr"
     )
-    stn__gpe_proto = Projection(
+    stn__gpe_proto = ann.Projection(
         pre=stn,
         post=gpe_proto,
         target="ampa",
         synapse=factor_synapse,
         name="stn__gpe_proto",
     )
-    stn__gpe_arky = Projection(
+    stn__gpe_arky = ann.Projection(
         pre=stn,
         post=gpe_arky,
         target="ampa",
         synapse=factor_synapse,
         name="stn__gpe_arky",
     )
-    stn__gpe_cp = Projection(
+    stn__gpe_cp = ann.Projection(
         pre=stn, post=gpe_cp, target="ampa", synapse=factor_synapse, name="stn__gpe_cp"
     )
     ### gpe proto output
-    gpe_proto__stn = Projection(
+    gpe_proto__stn = ann.Projection(
         pre=gpe_proto,
         post=stn,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__stn",
     )
-    gpe_proto__snr = Projection(
+    gpe_proto__snr = ann.Projection(
         pre=gpe_proto,
         post=snr,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__snr",
     )
-    gpe_proto__gpe_arky = Projection(
+    gpe_proto__gpe_arky = ann.Projection(
         pre=gpe_proto,
         post=gpe_arky,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__gpe_arky",
     )
-    gpe_proto__gpe_cp = Projection(
+    gpe_proto__gpe_cp = ann.Projection(
         pre=gpe_proto,
         post=gpe_cp,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__gpe_cp",
     )
-    gpe_proto__str_fsi = Projection(
+    gpe_proto__str_fsi = ann.Projection(
         pre=gpe_proto,
         post=str_fsi,
         target="gaba",
@@ -636,35 +640,35 @@ def BGM_v02(self):
         name="gpe_proto__str_fsi",
     )
     ### gpe arky output
-    gpe_arky__str_d1 = Projection(
+    gpe_arky__str_d1 = ann.Projection(
         pre=gpe_arky,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__str_d1",
     )
-    gpe_arky__str_d2 = Projection(
+    gpe_arky__str_d2 = ann.Projection(
         pre=gpe_arky,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__str_d2",
     )
-    gpe_arky__str_fsi = Projection(
+    gpe_arky__str_fsi = ann.Projection(
         pre=gpe_arky,
         post=str_fsi,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__str_fsi",
     )
-    gpe_arky__gpe_proto = Projection(
+    gpe_arky__gpe_proto = ann.Projection(
         pre=gpe_arky,
         post=gpe_proto,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__gpe_proto",
     )
-    gpe_arky__gpe_cp = Projection(
+    gpe_arky__gpe_cp = ann.Projection(
         pre=gpe_arky,
         post=gpe_cp,
         target="gaba",
@@ -672,42 +676,42 @@ def BGM_v02(self):
         name="gpe_arky__gpe_cp",
     )
     ### gpe cp output
-    gpe_cp__str_d1 = Projection(
+    gpe_cp__str_d1 = ann.Projection(
         pre=gpe_cp,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__str_d1",
     )
-    gpe_cp__str_d2 = Projection(
+    gpe_cp__str_d2 = ann.Projection(
         pre=gpe_cp,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__str_d2",
     )
-    gpe_cp__str_fsi = Projection(
+    gpe_cp__str_fsi = ann.Projection(
         pre=gpe_cp,
         post=str_fsi,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__str_fsi",
     )
-    gpe_cp__gpe_proto = Projection(
+    gpe_cp__gpe_proto = ann.Projection(
         pre=gpe_cp,
         post=gpe_proto,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__gpe_proto",
     )
-    gpe_cp__gpe_arky = Projection(
+    gpe_cp__gpe_arky = ann.Projection(
         pre=gpe_cp,
         post=gpe_arky,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__gpe_arky",
     )
-    gpe_cp__integrator_stop = Projection(
+    gpe_cp__integrator_stop = ann.Projection(
         pre=gpe_cp,
         post=integrator_stop,
         target="ampa",
@@ -715,32 +719,32 @@ def BGM_v02(self):
         name="gpe_cp__integrator_stop",
     )
     ### snr output
-    snr__thal = Projection(
+    snr__thal = ann.Projection(
         pre=snr, post=thal, target="gaba", synapse=factor_synapse, name="snr__thal"
     )
     ### thal output
-    thal__integrator_go = Projection(
+    thal__integrator_go = ann.Projection(
         pre=thal,
         post=integrator_go,
         target="ampa",
         synapse=factor_synapse,
         name="thal__integrator_go",
     )
-    thal__str_d1 = Projection(
+    thal__str_d1 = ann.Projection(
         pre=thal,
         post=str_d1,
         target="ampa",
         synapse=factor_synapse,
         name="thal__str_d1",
     )
-    thal__str_d2 = Projection(
+    thal__str_d2 = ann.Projection(
         pre=thal,
         post=str_d2,
         target="ampa",
         synapse=factor_synapse,
         name="thal__str_d2",
     )
-    thal__str_fsi = Projection(
+    thal__str_fsi = ann.Projection(
         pre=thal,
         post=str_fsi,
         target="ampa",
@@ -758,48 +762,52 @@ def BGM_vTEST(self):
     """
     #######   POPULATIONS   ######
     ### cortex / input populations
-    cor_go = Population(self.params["cor_go.size"], poisson_neuron_sin, name="cor_go")
-    cor_pause = Population(
+    cor_go = ann.Population(
+        self.params["cor_go.size"], poisson_neuron_sin, name="cor_go"
+    )
+    cor_pause = ann.Population(
         self.params["cor_pause.size"], poisson_neuron_up_down, name="cor_pause"
     )
-    cor_stop = Population(
+    cor_stop = ann.Population(
         self.params["cor_stop.size"], poisson_neuron_up_down, name="cor_stop"
     )
     ### Str Populations
-    str_d1 = Population(
+    str_d1 = ann.Population(
         self.params["str_d1.size"], Izhikevich2007_noisy_AMPA, name="str_d1"
     )
-    str_d2 = Population(
+    str_d2 = ann.Population(
         self.params["str_d2.size"], Izhikevich2007_noisy_AMPA, name="str_d2"
     )
-    str_fsi = Population(
+    str_fsi = ann.Population(
         self.params["str_fsi.size"], Izhikevich2007_fsi_noisy_AMPA, name="str_fsi"
     )
     ### BG Populations
-    stn = Population(self.params["stn.size"], Izhikevich2003_noisy_AMPA, name="stn")
-    snr = Population(self.params["snr.size"], Izhikevich2003_noisy_AMPA, name="snr")
-    gpe_proto = Population(
+    stn = ann.Population(self.params["stn.size"], Izhikevich2003_noisy_AMPA, name="stn")
+    snr = ann.Population(self.params["snr.size"], Izhikevich2003_noisy_AMPA, name="snr")
+    gpe_proto = ann.Population(
         self.params["gpe_proto.size"],
         Izhikevich2003_flexible_noisy_AMPA,
         name="gpe_proto",
     )
-    gpe_arky = Population(
+    gpe_arky = ann.Population(
         self.params["gpe_arky.size"],
         Izhikevich2003_flexible_noisy_AMPA,
         name="gpe_arky",
     )
-    gpe_cp = Population(
+    gpe_cp = ann.Population(
         self.params["gpe_cp.size"], Izhikevich2003_flexible_noisy_AMPA, name="gpe_cp"
     )
-    thal = Population(self.params["thal.size"], Izhikevich2003_noisy_AMPA, name="thal")
+    thal = ann.Population(
+        self.params["thal.size"], Izhikevich2003_noisy_AMPA, name="thal"
+    )
     ### integrator Neurons
-    integrator_go = Population(
+    integrator_go = ann.Population(
         self.params["integrator_go.size"],
         integrator_neuron,
         stop_condition="decision>=0 : any",
         name="integrator_go",
     )
-    integrator_stop = Population(
+    integrator_stop = ann.Population(
         self.params["integrator_stop.size"],
         integrator_neuron,
         stop_condition="decision>=0 : any",
@@ -808,28 +816,28 @@ def BGM_vTEST(self):
 
     ######   PROJECTIONS   ######
     ### cortex go output
-    cor_go__str_d1 = Projection(
+    cor_go__str_d1 = ann.Projection(
         pre=cor_go,
         post=str_d1,
         target="ampa",
         synapse=factor_synapse,
         name="cor_go__str_d1",
     )
-    cor_go__str_d2 = Projection(
+    cor_go__str_d2 = ann.Projection(
         pre=cor_go,
         post=str_d2,
         target="ampa",
         synapse=factor_synapse,
         name="cor_go__str_d2",
     )
-    cor_go__str_fsi = Projection(
+    cor_go__str_fsi = ann.Projection(
         pre=cor_go,
         post=str_fsi,
         target="ampa",
         synapse=factor_synapse,
         name="cor_go__str_fsi",
     )
-    cor_go__thal = Projection(
+    cor_go__thal = ann.Projection(
         pre=cor_go,
         post=thal,
         target="ampa",
@@ -837,14 +845,14 @@ def BGM_vTEST(self):
         name="cor_go__thal",
     )
     ### cortex stop output
-    cor_stop__gpe_arky = Projection(
+    cor_stop__gpe_arky = ann.Projection(
         pre=cor_stop,
         post=gpe_arky,
         target="ampa",
         synapse=factor_synapse,
         name="cor_stop__gpe_arky",
     )
-    cor_stop__gpe_cp = Projection(
+    cor_stop__gpe_cp = ann.Projection(
         pre=cor_stop,
         post=gpe_cp,
         target="ampa",
@@ -852,7 +860,7 @@ def BGM_vTEST(self):
         name="cor_stop__gpe_cp",
     )
     ### cortex pause output
-    cor_pause__stn = Projection(
+    cor_pause__stn = ann.Projection(
         pre=cor_pause,
         post=stn,
         target="ampa",
@@ -860,24 +868,24 @@ def BGM_vTEST(self):
         name="cor_pause__stn",
     )
     ### str d1 output
-    str_d1__snr = Projection(
+    str_d1__snr = ann.Projection(
         pre=str_d1, post=snr, target="gaba", synapse=factor_synapse, name="str_d1__snr"
     )
-    str_d1__gpe_cp = Projection(
+    str_d1__gpe_cp = ann.Projection(
         pre=str_d1,
         post=gpe_cp,
         target="gaba",
         synapse=factor_synapse,
         name="str_d1__gpe_cp",
     )
-    str_d1__str_d1 = Projection(
+    str_d1__str_d1 = ann.Projection(
         pre=str_d1,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="str_d1__str_d1",
     )
-    str_d1__str_d2 = Projection(
+    str_d1__str_d2 = ann.Projection(
         pre=str_d1,
         post=str_d2,
         target="gaba",
@@ -885,35 +893,35 @@ def BGM_vTEST(self):
         name="str_d1__str_d2",
     )
     ### str d2 output
-    str_d2__gpe_proto = Projection(
+    str_d2__gpe_proto = ann.Projection(
         pre=str_d2,
         post=gpe_proto,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__gpe_proto",
     )
-    str_d2__gpe_arky = Projection(
+    str_d2__gpe_arky = ann.Projection(
         pre=str_d2,
         post=gpe_arky,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__gpe_arky",
     )
-    str_d2__gpe_cp = Projection(
+    str_d2__gpe_cp = ann.Projection(
         pre=str_d2,
         post=gpe_cp,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__gpe_cp",
     )
-    str_d2__str_d1 = Projection(
+    str_d2__str_d1 = ann.Projection(
         pre=str_d2,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__str_d1",
     )
-    str_d2__str_d2 = Projection(
+    str_d2__str_d2 = ann.Projection(
         pre=str_d2,
         post=str_d2,
         target="gaba",
@@ -921,21 +929,21 @@ def BGM_vTEST(self):
         name="str_d2__str_d2",
     )
     ### str fsi output
-    str_fsi__str_d1 = Projection(
+    str_fsi__str_d1 = ann.Projection(
         pre=str_fsi,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="str_fsi__str_d1",
     )
-    str_fsi__str_d2 = Projection(
+    str_fsi__str_d2 = ann.Projection(
         pre=str_fsi,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse,
         name="str_fsi__str_d2",
     )
-    str_fsi__str_fsi = Projection(
+    str_fsi__str_fsi = ann.Projection(
         pre=str_fsi,
         post=str_fsi,
         target="gaba",
@@ -943,56 +951,56 @@ def BGM_vTEST(self):
         name="str_fsi__str_fsi",
     )
     ### stn output
-    stn__snr = Projection(
+    stn__snr = ann.Projection(
         pre=stn, post=snr, target="ampa", synapse=factor_synapse, name="stn__snr"
     )
-    stn__gpe_proto = Projection(
+    stn__gpe_proto = ann.Projection(
         pre=stn,
         post=gpe_proto,
         target="ampa",
         synapse=factor_synapse,
         name="stn__gpe_proto",
     )
-    stn__gpe_arky = Projection(
+    stn__gpe_arky = ann.Projection(
         pre=stn,
         post=gpe_arky,
         target="ampa",
         synapse=factor_synapse,
         name="stn__gpe_arky",
     )
-    stn__gpe_cp = Projection(
+    stn__gpe_cp = ann.Projection(
         pre=stn, post=gpe_cp, target="ampa", synapse=factor_synapse, name="stn__gpe_cp"
     )
     ### gpe proto output
-    gpe_proto__stn = Projection(
+    gpe_proto__stn = ann.Projection(
         pre=gpe_proto,
         post=stn,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__stn",
     )
-    gpe_proto__snr = Projection(
+    gpe_proto__snr = ann.Projection(
         pre=gpe_proto,
         post=snr,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__snr",
     )
-    gpe_proto__gpe_arky = Projection(
+    gpe_proto__gpe_arky = ann.Projection(
         pre=gpe_proto,
         post=gpe_arky,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__gpe_arky",
     )
-    gpe_proto__gpe_cp = Projection(
+    gpe_proto__gpe_cp = ann.Projection(
         pre=gpe_proto,
         post=gpe_cp,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__gpe_cp",
     )
-    gpe_proto__str_fsi = Projection(
+    gpe_proto__str_fsi = ann.Projection(
         pre=gpe_proto,
         post=str_fsi,
         target="gaba",
@@ -1000,35 +1008,35 @@ def BGM_vTEST(self):
         name="gpe_proto__str_fsi",
     )
     ### gpe arky output
-    gpe_arky__str_d1 = Projection(
+    gpe_arky__str_d1 = ann.Projection(
         pre=gpe_arky,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__str_d1",
     )
-    gpe_arky__str_d2 = Projection(
+    gpe_arky__str_d2 = ann.Projection(
         pre=gpe_arky,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__str_d2",
     )
-    gpe_arky__str_fsi = Projection(
+    gpe_arky__str_fsi = ann.Projection(
         pre=gpe_arky,
         post=str_fsi,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__str_fsi",
     )
-    gpe_arky__gpe_proto = Projection(
+    gpe_arky__gpe_proto = ann.Projection(
         pre=gpe_arky,
         post=gpe_proto,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__gpe_proto",
     )
-    gpe_arky__gpe_cp = Projection(
+    gpe_arky__gpe_cp = ann.Projection(
         pre=gpe_arky,
         post=gpe_cp,
         target="gaba",
@@ -1036,42 +1044,42 @@ def BGM_vTEST(self):
         name="gpe_arky__gpe_cp",
     )
     ### gpe cp output
-    gpe_cp__str_d1 = Projection(
+    gpe_cp__str_d1 = ann.Projection(
         pre=gpe_cp,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__str_d1",
     )
-    gpe_cp__str_d2 = Projection(
+    gpe_cp__str_d2 = ann.Projection(
         pre=gpe_cp,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__str_d2",
     )
-    gpe_cp__str_fsi = Projection(
+    gpe_cp__str_fsi = ann.Projection(
         pre=gpe_cp,
         post=str_fsi,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__str_fsi",
     )
-    gpe_cp__gpe_proto = Projection(
+    gpe_cp__gpe_proto = ann.Projection(
         pre=gpe_cp,
         post=gpe_proto,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__gpe_proto",
     )
-    gpe_cp__gpe_arky = Projection(
+    gpe_cp__gpe_arky = ann.Projection(
         pre=gpe_cp,
         post=gpe_arky,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__gpe_arky",
     )
-    gpe_cp__integrator_stop = Projection(
+    gpe_cp__integrator_stop = ann.Projection(
         pre=gpe_cp,
         post=integrator_stop,
         target="ampa",
@@ -1079,32 +1087,32 @@ def BGM_vTEST(self):
         name="gpe_cp__integrator_stop",
     )
     ### snr output
-    snr__thal = Projection(
+    snr__thal = ann.Projection(
         pre=snr, post=thal, target="gaba", synapse=factor_synapse, name="snr__thal"
     )
     ### thal output
-    thal__integrator_go = Projection(
+    thal__integrator_go = ann.Projection(
         pre=thal,
         post=integrator_go,
         target="ampa",
         synapse=factor_synapse,
         name="thal__integrator_go",
     )
-    thal__str_d1 = Projection(
+    thal__str_d1 = ann.Projection(
         pre=thal,
         post=str_d1,
         target="ampa",
         synapse=factor_synapse,
         name="thal__str_d1",
     )
-    thal__str_d2 = Projection(
+    thal__str_d2 = ann.Projection(
         pre=thal,
         post=str_d2,
         target="ampa",
         synapse=factor_synapse,
         name="thal__str_d2",
     )
-    thal__str_fsi = Projection(
+    thal__str_fsi = ann.Projection(
         pre=thal,
         post=str_fsi,
         target="ampa",
@@ -1125,56 +1133,58 @@ def BGM_v03(self):
     """
     #######   POPULATIONS   ######
     ### cortex / input populations
-    cor_go = Population(
+    cor_go = ann.Population(
         self.params["cor_go.size"], poisson_neuron_up_down, name="cor_go"
     )
-    cor_pause = Population(
+    cor_pause = ann.Population(
         self.params["cor_pause.size"], poisson_neuron_up_down, name="cor_pause"
     )
-    cor_stop = Population(
+    cor_stop = ann.Population(
         self.params["cor_stop.size"], poisson_neuron_up_down, name="cor_stop"
     )
     ### Str Populations
-    str_d1 = Population(
+    str_d1 = ann.Population(
         self.params["str_d1.size"],
         Izhikevich2007_noisy_AMPA_oscillating,
         name="str_d1",  # NEW NEURON MODEL
     )
-    str_d2 = Population(
+    str_d2 = ann.Population(
         self.params["str_d2.size"],
         Izhikevich2007_noisy_AMPA_oscillating,
         name="str_d2",  # NEW NEURON MODEL
     )
-    str_fsi = Population(
+    str_fsi = ann.Population(
         self.params["str_fsi.size"],
         Izhikevich2007_Corbit_FSI_noisy_AMPA,
         name="str_fsi",
     )
     ### BG Populations
-    stn = Population(self.params["stn.size"], Izhikevich2003_noisy_AMPA, name="stn")
-    snr = Population(self.params["snr.size"], Izhikevich2003_noisy_AMPA, name="snr")
-    gpe_proto = Population(
+    stn = ann.Population(self.params["stn.size"], Izhikevich2003_noisy_AMPA, name="stn")
+    snr = ann.Population(self.params["snr.size"], Izhikevich2003_noisy_AMPA, name="snr")
+    gpe_proto = ann.Population(
         self.params["gpe_proto.size"],
         Izhikevich2003_flexible_noisy_AMPA,
         name="gpe_proto",
     )
-    gpe_arky = Population(
+    gpe_arky = ann.Population(
         self.params["gpe_arky.size"],
         Izhikevich2003_flexible_noisy_AMPA,
         name="gpe_arky",
     )
-    gpe_cp = Population(
+    gpe_cp = ann.Population(
         self.params["gpe_cp.size"], Izhikevich2003_flexible_noisy_AMPA, name="gpe_cp"
     )
-    thal = Population(self.params["thal.size"], Izhikevich2003_noisy_AMPA, name="thal")
+    thal = ann.Population(
+        self.params["thal.size"], Izhikevich2003_noisy_AMPA, name="thal"
+    )
     ### integrator Neurons
-    integrator_go = Population(
+    integrator_go = ann.Population(
         self.params["integrator_go.size"],
         integrator_neuron,
         stop_condition="decision>=0 : any",
         name="integrator_go",
     )
-    integrator_stop = Population(
+    integrator_stop = ann.Population(
         self.params["integrator_stop.size"],
         integrator_neuron,
         stop_condition="decision>=0 : any",
@@ -1183,28 +1193,28 @@ def BGM_v03(self):
 
     ######   PROJECTIONS   ######
     ### cortex go output
-    cor_go__str_d1 = Projection(
+    cor_go__str_d1 = ann.Projection(
         pre=cor_go,
         post=str_d1,
         target="ampa",
         synapse=factor_synapse,
         name="cor_go__str_d1",
     )
-    cor_go__str_d2 = Projection(
+    cor_go__str_d2 = ann.Projection(
         pre=cor_go,
         post=str_d2,
         target="ampa",
         synapse=factor_synapse,
         name="cor_go__str_d2",
     )
-    cor_go__str_fsi = Projection(
+    cor_go__str_fsi = ann.Projection(
         pre=cor_go,
         post=str_fsi,
         target="ampa",
         synapse=factor_synapse,
         name="cor_go__str_fsi",
     )
-    cor_go__thal = Projection(
+    cor_go__thal = ann.Projection(
         pre=cor_go,
         post=thal,
         target="ampa",
@@ -1212,14 +1222,14 @@ def BGM_v03(self):
         name="cor_go__thal",
     )
     ### cortex stop output
-    cor_stop__gpe_arky = Projection(
+    cor_stop__gpe_arky = ann.Projection(
         pre=cor_stop,
         post=gpe_arky,
         target="ampa",
         synapse=factor_synapse,
         name="cor_stop__gpe_arky",
     )
-    cor_stop__gpe_cp = Projection(
+    cor_stop__gpe_cp = ann.Projection(
         pre=cor_stop,
         post=gpe_cp,
         target="ampa",
@@ -1227,7 +1237,7 @@ def BGM_v03(self):
         name="cor_stop__gpe_cp",
     )
     ### cortex pause output
-    cor_pause__stn = Projection(
+    cor_pause__stn = ann.Projection(
         pre=cor_pause,
         post=stn,
         target="ampa",
@@ -1235,24 +1245,24 @@ def BGM_v03(self):
         name="cor_pause__stn",
     )
     ### str d1 output
-    str_d1__snr = Projection(
+    str_d1__snr = ann.Projection(
         pre=str_d1, post=snr, target="gaba", synapse=factor_synapse, name="str_d1__snr"
     )
-    str_d1__gpe_cp = Projection(
+    str_d1__gpe_cp = ann.Projection(
         pre=str_d1,
         post=gpe_cp,
         target="gaba",
         synapse=factor_synapse,
         name="str_d1__gpe_cp",
     )
-    str_d1__str_d1 = Projection(
+    str_d1__str_d1 = ann.Projection(
         pre=str_d1,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="str_d1__str_d1",
     )
-    str_d1__str_d2 = Projection(
+    str_d1__str_d2 = ann.Projection(
         pre=str_d1,
         post=str_d2,
         target="gaba",
@@ -1260,35 +1270,35 @@ def BGM_v03(self):
         name="str_d1__str_d2",
     )
     ### str d2 output
-    str_d2__gpe_proto = Projection(
+    str_d2__gpe_proto = ann.Projection(
         pre=str_d2,
         post=gpe_proto,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__gpe_proto",
     )
-    str_d2__gpe_arky = Projection(
+    str_d2__gpe_arky = ann.Projection(
         pre=str_d2,
         post=gpe_arky,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__gpe_arky",
     )
-    str_d2__gpe_cp = Projection(
+    str_d2__gpe_cp = ann.Projection(
         pre=str_d2,
         post=gpe_cp,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__gpe_cp",
     )
-    str_d2__str_d1 = Projection(
+    str_d2__str_d1 = ann.Projection(
         pre=str_d2,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__str_d1",
     )
-    str_d2__str_d2 = Projection(
+    str_d2__str_d2 = ann.Projection(
         pre=str_d2,
         post=str_d2,
         target="gaba",
@@ -1296,21 +1306,21 @@ def BGM_v03(self):
         name="str_d2__str_d2",
     )
     ### str fsi output
-    str_fsi__str_d1 = Projection(
+    str_fsi__str_d1 = ann.Projection(
         pre=str_fsi,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="str_fsi__str_d1",
     )
-    str_fsi__str_d2 = Projection(
+    str_fsi__str_d2 = ann.Projection(
         pre=str_fsi,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse,
         name="str_fsi__str_d2",
     )
-    str_fsi__str_fsi = Projection(
+    str_fsi__str_fsi = ann.Projection(
         pre=str_fsi,
         post=str_fsi,
         target="gaba",
@@ -1318,56 +1328,56 @@ def BGM_v03(self):
         name="str_fsi__str_fsi",
     )
     ### stn output
-    stn__snr = Projection(
+    stn__snr = ann.Projection(
         pre=stn, post=snr, target="ampa", synapse=factor_synapse, name="stn__snr"
     )
-    stn__gpe_proto = Projection(
+    stn__gpe_proto = ann.Projection(
         pre=stn,
         post=gpe_proto,
         target="ampa",
         synapse=factor_synapse,
         name="stn__gpe_proto",
     )
-    stn__gpe_arky = Projection(
+    stn__gpe_arky = ann.Projection(
         pre=stn,
         post=gpe_arky,
         target="ampa",
         synapse=factor_synapse,
         name="stn__gpe_arky",
     )
-    stn__gpe_cp = Projection(
+    stn__gpe_cp = ann.Projection(
         pre=stn, post=gpe_cp, target="ampa", synapse=factor_synapse, name="stn__gpe_cp"
     )
     ### gpe proto output
-    gpe_proto__stn = Projection(
+    gpe_proto__stn = ann.Projection(
         pre=gpe_proto,
         post=stn,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__stn",
     )
-    gpe_proto__snr = Projection(
+    gpe_proto__snr = ann.Projection(
         pre=gpe_proto,
         post=snr,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__snr",
     )
-    gpe_proto__gpe_arky = Projection(
+    gpe_proto__gpe_arky = ann.Projection(
         pre=gpe_proto,
         post=gpe_arky,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__gpe_arky",
     )
-    gpe_proto__gpe_cp = Projection(
+    gpe_proto__gpe_cp = ann.Projection(
         pre=gpe_proto,
         post=gpe_cp,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__gpe_cp",
     )
-    gpe_proto__str_fsi = Projection(
+    gpe_proto__str_fsi = ann.Projection(
         pre=gpe_proto,
         post=str_fsi,
         target="gaba",
@@ -1375,35 +1385,35 @@ def BGM_v03(self):
         name="gpe_proto__str_fsi",
     )
     ### gpe arky output
-    gpe_arky__str_d1 = Projection(
+    gpe_arky__str_d1 = ann.Projection(
         pre=gpe_arky,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__str_d1",
     )
-    gpe_arky__str_d2 = Projection(
+    gpe_arky__str_d2 = ann.Projection(
         pre=gpe_arky,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__str_d2",
     )
-    gpe_arky__str_fsi = Projection(
+    gpe_arky__str_fsi = ann.Projection(
         pre=gpe_arky,
         post=str_fsi,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__str_fsi",
     )
-    gpe_arky__gpe_proto = Projection(
+    gpe_arky__gpe_proto = ann.Projection(
         pre=gpe_arky,
         post=gpe_proto,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__gpe_proto",
     )
-    gpe_arky__gpe_cp = Projection(
+    gpe_arky__gpe_cp = ann.Projection(
         pre=gpe_arky,
         post=gpe_cp,
         target="gaba",
@@ -1411,42 +1421,42 @@ def BGM_v03(self):
         name="gpe_arky__gpe_cp",
     )
     ### gpe cp output
-    gpe_cp__str_d1 = Projection(
+    gpe_cp__str_d1 = ann.Projection(
         pre=gpe_cp,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__str_d1",
     )
-    gpe_cp__str_d2 = Projection(
+    gpe_cp__str_d2 = ann.Projection(
         pre=gpe_cp,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__str_d2",
     )
-    gpe_cp__str_fsi = Projection(
+    gpe_cp__str_fsi = ann.Projection(
         pre=gpe_cp,
         post=str_fsi,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__str_fsi",
     )
-    gpe_cp__gpe_proto = Projection(
+    gpe_cp__gpe_proto = ann.Projection(
         pre=gpe_cp,
         post=gpe_proto,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__gpe_proto",
     )
-    gpe_cp__gpe_arky = Projection(
+    gpe_cp__gpe_arky = ann.Projection(
         pre=gpe_cp,
         post=gpe_arky,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__gpe_arky",
     )
-    gpe_cp__integrator_stop = Projection(
+    gpe_cp__integrator_stop = ann.Projection(
         pre=gpe_cp,
         post=integrator_stop,
         target="ampa",
@@ -1454,32 +1464,32 @@ def BGM_v03(self):
         name="gpe_cp__integrator_stop",
     )
     ### snr output
-    snr__thal = Projection(
+    snr__thal = ann.Projection(
         pre=snr, post=thal, target="gaba", synapse=factor_synapse, name="snr__thal"
     )
     ### thal output
-    thal__integrator_go = Projection(
+    thal__integrator_go = ann.Projection(
         pre=thal,
         post=integrator_go,
         target="ampa",
         synapse=factor_synapse,
         name="thal__integrator_go",
     )
-    thal__str_d1 = Projection(
+    thal__str_d1 = ann.Projection(
         pre=thal,
         post=str_d1,
         target="ampa",
         synapse=factor_synapse,
         name="thal__str_d1",
     )
-    thal__str_d2 = Projection(
+    thal__str_d2 = ann.Projection(
         pre=thal,
         post=str_d2,
         target="ampa",
         synapse=factor_synapse,
         name="thal__str_d2",
     )
-    thal__str_fsi = Projection(
+    thal__str_fsi = ann.Projection(
         pre=thal,
         post=str_fsi,
         target="ampa",
@@ -1494,52 +1504,54 @@ def BGM_v04(self):
     """
     #######   POPULATIONS   ######
     ### cortex / input populations
-    cor_go = Population(
+    cor_go = ann.Population(
         self.params["cor_go.size"], poisson_neuron_up_down, name="cor_go"
     )
-    cor_pause = Population(
+    cor_pause = ann.Population(
         self.params["cor_pause.size"], poisson_neuron_up_down, name="cor_pause"
     )
-    cor_stop = Population(
+    cor_stop = ann.Population(
         self.params["cor_stop.size"], poisson_neuron_up_down, name="cor_stop"
     )
     ### Str Populations
-    str_d1 = Population(
+    str_d1 = ann.Population(
         self.params["str_d1.size"], Izhikevich2007_noisy_AMPA, name="str_d1"
     )
-    str_d2 = Population(
+    str_d2 = ann.Population(
         self.params["str_d2.size"], Izhikevich2007_noisy_AMPA, name="str_d2"
     )
-    str_fsi = Population(
+    str_fsi = ann.Population(
         self.params["str_fsi.size"],
         Izhikevich2007_Corbit_FSI_noisy_AMPA,
         name="str_fsi",
     )
     ### BG Populations
-    stn = Population(self.params["stn.size"], Izhikevich2003_noisy_AMPA, name="stn")
-    snr = Population(self.params["snr.size"], Izhikevich2003_noisy_AMPA, name="snr")
-    gpe_proto = Population(
+    stn = ann.Population(self.params["stn.size"], Izhikevich2003_noisy_AMPA, name="stn")
+    snr = ann.Population(self.params["snr.size"], Izhikevich2003_noisy_AMPA, name="snr")
+    gpe_proto = ann.Population(
         self.params["gpe_proto.size"],
         Izhikevich2003_flexible_noisy_AMPA,
         name="gpe_proto",
     )
-    gpe_arky = Population(
+    gpe_arky = ann.Population(
         self.params["gpe_arky.size"],
         Izhikevich2003_flexible_noisy_AMPA,
         name="gpe_arky",
     )
-    gpe_cp = Population(
+    gpe_cp = ann.Population(
         self.params["gpe_cp.size"], Izhikevich2003_flexible_noisy_AMPA, name="gpe_cp"
     )
-    thal = Population(self.params["thal.size"], Izhikevich2003_noisy_AMPA, name="thal")
+    thal = ann.Population(
+        self.params["thal.size"], Izhikevich2003_noisy_AMPA, name="thal"
+    )
     ### integrator Neurons
-    integrator_go = Population(
+    integrator_go = ann.Population(
         self.params["integrator_go.size"],
         integrator_neuron,
         stop_condition="decision>=0 : any",
         name="integrator_go",
     )
-    integrator_stop = Population(
+    integrator_stop = ann.Population(
         self.params["integrator_stop.size"],
         integrator_neuron,
         stop_condition="decision>=0 : any",
@@ -1548,28 +1560,28 @@ def BGM_v04(self):
 
     ######   PROJECTIONS   ######
     ### cortex go output
-    cor_go__str_d1 = Projection(
+    cor_go__str_d1 = ann.Projection(
         pre=cor_go,
         post=str_d1,
         target="ampa",
         synapse=factor_synapse,
         name="cor_go__str_d1",
     )
-    cor_go__str_d2 = Projection(
+    cor_go__str_d2 = ann.Projection(
         pre=cor_go,
         post=str_d2,
         target="ampa",
         synapse=factor_synapse,
         name="cor_go__str_d2",
     )
-    cor_go__str_fsi = Projection(
+    cor_go__str_fsi = ann.Projection(
         pre=cor_go,
         post=str_fsi,
         target="ampa",
         synapse=factor_synapse,
         name="cor_go__str_fsi",
     )
-    cor_go__thal = Projection(
+    cor_go__thal = ann.Projection(
         pre=cor_go,
         post=thal,
         target="ampa",
@@ -1577,14 +1589,14 @@ def BGM_v04(self):
         name="cor_go__thal",
     )
     ### cortex stop output
-    cor_stop__gpe_arky = Projection(
+    cor_stop__gpe_arky = ann.Projection(
         pre=cor_stop,
         post=gpe_arky,
         target="ampa",
         synapse=factor_synapse,
         name="cor_stop__gpe_arky",
     )
-    cor_stop__gpe_cp = Projection(
+    cor_stop__gpe_cp = ann.Projection(
         pre=cor_stop,
         post=gpe_cp,
         target="ampa",
@@ -1592,7 +1604,7 @@ def BGM_v04(self):
         name="cor_stop__gpe_cp",
     )
 
-    cor_stop__gpe_proto = Projection(  # NEW !
+    cor_stop__gpe_proto = ann.Projection(  # NEW !
         pre=cor_stop,
         post=gpe_proto,
         target="ampa",
@@ -1600,7 +1612,7 @@ def BGM_v04(self):
         name="cor_stop__gpe_proto",
     )
     ### cortex pause output
-    cor_pause__stn = Projection(
+    cor_pause__stn = ann.Projection(
         pre=cor_pause,
         post=stn,
         target="ampa",
@@ -1608,24 +1620,24 @@ def BGM_v04(self):
         name="cor_pause__stn",
     )
     ### str d1 output
-    str_d1__snr = Projection(
+    str_d1__snr = ann.Projection(
         pre=str_d1, post=snr, target="gaba", synapse=factor_synapse, name="str_d1__snr"
     )
-    str_d1__gpe_cp = Projection(
+    str_d1__gpe_cp = ann.Projection(
         pre=str_d1,
         post=gpe_cp,
         target="gaba",
         synapse=factor_synapse,
         name="str_d1__gpe_cp",
     )
-    str_d1__str_d1 = Projection(
+    str_d1__str_d1 = ann.Projection(
         pre=str_d1,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="str_d1__str_d1",
     )
-    str_d1__str_d2 = Projection(
+    str_d1__str_d2 = ann.Projection(
         pre=str_d1,
         post=str_d2,
         target="gaba",
@@ -1633,35 +1645,35 @@ def BGM_v04(self):
         name="str_d1__str_d2",
     )
     ### str d2 output
-    str_d2__gpe_proto = Projection(
+    str_d2__gpe_proto = ann.Projection(
         pre=str_d2,
         post=gpe_proto,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__gpe_proto",
     )
-    str_d2__gpe_arky = Projection(
+    str_d2__gpe_arky = ann.Projection(
         pre=str_d2,
         post=gpe_arky,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__gpe_arky",
     )
-    str_d2__gpe_cp = Projection(
+    str_d2__gpe_cp = ann.Projection(
         pre=str_d2,
         post=gpe_cp,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__gpe_cp",
     )
-    str_d2__str_d1 = Projection(
+    str_d2__str_d1 = ann.Projection(
         pre=str_d2,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__str_d1",
     )
-    str_d2__str_d2 = Projection(
+    str_d2__str_d2 = ann.Projection(
         pre=str_d2,
         post=str_d2,
         target="gaba",
@@ -1669,21 +1681,21 @@ def BGM_v04(self):
         name="str_d2__str_d2",
     )
     ### str fsi output
-    str_fsi__str_d1 = Projection(
+    str_fsi__str_d1 = ann.Projection(
         pre=str_fsi,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="str_fsi__str_d1",
     )
-    str_fsi__str_d2 = Projection(
+    str_fsi__str_d2 = ann.Projection(
         pre=str_fsi,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse,
         name="str_fsi__str_d2",
     )
-    str_fsi__str_fsi = Projection(
+    str_fsi__str_fsi = ann.Projection(
         pre=str_fsi,
         post=str_fsi,
         target="gaba",
@@ -1691,49 +1703,49 @@ def BGM_v04(self):
         name="str_fsi__str_fsi",
     )
     ### stn output
-    stn__snr = Projection(
+    stn__snr = ann.Projection(
         pre=stn, post=snr, target="ampa", synapse=factor_synapse, name="stn__snr"
     )
-    stn__gpe_proto = Projection(
+    stn__gpe_proto = ann.Projection(
         pre=stn,
         post=gpe_proto,
         target="ampa",
         synapse=factor_synapse,
         name="stn__gpe_proto",
     )
-    stn__gpe_arky = Projection(
+    stn__gpe_arky = ann.Projection(
         pre=stn,
         post=gpe_arky,
         target="ampa",
         synapse=factor_synapse,
         name="stn__gpe_arky",
     )
-    stn__gpe_cp = Projection(
+    stn__gpe_cp = ann.Projection(
         pre=stn, post=gpe_cp, target="ampa", synapse=factor_synapse, name="stn__gpe_cp"
     )
     ### gpe proto output
-    gpe_proto__stn = Projection(
+    gpe_proto__stn = ann.Projection(
         pre=gpe_proto,
         post=stn,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__stn",
     )
-    gpe_proto__snr = Projection(
+    gpe_proto__snr = ann.Projection(
         pre=gpe_proto,
         post=snr,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__snr",
     )
-    gpe_proto__gpe_arky = Projection(
+    gpe_proto__gpe_arky = ann.Projection(
         pre=gpe_proto,
         post=gpe_arky,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__gpe_arky",
     )
-    gpe_proto__gpe_cp = Projection(
+    gpe_proto__gpe_cp = ann.Projection(
         pre=gpe_proto,
         post=gpe_cp,
         target="gaba",
@@ -1741,7 +1753,7 @@ def BGM_v04(self):
         name="gpe_proto__gpe_cp",
     )
 
-    gpe_proto__gpe_proto = Projection(
+    gpe_proto__gpe_proto = ann.Projection(
         pre=gpe_proto,
         post=gpe_proto,
         target="gaba",
@@ -1749,7 +1761,7 @@ def BGM_v04(self):
         name="gpe_proto__gpe_proto",
     )
 
-    gpe_arky__gpe_arky = Projection(  # NEW, not in original BGM
+    gpe_arky__gpe_arky = ann.Projection(  # NEW, not in original BGM
         pre=gpe_arky,
         post=gpe_arky,
         target="gaba",
@@ -1757,7 +1769,7 @@ def BGM_v04(self):
         name="gpe_arky__gpe_arky",
     )
 
-    gpe_proto__str_fsi = Projection(
+    gpe_proto__str_fsi = ann.Projection(
         pre=gpe_proto,
         post=str_fsi,
         target="gaba",
@@ -1765,35 +1777,35 @@ def BGM_v04(self):
         name="gpe_proto__str_fsi",
     )
     ### gpe arky output
-    gpe_arky__str_d1 = Projection(
+    gpe_arky__str_d1 = ann.Projection(
         pre=gpe_arky,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__str_d1",
     )
-    gpe_arky__str_d2 = Projection(
+    gpe_arky__str_d2 = ann.Projection(
         pre=gpe_arky,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__str_d2",
     )
-    gpe_arky__str_fsi = Projection(
+    gpe_arky__str_fsi = ann.Projection(
         pre=gpe_arky,
         post=str_fsi,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__str_fsi",
     )
-    gpe_arky__gpe_proto = Projection(
+    gpe_arky__gpe_proto = ann.Projection(
         pre=gpe_arky,
         post=gpe_proto,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__gpe_proto",
     )
-    gpe_arky__gpe_cp = Projection(
+    gpe_arky__gpe_cp = ann.Projection(
         pre=gpe_arky,
         post=gpe_cp,
         target="gaba",
@@ -1801,42 +1813,42 @@ def BGM_v04(self):
         name="gpe_arky__gpe_cp",
     )
     ### gpe cp output
-    gpe_cp__str_d1 = Projection(
+    gpe_cp__str_d1 = ann.Projection(
         pre=gpe_cp,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__str_d1",
     )
-    gpe_cp__str_d2 = Projection(
+    gpe_cp__str_d2 = ann.Projection(
         pre=gpe_cp,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__str_d2",
     )
-    gpe_cp__str_fsi = Projection(
+    gpe_cp__str_fsi = ann.Projection(
         pre=gpe_cp,
         post=str_fsi,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__str_fsi",
     )
-    gpe_cp__gpe_proto = Projection(
+    gpe_cp__gpe_proto = ann.Projection(
         pre=gpe_cp,
         post=gpe_proto,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__gpe_proto",
     )
-    gpe_cp__gpe_arky = Projection(
+    gpe_cp__gpe_arky = ann.Projection(
         pre=gpe_cp,
         post=gpe_arky,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__gpe_arky",
     )
-    gpe_cp__integrator_stop = Projection(
+    gpe_cp__integrator_stop = ann.Projection(
         pre=gpe_cp,
         post=integrator_stop,
         target="ampa",
@@ -1844,32 +1856,32 @@ def BGM_v04(self):
         name="gpe_cp__integrator_stop",
     )
     ### snr output
-    snr__thal = Projection(
+    snr__thal = ann.Projection(
         pre=snr, post=thal, target="gaba", synapse=factor_synapse, name="snr__thal"
     )
     ### thal output
-    thal__integrator_go = Projection(
+    thal__integrator_go = ann.Projection(
         pre=thal,
         post=integrator_go,
         target="ampa",
         synapse=factor_synapse,
         name="thal__integrator_go",
     )
-    thal__str_d1 = Projection(
+    thal__str_d1 = ann.Projection(
         pre=thal,
         post=str_d1,
         target="ampa",
         synapse=factor_synapse,
         name="thal__str_d1",
     )
-    thal__str_d2 = Projection(
+    thal__str_d2 = ann.Projection(
         pre=thal,
         post=str_d2,
         target="ampa",
         synapse=factor_synapse,
         name="thal__str_d2",
     )
-    thal__str_fsi = Projection(
+    thal__str_fsi = ann.Projection(
         pre=thal,
         post=str_fsi,
         target="ampa",
@@ -1884,18 +1896,18 @@ def BGM_v04oliver(self):
     """
     #######   POPULATIONS   ######
     ### Str Populations
-    str_d2 = Population(
+    str_d2 = ann.Population(
         self.params["str_d2.size"],
         Izhikevich2007_noisy_AMPA,
         name="str_d2",
     )
-    str_fsi = Population(
+    str_fsi = ann.Population(
         self.params["str_fsi.size"],
         Izhikevich2007_Corbit_FSI_noisy_AMPA,
         name="str_fsi",
     )
     ### BG Populations
-    gpe_arky = Population(
+    gpe_arky = ann.Population(
         self.params["gpe_arky.size"],
         Izhikevich2003_flexible_noisy_AMPA,
         name="gpe_arky",
@@ -1903,14 +1915,14 @@ def BGM_v04oliver(self):
 
     ######   PROJECTIONS   ######
     ### str d2 output
-    str_d2__gpe_arky = Projection(
+    str_d2__gpe_arky = ann.Projection(
         pre=str_d2,
         post=gpe_arky,
         target="gaba",
         synapse=factor_synapse_without_max,
         name="str_d2__gpe_arky",
     )
-    str_d2__str_d2 = Projection(
+    str_d2__str_d2 = ann.Projection(
         pre=str_d2,
         post=str_d2,
         target="gaba",
@@ -1918,14 +1930,14 @@ def BGM_v04oliver(self):
         name="str_d2__str_d2",
     )
     ### str fsi output
-    str_fsi__str_d2 = Projection(
+    str_fsi__str_d2 = ann.Projection(
         pre=str_fsi,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse_without_max,
         name="str_fsi__str_d2",
     )
-    str_fsi__str_fsi = Projection(
+    str_fsi__str_fsi = ann.Projection(
         pre=str_fsi,
         post=str_fsi,
         target="gaba",
@@ -1933,14 +1945,14 @@ def BGM_v04oliver(self):
         name="str_fsi__str_fsi",
     )
     ### gpe arky output
-    gpe_arky__str_fsi = Projection(
+    gpe_arky__str_fsi = ann.Projection(
         pre=gpe_arky,
         post=str_fsi,
         target="gaba",
         synapse=factor_synapse_without_max,
         name="gpe_arky__str_fsi",
     )
-    gpe_arky__gpe_arky = Projection(  # NEW, not in original BGM
+    gpe_arky__gpe_arky = ann.Projection(  # NEW, not in original BGM
         pre=gpe_arky,
         post=gpe_arky,
         target="gaba",
@@ -1958,18 +1970,18 @@ def BGM_v04newgpe(self):
     """
     #######   POPULATIONS   ######
     ### Str Populations
-    str_d2 = Population(
+    str_d2 = ann.Population(
         self.params["str_d2.size"],
         Izhikevich2007_noisy_I,
         name="str_d2",
     )
-    str_fsi = Population(
+    str_fsi = ann.Population(
         self.params["str_fsi.size"],
         Izhikevich2007_Corbit_FSI_noisy_I,
         name="str_fsi",
     )
     ### BG Populations
-    gpe_proto = Population(
+    gpe_proto = ann.Population(
         self.params["gpe_proto.size"],
         Izhikevich2003_flexible_noisy_I_nonlin,
         name="gpe_proto",
@@ -1977,14 +1989,14 @@ def BGM_v04newgpe(self):
 
     ######   PROJECTIONS   ######
     ### str d2 output
-    str_d2__gpe_proto = Projection(
+    str_d2__gpe_proto = ann.Projection(
         pre=str_d2,
         post=gpe_proto,
         target="gaba",
         synapse=factor_synapse_without_max,
         name="str_d2__gpe_proto",
     )
-    str_d2__str_d2 = Projection(
+    str_d2__str_d2 = ann.Projection(
         pre=str_d2,
         post=str_d2,
         target="gaba",
@@ -1992,14 +2004,14 @@ def BGM_v04newgpe(self):
         name="str_d2__str_d2",
     )
     ### str fsi output
-    str_fsi__str_d2 = Projection(
+    str_fsi__str_d2 = ann.Projection(
         pre=str_fsi,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse_without_max,
         name="str_fsi__str_d2",
     )
-    str_fsi__str_fsi = Projection(
+    str_fsi__str_fsi = ann.Projection(
         pre=str_fsi,
         post=str_fsi,
         target="gaba",
@@ -2007,14 +2019,14 @@ def BGM_v04newgpe(self):
         name="str_fsi__str_fsi",
     )
     ### gpe proto output
-    gpe_proto__str_fsi = Projection(
+    gpe_proto__str_fsi = ann.Projection(
         pre=gpe_proto,
         post=str_fsi,
         target="gaba",
         synapse=factor_synapse_without_max,
         name="gpe_proto__str_fsi",
     )
-    gpe_proto__gpe_proto = Projection(  # NEW, not in original BGM
+    gpe_proto__gpe_proto = ann.Projection(  # NEW, not in original BGM
         pre=gpe_proto,
         post=gpe_proto,
         target="gaba",
@@ -2030,56 +2042,58 @@ def BGM_v05(self):
     """
     #######   POPULATIONS   ######
     ### cortex / input populations
-    cor_go = Population(
+    cor_go = ann.Population(
         self.params["cor_go.size"], poisson_neuron_up_down, name="cor_go"
     )
-    cor_pause = Population(
+    cor_pause = ann.Population(
         self.params["cor_pause.size"], poisson_neuron_up_down, name="cor_pause"
     )
-    cor_stop = Population(
+    cor_stop = ann.Population(
         self.params["cor_stop.size"], poisson_neuron_up_down, name="cor_stop"
     )
     ### Str Populations
-    str_d1 = Population(
+    str_d1 = ann.Population(
         self.params["str_d1.size"],
         Izhikevich2007_noisy_AMPA_oscillating,
         name="str_d1",  # NEW NEURON MODEL
     )
-    str_d2 = Population(
+    str_d2 = ann.Population(
         self.params["str_d2.size"],
         Izhikevich2007_noisy_AMPA_oscillating,
         name="str_d2",  # NEW NEURON MODEL
     )
-    str_fsi = Population(
+    str_fsi = ann.Population(
         self.params["str_fsi.size"],
         Izhikevich2007_Corbit_FSI_noisy_AMPA,
         name="str_fsi",
     )
     ### BG Populations
-    stn = Population(self.params["stn.size"], Izhikevich2003_noisy_AMPA, name="stn")
-    snr = Population(self.params["snr.size"], Izhikevich2003_noisy_AMPA, name="snr")
-    gpe_proto = Population(
+    stn = ann.Population(self.params["stn.size"], Izhikevich2003_noisy_AMPA, name="stn")
+    snr = ann.Population(self.params["snr.size"], Izhikevich2003_noisy_AMPA, name="snr")
+    gpe_proto = ann.Population(
         self.params["gpe_proto.size"],
         Izhikevich2003_flexible_noisy_AMPA,  # NEW NEURON MODEL
         name="gpe_proto",
     )
-    gpe_arky = Population(
+    gpe_arky = ann.Population(
         self.params["gpe_arky.size"],
         Izhikevich2003_flexible_noisy_AMPA_oscillating,
         name="gpe_arky",
     )
-    gpe_cp = Population(
+    gpe_cp = ann.Population(
         self.params["gpe_cp.size"], Izhikevich2003_flexible_noisy_AMPA, name="gpe_cp"
     )
-    thal = Population(self.params["thal.size"], Izhikevich2003_noisy_AMPA, name="thal")
+    thal = ann.Population(
+        self.params["thal.size"], Izhikevich2003_noisy_AMPA, name="thal"
+    )
     ### integrator Neurons
-    integrator_go = Population(
+    integrator_go = ann.Population(
         self.params["integrator_go.size"],
         integrator_neuron,
         stop_condition="decision>=0 : any",
         name="integrator_go",
     )
-    integrator_stop = Population(
+    integrator_stop = ann.Population(
         self.params["integrator_stop.size"],
         integrator_neuron,
         stop_condition="decision>=0 : any",
@@ -2088,28 +2102,28 @@ def BGM_v05(self):
 
     ######   PROJECTIONS   ######
     ### cortex go output
-    cor_go__str_d1 = Projection(
+    cor_go__str_d1 = ann.Projection(
         pre=cor_go,
         post=str_d1,
         target="ampa",
         synapse=factor_synapse,
         name="cor_go__str_d1",
     )
-    cor_go__str_d2 = Projection(
+    cor_go__str_d2 = ann.Projection(
         pre=cor_go,
         post=str_d2,
         target="ampa",
         synapse=factor_synapse,
         name="cor_go__str_d2",
     )
-    cor_go__str_fsi = Projection(
+    cor_go__str_fsi = ann.Projection(
         pre=cor_go,
         post=str_fsi,
         target="ampa",
         synapse=factor_synapse,
         name="cor_go__str_fsi",
     )
-    cor_go__thal = Projection(
+    cor_go__thal = ann.Projection(
         pre=cor_go,
         post=thal,
         target="ampa",
@@ -2117,14 +2131,14 @@ def BGM_v05(self):
         name="cor_go__thal",
     )
     ### cortex stop output
-    cor_stop__gpe_arky = Projection(
+    cor_stop__gpe_arky = ann.Projection(
         pre=cor_stop,
         post=gpe_arky,
         target="ampa",
         synapse=factor_synapse,
         name="cor_stop__gpe_arky",
     )
-    cor_stop__gpe_cp = Projection(
+    cor_stop__gpe_cp = ann.Projection(
         pre=cor_stop,
         post=gpe_cp,
         target="ampa",
@@ -2132,7 +2146,7 @@ def BGM_v05(self):
         name="cor_stop__gpe_cp",
     )
 
-    cor_stop__gpe_proto = Projection(  # NEW !
+    cor_stop__gpe_proto = ann.Projection(  # NEW !
         pre=cor_stop,
         post=gpe_proto,
         target="ampa",
@@ -2140,7 +2154,7 @@ def BGM_v05(self):
         name="cor_stop__gpe_proto",
     )
     ### cortex pause output
-    cor_pause__stn = Projection(
+    cor_pause__stn = ann.Projection(
         pre=cor_pause,
         post=stn,
         target="ampa",
@@ -2148,24 +2162,24 @@ def BGM_v05(self):
         name="cor_pause__stn",
     )
     ### str d1 output
-    str_d1__snr = Projection(
+    str_d1__snr = ann.Projection(
         pre=str_d1, post=snr, target="gaba", synapse=factor_synapse, name="str_d1__snr"
     )
-    str_d1__gpe_cp = Projection(
+    str_d1__gpe_cp = ann.Projection(
         pre=str_d1,
         post=gpe_cp,
         target="gaba",
         synapse=factor_synapse,
         name="str_d1__gpe_cp",
     )
-    str_d1__str_d1 = Projection(
+    str_d1__str_d1 = ann.Projection(
         pre=str_d1,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="str_d1__str_d1",
     )
-    str_d1__str_d2 = Projection(
+    str_d1__str_d2 = ann.Projection(
         pre=str_d1,
         post=str_d2,
         target="gaba",
@@ -2173,35 +2187,35 @@ def BGM_v05(self):
         name="str_d1__str_d2",
     )
     ### str d2 output
-    str_d2__gpe_proto = Projection(
+    str_d2__gpe_proto = ann.Projection(
         pre=str_d2,
         post=gpe_proto,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__gpe_proto",
     )
-    str_d2__gpe_arky = Projection(
+    str_d2__gpe_arky = ann.Projection(
         pre=str_d2,
         post=gpe_arky,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__gpe_arky",
     )
-    str_d2__gpe_cp = Projection(
+    str_d2__gpe_cp = ann.Projection(
         pre=str_d2,
         post=gpe_cp,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__gpe_cp",
     )
-    str_d2__str_d1 = Projection(
+    str_d2__str_d1 = ann.Projection(
         pre=str_d2,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__str_d1",
     )
-    str_d2__str_d2 = Projection(
+    str_d2__str_d2 = ann.Projection(
         pre=str_d2,
         post=str_d2,
         target="gaba",
@@ -2209,21 +2223,21 @@ def BGM_v05(self):
         name="str_d2__str_d2",
     )
     ### str fsi output
-    str_fsi__str_d1 = Projection(
+    str_fsi__str_d1 = ann.Projection(
         pre=str_fsi,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="str_fsi__str_d1",
     )
-    str_fsi__str_d2 = Projection(
+    str_fsi__str_d2 = ann.Projection(
         pre=str_fsi,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse,
         name="str_fsi__str_d2",
     )
-    str_fsi__str_fsi = Projection(
+    str_fsi__str_fsi = ann.Projection(
         pre=str_fsi,
         post=str_fsi,
         target="gaba",
@@ -2231,49 +2245,49 @@ def BGM_v05(self):
         name="str_fsi__str_fsi",
     )
     ### stn output
-    stn__snr = Projection(
+    stn__snr = ann.Projection(
         pre=stn, post=snr, target="ampa", synapse=factor_synapse, name="stn__snr"
     )
-    stn__gpe_proto = Projection(
+    stn__gpe_proto = ann.Projection(
         pre=stn,
         post=gpe_proto,
         target="ampa",
         synapse=factor_synapse,
         name="stn__gpe_proto",
     )
-    stn__gpe_arky = Projection(
+    stn__gpe_arky = ann.Projection(
         pre=stn,
         post=gpe_arky,
         target="ampa",
         synapse=factor_synapse,
         name="stn__gpe_arky",
     )
-    stn__gpe_cp = Projection(
+    stn__gpe_cp = ann.Projection(
         pre=stn, post=gpe_cp, target="ampa", synapse=factor_synapse, name="stn__gpe_cp"
     )
     ### gpe proto output
-    gpe_proto__stn = Projection(
+    gpe_proto__stn = ann.Projection(
         pre=gpe_proto,
         post=stn,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__stn",
     )
-    gpe_proto__snr = Projection(
+    gpe_proto__snr = ann.Projection(
         pre=gpe_proto,
         post=snr,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__snr",
     )
-    gpe_proto__gpe_arky = Projection(
+    gpe_proto__gpe_arky = ann.Projection(
         pre=gpe_proto,
         post=gpe_arky,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__gpe_arky",
     )
-    gpe_proto__gpe_cp = Projection(
+    gpe_proto__gpe_cp = ann.Projection(
         pre=gpe_proto,
         post=gpe_cp,
         target="gaba",
@@ -2281,7 +2295,7 @@ def BGM_v05(self):
         name="gpe_proto__gpe_cp",
     )
 
-    gpe_proto__gpe_proto = Projection(  # NEW, not in original BGM
+    gpe_proto__gpe_proto = ann.Projection(  # NEW, not in original BGM
         pre=gpe_proto,
         post=gpe_proto,
         target="gaba",
@@ -2289,7 +2303,7 @@ def BGM_v05(self):
         name="gpe_proto__gpe_proto",
     )
 
-    gpe_arky__gpe_arky = Projection(  # NEW, not in original BGM
+    gpe_arky__gpe_arky = ann.Projection(  # NEW, not in original BGM
         pre=gpe_arky,
         post=gpe_arky,
         target="gaba",
@@ -2297,7 +2311,7 @@ def BGM_v05(self):
         name="gpe_arky__gpe_arky",
     )
 
-    gpe_proto__str_fsi = Projection(
+    gpe_proto__str_fsi = ann.Projection(
         pre=gpe_proto,
         post=str_fsi,
         target="gaba",
@@ -2305,35 +2319,35 @@ def BGM_v05(self):
         name="gpe_proto__str_fsi",
     )
     ### gpe arky output
-    gpe_arky__str_d1 = Projection(
+    gpe_arky__str_d1 = ann.Projection(
         pre=gpe_arky,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__str_d1",
     )
-    gpe_arky__str_d2 = Projection(
+    gpe_arky__str_d2 = ann.Projection(
         pre=gpe_arky,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__str_d2",
     )
-    gpe_arky__str_fsi = Projection(
+    gpe_arky__str_fsi = ann.Projection(
         pre=gpe_arky,
         post=str_fsi,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__str_fsi",
     )
-    gpe_arky__gpe_proto = Projection(
+    gpe_arky__gpe_proto = ann.Projection(
         pre=gpe_arky,
         post=gpe_proto,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__gpe_proto",
     )
-    gpe_arky__gpe_cp = Projection(
+    gpe_arky__gpe_cp = ann.Projection(
         pre=gpe_arky,
         post=gpe_cp,
         target="gaba",
@@ -2341,42 +2355,42 @@ def BGM_v05(self):
         name="gpe_arky__gpe_cp",
     )
     ### gpe cp output
-    gpe_cp__str_d1 = Projection(
+    gpe_cp__str_d1 = ann.Projection(
         pre=gpe_cp,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__str_d1",
     )
-    gpe_cp__str_d2 = Projection(
+    gpe_cp__str_d2 = ann.Projection(
         pre=gpe_cp,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__str_d2",
     )
-    gpe_cp__str_fsi = Projection(
+    gpe_cp__str_fsi = ann.Projection(
         pre=gpe_cp,
         post=str_fsi,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__str_fsi",
     )
-    gpe_cp__gpe_proto = Projection(
+    gpe_cp__gpe_proto = ann.Projection(
         pre=gpe_cp,
         post=gpe_proto,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__gpe_proto",
     )
-    gpe_cp__gpe_arky = Projection(
+    gpe_cp__gpe_arky = ann.Projection(
         pre=gpe_cp,
         post=gpe_arky,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__gpe_arky",
     )
-    gpe_cp__integrator_stop = Projection(
+    gpe_cp__integrator_stop = ann.Projection(
         pre=gpe_cp,
         post=integrator_stop,
         target="ampa",
@@ -2384,32 +2398,32 @@ def BGM_v05(self):
         name="gpe_cp__integrator_stop",
     )
     ### snr output
-    snr__thal = Projection(
+    snr__thal = ann.Projection(
         pre=snr, post=thal, target="gaba", synapse=factor_synapse, name="snr__thal"
     )
     ### thal output
-    thal__integrator_go = Projection(
+    thal__integrator_go = ann.Projection(
         pre=thal,
         post=integrator_go,
         target="ampa",
         synapse=factor_synapse,
         name="thal__integrator_go",
     )
-    thal__str_d1 = Projection(
+    thal__str_d1 = ann.Projection(
         pre=thal,
         post=str_d1,
         target="ampa",
         synapse=factor_synapse,
         name="thal__str_d1",
     )
-    thal__str_d2 = Projection(
+    thal__str_d2 = ann.Projection(
         pre=thal,
         post=str_d2,
         target="ampa",
         synapse=factor_synapse,
         name="thal__str_d2",
     )
-    thal__str_fsi = Projection(
+    thal__str_fsi = ann.Projection(
         pre=thal,
         post=str_fsi,
         target="ampa",
@@ -2425,54 +2439,58 @@ def BGM_v06(self):
     """
     #######   POPULATIONS   ######
     ### cortex / input populations
-    cor_go = Population(self.params["cor_go.size"], poisson_neuron_sin, name="cor_go")
-    cor_pause = Population(
+    cor_go = ann.Population(
+        self.params["cor_go.size"], poisson_neuron_sin, name="cor_go"
+    )
+    cor_pause = ann.Population(
         self.params["cor_pause.size"], poisson_neuron_up_down, name="cor_pause"
     )
-    cor_stop = Population(
+    cor_stop = ann.Population(
         self.params["cor_stop.size"], poisson_neuron_sin, name="cor_stop"
     )
     ### Str Populations
-    str_d1 = Population(
+    str_d1 = ann.Population(
         self.params["str_d1.size"],
         Izhikevich2007_noisy_AMPA,
         name="str_d1",  # NEW NEURON MODEL
     )
-    str_d2 = Population(
+    str_d2 = ann.Population(
         self.params["str_d2.size"],
         Izhikevich2007_noisy_AMPA,
         name="str_d2",  # NEW NEURON MODEL
     )
-    str_fsi = Population(
+    str_fsi = ann.Population(
         self.params["str_fsi.size"],
         Izhikevich2007_Corbit_FSI_noisy_AMPA,
         name="str_fsi",
     )
     ### BG Populations
-    stn = Population(self.params["stn.size"], Izhikevich2003_noisy_AMPA, name="stn")
-    snr = Population(self.params["snr.size"], Izhikevich2003_noisy_AMPA, name="snr")
-    gpe_proto = Population(
+    stn = ann.Population(self.params["stn.size"], Izhikevich2003_noisy_AMPA, name="stn")
+    snr = ann.Population(self.params["snr.size"], Izhikevich2003_noisy_AMPA, name="snr")
+    gpe_proto = ann.Population(
         self.params["gpe_proto.size"],
         Izhikevich2003_flexible_noisy_AMPA,  # NEW NEURON MODEL
         name="gpe_proto",
     )
-    gpe_arky = Population(
+    gpe_arky = ann.Population(
         self.params["gpe_arky.size"],
         Izhikevich2003_flexible_noisy_AMPA,
         name="gpe_arky",
     )
-    gpe_cp = Population(
+    gpe_cp = ann.Population(
         self.params["gpe_cp.size"], Izhikevich2003_flexible_noisy_AMPA, name="gpe_cp"
     )
-    thal = Population(self.params["thal.size"], Izhikevich2003_noisy_AMPA, name="thal")
+    thal = ann.Population(
+        self.params["thal.size"], Izhikevich2003_noisy_AMPA, name="thal"
+    )
     ### integrator Neurons
-    integrator_go = Population(
+    integrator_go = ann.Population(
         self.params["integrator_go.size"],
         integrator_neuron,
         stop_condition="decision>=0 : any",
         name="integrator_go",
     )
-    integrator_stop = Population(
+    integrator_stop = ann.Population(
         self.params["integrator_stop.size"],
         integrator_neuron,
         stop_condition="decision>=0 : any",
@@ -2481,28 +2499,28 @@ def BGM_v06(self):
 
     ######   PROJECTIONS   ######
     ### cortex go output
-    cor_go__str_d1 = Projection(
+    cor_go__str_d1 = ann.Projection(
         pre=cor_go,
         post=str_d1,
         target="ampa",
         synapse=factor_synapse,
         name="cor_go__str_d1",
     )
-    cor_go__str_d2 = Projection(
+    cor_go__str_d2 = ann.Projection(
         pre=cor_go,
         post=str_d2,
         target="ampa",
         synapse=factor_synapse,
         name="cor_go__str_d2",
     )
-    cor_go__str_fsi = Projection(
+    cor_go__str_fsi = ann.Projection(
         pre=cor_go,
         post=str_fsi,
         target="ampa",
         synapse=factor_synapse,
         name="cor_go__str_fsi",
     )
-    cor_go__thal = Projection(
+    cor_go__thal = ann.Projection(
         pre=cor_go,
         post=thal,
         target="ampa",
@@ -2510,14 +2528,14 @@ def BGM_v06(self):
         name="cor_go__thal",
     )
     ### cortex stop output
-    cor_stop__gpe_arky = Projection(
+    cor_stop__gpe_arky = ann.Projection(
         pre=cor_stop,
         post=gpe_arky,
         target="ampa",
         synapse=factor_synapse,
         name="cor_stop__gpe_arky",
     )
-    cor_stop__gpe_cp = Projection(
+    cor_stop__gpe_cp = ann.Projection(
         pre=cor_stop,
         post=gpe_cp,
         target="ampa",
@@ -2525,7 +2543,7 @@ def BGM_v06(self):
         name="cor_stop__gpe_cp",
     )
 
-    cor_stop__gpe_proto = Projection(  # NEW !
+    cor_stop__gpe_proto = ann.Projection(  # NEW !
         pre=cor_stop,
         post=gpe_proto,
         target="ampa",
@@ -2533,7 +2551,7 @@ def BGM_v06(self):
         name="cor_stop__gpe_proto",
     )
     ### cortex pause output
-    cor_pause__stn = Projection(
+    cor_pause__stn = ann.Projection(
         pre=cor_pause,
         post=stn,
         target="ampa",
@@ -2541,24 +2559,24 @@ def BGM_v06(self):
         name="cor_pause__stn",
     )
     ### str d1 output
-    str_d1__snr = Projection(
+    str_d1__snr = ann.Projection(
         pre=str_d1, post=snr, target="gaba", synapse=factor_synapse, name="str_d1__snr"
     )
-    str_d1__gpe_cp = Projection(
+    str_d1__gpe_cp = ann.Projection(
         pre=str_d1,
         post=gpe_cp,
         target="gaba",
         synapse=factor_synapse,
         name="str_d1__gpe_cp",
     )
-    str_d1__str_d1 = Projection(
+    str_d1__str_d1 = ann.Projection(
         pre=str_d1,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="str_d1__str_d1",
     )
-    str_d1__str_d2 = Projection(
+    str_d1__str_d2 = ann.Projection(
         pre=str_d1,
         post=str_d2,
         target="gaba",
@@ -2566,35 +2584,35 @@ def BGM_v06(self):
         name="str_d1__str_d2",
     )
     ### str d2 output
-    str_d2__gpe_proto = Projection(
+    str_d2__gpe_proto = ann.Projection(
         pre=str_d2,
         post=gpe_proto,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__gpe_proto",
     )
-    str_d2__gpe_arky = Projection(
+    str_d2__gpe_arky = ann.Projection(
         pre=str_d2,
         post=gpe_arky,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__gpe_arky",
     )
-    str_d2__gpe_cp = Projection(
+    str_d2__gpe_cp = ann.Projection(
         pre=str_d2,
         post=gpe_cp,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__gpe_cp",
     )
-    str_d2__str_d1 = Projection(
+    str_d2__str_d1 = ann.Projection(
         pre=str_d2,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="str_d2__str_d1",
     )
-    str_d2__str_d2 = Projection(
+    str_d2__str_d2 = ann.Projection(
         pre=str_d2,
         post=str_d2,
         target="gaba",
@@ -2602,21 +2620,21 @@ def BGM_v06(self):
         name="str_d2__str_d2",
     )
     ### str fsi output
-    str_fsi__str_d1 = Projection(
+    str_fsi__str_d1 = ann.Projection(
         pre=str_fsi,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="str_fsi__str_d1",
     )
-    str_fsi__str_d2 = Projection(
+    str_fsi__str_d2 = ann.Projection(
         pre=str_fsi,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse,
         name="str_fsi__str_d2",
     )
-    str_fsi__str_fsi = Projection(
+    str_fsi__str_fsi = ann.Projection(
         pre=str_fsi,
         post=str_fsi,
         target="gaba",
@@ -2624,49 +2642,49 @@ def BGM_v06(self):
         name="str_fsi__str_fsi",
     )
     ### stn output
-    stn__snr = Projection(
+    stn__snr = ann.Projection(
         pre=stn, post=snr, target="ampa", synapse=factor_synapse, name="stn__snr"
     )
-    stn__gpe_proto = Projection(
+    stn__gpe_proto = ann.Projection(
         pre=stn,
         post=gpe_proto,
         target="ampa",
         synapse=factor_synapse,
         name="stn__gpe_proto",
     )
-    stn__gpe_arky = Projection(
+    stn__gpe_arky = ann.Projection(
         pre=stn,
         post=gpe_arky,
         target="ampa",
         synapse=factor_synapse,
         name="stn__gpe_arky",
     )
-    stn__gpe_cp = Projection(
+    stn__gpe_cp = ann.Projection(
         pre=stn, post=gpe_cp, target="ampa", synapse=factor_synapse, name="stn__gpe_cp"
     )
     ### gpe proto output
-    gpe_proto__stn = Projection(
+    gpe_proto__stn = ann.Projection(
         pre=gpe_proto,
         post=stn,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__stn",
     )
-    gpe_proto__snr = Projection(
+    gpe_proto__snr = ann.Projection(
         pre=gpe_proto,
         post=snr,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__snr",
     )
-    gpe_proto__gpe_arky = Projection(
+    gpe_proto__gpe_arky = ann.Projection(
         pre=gpe_proto,
         post=gpe_arky,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_proto__gpe_arky",
     )
-    gpe_proto__gpe_cp = Projection(
+    gpe_proto__gpe_cp = ann.Projection(
         pre=gpe_proto,
         post=gpe_cp,
         target="gaba",
@@ -2674,7 +2692,7 @@ def BGM_v06(self):
         name="gpe_proto__gpe_cp",
     )
 
-    gpe_proto__gpe_proto = Projection(  # NEW, not in original BGM
+    gpe_proto__gpe_proto = ann.Projection(  # NEW, not in original BGM
         pre=gpe_proto,
         post=gpe_proto,
         target="gaba",
@@ -2682,7 +2700,7 @@ def BGM_v06(self):
         name="gpe_proto__gpe_proto",
     )
 
-    gpe_arky__gpe_arky = Projection(  # NEW, not in original BGM
+    gpe_arky__gpe_arky = ann.Projection(  # NEW, not in original BGM
         pre=gpe_arky,
         post=gpe_arky,
         target="gaba",
@@ -2690,7 +2708,7 @@ def BGM_v06(self):
         name="gpe_arky__gpe_arky",
     )
 
-    gpe_proto__str_fsi = Projection(
+    gpe_proto__str_fsi = ann.Projection(
         pre=gpe_proto,
         post=str_fsi,
         target="gaba",
@@ -2698,35 +2716,35 @@ def BGM_v06(self):
         name="gpe_proto__str_fsi",
     )
     ### gpe arky output
-    gpe_arky__str_d1 = Projection(
+    gpe_arky__str_d1 = ann.Projection(
         pre=gpe_arky,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__str_d1",
     )
-    gpe_arky__str_d2 = Projection(
+    gpe_arky__str_d2 = ann.Projection(
         pre=gpe_arky,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__str_d2",
     )
-    gpe_arky__str_fsi = Projection(
+    gpe_arky__str_fsi = ann.Projection(
         pre=gpe_arky,
         post=str_fsi,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__str_fsi",
     )
-    gpe_arky__gpe_proto = Projection(
+    gpe_arky__gpe_proto = ann.Projection(
         pre=gpe_arky,
         post=gpe_proto,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_arky__gpe_proto",
     )
-    gpe_arky__gpe_cp = Projection(
+    gpe_arky__gpe_cp = ann.Projection(
         pre=gpe_arky,
         post=gpe_cp,
         target="gaba",
@@ -2734,42 +2752,42 @@ def BGM_v06(self):
         name="gpe_arky__gpe_cp",
     )
     ### gpe cp output
-    gpe_cp__str_d1 = Projection(
+    gpe_cp__str_d1 = ann.Projection(
         pre=gpe_cp,
         post=str_d1,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__str_d1",
     )
-    gpe_cp__str_d2 = Projection(
+    gpe_cp__str_d2 = ann.Projection(
         pre=gpe_cp,
         post=str_d2,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__str_d2",
     )
-    gpe_cp__str_fsi = Projection(
+    gpe_cp__str_fsi = ann.Projection(
         pre=gpe_cp,
         post=str_fsi,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__str_fsi",
     )
-    gpe_cp__gpe_proto = Projection(
+    gpe_cp__gpe_proto = ann.Projection(
         pre=gpe_cp,
         post=gpe_proto,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__gpe_proto",
     )
-    gpe_cp__gpe_arky = Projection(
+    gpe_cp__gpe_arky = ann.Projection(
         pre=gpe_cp,
         post=gpe_arky,
         target="gaba",
         synapse=factor_synapse,
         name="gpe_cp__gpe_arky",
     )
-    gpe_cp__integrator_stop = Projection(
+    gpe_cp__integrator_stop = ann.Projection(
         pre=gpe_cp,
         post=integrator_stop,
         target="ampa",
@@ -2777,32 +2795,32 @@ def BGM_v06(self):
         name="gpe_cp__integrator_stop",
     )
     ### snr output
-    snr__thal = Projection(
+    snr__thal = ann.Projection(
         pre=snr, post=thal, target="gaba", synapse=factor_synapse, name="snr__thal"
     )
     ### thal output
-    thal__integrator_go = Projection(
+    thal__integrator_go = ann.Projection(
         pre=thal,
         post=integrator_go,
         target="ampa",
         synapse=factor_synapse,
         name="thal__integrator_go",
     )
-    thal__str_d1 = Projection(
+    thal__str_d1 = ann.Projection(
         pre=thal,
         post=str_d1,
         target="ampa",
         synapse=factor_synapse,
         name="thal__str_d1",
     )
-    thal__str_d2 = Projection(
+    thal__str_d2 = ann.Projection(
         pre=thal,
         post=str_d2,
         target="ampa",
         synapse=factor_synapse,
         name="thal__str_d2",
     )
-    thal__str_fsi = Projection(
+    thal__str_fsi = ann.Projection(
         pre=thal,
         post=str_fsi,
         target="ampa",

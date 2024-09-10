@@ -1,6 +1,6 @@
-from ANNarchy import Neuron
+from CompNeuroPy import ann
 
-_fit_Bogacz = Neuron(
+_fit_Bogacz = ann.Neuron(
     parameters="""
         a              = 0 : population
         b              = 0 : population
@@ -39,7 +39,7 @@ _fit_Bogacz = Neuron(
 )
 
 
-_fit_Bogacz_2 = Neuron(
+_fit_Bogacz_2 = ann.Neuron(
     parameters="""
         C        = 0 : population # pF
         k        = 0 : population # pS * mV**-1

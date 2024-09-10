@@ -1,13 +1,18 @@
 import os
 import traceback
 import shutil
-from time import time
+from time import time, sleep
 import pickle
 from functools import wraps
-from joblib import Parallel, delayed
 import inspect
 import subprocess
 import textwrap
+import concurrent.futures
+import signal
+from typing import List
+from types import ModuleType
+import threading
+import sys
 
 
 def clear_dir(path):
@@ -245,10 +250,79 @@ def run_script_parallel(
     n_jobs = min(n_jobs, len(args_list))
 
     ### run the script in parallel
-    Parallel(n_jobs=n_jobs)(
-        delayed(os.system)(f"python {script_path} {' '.join(args)}")
-        for args in args_list
+    runner = _ScriptRunner(
+        script_path=script_path, num_workers=n_jobs, args_list=args_list
     )
+    runner.run()
+
+
+class _ScriptRunner:
+    def __init__(self, script_path: str, num_workers: int, args_list: List[List[str]]):
+        self.script_path = script_path
+        self.args_list = args_list
+        self.num_workers = num_workers
+        self.processes = []
+        self.executor = None
+        self.error_flag = threading.Event()
+
+    def run_script(self, args: List[str]):
+        """
+        Run the script with the given arguments.
+
+        Args:
+            args (List[str]):
+                List of arguments to pass to the script.
+        """
+        process = subprocess.Popen(
+            ["python", self.script_path] + args,
+        )
+        self.processes.append(process)
+
+        process.wait()
+        # Check if the process returned an error
+        if process.returncode != 0:
+            self.error_flag.set()
+            return -1
+
+    def signal_handler(self, sig, frame):
+        """
+        Signal handler to terminate all running processes and shutdown the executor.
+        """
+        # need a small sleep here, otherwise a single new process is started, don't know why
+        sleep(0.01)
+        # Terminate all running processes
+        for process in self.processes:
+            if process.poll() is None:
+                process.terminate()
+        # Shutdown the executor
+        if self.executor:
+            self.executor.shutdown(wait=False, cancel_futures=True)
+        # Exit the program
+        exit(1)
+
+    def run(self):
+        """
+        Run the script with the given arguments in parallel.
+        """
+        # Register the signal handler for SIGINT (Ctrl+C)
+        signal.signal(signal.SIGINT, self.signal_handler)
+        # Create a thread pool executor with the specified number of workers
+        self.executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=self.num_workers
+        )
+        # Submit the tasks to the executor
+        try:
+            futures = [
+                self.executor.submit(self.run_script, args) for args in self.args_list
+            ]
+            # Wait for all futures to complete
+            while any(f.running() for f in futures):
+                # Check if an error occurred in any of the threads
+                if self.error_flag.is_set():
+                    self.signal_handler(None, None)
+                    break
+        finally:
+            self.executor.shutdown(wait=True)
 
 
 def _is_git_repo():
@@ -262,8 +336,15 @@ def _is_git_repo():
         return False
 
 
+def _timeout_handler(signum, frame):
+    print("\nTime's up! No response received. Exiting the program.")
+    sys.exit()
+
+
 def create_data_raw_folder(
     folder_name: str,
+    parameter_module: ModuleType | None = None,
+    parameter_dict: dict | None = None,
     **kwargs,
 ):
     """
@@ -278,7 +359,8 @@ def create_data_raw_folder(
     This function stores the following information in a file called "__data_raw_meta__"
     in the created folder:
         - the name of the python script which created the data raw
-        - the global variables of the python script given as kwargs
+        - the global variables of the python script given as parameter_module,
+          parameter_dict, and kwargs
         - the conda environment
         - the pip requirements
         - the git log of ANNarchy and CompNeuroPy if they are installed locally
@@ -290,12 +372,24 @@ def create_data_raw_folder(
         folder_name (str):
             Name of the folder to create.
 
-        **kwargs (Any, optional):
-            Global variables of the caller script.
+        parameter_module (ModuleType, optional):
+            Module containing parameters as upper case constants. Default: None.
+
+        parameter_dict (dict, optional):
+            Dictionary containing parameters to store as parameter name - value pairs.
+            Default: None.
+
+    Returns:
+        folder_name (str):
+            Name of the created folder.
 
     Example:
         ```python
         from CompNeuroPy import create_data_raw_folder
+        import parameter_module as params
+
+        # this is a parameter
+        params.A = 10
 
         ### define global variables
         var1 = 1
@@ -305,15 +399,37 @@ def create_data_raw_folder(
         ### call the function
         create_data_raw_folder(
             "my_data_raw_folder",
-            var1=var1,
-            var2=var2,
-            var3=var3,
+            parameter_module=params,
+            parameter_dict={"var1": var1, "var2": var2, "var3": var3},
         )
         ```
     """
     ### check if folder already exists
     if os.path.isdir(folder_name):
-        raise FileExistsError(f"{folder_name} already exists")
+        print(f"'{folder_name}' already exists.")
+
+        # Set the signal for timeout
+        signal.signal(signal.SIGALRM, _timeout_handler)
+        while True:
+
+            signal.alarm(60)
+            user_input = input(
+                "You want to delete the folder and continue? (y/n)"
+            ).lower()
+            signal.alarm(0)
+
+            if user_input == "n":
+                print("Exiting the program.")
+                raise FileExistsError(f"'{folder_name}' already exists")
+            elif user_input == "y":
+                print(f"Deleting '{folder_name}' and continuing.")
+                shutil.rmtree(folder_name)
+                break
+            else:
+                print(
+                    "Invalid input. Please enter 'y' to delete the folder or 'n' to exit."
+                )
+
     ### create folder
     create_dir(folder_name)
 
@@ -467,11 +583,27 @@ def create_data_raw_folder(
             f"{''.join(git_strings)}"
             f"# with the following global variables:\n"
         )
-        for key, value in kwargs.items():
-            if isinstance(value, str):
-                f.write(f"{key} = '{value}'\n")
-            else:
-                f.write(f"{key} = {value}\n")
+        # store parameters from parameter_module, parameter_dict, and kwargs
+        if parameter_module is not None:
+            for key, value in vars(parameter_module).items():
+                if not (key.isupper()):
+                    continue
+                if isinstance(value, str):
+                    f.write(f"{key} = '{value}'\n")
+                else:
+                    f.write(f"{key} = {value}\n")
+        if parameter_dict is not None:
+            for key, value in parameter_dict.items():
+                if isinstance(value, str):
+                    f.write(f"{key} = '{value}'\n")
+                else:
+                    f.write(f"{key} = {value}\n")
+        if kwargs:
+            for key, value in kwargs.items():
+                if isinstance(value, str):
+                    f.write(f"{key} = '{value}'\n")
+                else:
+                    f.write(f"{key} = {value}\n")
         f.write("\n")
         f.write(
             "# ##########################################################################\n"
@@ -508,6 +640,7 @@ def create_data_raw_folder(
             f.write("# CompNeuroPy was installed locally with commit:\n")
             compneuropy_commit = compneuropy_git_log[0].replace("\n", "")
             f.write(f"# {compneuropy_commit}")
+    return folder_name
 
 
 def _find_folder_with_prefix(base_path, prefix):
@@ -562,7 +695,7 @@ class Logger:
                     print("Logger file:", file=f)
         return cls._instance
 
-    def log(self, txt):
+    def log(self, txt, verbose=False):
         """
         Log the given text to the log file. Only if the log file was given during
         the first initialization.
@@ -570,7 +703,11 @@ class Logger:
         Args:
             txt (str):
                 Text to be logged
+            verbose (bool, optional):
+                Whether to print the text. Default: False.
         """
+        if verbose:
+            print(txt)
         if self._log_file is None:
             return
 

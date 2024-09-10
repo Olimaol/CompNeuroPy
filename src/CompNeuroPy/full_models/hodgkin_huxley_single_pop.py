@@ -1,11 +1,11 @@
-from ..generate_model import CompNeuroModel
+from CompNeuroPy.generate_model import CompNeuroModel
 from CompNeuroPy.neuron_models import (
     HHneuronCorbit,
     HHneuronCorbitSyn,
     HHneuronBischop,
     HHneuronBischopSyn,
 )
-from ANNarchy import Population
+from CompNeuroPy import ann
 
 
 class HHmodelBischop(CompNeuroModel):
@@ -61,9 +61,11 @@ class HHmodelBischop(CompNeuroModel):
 
     def _bischop_2012_creation_function(self):
         if self.conductance_based_synapses:
-            Population(self.pop_size, neuron=HHneuronBischopSyn, name="HH_Bischop_syn")
+            ann.Population(
+                self.pop_size, neuron=HHneuronBischopSyn, name="HH_Bischop_syn"
+            )
         else:
-            Population(self.pop_size, neuron=HHneuronBischop, name="HH_Bischop")
+            ann.Population(self.pop_size, neuron=HHneuronBischop, name="HH_Bischop")
 
 
 class HHmodelCorbit(CompNeuroModel):
@@ -119,6 +121,8 @@ class HHmodelCorbit(CompNeuroModel):
 
     def _model_creation_function(self):
         if self.conductance_based_synapses:
-            Population(self.pop_size, neuron=HHneuronCorbitSyn, name="HH_Corbit_syn")
+            ann.Population(
+                self.pop_size, neuron=HHneuronCorbitSyn, name="HH_Corbit_syn"
+            )
         else:
-            Population(self.pop_size, neuron=HHneuronCorbit, name="HH_Corbit")
+            ann.Population(self.pop_size, neuron=HHneuronCorbit, name="HH_Corbit")

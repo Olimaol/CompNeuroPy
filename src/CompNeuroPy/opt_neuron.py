@@ -1,4 +1,4 @@
-from ANNarchy import setup, Population, get_population, Neuron
+from CompNeuroPy import ann
 import numpy as np
 import traceback
 from CompNeuroPy import system_functions as sf
@@ -54,9 +54,9 @@ class OptNeuron:
         experiment: Type[CompNeuroExp],
         get_loss_function: Callable[[Any, Any], float | list[float]],
         variables_bounds: dict[str, float | str | list[float | str]],
-        neuron_model: Neuron,
+        neuron_model: ann.Neuron,
         results_soll: Any | None = None,
-        target_neuron_model: Neuron | None = None,
+        target_neuron_model: ann.Neuron | None = None,
         time_step: float = 1.0,
         recording_period: float | None = None,
         compile_folder_name: str = "annarchy_OptNeuron",
@@ -202,7 +202,7 @@ class OptNeuron:
             self._check_neuron_models()
 
             ### setup ANNarchy
-            setup(dt=time_step)
+            ann.setup(dt=time_step)
 
             ### create and compile model
             ### if neuron models and target neuron model --> create both models then
@@ -468,9 +468,9 @@ class OptNeuron:
         """
         Checks if the neuron models are ANNarchy neuron models.
         """
-        if not (isinstance(self.neuron_model, type(Neuron()))) or (
+        if not (isinstance(self.neuron_model, type(ann.Neuron()))) or (
             self.target_neuron is not None
-            and not (isinstance(self.target_neuron, type(Neuron())))
+            and not (isinstance(self.target_neuron, type(ann.Neuron())))
         ):
             print(
                 "OptNeuron: Error: neuron_model and/or target_neuron_model have to be ANNarchy neuron models"
@@ -713,7 +713,7 @@ class OptNeuron:
             size (int):
                 The number of neurons in the population.
         """
-        Population(size, neuron=neuron, name=name)
+        ann.Population(size, neuron=neuron, name=name)
 
     def _test_variables(self):
         """
@@ -728,7 +728,7 @@ class OptNeuron:
             ]
         ).tolist()
         ### check if pop has these parameters
-        pop_parameter_names = get_population(self.pop).attributes.copy()
+        pop_parameter_names = ann.get_population(self.pop).attributes.copy()
         for name in pop_parameter_names.copy():
             if name in all_vars_names:
                 all_vars_names.remove(name)
@@ -1135,13 +1135,13 @@ class OptNeuron:
 
         ### set parameters
         for param_name, param_val in all_variables_dict.items():
-            pop_parameter_names = get_population(pop).attributes
+            pop_parameter_names = ann.get_population(pop).attributes
             ### only if param_name in parameter attributes
             if param_name in pop_parameter_names:
                 if self.popsize == 1:
-                    setattr(get_population(pop), param_name, param_val[0])
+                    setattr(ann.get_population(pop), param_name, param_val[0])
                 else:
-                    setattr(get_population(pop), param_name, param_val)
+                    setattr(ann.get_population(pop), param_name, param_val)
 
     def _test_fit(self, fitparams_dict):
         """

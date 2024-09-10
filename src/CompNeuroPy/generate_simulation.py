@@ -1,4 +1,4 @@
-from ANNarchy import get_time
+from CompNeuroPy import ann
 from CompNeuroPy import extra_functions as ef
 from CompNeuroPy.monitors import CompNeuroMonitors
 import numpy as np
@@ -117,12 +117,12 @@ class CompNeuroSim:
             self.monitor_chunk.append(self.monitor_object.current_chunk())
 
         ### run the simulation, store start and end simulation time
-        self.start.append(get_time())
+        self.start.append(ann.get_time())
         if tmp_kwargs is not None:
             self.info.append(self.simulation_function(**tmp_kwargs))
         else:
             self.info.append(self.simulation_function())
-        self.end.append(get_time())
+        self.end.append(ann.get_time())
 
     def _nr_simulations(self):
         """

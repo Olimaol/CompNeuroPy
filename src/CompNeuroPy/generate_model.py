@@ -1,7 +1,7 @@
 from typing import Callable
 from CompNeuroPy import model_functions as mf
 from CompNeuroPy import analysis_functions as af
-from ANNarchy import get_population, get_projection
+from CompNeuroPy import ann
 import numpy as np
 import pandas as pd
 from typingchecker import check_types
@@ -139,7 +139,7 @@ class CompNeuroModel:
         Updates _attribute_df for the weights of all projections.
         """
         for proj_name in self.projections:
-            values = get_projection(proj_name).w
+            values = ann.get_projection(proj_name).w
             self._update_attribute_df(
                 compartment=proj_name, parameter_name="w", parameter_value=values
             )
@@ -283,9 +283,9 @@ class CompNeuroModel:
         comp_in_proj = compartment in self.projections
 
         if comp_in_pop:
-            comp_obj = get_population(compartment)
+            comp_obj = ann.get_population(compartment)
         elif comp_in_proj:
-            comp_obj = get_projection(compartment)
+            comp_obj = ann.get_projection(compartment)
         else:
             assert (
                 comp_in_pop or comp_in_proj
@@ -374,12 +374,12 @@ class CompNeuroModel:
 
         ### fill paramter dict with population attributes
         for pop in self.populations:
-            for attribute in vars(get_population(pop))["attributes"]:
+            for attribute in vars(ann.get_population(pop))["attributes"]:
                 ### store min and max of attribute
                 ### create numpy array with getattr to use numpy min max function
                 values = np.array(
-                    [getattr(get_population(pop), attribute)]
-                    + [getattr(get_population(pop), attribute)]
+                    [getattr(ann.get_population(pop), attribute)]
+                    + [getattr(ann.get_population(pop), attribute)]
                 )
                 attribute_dict["compartment_type"].append("population")
                 attribute_dict["compartment_name"].append(pop)
@@ -392,12 +392,12 @@ class CompNeuroModel:
 
         ### fill paramter dict with projection attributes
         for proj in self.projections:
-            for attribute in vars(get_projection(proj))["attributes"]:
+            for attribute in vars(ann.get_projection(proj))["attributes"]:
                 ### store min and max of attribute
                 ### create numpy array with getattr to use numpy min max function
                 values = np.array(
-                    [getattr(get_projection(proj), attribute)]
-                    + [getattr(get_projection(proj), attribute)]
+                    [getattr(ann.get_projection(proj), attribute)]
+                    + [getattr(ann.get_projection(proj), attribute)]
                 )
                 attribute_dict["compartment_type"].append("projection")
                 attribute_dict["compartment_name"].append(proj)
