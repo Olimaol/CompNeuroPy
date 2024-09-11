@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "CompNeuroPy"
-version = "1.0.3"
+version = "1.0.4"
 description = 'General package for computational neuroscience with ANNarchy.'
 readme = "README.md"
 requires-python = ">=3.10"

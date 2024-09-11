@@ -7,3 +7,4 @@ People who want to start working with ANNarchy are strongly recommended to first
 - v.1.0.1: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10793741.svg)](https://doi.org/10.5281/zenodo.10793741)
 - v.1.0.2: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.11917511.svg)](https://doi.org/10.5281/zenodo.11917511)
 - v.1.0.3: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12091205.svg)](https://doi.org/10.5281/zenodo.12091205)
+- v.1.0.4: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13743017.svg)](https://doi.org/10.5281/zenodo.13743017)
