@@ -18,3 +18,4 @@ dist/
 *json
 *.log
 *test2_data*/
+site/
