@@ -1,4 +1,5 @@
 site_name: CompNeuroPy
+site_url: https://olimaol.github.io/CompNeuroPy/
 
 theme:
   name: material
@@ -19,6 +20,11 @@ repo_url: https://github.com/Olimaol/CompNeuroPy
 
 extra_css:
   - stylesheets/extra.css
+
+extra:
+  version:
+    provider: mike
+    alias: true
   
 plugins:
   - search

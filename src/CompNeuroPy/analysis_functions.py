@@ -28,7 +28,6 @@ def my_raster_plot(spikes: dict):
             ranks of the neurons
     """
     t, n = ann.raster_plot(spikes)
-    np.zeros(10)
     t = np.round(t / ann.dt(), 0).astype(int)
     return t, n
 

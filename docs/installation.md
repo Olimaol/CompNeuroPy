@@ -19,12 +19,7 @@ pip install -e .
 You must install ANNarchy separately, best **after** CompNeuroPy.
 
 ```
-git clone https://github.com/ANNarchy/ANNarchy
-cd ANNarchy
-git checkout develop
-pip install .
-cd ..
-rm -rf ANNarchy
+pip install ANNarchy
 ```
 
 Optional install torch, sbi, and hyperopt to be able to use [OptNeuron](./main/optimize_neuron.md)
