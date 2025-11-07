@@ -34,6 +34,8 @@ import efel
 import time
 import threading
 from matplotlib.animation import FuncAnimation
+from typing import List, Dict, Any
+from scipy.stats import truncnorm
 
 
 def print_df(df: pd.DataFrame | dict, **kwargs):
@@ -2579,3 +2581,117 @@ def find_x_bound(
                 epsilon *= 2
         sf.Logger().log(f"Returning y(x={x}) = {y_val}")
         return x
+
+
+class CombinedSampler:
+    def __init__(self, components: List[Dict[str, Any]]):
+        if not components:
+            raise ValueError("components list must not be empty")
+        self.components = []
+        weights = []
+        for comp in components:
+            comp_type = comp.get("type")
+            params = comp.get("params", {})
+            weight = float(comp.get("weight", 0.0))
+            if weight < 0:
+                raise ValueError("component weights must be non-negative")
+            if comp_type not in ("uniform", "gaussian", "trunc_gaussian", "histogram"):
+                raise ValueError(f"unknown component type: {comp_type}")
+            if comp_type == "uniform":
+                if "min" not in params or "max" not in params:
+                    raise ValueError("uniform requires 'min' and 'max'")
+            if comp_type == "gaussian":
+                if "mean" not in params or "std" not in params:
+                    raise ValueError("gaussian requires 'mean' and 'std'")
+            if comp_type == "trunc_gaussian":
+                if (
+                    "mean" not in params
+                    or "std" not in params
+                    or "min" not in params
+                    or "max" not in params
+                ):
+                    raise ValueError("trunc_gaussian requires 'mean','std','min','max'")
+                if params["min"] >= params["max"]:
+                    raise ValueError("trunc_gaussian 'min' must be < 'max'")
+            if comp_type == "histogram":
+                if "edges" not in params or "counts" not in params:
+                    raise ValueError("histogram requires 'edges' and 'counts'")
+                edges = np.asarray(params["edges"])
+                counts = np.asarray(params["counts"])
+                if len(edges) != len(counts) + 1:
+                    raise ValueError(
+                        "histogram 'edges' length must be counts_length + 1"
+                    )
+            self.components.append({"type": comp_type, "params": params})
+            weights.append(weight)
+        weights = np.array(weights, dtype=float)
+        total = weights.sum()
+        if total == 0:
+            weights = np.ones_like(weights) / len(weights)
+        else:
+            weights = weights / total
+        self.weights = weights
+
+    def _sample_uniform(self, size: int, params: dict):
+        a = float(params["min"])
+        b = float(params["max"])
+        return np.random.uniform(a, b, size=size)
+
+    def _sample_gaussian(self, size: int, params: dict):
+        mu = float(params["mean"])
+        sigma = float(params["std"])
+        return np.random.normal(mu, sigma, size=size)
+
+    def _sample_trunc_gaussian(self, size: int, params: dict):
+        mu = float(params["mean"])
+        sigma = float(params["std"])
+        lo = float(params["min"])
+        hi = float(params["max"])
+        a, b = (lo - mu) / sigma, (hi - mu) / sigma
+        return truncnorm.rvs(a, b, loc=mu, scale=sigma, size=size)
+
+    def _sample_histogram(self, size: int, params: dict):
+        edges = np.asarray(params["edges"], dtype=float)
+        counts = np.asarray(params["counts"], dtype=float)
+        widths = edges[1:] - edges[:-1]
+        masses = counts * widths
+        if np.all(masses == 0):
+            masses = widths.copy()
+        probs = masses / masses.sum()
+        bins = np.random.choice(len(probs), size=size, p=probs)
+        lefts = edges[bins]
+        rights = edges[bins + 1]
+        return np.random.uniform(lefts, rights)
+
+    def sample_component(self, index: int, n: int):
+        comp = self.components[index]
+        t = comp["type"]
+        params = comp["params"]
+        if t == "uniform":
+            return self._sample_uniform(n, params)
+        elif t == "gaussian":
+            return self._sample_gaussian(n, params)
+        elif t == "trunc_gaussian":
+            return self._sample_trunc_gaussian(n, params)
+        elif t == "histogram":
+            return self._sample_histogram(n, params)
+        else:
+            raise ValueError(f"unknown component type: {t}")
+
+    def sample(self, n: int):
+        n = int(n)
+        if n <= 0:
+            return np.array([])
+        choices = np.random.choice(len(self.components), size=n, p=self.weights)
+        samples = np.empty(n)
+        unique, counts = np.unique(choices, return_counts=True)
+        for u, cnt in zip(unique, counts):
+            idxs = np.nonzero(choices == u)[0]
+            samples[idxs] = self.sample_component(int(u), cnt)
+        return samples
+
+    def sample_components_separately(self, n_per_component: int):
+        return [
+            self.sample_component(i, n_per_component)
+            for i in range(len(self.components))
+        ]

@@ -46,6 +46,9 @@ from .final_models.izhikevich_2007_like_nm import (
     Izhikevich2007CorbitFsiNoisyBase,
     Izhikevich2007NoisyAmpaOscillating,
     IzhikevichGolomb,
+    Izhikevich2007Humphries2009SPND1,
+    Izhikevich2007Humphries2009SPND2,
+    Izhikevich2007Humphries2009FSI,
 )
 from .final_models.artificial_nm import (
     integrator_neuron,

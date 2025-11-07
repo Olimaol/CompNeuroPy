@@ -6,25 +6,72 @@ import re
 
 
 _dv_default = "k*(v - v_r)*(v - v_t) - u + I_v"
+
 _du_default = "a*(b*(v - v_r) - u)"
+
 _syn_default = """
     dg_ampa/dt = -g_ampa/tau_ampa
     dg_gaba/dt = -g_gaba/tau_gaba
 """
+
 _syn_noisy = """
     dg_ampa/dt = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rates_noise, -g_ampa/tau_ampa, -g_ampa/tau_ampa + increase_noise/dt)
     dg_gaba/dt = -g_gaba/tau_gaba
 """
+
 _I_syn = "- neg(g_ampa*(v - E_ampa)) - pos(g_gaba*(v - E_gaba))"
+
 _I_base_noise = """
     offset_base = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rate_base_noise, offset_base, Normal(0, 1) * base_noise)
     I_base      = base_mean + offset_base
+"""
+
+_syn_humphries2009_spn = """
+    dg_ampa/dt = -g_ampa / tau_ampa + g_glut
+    dg_nmda/dt = -g_nmda / tau_nmda + g_glut
+    dg_gaba/dt = -g_gaba / tau_gaba
+    B_nmda = 1 / (1 + 0.28 * exp(-0.062 * v)) # MG2+/3.57 --> 0.28
+"""
+
+_I_syn_humphries2009_d1 = """
+    g_ampa * (E_ampa - v) + g_nmda * B_nmda * (E_nmda - v) * (1 + beta_1 * phi_1) + g_gaba * (E_gaba - v) + I_app
+"""
+
+_I_syn_humphries2009_d2 = """
+    g_ampa * (E_ampa - v) * (1 - beta_2 * phi_2) + g_nmda * B_nmda * (E_nmda - v) + g_gaba * (E_gaba - v) + I_app
+"""
+
+_dv_humphries2009_d2 = """
+    k * (1 - alpha * phi_2) * (v - v_r) * (v - v_t) - u + I_v
+"""
+
+_syn_humphries2009_fsi = _syn_default
+
+_I_syn_humphries2009_fsi = """
+    g_ampa * (E_ampa - v) + g_gaba * (E_gaba - v) * (1 - epsilon * phi_2) + I_app
+"""
+
+_dv_humphries2009_fsi = """
+    k * (v - v_r * (1 - eta * phi_1)) * (v - v_t) - u + I_v
+"""
+
+_du_humphries2009_fsi = """
+    if v < v_b:
+        -a * u
+    else:
+        a * (b * (v - v_b)**3 - u)
 """
 
 
 def _get_equation_izhikevich_2007(
     syn="", i_v="I_app", dv=_dv_default, du=_du_default, prefix="", affix=""
 ):
+
+    # remove whitespace and line breaks before i_v, dv, du
+    i_v = i_v.strip()
+    dv = dv.strip()
+    du = du.strip()
+
     return f"""
         {prefix}
         {syn}
@@ -1500,6 +1547,314 @@ class IzhikevichGolomb(ann.Neuron):
             description="""
                 Izhikevich (2007)-like neuron model fitted to the FSI neuron model
                 from Golomb et al. (2007) and Corbit et al. (2016).
+            """,
+        )
+
+        # For reporting
+        self._instantiated.append(True)
+
+
+class Izhikevich2007Humphries2009SPND1(ann.Neuron):
+    """
+    PREDEFINED
+
+    [Izhikevich (2007)](https://isbnsearch.org/isbn/9780262090438)-like neuron model
+    as described in [Humphries et al. (2007)](https://doi.org/10.1016/j.neunet.2009.07.018)
+    for striatal SPNs with D1 receptor.
+
+    Parameters:
+        I_app (float, optional):
+            External applied input current.
+        tau_ampa (float, optional):
+            Time constant of the AMPA synapse.
+        tau_nmda (float, optional):
+            Time constant of the NMDA synapse.
+        tau_gaba (float, optional):
+            Time constant of the GABA synapse.
+        phi_1 (float, optional):
+            Dopamine modulation parameter for D1 receptor.
+        params_for_pop (bool, optional):
+            If True, the parameters are population-wide and not neuron-specific.
+        init (dict, optional):
+            Initial values for the variables.
+
+    Variables to record:
+        - g_ampa
+        - g_nmda
+        - g_gaba
+        - B_nmda
+        - I_v
+        - v
+        - u
+    """
+
+    # For reporting
+    _instantiated = []
+
+    def __init__(
+        self,
+        I_app: float = 0.0,
+        tau_ampa: float = 6.0,
+        tau_nmda: float = 160.0,
+        tau_gaba: float = 4.0,
+        phi_1: float = 0.0,
+        params_for_pop: bool = False,
+        init: dict = {},
+    ):
+        # Create the arguments
+        parameters = f"""
+            # synaptic current parameters
+            tau_ampa = {tau_ampa} {': population' if params_for_pop else ''}
+            tau_nmda = {tau_nmda} {': population' if params_for_pop else ''}
+            tau_gaba = {tau_gaba} {': population' if params_for_pop else ''}
+            E_ampa   = 0.0 : population
+            E_nmda   = 0.0 : population
+            E_gaba   = -60.0 : population
+            I_app    = {I_app}
+
+            # neuron model parameters
+            C      = 50.0   : population
+            k      = 1.14   : population
+            v_r    = -80.0  : population
+            v_t    = -33.8  : population
+            c_da   = 22.7   : population # g_da in Humphries et al. (2009)
+            E_da   = -68.4  : population
+            a      = 0.05   : population
+            b      = -20.0  : population
+            c      = -55.0  : population
+            d      = 377.0  : population
+            v_peak = 40.0   : population
+
+            # dopamine modulation parameter
+            phi_1  = {phi_1}  {': population' if params_for_pop else ''}
+            beta_1 = 3.75 : population
+        """
+
+        syn = _syn_humphries2009_spn
+        i_v = _I_syn_humphries2009_d1
+        dv = f"{_dv_default} + phi_1 * c_da * (v - E_da)"
+
+        # get equations
+        equations = _get_equation_izhikevich_2007(syn=syn, i_v=i_v, dv=dv)
+
+        # set initial values
+        equations = _set_init(equations, init)
+
+        super().__init__(
+            parameters=parameters,
+            equations=equations,
+            spike="v >= v_peak",
+            reset="""
+                v = c
+                u = u + d
+            """,
+            name="Izhikevich2007Humphries2009SPND1",
+            description="""
+                Izhikevich (2007)-like neuron model for D1 SPNs from Humphries et al. (2009).
+            """,
+        )
+
+        # For reporting
+        self._instantiated.append(True)
+
+
+class Izhikevich2007Humphries2009SPND2(ann.Neuron):
+    """
+    PREDEFINED
+
+    [Izhikevich (2007)](https://isbnsearch.org/isbn/9780262090438)-like neuron model
+    as described in [Humphries et al. (2007)](https://doi.org/10.1016/j.neunet.2009.07.018)
+    for striatal SPNs with D2 receptor.
+
+    Parameters:
+        I_app (float, optional):
+            External applied input current.
+        tau_ampa (float, optional):
+            Time constant of the AMPA synapse.
+        tau_nmda (float, optional):
+            Time constant of the NMDA synapse.
+        tau_gaba (float, optional):
+            Time constant of the GABA synapse.
+        phi_2 (float, optional):
+            Dopamine modulation parameter for D2 receptor.
+        params_for_pop (bool, optional):
+            If True, the parameters are population-wide and not neuron-specific.
+        init (dict, optional):
+            Initial values for the variables.
+
+    Variables to record:
+        - g_ampa
+        - g_nmda
+        - g_gaba
+        - B_nmda
+        - I_v
+        - v
+        - u
+    """
+
+    # For reporting
+    _instantiated = []
+
+    def __init__(
+        self,
+        I_app: float = 0.0,
+        tau_ampa: float = 6.0,
+        tau_nmda: float = 160.0,
+        tau_gaba: float = 4.0,
+        phi_2: float = 0.0,
+        params_for_pop: bool = False,
+        init: dict = {},
+    ):
+        # Create the arguments
+        parameters = f"""
+            # synaptic current parameters
+            tau_ampa = {tau_ampa} {': population' if params_for_pop else ''}
+            tau_nmda = {tau_nmda} {': population' if params_for_pop else ''}
+            tau_gaba = {tau_gaba} {': population' if params_for_pop else ''}
+            E_ampa   = 0.0 : population
+            E_nmda   = 0.0 : population
+            E_gaba   = -60.0 : population
+            I_app    = {I_app}
+
+            # neuron model parameters
+            C      = 50.0   : population
+            k      = 1.14   : population
+            v_r    = -80.0  : population
+            v_t    = -33.8  : population
+            a      = 0.05   : population
+            b      = -20.0  : population
+            c      = -55.0  : population
+            d      = 377.0  : population
+            v_peak = 40.0   : population
+
+            # dopamine modulation parameter
+            phi_2  = {phi_2}  {': population' if params_for_pop else ''}
+            alpha  = 0.03  : population
+            beta_2 = 0.156 : population
+        """
+
+        syn = _syn_humphries2009_spn
+        i_v = _I_syn_humphries2009_d2
+        dv = _dv_humphries2009_d2
+
+        # get equations
+        equations = _get_equation_izhikevich_2007(syn=syn, i_v=i_v, dv=dv)
+
+        # set initial values
+        equations = _set_init(equations, init)
+
+        super().__init__(
+            parameters=parameters,
+            equations=equations,
+            spike="v >= v_peak",
+            reset="""
+                v = c
+                u = u + d
+            """,
+            name="Izhikevich2007Humphries2009SPND2",
+            description="""
+                Izhikevich (2007)-like neuron model for D2 SPNs from Humphries et al. (2009).
+            """,
+        )
+
+        # For reporting
+        self._instantiated.append(True)
+
+
+class Izhikevich2007Humphries2009FSI(ann.Neuron):
+    """
+    PREDEFINED
+
+    [Izhikevich (2007)](https://isbnsearch.org/isbn/9780262090438)-like neuron model
+    as described in [Humphries et al. (2007)](https://doi.org/10.1016/j.neunet.2009.07.018)
+    for striatal FSIs.
+
+    Parameters:
+        I_app (float, optional):
+            External applied input current.
+        tau_ampa (float, optional):
+            Time constant of the AMPA synapse.
+        tau_gaba (float, optional):
+            Time constant of the GABA synapse.
+        phi_1 (float, optional):
+            Dopamine modulation parameter for D1 receptor.
+        phi_2 (float, optional):
+            Dopamine modulation parameter for D2 receptor.
+        params_for_pop (bool, optional):
+            If True, the parameters are population-wide and not neuron-specific.
+        init (dict, optional):
+            Initial values for the variables.
+
+    Variables to record:
+        - g_ampa
+        - g_gaba
+        - I_v
+        - v
+        - u
+    """
+
+    # For reporting
+    _instantiated = []
+
+    def __init__(
+        self,
+        I_app: float = 0.0,
+        tau_ampa: float = 6.0,
+        tau_gaba: float = 4.0,
+        phi_1: float = 0.0,
+        phi_2: float = 0.0,
+        params_for_pop: bool = False,
+        init: dict = {},
+    ):
+        # Create the arguments
+        parameters = f"""
+            # synaptic current parameters
+            tau_ampa = {tau_ampa} {': population' if params_for_pop else ''}
+            tau_gaba = {tau_gaba} {': population' if params_for_pop else ''}
+            E_ampa   = 0.0 : population
+            E_gaba   = -60.0 : population
+            I_app    = {I_app}
+
+            # neuron model parameters
+            C      = 80.0   : population
+            k      = 1.0   : population
+            v_r    = -70.0  : population
+            v_t    = -50.0  : population
+            v_b    = -55.0  : population
+            a      = 0.2   : population
+            b      = 0.025  : population
+            c      = -60.0  : population
+            v_peak = 25.0   : population
+
+            # dopamine modulation parameter
+            phi_1   = {phi_1}  {': population' if params_for_pop else ''}
+            phi_2   = {phi_2}  {': population' if params_for_pop else ''}
+            eta     = 0.1 : population
+            epsilon = 0.625 : population
+        """
+
+        syn = _syn_humphries2009_fsi
+        i_v = _I_syn_humphries2009_fsi
+        dv = _dv_humphries2009_fsi
+        du = _du_humphries2009_fsi
+
+        # get equations
+        equations = _get_equation_izhikevich_2007(syn=syn, i_v=i_v, dv=dv, du=du)
+
+        # set initial values
+        equations = _set_init(equations, init)
+
+        super().__init__(
+            parameters=parameters,
+            equations=equations,
+            spike="v >= v_peak",
+            reset="""
+                v = c
+                u = u
+            """,
+            name="Izhikevich2007Humphries2009FSI",
+            description="""
+                Izhikevich (2007)-like neuron model for FSI from Humphries et al. (2009).
             """,
         )
 
