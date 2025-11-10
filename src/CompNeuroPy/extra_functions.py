@@ -2584,11 +2584,85 @@ def find_x_bound(
 
 
 class CombinedSampler:
-    def __init__(self, components: List[Dict[str, Any]]):
+    """Combined (mixture) sampler supporting multiple component distributions.
+
+    This utility samples from a user-defined mixture of simple 1D distributions:
+    - "uniform":     Uniform over [min, max]
+    - "gaussian":    Normal with mean and std (unbounded)
+    - "trunc_gaussian": Truncated normal restricted to [min, max]
+    - "histogram":   KDE (Gaussian mixture over bin centers weighted by counts)
+
+    Each component is given as a dictionary with keys:
+        type (str): One of {"uniform", "gaussian", "trunc_gaussian", "histogram"}
+        params (dict): Parameter dictionary depending on type:
+            uniform:        {"min": float, "max": float}
+            gaussian:       {"mean": float, "std": float}
+            trunc_gaussian: {"mean": float, "std": float, "min": float, "max": float}
+            histogram:      {
+                "edges": Sequence[float],  # bin boundaries; length = len(counts) + 1; strictly increasing
+                "counts": Sequence[float], # non-negative bin weights (frequencies)
+                "bandwidth": float,        # optional Gaussian kernel std for KDE; auto if omitted
+            }
+            For the "histogram" type, a smooth probability density estimate is formed by
+            placing Gaussian kernels with standard deviation = bandwidth at the bin centers,
+            with mixture weights proportional to the normalized counts. If bandwidth is
+            not provided, an automatic (weighted Silverman) bandwidth is used. Samples are
+            drawn from this Gaussian mixture and clipped to [edges[0], edges[-1]]. If all
+            counts are zero, sampling falls back to uniform over the full support.
+        weight (float, optional): Non-negative mixture weight. If all weights are 0
+            or omitted, a uniform weighting over components is used.
+
+    Randomness:
+        An :class:`numpy.random.Generator` can be supplied via the ``rng`` argument.
+        If an ``int`` is supplied it is interpreted as a seed and a new generator is
+        created. If ``None`` a fresh default generator is instantiated. All internal
+        sampling uses this generator, ensuring reproducibility when desired.
+
+    Example
+    -------
+    ```python
+    sampler = CombinedSampler([
+        {"type": "uniform", "params": {"min": 0.0, "max": 1.0}, "weight": 1.0},
+        {"type": "gaussian", "params": {"mean": 2.0, "std": 0.5}, "weight": 2.0},
+        {"type": "trunc_gaussian", "params": {"mean": 5.0, "std": 1.0, "min": 4.0, "max": 6.0}, "weight": 1.0},
+        {"type": "histogram", "params": {"edges": [0.0, 1.0, 3.0], "counts": [5, 15], "bandwidth": 0.25}, "weight": 1.0},
+    ], rng=1234)
+    samples = sampler.sample(1000)
+    separate = sampler.sample_components_separately(50)
+    ```
+
+    Attributes
+    ----------
+    components : list[dict]
+        List of component specs with canonical structure {"type": str, "params": dict}.
+    weights : np.ndarray
+        Normalized mixture weights (sum to 1).
+    rng : np.random.Generator
+        Random number generator used for all sampling operations.
+    """
+
+    def __init__(
+        self,
+        components: List[Dict[str, Any]],
+        rng: None | int | np.random.Generator = None,
+    ):
         if not components:
             raise ValueError("components list must not be empty")
+
+        # Initialize / normalize RNG
+        if isinstance(rng, np.random.Generator):
+            self.rng = rng
+        elif isinstance(rng, (int, np.integer)):
+            self.rng = np.random.default_rng(seed=int(rng))
+        elif rng is None:
+            self.rng = np.random.default_rng()
+        else:
+            raise TypeError(
+                "rng must be None, an int seed, or a np.random.Generator instance"
+            )
+
         self.components = []
-        weights = []
+        weights: list[float] = []
         for comp in components:
             comp_type = comp.get("type")
             params = comp.get("params", {})
@@ -2597,6 +2671,7 @@ class CombinedSampler:
                 raise ValueError("component weights must be non-negative")
             if comp_type not in ("uniform", "gaussian", "trunc_gaussian", "histogram"):
                 raise ValueError(f"unknown component type: {comp_type}")
+            # Validate params per type
             if comp_type == "uniform":
                 if "min" not in params or "max" not in params:
                     raise ValueError("uniform requires 'min' and 'max'")
@@ -2624,65 +2699,147 @@ class CombinedSampler:
                     )
             self.components.append({"type": comp_type, "params": params})
             weights.append(weight)
-        weights = np.array(weights, dtype=float)
-        total = weights.sum()
-        if total == 0:
-            weights = np.ones_like(weights) / len(weights)
-        else:
-            weights = weights / total
-        self.weights = weights
 
+        weights_arr = np.array(weights, dtype=float)
+        total = weights_arr.sum()
+        if total == 0:
+            weights_arr = np.ones_like(weights_arr) / len(weights_arr)
+        else:
+            weights_arr = weights_arr / total
+        self.weights = weights_arr
+
+    # ---- internal per-component sampling helpers ---------------------------------
     def _sample_uniform(self, size: int, params: dict):
+        """Sample from a uniform distribution over [min, max]."""
         a = float(params["min"])
         b = float(params["max"])
-        return np.random.uniform(a, b, size=size)
+        return self.rng.uniform(a, b, size=size)
 
     def _sample_gaussian(self, size: int, params: dict):
+        """Sample from a standard (unbounded) normal distribution."""
         mu = float(params["mean"])
         sigma = float(params["std"])
-        return np.random.normal(mu, sigma, size=size)
+        return self.rng.normal(mu, sigma, size=size)
 
     def _sample_trunc_gaussian(self, size: int, params: dict):
+        """Sample from a truncated normal within [min, max]."""
         mu = float(params["mean"])
         sigma = float(params["std"])
         lo = float(params["min"])
         hi = float(params["max"])
         a, b = (lo - mu) / sigma, (hi - mu) / sigma
-        return truncnorm.rvs(a, b, loc=mu, scale=sigma, size=size)
+        return truncnorm.rvs(
+            a, b, loc=mu, scale=sigma, size=size, random_state=self.rng
+        )
 
     def _sample_histogram(self, size: int, params: dict):
+        """Sample from a probability density estimate fitted to histogram data.
+
+        We interpret the histogram (edges, counts) as a binned approximation to an
+        underlying distribution and form a Gaussian-kernel density estimate (KDE)
+        using bin centers as support points with weights proportional to the bin
+        counts. Samples are then drawn from the resulting Gaussian mixture.
+
+        Optional params:
+            - bandwidth (float > 0): Kernel std used for the KDE; if omitted, an
+              automatic bandwidth is computed from a weighted Silverman's rule.
+        """
         edges = np.asarray(params["edges"], dtype=float)
         counts = np.asarray(params["counts"], dtype=float)
-        widths = edges[1:] - edges[:-1]
-        masses = counts * widths
-        if np.all(masses == 0):
-            masses = widths.copy()
-        probs = masses / masses.sum()
-        bins = np.random.choice(len(probs), size=size, p=probs)
-        lefts = edges[bins]
-        rights = edges[bins + 1]
-        return np.random.uniform(lefts, rights)
+        if edges.ndim != 1 or counts.ndim != 1 or len(edges) != len(counts) + 1:
+            raise ValueError("histogram requires 1D 'edges' with len = len(counts)+1")
 
+        # If no mass, fall back to uniform over the full support
+        total_count = float(np.sum(counts))
+        if total_count <= 0:
+            return self.rng.uniform(edges[0], edges[-1], size=size)
+
+        # Compute bin centers and normalized weights
+        centers = 0.5 * (edges[:-1] + edges[1:])
+        weights = counts / total_count  # mixture weights sum to 1
+
+        # Bandwidth selection: allow override via params; otherwise, estimate
+        bw = float(params.get("bandwidth", 0.0) or 0.0)
+        if not np.isfinite(bw) or bw <= 0:
+            # Weighted mean and std of bin centers
+            mu = float(np.sum(weights * centers))
+            var = float(np.sum(weights * (centers - mu) ** 2))
+            std = np.sqrt(max(var, 0.0))
+
+            # Approximate weighted IQR from the binned distribution
+            cdf = np.cumsum(weights)
+
+            def _wquantile(q: float):
+                idx = np.searchsorted(cdf, q, side="left")
+                idx = int(np.clip(idx, 0, len(centers) - 1))
+                return centers[idx]
+
+            q25 = _wquantile(0.25)
+            q75 = _wquantile(0.75)
+            iqr = max(q75 - q25, 0.0)
+
+            sigma = std if iqr <= 0 else min(std, iqr / 1.34)
+            # Effective sample size ~ total count; guard against 0
+            n_eff = max(total_count, 1.0)
+            # Silverman's rule-of-thumb
+            bw = (
+                0.9
+                * (sigma if sigma > 0 else (np.mean(np.diff(edges)) / np.sqrt(12)))
+                * (n_eff ** (-1 / 5))
+            )
+            # Ensure positive and not vanishingly small compared to bin width
+            avg_w = float(np.mean(np.diff(edges)))
+            if not np.isfinite(bw) or bw <= 0:
+                bw = max(1e-12, 0.3 * avg_w)
+            else:
+                bw = max(bw, 1e-12)
+
+        # Mixture sampling: pick component (bin center) then draw from N(center, bw)
+        comp_idx = self.rng.choice(len(centers), size=size, p=weights)
+        locs = centers[comp_idx]
+        samples = self.rng.normal(locs, bw)
+        # Constrain to the histogram support to avoid unrealistic tails
+        return np.clip(samples, edges[0], edges[-1])
+
+    # ---- public API ---------------------------------------------------------------
     def sample_component(self, index: int, n: int):
+        """Sample ``n`` values from a single component specified by its index.
+
+        Args:
+            index (int): Position of component in ``components`` list.
+            n (int): Number of samples to draw.
+
+        Returns:
+            np.ndarray: 1D array of sampled values.
+        """
         comp = self.components[index]
         t = comp["type"]
         params = comp["params"]
         if t == "uniform":
             return self._sample_uniform(n, params)
-        elif t == "gaussian":
+        if t == "gaussian":
             return self._sample_gaussian(n, params)
-        elif t == "trunc_gaussian":
+        if t == "trunc_gaussian":
             return self._sample_trunc_gaussian(n, params)
-        elif t == "histogram":
+        if t == "histogram":
             return self._sample_histogram(n, params)
-        else:
-            raise ValueError(f"unknown component type: {t}")
+        raise ValueError(f"unknown component type: {t}")
 
     def sample(self, n: int):
+        """Draw ``n`` samples from the mixture distribution.
+
+        Sampling strategy: first choose component indices according to the normalized
+        mixture weights; then batch-sample per unique component for efficiency.
+
+        Args:
+            n (int): Number of samples.
+        Returns:
+            np.ndarray: Mixture samples of length ``n``.
+        """
         n = int(n)
         if n <= 0:
             return np.array([])
-        choices = np.random.choice(len(self.components), size=n, p=self.weights)
+        choices = self.rng.choice(len(self.components), size=n, p=self.weights)
         samples = np.empty(n)
         unique, counts = np.unique(choices, return_counts=True)
         for u, cnt in zip(unique, counts):
@@ -2691,6 +2848,11 @@ class CombinedSampler:
         return samples
 
     def sample_components_separately(self, n_per_component: int):
+        """Sample ``n_per_component`` values from each component independently.
+
+        Returns:
+            list[np.ndarray]: One array per component.
+        """
         return [
             self.sample_component(i, n_per_component)
             for i in range(len(self.components))

@@ -35,7 +35,7 @@ with suppress_stdout():
 
     from ANNarchy.core import Random as ann_Random
 
-### functions
+### special functions and classes
 from CompNeuroPy.analysis_functions import (
     my_raster_plot,
     get_nanmean,
@@ -69,6 +69,7 @@ from CompNeuroPy.extra_functions import (
     efel_loss,
     RNG,
     find_x_bound,
+    CombinedSampler,
 )
 from CompNeuroPy.model_functions import (
     compile_in_folder,
@@ -100,7 +101,7 @@ from CompNeuroPy.system_functions import (
 from CompNeuroPy.simulation_requirements import req_pop_attr, ReqPopHasAttr
 from CompNeuroPy.statistic_functions import anova_between_groups
 
-### classes
+### global classes
 from CompNeuroPy.monitors import CompNeuroMonitors
 from CompNeuroPy.experiment import CompNeuroExp
 from CompNeuroPy.generate_model import CompNeuroModel
