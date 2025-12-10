@@ -377,10 +377,16 @@ class CompNeuroModel:
             for attribute in vars(ann.get_population(pop))["attributes"]:
                 ### store min and max of attribute
                 ### create numpy array with getattr to use numpy min max function
-                values = np.array(
-                    [getattr(ann.get_population(pop), attribute)]
-                    + [getattr(ann.get_population(pop), attribute)]
-                )
+                try:
+                    attr_value = getattr(ann.get_population(pop), attribute)
+                    values = np.array([attr_value, attr_value])
+                except Exception:
+                    attribute_dict["compartment_type"].append("population")
+                    attribute_dict["compartment_name"].append(pop)
+                    attribute_dict["attribute_name"].append(attribute)
+                    attribute_dict["value"].append(np.nan)
+                    attribute_dict["definition"].append("init")
+                    continue
                 attribute_dict["compartment_type"].append("population")
                 attribute_dict["compartment_name"].append(pop)
                 attribute_dict["attribute_name"].append(attribute)
@@ -395,10 +401,16 @@ class CompNeuroModel:
             for attribute in vars(ann.get_projection(proj))["attributes"]:
                 ### store min and max of attribute
                 ### create numpy array with getattr to use numpy min max function
-                values = np.array(
-                    [getattr(ann.get_projection(proj), attribute)]
-                    + [getattr(ann.get_projection(proj), attribute)]
-                )
+                try:
+                    attr_value = getattr(ann.get_projection(proj), attribute)
+                    values = np.array([attr_value, attr_value])
+                except Exception:
+                    attribute_dict["compartment_type"].append("projection")
+                    attribute_dict["compartment_name"].append(proj)
+                    attribute_dict["attribute_name"].append(attribute)
+                    attribute_dict["value"].append(np.nan)
+                    attribute_dict["definition"].append("init")
+                    continue
                 attribute_dict["compartment_type"].append("projection")
                 attribute_dict["compartment_name"].append(proj)
                 attribute_dict["attribute_name"].append(attribute)
