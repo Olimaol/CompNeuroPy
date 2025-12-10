@@ -19,3 +19,4 @@ dist/
 *.log
 *test2_data*/
 site/
+src/CompNeuroPy/tmp/*
