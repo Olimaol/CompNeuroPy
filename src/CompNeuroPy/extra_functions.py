@@ -2825,20 +2825,22 @@ class CombinedSampler:
             return self._sample_histogram(n, params)
         raise ValueError(f"unknown component type: {t}")
 
-    def sample(self, n: int):
-        """Draw ``n`` samples from the mixture distribution.
-
-        Sampling strategy: first choose component indices according to the normalized
-        mixture weights; then batch-sample per unique component for efficiency.
+    def sample(self, n: int | None = None):
+        """Draw samples from the mixture.
 
         Args:
-            n (int): Number of samples.
+            n (int | None): Number of samples. If None, a single scalar is returned.
         Returns:
-            np.ndarray: Mixture samples of length ``n``.
+            float | np.ndarray: Scalar if n is None; array of length n otherwise.
         """
+        if n is None:
+            comp_idx = int(self.rng.choice(len(self.components), p=self.weights))
+            return float(self.sample_component(comp_idx, 1)[0])
+
         n = int(n)
         if n <= 0:
             return np.array([])
+
         choices = self.rng.choice(len(self.components), size=n, p=self.weights)
         samples = np.empty(n)
         unique, counts = np.unique(choices, return_counts=True)
