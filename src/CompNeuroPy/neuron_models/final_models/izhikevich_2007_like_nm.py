@@ -3,6 +3,7 @@ import re
 
 ### Izhikevich (2007)-like neuron model templates
 ### based on: Izhikevich, E. M. (2007). Dynamical Systems in Neuroscience. MIT Press.
+### For Humphries neurons added numerical stability factors 1 / (1 + g_syn * dt / C) in synaptic currents
 
 
 _dv_default = "k*(v - v_r)*(v - v_t) - u + I_v"
@@ -27,18 +28,27 @@ _I_base_noise = """
 """
 
 _syn_humphries2009_spn = """
-    dg_ampa/dt = -g_ampa / tau_ampa + g_glut
-    dg_nmda/dt = -g_nmda / tau_nmda + g_glut
+    dg_ampa/dt = -g_ampa / tau_ampa + g_glut / dt
+    dg_nmda/dt = -g_nmda / tau_nmda + g_glut / dt
     dg_gaba/dt = -g_gaba / tau_gaba
     B_nmda = 1 / (1 + 0.28 * exp(-0.062 * v)) # MG2+/3.57 --> 0.28
 """
 
 _I_syn_humphries2009_d1 = """
-    g_ampa * (E_ampa - v) + g_nmda * B_nmda * (E_nmda - v) * (1 + beta_1 * phi_1) + g_gaba * (E_gaba - v) + I_app
+    g_ampa * (E_ampa - v) / (1 + g_ampa * dt / C) + g_nmda * B_nmda * (E_nmda - v) * (1 + beta_1 * phi_1) / (1 + g_nmda * dt / C) + g_gaba * (E_gaba - v) / (1 + g_gaba * dt / C) + I_app
+"""
+
+
+_I_syn_humphries2009_d1_current_based = """
+    g_ampa * E_exc / (1 + g_ampa * dt / C) + g_nmda * B_nmda * E_exc * (1 + beta_1 * phi_1) / (1 + g_nmda * dt / C) + g_gaba * (E_gaba - v) / (1 + g_gaba * dt / C) + I_app
 """
 
 _I_syn_humphries2009_d2 = """
-    g_ampa * (E_ampa - v) * (1 - beta_2 * phi_2) + g_nmda * B_nmda * (E_nmda - v) + g_gaba * (E_gaba - v) + I_app
+    g_ampa * (E_ampa - v) * (1 - beta_2 * phi_2) / (1 + g_ampa * dt / C) + g_nmda * B_nmda * (E_nmda - v) / (1 + g_nmda * dt / C) + g_gaba * (E_gaba - v) / (1 + g_gaba * dt / C) + I_app
+"""
+
+_I_syn_humphries2009_d2_current_based = """
+    g_ampa * E_exc * (1 - beta_2 * phi_2) / (1 + g_ampa * dt / C) + g_nmda * B_nmda * E_exc / (1 + g_nmda * dt / C) + g_gaba * (E_gaba - v) / (1 + g_gaba * dt / C) + I_app
 """
 
 _dv_humphries2009_d2 = """
@@ -48,7 +58,11 @@ _dv_humphries2009_d2 = """
 _syn_humphries2009_fsi = _syn_default
 
 _I_syn_humphries2009_fsi = """
-    g_ampa * (E_ampa - v) + g_gaba * (E_gaba - v) * (1 - epsilon * phi_2) + I_app
+    g_ampa * (E_ampa - v) / (1 + g_ampa * dt / C) + g_gaba * (E_gaba - v) * (1 - epsilon * phi_2) / (1 + g_gaba * dt / C) + I_app
+"""
+
+_I_syn_humphries2009_fsi_current_based = """
+    g_ampa * E_exc / (1 + g_ampa * dt / C) + g_gaba * (E_gaba - v) * (1 - epsilon * phi_2) / (1 + g_gaba * dt / C) + I_app
 """
 
 _dv_humphries2009_fsi = """
@@ -1573,6 +1587,8 @@ class Izhikevich2007Humphries2009SPND1(ann.Neuron):
             Time constant of the GABA synapse.
         phi_1 (float, optional):
             Dopamine modulation parameter for D1 receptor.
+        current_based_excitation (bool, optional):
+            If True, the excitatory synapses are current-based with a fixed driving force of 50 mV (default: conductance-based).
         params_for_pop (bool, optional):
             If True, the parameters are population-wide and not neuron-specific.
         init (dict, optional):
@@ -1598,6 +1614,7 @@ class Izhikevich2007Humphries2009SPND1(ann.Neuron):
         tau_nmda: float = 160.0,
         tau_gaba: float = 4.0,
         phi_1: float = 0.0,
+        current_based_excitation: bool = False,
         params_for_pop: bool = False,
         init: dict = {},
     ):
@@ -1611,6 +1628,7 @@ class Izhikevich2007Humphries2009SPND1(ann.Neuron):
             E_nmda   = 0.0 : population
             E_gaba   = -60.0 : population
             I_app    = {I_app}
+            E_exc    = {50.0 if current_based_excitation else 0.0} : population
 
             # neuron model parameters
             C      = 50.0   : population
@@ -1631,7 +1649,11 @@ class Izhikevich2007Humphries2009SPND1(ann.Neuron):
         """
 
         syn = _syn_humphries2009_spn
-        i_v = _I_syn_humphries2009_d1
+        i_v = (
+            _I_syn_humphries2009_d1
+            if not current_based_excitation
+            else _I_syn_humphries2009_d1_current_based
+        )
         dv = f"{_dv_default} + phi_1 * c_da * (v - E_da)"
 
         # get equations
@@ -1677,6 +1699,8 @@ class Izhikevich2007Humphries2009SPND2(ann.Neuron):
             Time constant of the GABA synapse.
         phi_2 (float, optional):
             Dopamine modulation parameter for D2 receptor.
+        current_based_excitation (bool, optional):
+            If True, the excitatory synapses are current-based with a fixed driving force of 50 mV (default: conductance-based).
         params_for_pop (bool, optional):
             If True, the parameters are population-wide and not neuron-specific.
         init (dict, optional):
@@ -1702,6 +1726,7 @@ class Izhikevich2007Humphries2009SPND2(ann.Neuron):
         tau_nmda: float = 160.0,
         tau_gaba: float = 4.0,
         phi_2: float = 0.0,
+        current_based_excitation: bool = False,
         params_for_pop: bool = False,
         init: dict = {},
     ):
@@ -1715,6 +1740,7 @@ class Izhikevich2007Humphries2009SPND2(ann.Neuron):
             E_nmda   = 0.0 : population
             E_gaba   = -60.0 : population
             I_app    = {I_app}
+            E_exc    = {50.0 if current_based_excitation else 0.0} : population
 
             # neuron model parameters
             C      = 50.0   : population
@@ -1734,7 +1760,11 @@ class Izhikevich2007Humphries2009SPND2(ann.Neuron):
         """
 
         syn = _syn_humphries2009_spn
-        i_v = _I_syn_humphries2009_d2
+        i_v = (
+            _I_syn_humphries2009_d2
+            if not current_based_excitation
+            else _I_syn_humphries2009_d2_current_based
+        )
         dv = _dv_humphries2009_d2
 
         # get equations
@@ -1780,6 +1810,8 @@ class Izhikevich2007Humphries2009FSI(ann.Neuron):
             Dopamine modulation parameter for D1 receptor.
         phi_2 (float, optional):
             Dopamine modulation parameter for D2 receptor.
+        current_based_excitation (bool, optional):
+            If True, the excitatory synapses are current-based with a fixed driving force of 50 mV (default: conductance-based).
         params_for_pop (bool, optional):
             If True, the parameters are population-wide and not neuron-specific.
         init (dict, optional):
@@ -1803,6 +1835,7 @@ class Izhikevich2007Humphries2009FSI(ann.Neuron):
         tau_gaba: float = 4.0,
         phi_1: float = 0.0,
         phi_2: float = 0.0,
+        current_based_excitation: bool = False,
         params_for_pop: bool = False,
         init: dict = {},
     ):
@@ -1814,6 +1847,7 @@ class Izhikevich2007Humphries2009FSI(ann.Neuron):
             E_ampa   = 0.0 : population
             E_gaba   = -60.0 : population
             I_app    = {I_app}
+            E_exc    = {50.0 if current_based_excitation else 0.0} : population
 
             # neuron model parameters
             C      = 80.0   : population
@@ -1834,7 +1868,11 @@ class Izhikevich2007Humphries2009FSI(ann.Neuron):
         """
 
         syn = _syn_humphries2009_fsi
-        i_v = _I_syn_humphries2009_fsi
+        i_v = (
+            _I_syn_humphries2009_fsi
+            if not current_based_excitation
+            else _I_syn_humphries2009_fsi_current_based
+        )
         dv = _dv_humphries2009_fsi
         du = _du_humphries2009_fsi
 
