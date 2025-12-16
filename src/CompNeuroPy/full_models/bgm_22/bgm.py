@@ -9,6 +9,14 @@ import traceback
 import sys
 from typingchecker import check_types
 
+# expose ANNarchy random distributions for eval() in connectivity setup
+Uniform = ann_Random.Uniform
+DiscreteUniform = ann_Random.DiscreteUniform
+Normal = ann_Random.Normal
+LogNormal = ann_Random.LogNormal
+Exponential = ann_Random.Exponential
+Gamma = ann_Random.Gamma
+
 
 class BGM(CompNeuroModel):
     """
@@ -348,7 +356,7 @@ class BGM(CompNeuroModel):
             if connectivity in possible_con_list:
                 try:
                     # get all possible parameters of the connectivity function
-                    con_func = eval(f"get_projection(proj_name).{connectivity}")
+                    con_func = eval(f"ann.get_projection(proj_name).{connectivity}")
                     possible_con_params_list = list(
                         inspect.signature(con_func).parameters.keys()
                     )
