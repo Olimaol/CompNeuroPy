@@ -1,0 +1,14 @@
+microcircuit:
+    containing Microcircuit class
+
+cortical_inputs:
+    containing CorticalInputs class
+
+get_weights:
+    - contain weight data to sample from using CombinedSampler class
+    - used by Microcircuit to sample weights of local connections
+
+spike_input_cortex:
+    - includes functions to simulate spike counts over time for multiple receivers receiving input from multiple input neurons considering correlations in inputs and shared input fractions
+    - used by Microcircuit to simulate local missing gaba inputs and excitatoryy cortical inputs
+

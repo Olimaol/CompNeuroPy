@@ -107,6 +107,8 @@ from CompNeuroPy.experiment import CompNeuroExp
 from CompNeuroPy.generate_model import CompNeuroModel
 from CompNeuroPy.generate_simulation import CompNeuroSim
 from CompNeuroPy.dbs import DBSstimulator
+from CompNeuroPy.striatal_microcircuit.microcircuit import Microcircuit
+from CompNeuroPy.striatal_microcircuit.cortical_inputs import CorticalInputs
 
 ### modules
 ### for opt_neuron you need to install torch, sbi, and hyperopt
