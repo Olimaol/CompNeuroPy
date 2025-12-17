@@ -273,6 +273,19 @@ class CompNeuroModel:
             AssertionError: if compartment is neither a population nor a projection of
                 the model
         """
+        ### catch if the parameter is not a parameter of the compartment
+        try:
+            comp_obj = ann.get_population(compartment)
+            getattr(comp_obj, parameter_name)
+        except Exception:
+            try:
+                comp_obj = ann.get_projection(compartment)
+                getattr(comp_obj, parameter_name)
+            except Exception:
+                assert (
+                    False
+                ), f"ERROR set_param: parameter {parameter_name} is not a valid parameter of compartment {compartment} in model {self.name}!"
+
         ### catch if model is not created
         assert (
             self.created == True
