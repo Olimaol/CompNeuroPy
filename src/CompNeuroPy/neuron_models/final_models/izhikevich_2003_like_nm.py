@@ -36,6 +36,10 @@ class Izhikevich2003FixedNoisyAmpa(ann.Neuron):
             spike train as input) noise in the AMPA conductance.
         rates_noise (float, optional):
             Rate of the Poisson distributed noise in the AMPA conductance.
+        stabilize (bool, optional):
+            If True, the neuron model uses numerical stabilization factors for the
+            conductances and a current based excitatory synapse with a fixed driving
+            force of 50 mV instead of a conductance based one.
 
     Variables to record:
         - g_ampa
@@ -61,6 +65,7 @@ class Izhikevich2003FixedNoisyAmpa(ann.Neuron):
         I_app: float = 0,
         increase_noise: float = 0,
         rates_noise: float = 0,
+        stabilize: bool = False,
     ):
         # Create the arguments
         parameters = f"""
@@ -77,14 +82,24 @@ class Izhikevich2003FixedNoisyAmpa(ann.Neuron):
             rates_noise    = {rates_noise}
         """
 
-        super().__init__(
-            parameters=parameters,
-            equations="""
+        if not stabilize:
+            eq = """
                 dg_ampa/dt = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rates_noise, -g_ampa/tau_ampa, -g_ampa/tau_ampa + increase_noise/dt)
                 dg_gaba/dt = -g_gaba / tau_gaba
                 dv/dt      = 0.04 * v * v + 5 * v + 140 - u + I_app - neg(g_ampa*(v - E_ampa)) - pos(g_gaba*(v - E_gaba))
                 du/dt      = a * (b * v - u)
-            """,
+            """
+        else:
+            eq = """
+                dg_ampa/dt = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rates_noise, -g_ampa/tau_ampa, -g_ampa/tau_ampa + increase_noise/dt)
+                dg_gaba/dt = -g_gaba / tau_gaba
+                dv/dt      = 0.04 * v * v + 5 * v + 140 - u + I_app - g_ampa*(-50) / (1 + g_ampa * dt) - g_gaba*(v - E_gaba) / (1 + g_gaba * dt)
+                du/dt      = a * (b * v - u)
+            """
+
+        super().__init__(
+            parameters=parameters,
+            equations=eq,
             spike="""
                 v >= 30
             """,
@@ -766,6 +781,13 @@ class Izhikevich2003NoisyBaseNonlin(ann.Neuron):
             often the baseline current is changed randomly.
         nonlin (float, optional):
             Exponent of the nonlinear function for the external current.
+        stabilize (bool, optional):
+            If True, the neuron model uses numerical stabilization factors for the
+            conductances and a current based excitatory synapse with a fixed driving
+            force of 50 mV instead of a conductance based one.
+        use_nonlin (bool, optional):
+            If True, the neuron model uses a nonlinear function for the external
+            current.
 
     Variables to record:
         - g_ampa
@@ -799,6 +821,8 @@ class Izhikevich2003NoisyBaseNonlin(ann.Neuron):
         base_noise: float = 0,
         rate_base_noise: float = 0,
         nonlin: float = 1,
+        stabilize: bool = False,
+        use_nonlin: bool = True,
     ):
         # Create the arguments
         parameters = f"""
@@ -819,18 +843,35 @@ class Izhikevich2003NoisyBaseNonlin(ann.Neuron):
             rate_base_noise = {rate_base_noise}
             nonlin          = {nonlin} : population
         """
+        if use_nonlin:
+            ext_current = "f(I,nonlin)"
+        else:
+            ext_current = "I"
 
-        super().__init__(
-            parameters=parameters,
-            equations="""
+        if not stabilize:
+            eq = f"""
                 dg_ampa/dt  = -g_ampa/tau_ampa
                 dg_gaba/dt  = -g_gaba / tau_gaba
                 offset_base = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rate_base_noise, offset_base, Normal(0, 1) * base_noise)
                 I_base      = base_mean + offset_base
                 I           = I_app - neg(g_ampa*(v - E_ampa)) - pos(g_gaba*(v - E_gaba))
-                dv/dt       = n2 * v * v + n1 * v + n0 - u + f(I,nonlin) + I_base
+                dv/dt       = n2 * v * v + n1 * v + n0 - u + {ext_current} + I_base
                 du/dt       = a * (b * v - u)
-            """,
+            """
+        else:
+            eq = f"""
+                dg_ampa/dt  = -g_ampa/tau_ampa
+                dg_gaba/dt  = -g_gaba / tau_gaba
+                offset_base = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rate_base_noise, offset_base, Normal(0, 1) * base_noise)
+                I_base      = base_mean + offset_base
+                I           = I_app - g_ampa*(-50) / (1 + g_ampa * dt) - g_gaba*(v - E_gaba) / (1 + g_gaba * dt)
+                dv/dt       = n2 * v * v + n1 * v + n0 - u + {ext_current} + I_base
+                du/dt       = a * (b * v - u)
+            """
+
+        super().__init__(
+            parameters=parameters,
+            equations=eq,
             spike="""
                 v >= 30
             """,
@@ -838,9 +879,11 @@ class Izhikevich2003NoisyBaseNonlin(ann.Neuron):
                 v = c
                 u = u + d
             """,
-            functions="""
-                f(x,y)=((abs(x))**(1/y))/((x+1e-20)/(abs(x)+ 1e-20))
-            """,
+            functions=(
+                "f(x,y)=((abs(x))**(1/y))/((x+1e-20)/(abs(x)+ 1e-20))"
+                if use_nonlin
+                else ""
+            ),
             name="Izhikevich2003_noisy_I_nonlin",
             description="""
                 Neuron model from Izhikevich (2003). With additional conductance based

@@ -13,8 +13,12 @@ from CompNeuroPy.neuron_models import (
     Izhikevich2007_noisy_AMPA_oscillating,
     Izhikevich2003_flexible_noisy_AMPA_oscillating,
     Izhikevich2003_flexible_noisy_I_nonlin,
+    Izhikevich2003FixedNoisyAmpa,
+    Izhikevich2003NoisyBaseNonlin,
 )
 from CompNeuroPy.synapse_models import factor_synapse, factor_synapse_without_max
+from CompNeuroPy.striatal_microcircuit.microcircuit import Microcircuit
+from CompNeuroPy.striatal_microcircuit.cortical_inputs import CorticalInputs
 
 
 def BGM_v01(self):
@@ -2827,3 +2831,332 @@ def BGM_v06(self):
         synapse=factor_synapse,
         name="thal__str_fsi",
     )
+
+
+def BGM_v07(self):
+    """
+    difference to Goenner et al. (2021):
+    - no cortical populations: they are replaced by spike count TimedArray inputs created in the Microcircuit and Cortical Inputs classes
+        - the striatal inputs: are generated in the Microcircuit class
+        - the cortex_go to thalamus, cortex_stop to GPe_arky and GPe_cp, and cortex_pause to STN inputs: are generated using the Cortical Inputs class after generating the corresponding BG pops
+    - striatum popultions are generated within the Microcircuit class here at the begining
+        - the populations str_d1, str_d2 and str_fsi are obtained from the Microcircuit class with the method create_model()
+        - the local striatal connections are generated in the Microcircuit class, not here anymore
+        - the projections between the striatal populations and other BG populations are still generated here
+    - Integrators not used anymore
+    - new neuron models
+        - GPe parameters were refitted and GPe neurons use nonlinear function for external current (not baseline current)
+        - implemented a new noise method (not noisy ampa anymore but noisy baseline current)
+        - implemented numerical stabilization for conductances (factor and constant driving force for ampa)
+    - using this model_creation_function requires the BGM class to have a model_creation_kwargs dict with the following entries:
+        - "build_mc": bool, whether to build the microcircuit or load existing data
+        - "build_ci": bool, whether to build the cortical inputs or load existing data
+        - "mc.nx": size parameter for the microcircuit (number of neurons per dimension)
+        - "mc.b": size parameter for the microcircuit (number of neurons per dimension) . just make them equal
+        - "dbs": bool, whether to simulate under DBS condition or not
+        - "timestep": simulation timestep in ms
+        - "t.duration": max total simulation duration in ms
+        - "update_time": time interval for updating the striatal inputs in ms
+        - "mc.storage_dir": directory where to store/load the caudate microcircuit data
+        - "mc.seed": random seed for the microcircuit generation
+        - "mc.fitted_params_path": path to the fitted striatal connection probabilities
+        - "mc.cortical_rate_path": path to the cortical rate time series (it's not used here but it needs to be the same as for creating the inputs for the Microcircuits)
+        - "ci.storage_dir": directory where to store/load the putamen cortical inputs data
+        - "ci.seed": random seed for the cortical input generation
+        - "ci.n_thal": number of cortical input neurons for a thalamic neuron
+        - "ci.n_gpe_arky": number of cortical input neurons for a GPe_arky neuron
+        - "ci.n_gpe_cp": number of cortical input neurons for a GPe_cp neuron
+        - "ci.n_stn": number of cortical input neurons for a STN neuron
+    """
+
+    ### CREATE THE STRIATAL MICRO CIRCUIT FOR THE CURRENT LOOP
+    mc = Microcircuit(
+        name=self.model_creation_kwargs["mc.name"],
+        nx=self.model_creation_kwargs["mc.nx"],
+        b=self.model_creation_kwargs["mc.b"],
+        dbs_condition=self.model_creation_kwargs["dbs"],
+        build_connectivity=self.model_creation_kwargs["build_mc"],
+        build_missing_gaba_input=self.model_creation_kwargs["build_mc"],
+        build_cortical_input=self.model_creation_kwargs["build_ci"],
+        dt=self.model_creation_kwargs["timestep"],
+        T=self.model_creation_kwargs["t.duration"],
+        update_time=self.model_creation_kwargs["update_time"],
+        storage_dir=self.model_creation_kwargs[f"mc.storage_dir"],
+        seed=self.model_creation_kwargs["mc.seed"],
+        fitted_params_path=self.model_creation_kwargs["mc.fitted_params_path"],
+        cortical_rate_path=self.model_creation_kwargs["mc.cortical_rate_path"],
+        verbose=True,
+    )
+    str_pop = mc.create_model()
+
+    #######   POPULATIONS   ######
+    ### Str Populations now obtained from Microcircuit class
+    str_d1 = str_pop["dSPN"]
+    str_d2 = str_pop["iSPN"]
+    str_fsi = str_pop["FS"]
+    ### BG Populations
+    stn = ann.Population(
+        self.params["stn.size"],
+        Izhikevich2003NoisyBaseNonlin(stabilize=True, use_nonlin=False),
+        name="stn",
+    )
+    snr = ann.Population(
+        self.params["snr.size"],
+        Izhikevich2003NoisyBaseNonlin(stabilize=True, use_nonlin=False),
+        name="snr",
+    )
+    gpe_proto = ann.Population(
+        self.params["gpe_proto.size"],
+        Izhikevich2003NoisyBaseNonlin(stabilize=True, use_nonlin=True),
+        name="gpe_proto",
+    )
+    gpe_arky = ann.Population(
+        self.params["gpe_arky.size"],
+        Izhikevich2003NoisyBaseNonlin(stabilize=True, use_nonlin=True),
+        name="gpe_arky",
+    )
+    gpe_cp = ann.Population(
+        self.params["gpe_cp.size"],
+        Izhikevich2003NoisyBaseNonlin(stabilize=True, use_nonlin=True),
+        name="gpe_cp",
+    )
+    thal = ann.Population(
+        self.params["thal.size"],
+        Izhikevich2003NoisyBaseNonlin(stabilize=True, use_nonlin=True),
+        name="thal",
+    )
+
+    ######   PROJECTIONS   ######
+
+    ### str d1 output
+    ann.Projection(
+        pre=str_d1,
+        post=snr,
+        target="gaba",
+        synapse=factor_synapse,
+        name=f"str_d1__{snr.name}",
+    )
+    ann.Projection(
+        pre=str_d1,
+        post=gpe_cp,
+        target="gaba",
+        synapse=factor_synapse,
+        name=f"str_d1__{gpe_cp.name}",
+    )
+    ### str d2 output
+    ann.Projection(
+        pre=str_d2,
+        post=gpe_proto,
+        target="gaba",
+        synapse=factor_synapse,
+        name=f"str_d2__{gpe_proto.name}",
+    )
+    ann.Projection(
+        pre=str_d2,
+        post=gpe_arky,
+        target="gaba",
+        synapse=factor_synapse,
+        name=f"str_d2__{gpe_arky.name}",
+    )
+    ann.Projection(
+        pre=str_d2,
+        post=gpe_cp,
+        target="gaba",
+        synapse=factor_synapse,
+        name=f"str_d2__{gpe_cp.name}",
+    )
+    ### stn output
+    ann.Projection(
+        pre=stn,
+        post=snr,
+        target="ampa",
+        synapse=factor_synapse,
+        name=f"{stn.name}__{snr.name}",
+    )
+    ann.Projection(
+        pre=stn,
+        post=gpe_proto,
+        target="ampa",
+        synapse=factor_synapse,
+        name=f"{stn.name}__{gpe_proto.name}",
+    )
+    ann.Projection(
+        pre=stn,
+        post=gpe_arky,
+        target="ampa",
+        synapse=factor_synapse,
+        name=f"{stn.name}__{gpe_arky.name}",
+    )
+    ann.Projection(
+        pre=stn,
+        post=gpe_cp,
+        target="ampa",
+        synapse=factor_synapse,
+        name=f"{stn.name}__{gpe_cp.name}",
+    )
+    ### gpe proto output
+    ann.Projection(
+        pre=gpe_proto,
+        post=stn,
+        target="gaba",
+        synapse=factor_synapse,
+        name=f"{gpe_proto.name}__{stn.name}",
+    )
+    ann.Projection(
+        pre=gpe_proto,
+        post=snr,
+        target="gaba",
+        synapse=factor_synapse,
+        name=f"{gpe_proto.name}__{snr.name}",
+    )
+    ann.Projection(
+        pre=gpe_proto,
+        post=gpe_arky,
+        target="gaba",
+        synapse=factor_synapse,
+        name=f"{gpe_proto.name}__{gpe_arky.name}",
+    )
+    ann.Projection(
+        pre=gpe_proto,
+        post=gpe_cp,
+        target="gaba",
+        synapse=factor_synapse,
+        name=f"{gpe_proto.name}__{gpe_cp.name}",
+    )
+    ann.Projection(
+        pre=gpe_proto,
+        post=str_fsi,
+        target="gaba",
+        synapse=factor_synapse,
+        name=f"{gpe_proto.name}__str_fsi",
+    )
+    ### gpe arky output
+    ann.Projection(
+        pre=gpe_arky,
+        post=str_d1,
+        target="gaba",
+        synapse=factor_synapse,
+        name=f"{gpe_arky.name}__str_d1",
+    )
+    ann.Projection(
+        pre=gpe_arky,
+        post=str_d2,
+        target="gaba",
+        synapse=factor_synapse,
+        name=f"{gpe_arky.name}__str_d2",
+    )
+    ann.Projection(
+        pre=gpe_arky,
+        post=str_fsi,
+        target="gaba",
+        synapse=factor_synapse,
+        name=f"{gpe_arky.name}__str_fsi",
+    )
+    ann.Projection(
+        pre=gpe_arky,
+        post=gpe_proto,
+        target="gaba",
+        synapse=factor_synapse,
+        name=f"{gpe_arky.name}__{gpe_proto.name}",
+    )
+    ann.Projection(
+        pre=gpe_arky,
+        post=gpe_cp,
+        target="gaba",
+        synapse=factor_synapse,
+        name=f"{gpe_arky.name}__{gpe_cp.name}",
+    )
+    ### gpe cp output
+    ann.Projection(
+        pre=gpe_cp,
+        post=str_d1,
+        target="gaba",
+        synapse=factor_synapse,
+        name=f"{gpe_cp.name}__str_d1",
+    )
+    ann.Projection(
+        pre=gpe_cp,
+        post=str_d2,
+        target="gaba",
+        synapse=factor_synapse,
+        name=f"{gpe_cp.name}__str_d2",
+    )
+    ann.Projection(
+        pre=gpe_cp,
+        post=str_fsi,
+        target="gaba",
+        synapse=factor_synapse,
+        name=f"{gpe_cp.name}__str_fsi",
+    )
+    ann.Projection(
+        pre=gpe_cp,
+        post=gpe_proto,
+        target="gaba",
+        synapse=factor_synapse,
+        name=f"{gpe_cp.name}__{gpe_proto.name}",
+    )
+    ann.Projection(
+        pre=gpe_cp,
+        post=gpe_arky,
+        target="gaba",
+        synapse=factor_synapse,
+        name=f"{gpe_cp.name}__{gpe_arky.name}",
+    )
+    ### snr output
+    ann.Projection(
+        pre=snr,
+        post=thal,
+        target="gaba",
+        synapse=factor_synapse,
+        name=f"{snr.name}__{thal.name}",
+    )
+    ann.Projection(
+        pre=thal,
+        post=str_d1,
+        target="glut",
+        synapse=factor_synapse,
+        name=f"{thal.name}__str_d1",
+    )
+    ann.Projection(
+        pre=thal,
+        post=str_d2,
+        target="glut",
+        synapse=factor_synapse,
+        name=f"{thal.name}__str_d2",
+    )
+    ann.Projection(
+        pre=thal,
+        post=str_fsi,
+        target="ampa",
+        synapse=factor_synapse,
+        name=f"{thal.name}__str_fsi",
+    )
+
+    #######   CREATE THE CORTICAL INPUTS OF THE BG POPs   ######
+    ci = CorticalInputs(
+        populations=[
+            thal,
+            gpe_arky,
+            gpe_cp,
+            stn,
+        ],
+        N_cortical_inputs_dict={
+            thal.name: self.model_creation_kwargs["ci.n_thal"],
+            gpe_arky.name: self.model_creation_kwargs["ci.n_gpe_arky"],
+            gpe_cp.name: self.model_creation_kwargs["ci.n_gpe_cp"],
+            stn.name: self.model_creation_kwargs["ci.n_stn"],
+        },
+        dt=self.model_creation_kwargs["timestep"],
+        update_time=self.model_creation_kwargs["update_time"],
+        T=self.model_creation_kwargs["t.duration"],
+        name=self.model_creation_kwargs["mc.name"],
+        dbs_condition=self.model_creation_kwargs["dbs"],
+        storage_dir=self.model_creation_kwargs["ci.storage_dir"],
+        cortical_rate_path=self.model_creation_kwargs["mc.cortical_rate_path"],
+        build_cortical_input=self.model_creation_kwargs["build_ci"],
+        seed=self.model_creation_kwargs["ci.seed"],
+        verbose=True,
+    )
+    ci.create_model()
+
+    return mc, ci

@@ -53,6 +53,7 @@ class BGM(CompNeuroModel):
     def __init__(
         self,
         name: str = "BGM_v01_p01",
+        model_creation_kwargs: dict | None = None,
         do_create: bool = True,
         do_compile: bool = True,
         compile_folder_name: str | None = None,
@@ -66,6 +67,8 @@ class BGM(CompNeuroModel):
                 replace *model_version* and *parameters_version* with the versions you
                 want to use, see CompNeuroPy.full_models.BGM_22.parameters for available
                 versions. Default: "BGM_v01_p01"
+            model_creation_kwargs (dict, optional):
+                keyword arguments for the model creation function. Default: None
             do_create (bool, optional):
                 if True, the model is created after initialization. Default: True
             do_compile (bool, optional):
@@ -100,6 +103,12 @@ class BGM(CompNeuroModel):
         else:
             self._name_appendix_to_add = ""
 
+        ### store model_creation_kwargs
+        if model_creation_kwargs is None:
+            self.model_creation_kwargs = {}
+        else:
+            self.model_creation_kwargs = model_creation_kwargs
+
         ### set model_version_name
         self._model_version_name = "_".join(name.split("_")[:2])
 
@@ -121,6 +130,10 @@ class BGM(CompNeuroModel):
         ### get model parameters before init, ignore name_appendix
         self.params = self._get_params(name.split(":")[0])
 
+        ### initialize the model creation returns with None
+        self.mc = None
+        self.ci = None
+
         ### init
         super().__init__(
             model_creation_function=self._model_creation_function,
@@ -139,17 +152,28 @@ class BGM(CompNeuroModel):
 
         ### update the attribute_df of the model object (it still contains the original
         ### names of the model creation)
-        self.attribute_df["compartment_name"] = (
-            self.attribute_df["compartment_name"] + self._name_appendix_to_add
+        self.attribute_df["compartment_name"] = self.attribute_df[
+            "compartment_name"
+        ].where(
+            self.attribute_df["compartment_name"].isin(
+                self._components_created_by_mc_ci
+            ),
+            self.attribute_df["compartment_name"] + self._name_appendix_to_add,
         )
         ### rename populations and projections
         populations_new = []
         for pop_name in self.populations:
+            if pop_name in self._components_created_by_mc_ci:
+                populations_new.append(pop_name)
+                continue
             populations_new.append(pop_name + self._name_appendix_to_add)
             ann.get_population(pop_name).name = pop_name + self._name_appendix_to_add
         self.populations = populations_new
         projections_new = []
         for proj_name in self.projections:
+            if proj_name in self._components_created_by_mc_ci:
+                projections_new.append(proj_name)
+                continue
             projections_new.append(proj_name + self._name_appendix_to_add)
             ann.get_projection(proj_name).name = proj_name + self._name_appendix_to_add
         self.projections = projections_new
@@ -160,6 +184,10 @@ class BGM(CompNeuroModel):
             param_name = key.split(".")[1]
 
             if param_object == "general":
+                params_new[key] = param_val
+                continue
+
+            if param_object in self._components_created_by_mc_ci:
                 params_new[key] = param_val
                 continue
 
@@ -178,7 +206,22 @@ class BGM(CompNeuroModel):
             "importlib.import_module('CompNeuroPy.full_models.bgm_22.model_creation_functions')."
             + self._model_version_name
         )
-        model_creation_function(self)
+        model_returns = model_creation_function(self)
+
+        # if model returns are not not None, unpack them this means we used mc and ci
+        if model_returns is not None:
+            self.mc, self.ci = model_returns
+
+        # components created by mc and ci -> should be ignored in setting params etc.
+        self._components_created_by_mc_ci: list[str] = []
+        if self.mc is not None:
+            mc_components = self.mc.get_model_component_names()
+            self._components_created_by_mc_ci.extend(mc_components["populations"])
+            self._components_created_by_mc_ci.extend(mc_components["projections"])
+        if self.ci is not None:
+            ci_components = self.ci.get_model_component_names()
+            self._components_created_by_mc_ci.extend(ci_components["populations"])
+            self._components_created_by_mc_ci.extend(ci_components["projections"])
 
     def create(self, do_compile=True, compile_folder_name=None):
         """
@@ -217,6 +260,10 @@ class BGM(CompNeuroModel):
             ### split key in param object and param name
             param_object = key.split(".")[0]
             param_name = key.split(".")[1]
+
+            ### skip components created by model components/inputs helpers
+            if param_object in self._components_created_by_mc_ci:
+                continue
 
             ### if param is a noise param --> skip (separate function)
             if param_name.split("_")[-1] == "noise":
@@ -280,6 +327,10 @@ class BGM(CompNeuroModel):
             param_object = key.split(".")[0]
             param_name = key.split(".")[1]
 
+            ### skip components created by model components/inputs helpers
+            if param_object in self._components_created_by_mc_ci:
+                continue
+
             ### if param_object is a pop in network and param_name ends with noise --> set noise param of pop
             if (
                 param_object in self.populations
@@ -331,6 +382,9 @@ class BGM(CompNeuroModel):
         set_con_failed = False
         error_message_list = []
         for proj_name in self.projections:
+            ### skip projections created by model components/inputs helpers
+            if proj_name in self._components_created_by_mc_ci:
+                continue
             ### get the type of connectivity for projection
             try:
                 connectivity = self.params[proj_name + ".connectivity"]
@@ -403,9 +457,10 @@ class BGM(CompNeuroModel):
             if param_object == "general":
                 continue
 
-            ### if param_object is proj in network and param not already used and param is an attribute of proj --> set param of proj
+            ### if param_object is proj in network and was not created by mc/ci and param not already used and param is an attribute of proj --> set param of proj
             if (
                 param_object in self.projections
+                and param_object not in self._components_created_by_mc_ci
                 and not (param_name in already_set_params[param_object])
                 and param_name in vars(ann.get_projection(param_object))["attributes"]
             ):
