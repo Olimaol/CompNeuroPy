@@ -9,6 +9,15 @@ import traceback
 import sys
 from typingchecker import check_types
 
+# global debug flag to toggle verbose output
+DEBUG = False
+
+
+def _debug_print(*args, **kwargs):
+    if DEBUG:
+        print(*args, **kwargs)
+
+
 # expose ANNarchy random distributions for eval() in connectivity setup
 Uniform = ann_Random.Uniform
 DiscreteUniform = ann_Random.DiscreteUniform
@@ -238,12 +247,40 @@ class BGM(CompNeuroModel):
         super().create(do_compile=False, compile_folder_name=compile_folder_name)
 
         ### update names of compartments and parameters
+        _debug_print(
+            "#################################################################"
+        )
+        _debug_print("_add_name_appendix()")
+        _debug_print(
+            "#################################################################"
+        )
         self._add_name_appendix()
 
         ### set parameters and connectivity of projections
         ### for each projection the connectivity has to be defined in the params
+        _debug_print(
+            "#################################################################"
+        )
+        _debug_print("_set_params()")
+        _debug_print(
+            "#################################################################"
+        )
         self._set_params()
+        _debug_print(
+            "#################################################################"
+        )
+        _debug_print("_set_noise_values()")
+        _debug_print(
+            "#################################################################"
+        )
         self._set_noise_values()
+        _debug_print(
+            "#################################################################"
+        )
+        _debug_print("_set_connections()")
+        _debug_print(
+            "#################################################################"
+        )
         self._set_connections()
 
         ### compile the model, after setting all parameters (included in compile state)
@@ -377,6 +414,14 @@ class BGM(CompNeuroModel):
         ### dict for each projection, which params were already set during connectivity definition
         already_set_params = {}
 
+        _debug_print(
+            "#################################################################"
+        )
+        _debug_print("_set_connections() first loop")
+        _debug_print(
+            "#################################################################"
+        )
+
         ### set connectivity
         ### loop over all projections
         set_con_failed = False
@@ -447,6 +492,14 @@ class BGM(CompNeuroModel):
                 print(" ".join(error_message))
             raise TypeError("Setting connectivities failed")
 
+        _debug_print(
+            "#################################################################"
+        )
+        _debug_print("_set_connections() second loop")
+        _debug_print(
+            "#################################################################"
+        )
+
         ### set parameters
         ### loop over all params
         for key, param_val in self.params.items():
@@ -456,6 +509,8 @@ class BGM(CompNeuroModel):
 
             if param_object == "general":
                 continue
+
+            _debug_print(f"   Setting param {param_object}.{param_name}...", end=" ")
 
             ### if param_object is proj in network and was not created by mc/ci and param not already used and param is an attribute of proj --> set param of proj
             if (
@@ -469,6 +524,9 @@ class BGM(CompNeuroModel):
                     parameter_name=param_name,
                     parameter_value=param_val,
                 )
+                _debug_print("done.")
+            else:
+                _debug_print("skipped.")
 
     def _get_params(self, name):
         """
