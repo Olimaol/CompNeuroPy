@@ -273,19 +273,6 @@ class CompNeuroModel:
             AssertionError: if compartment is neither a population nor a projection of
                 the model
         """
-        ### catch if the parameter is not a parameter of the compartment
-        try:
-            comp_obj = ann.get_population(compartment)
-            getattr(comp_obj, parameter_name)
-        except Exception:
-            try:
-                comp_obj = ann.get_projection(compartment)
-                getattr(comp_obj, parameter_name)
-            except Exception:
-                assert (
-                    False
-                ), f"ERROR set_param: parameter {parameter_name} is not a valid parameter of compartment {compartment} in model {self.name}!"
-
         ### catch if model is not created
         assert (
             self.created == True
@@ -295,6 +282,11 @@ class CompNeuroModel:
         comp_in_pop = compartment in self.populations
         comp_in_proj = compartment in self.projections
 
+        ### catch if compartment is both population and projection
+        assert not (
+            comp_in_pop and comp_in_proj
+        ), f"ERROR set_param: compartment {compartment} of model {self.name} is both population and projection!"
+
         if comp_in_pop:
             comp_obj = ann.get_population(compartment)
         elif comp_in_proj:
@@ -303,6 +295,14 @@ class CompNeuroModel:
             assert (
                 comp_in_pop or comp_in_proj
             ), f"ERROR set_param: setting parameter {parameter_name} of compartment {compartment}. The compartment is neither a population nor a projection of the model {self.name}!"
+
+        ### catch if the parameter is not a parameter of the compartment
+        try:
+            getattr(comp_obj, parameter_name)
+        except Exception:
+            assert (
+                False
+            ), f"ERROR set_param: parameter {parameter_name} is not a valid parameter of compartment {compartment} in model {self.name}!"
 
         ### set the parameter value
         setattr(comp_obj, parameter_name, parameter_value)
