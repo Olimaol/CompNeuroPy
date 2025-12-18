@@ -217,6 +217,32 @@ class CorticalInputs:
         if run_simulation:
             simulate(self.update_time)
 
+    def reset(self) -> None:
+        """Reset cortical input iterators so the next ``update`` starts from the beginning."""
+        if not self.model_created:
+            raise RuntimeError("create_model() must be called before reset()")
+
+        n_steps_input = int(self.update_time / self.dt)
+        if n_steps_input <= 0:
+            raise ValueError("update_time must be at least one dt long")
+
+        self.inp_iterator_dict = {}
+        for key in self.annarchy_inp_populations.keys():
+            memmap_info = self.cor_input_memmap_dict.get(key)
+            if memmap_info is None:
+                continue
+
+            spike_file = self._spike_counts_path(*key)
+            self.inp_iterator_dict[key] = iter_memmap_spike_counts(
+                filename=spike_file,
+                R=memmap_info["R"],
+                num_bins=self.n_steps,
+                receiver_dtype=memmap_info["receiver_dtype"],
+                chunk_size=n_steps_input,
+                copy=False,
+                verbose=self.verbose,
+            )
+
     # ----------------------
     # Internal helpers
     # ----------------------
