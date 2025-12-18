@@ -93,10 +93,10 @@ stn.d,2,2,2,2,2,2,2,2,2,2,2,,2,,,,,2
 stn.n0,,,,,,,,,,,,,,,,,,140
 stn.n1,,,,,,,,,,,,,,,,,,5
 stn.n2,,,,,,,,,,,,,,,,,,0.04
-stn.tau_ampa,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-stn.tau_gaba,20,20,20,20,20,20,20,20,20,20,20,,20,,,,,20
+stn.tau_ampa,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,2
+stn.tau_gaba,20,20,20,20,20,20,20,20,20,20,20,,20,,,,,10
 stn.E_ampa,0,0,0,0,0,0,0,0,0,0,0,,0,,,,,0
-stn.E_gaba,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,,-90,,,,,-90
+stn.E_gaba,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,,-90,,,,,-70
 stn.I_app,0,0,0,0,0,0,0,0,0,0,0,,0,,,,,0
 stn.mean_rate_noise,400,400,400,400,400,400,400,400,400,400,400,,400,,,,,
 stn.rate_sd_noise,80,80,80,80,80,80,80,80,80,80,80,,80,,,,,
@@ -115,10 +115,10 @@ snr.d,4,4,4,4,4,4,4,4,4,4,4,,4,,,,,4
 snr.n0,,,,,,,,,,,,,,,,,,140
 snr.n1,,,,,,,,,,,,,,,,,,5
 snr.n2,,,,,,,,,,,,,,,,,,0.04
-snr.tau_ampa,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-snr.tau_gaba,20,20,20,20,20,20,20,20,20,20,20,,20,,,,,20
+snr.tau_ampa,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,2
+snr.tau_gaba,20,20,20,20,20,20,20,20,20,20,20,,20,,,,,10
 snr.E_ampa,0,0,0,0,0,0,0,0,0,0,0,,0,,,,,0
-snr.E_gaba,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,,-90,,,,,-90
+snr.E_gaba,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,,-90,,,,,-70
 snr.I_app,0,0,0,0,0,0,0,0,0,0,0,,0,,,,,0
 snr.mean_rate_noise,400,400,400,400,400,400,400,400,400,400,400,,400,,,,,
 snr.rate_sd_noise,80,80,80,80,80,80,80,80,80,80,80,,80,,,,,
@@ -138,10 +138,10 @@ gpe_proto.n0,117,117,117,117,117,117,117,117,117,117,117,,117,,,,63.594188751422
 gpe_proto.n1,4.86,4.86,4.86,4.86,4.86,4.86,4.86,4.86,4.86,4.86,4.86,,4.86,,,,3.34231405770416,3.34231405770416
 gpe_proto.n2,0.043,0.043,0.043,0.043,0.043,0.043,0.043,0.043,0.043,0.043,0.043,,0.043,,,,0.050503169997306,0.050503169997306
 gpe_proto.refractory,5,5,5,5,5,5,5,5,5,5,5,,5,,,,,
-gpe_proto.tau_ampa,10,10,10,10,10,10,10,10,10,10,10,,10,,,,10,10
-gpe_proto.tau_gaba,20,20,20,20,20,20,20,20,20,20,20,,20,,,,20,20
+gpe_proto.tau_ampa,10,10,10,10,10,10,10,10,10,10,10,,10,,,,10,2
+gpe_proto.tau_gaba,20,20,20,20,20,20,20,20,20,20,20,,20,,,,20,10
 gpe_proto.E_ampa,0,0,0,0,0,0,0,0,0,0,0,,0,,,,0,0
-gpe_proto.E_gaba,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,,-90,,,,-90,-90
+gpe_proto.E_gaba,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,,-90,,,,-90,-70
 gpe_proto.I_app,0,0,0,0,0,0,0,0,0,0,0,,0,,,,0,0
 gpe_proto.mean_rate_noise,400,400,400,400,400,400,400,400,400,400,400,,400,,,,,
 gpe_proto.rate_sd_noise,80,80,80,80,80,80,80,80,80,80,80,,80,,,,,
@@ -163,10 +163,10 @@ gpe_arky.n0,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,56.6
 gpe_arky.n1,4.47,4.47,4.47,4.47,4.47,4.47,4.47,4.47,4.47,4.47,4.47,4.47,4.47,4.47,4.47,4.47,3.41755665893423,3.41755665893423
 gpe_arky.n2,0.04,0.04,0.04,0.04,0.04,0.04,0.04,0.04,0.04,0.04,0.04,0.04,0.04,0.04,0.04,0.04,0.045725149196711,0.045725149196711
 gpe_arky.refractory,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,,
-gpe_arky.tau_ampa,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10
-gpe_arky.tau_gaba,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20
+gpe_arky.tau_ampa,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,2
+gpe_arky.tau_gaba,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,10
 gpe_arky.E_ampa,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-gpe_arky.E_gaba,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90
+gpe_arky.E_gaba,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-70
 gpe_arky.I_app,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 gpe_arky.mean_rate_noise,400,400,400,400,400,400,400,400,400,400,400,400,400,400,400,100,100,
 gpe_arky.rate_sd_noise,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,5,5,
@@ -188,10 +188,10 @@ gpe_cp.n0,117,117,117,117,117,117,117,117,117,117,117,,117,,,,,63.5941887514228
 gpe_cp.n1,4.86,4.86,4.86,4.86,4.86,4.86,4.86,4.86,4.86,4.86,4.86,,4.86,,,,,3.34231405770416
 gpe_cp.n2,0.043,0.043,0.043,0.043,0.043,0.043,0.043,0.043,0.043,0.043,0.043,,0.043,,,,,0.050503169997306
 gpe_cp.refractory,5,5,5,5,5,5,5,5,5,5,5,,5,,,,,
-gpe_cp.tau_ampa,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-gpe_cp.tau_gaba,20,20,20,20,20,20,20,20,20,20,20,,20,,,,,20
+gpe_cp.tau_ampa,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,2
+gpe_cp.tau_gaba,20,20,20,20,20,20,20,20,20,20,20,,20,,,,,10
 gpe_cp.E_ampa,0,0,0,0,0,0,0,0,0,0,0,,0,,,,,0
-gpe_cp.E_gaba,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,,-90,,,,,-90
+gpe_cp.E_gaba,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,,-90,,,,,-70
 gpe_cp.I_app,0,0,0,0,0,0,0,0,0,0,0,,0,,,,,0
 gpe_cp.mean_rate_noise,400,400,400,400,400,400,400,400,400,400,400,,400,,,,,
 gpe_cp.rate_sd_noise,80,80,80,80,80,80,80,80,80,80,80,,80,,,,,
@@ -212,10 +212,10 @@ thal.d,6,6,6,6,6,6,6,6,6,6,6,,6,,,,,6
 thal.n0,,,,,,,,,,,,,,,,,,140
 thal.n1,,,,,,,,,,,,,,,,,,5
 thal.n2,,,,,,,,,,,,,,,,,,0.04
-thal.tau_ampa,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-thal.tau_gaba,20,20,20,20,20,20,20,20,20,20,20,,20,,,,,20
+thal.tau_ampa,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,2
+thal.tau_gaba,20,20,20,20,20,20,20,20,20,20,20,,20,,,,,10
 thal.E_ampa,0,0,0,0,0,0,0,0,0,0,0,,0,,,,,0
-thal.E_gaba,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,,-90,,,,,-90
+thal.E_gaba,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,-90,,-90,,,,,-70
 thal.I_app,5,5,5,5,5,5,5,5,5,5,5,,5,,,,,5
 thal.mean_rate_noise,150,150,150,150,150,150,150,150,150,150,150,,150,,,,,
 thal.rate_sd_noise,30,30,30,30,30,30,30,30,30,30,30,,30,,,,,
@@ -288,17 +288,17 @@ cor_pause__stn.delays,0,0,0,0,0,5.9,0,0,0,0,0,,0,,,,,
 ### STRD1 - SNR PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 str_d1__snr.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 str_d1__snr.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-str_d1__snr.mod_factor,0.06,0.06,0.06,0.06,0.06,0.06,0.06,0,0,0.06,0,,0,,,,,0.06
-str_d1__snr.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,14
-str_d1__snr.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-str_d1__snr.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",4,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,"Uniform(0.0, 10.0)"
+str_d1__snr.mod_factor,0.06,0.06,0.06,0.06,0.06,0.06,0.06,0,0,0.06,0,,0,,,,,
+str_d1__snr.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,
+str_d1__snr.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,0.06
+str_d1__snr.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",4,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,4
 ### STRD1 - GPE-CP PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 str_d1__gpe_cp.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 str_d1__gpe_cp.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-str_d1__gpe_cp.mod_factor,0.005,0.005,0.005,0.005,0.005,0.005,0.005,0,0,0.005,0,,0,,,,,0.005
-str_d1__gpe_cp.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,14
-str_d1__gpe_cp.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-str_d1__gpe_cp.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",4,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,"Uniform(0.0, 10.0)"
+str_d1__gpe_cp.mod_factor,0.005,0.005,0.005,0.005,0.005,0.005,0.005,0,0,0.005,0,,0,,,,,
+str_d1__gpe_cp.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,
+str_d1__gpe_cp.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,0.005
+str_d1__gpe_cp.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",4,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,5
 ### STRD1 - STRD1 PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 str_d1__str_d1.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,
 str_d1__str_d1.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,
@@ -317,18 +317,18 @@ str_d1__str_d2.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10
 str_d2__gpe_proto.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,connect_fixed_probability,connect_fixed_number_pre
 str_d2__gpe_proto.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
 str_d2__gpe_proto.probability,,,,,,,,,,,,,,,,,0.375,
-str_d2__gpe_proto.mod_factor,0.04,0.04,0.04,0.04,0.04,0.04,0.04,0.1,0,0.04,0.1,,0.1,,,,0,0.04
-str_d2__gpe_proto.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,14
-str_d2__gpe_proto.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,1,1
-str_d2__gpe_proto.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)",5,5,"Uniform(0.0, 10.0)",5,,5,,,,"Normal(5.0,0.5,0,7.0)","Uniform(0.0, 10.0)"
+str_d2__gpe_proto.mod_factor,0.04,0.04,0.04,0.04,0.04,0.04,0.04,0.1,0,0.04,0.1,,0.1,,,,0,
+str_d2__gpe_proto.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,
+str_d2__gpe_proto.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,1,0.04
+str_d2__gpe_proto.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)",5,5,"Uniform(0.0, 10.0)",5,,5,,,,"Normal(5.0,0.5,0,7.0)",5
 ### STRD2 - GPE-ARKY PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 str_d2__gpe_arky.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_probability,connect_fixed_number_pre,connect_fixed_probability,connect_fixed_probability,connect_fixed_probability,,connect_fixed_number_pre
 str_d2__gpe_arky.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
 str_d2__gpe_arky.probability,,,,,,,,,,,,0.7,,0.375,0.375,0.375,,
-str_d2__gpe_arky.mod_factor,0.08,0.08,0.08,0.08,0.08,ffre,0.08,0,0,0.08,0,0,0,0,0,0,,0.08
-str_d2__gpe_arky.max_trans,14,14,14,14,14,14,14,14,14,14,14,14,14,14,,,,14
-str_d2__gpe_arky.weights,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,,1
-str_d2__gpe_arky.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Normal(5.0,0.5,0,7.0)","Uniform(0.0, 10.0)","Normal(5.0,0.5,0,7.0)","Normal(5.0,0.5,0,7.0)","Normal(5.0,0.5,0,7.0)",,"Uniform(0.0, 10.0)"
+str_d2__gpe_arky.mod_factor,0.08,0.08,0.08,0.08,0.08,ffre,0.08,0,0,0.08,0,0,0,0,0,0,,
+str_d2__gpe_arky.max_trans,14,14,14,14,14,14,14,14,14,14,14,14,14,14,,,,
+str_d2__gpe_arky.weights,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,,0.08
+str_d2__gpe_arky.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Normal(5.0,0.5,0,7.0)","Uniform(0.0, 10.0)","Normal(5.0,0.5,0,7.0)","Normal(5.0,0.5,0,7.0)","Normal(5.0,0.5,0,7.0)",,5
 ### STRD2 - STRD1 PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 str_d2__str_d1.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,
 str_d2__str_d1.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,
@@ -347,10 +347,10 @@ str_d2__str_d2.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10
 ### STRD2 - GPE-CP PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 str_d2__gpe_cp.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 str_d2__gpe_cp.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-str_d2__gpe_cp.mod_factor,0.08,0.08,0.08,0.08,0.08,0.08,0.08,0,0,0.08,0,,0,,,,,0.08
-str_d2__gpe_cp.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,14
-str_d2__gpe_cp.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-str_d2__gpe_cp.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,"Uniform(0.0, 10.0)"
+str_d2__gpe_cp.mod_factor,0.08,0.08,0.08,0.08,0.08,0.08,0.08,0,0,0.08,0,,0,,,,,
+str_d2__gpe_cp.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,
+str_d2__gpe_cp.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,0.08
+str_d2__gpe_cp.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,5
 ### STRFSI - STRD1 PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 str_fsi__str_d1.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,
 str_fsi__str_d1.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,
@@ -377,138 +377,138 @@ str_fsi__str_fsi.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 
 ### STN - SNR PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 stn__snr.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 stn__snr.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-stn__snr.mod_factor,0.04,0.04,0.04,0.04,0.04,0.04,0.04,0,0,0.04,0,,0,,,,,0.04
-stn__snr.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,14
-stn__snr.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-stn__snr.delays,10,10,10,10,10,1.5,10,10,10,10,10,,10,,,,,10
+stn__snr.mod_factor,0.04,0.04,0.04,0.04,0.04,0.04,0.04,0,0,0.04,0,,0,,,,,
+stn__snr.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,
+stn__snr.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,0.04
+stn__snr.delays,10,10,10,10,10,1.5,10,10,10,10,10,,10,,,,,1.5
 ### STN - GPE-PROTO PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 stn__gpe_proto.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 stn__gpe_proto.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-stn__gpe_proto.mod_factor,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0,0,0.001,0,,0,,,,,0.001
-stn__gpe_proto.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,14
-stn__gpe_proto.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-stn__gpe_proto.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",2,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,"Uniform(0.0, 10.0)"
+stn__gpe_proto.mod_factor,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0,0,0.001,0,,0,,,,,
+stn__gpe_proto.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,
+stn__gpe_proto.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,0.001
+stn__gpe_proto.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",2,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,2
 ### STN - GPE-ARKY PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 stn__gpe_arky.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 stn__gpe_arky.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-stn__gpe_arky.mod_factor,0.001,0,0.001,0.001,0.001,0.001,0.001,0,0,0,0,,0,,,,,0.001
-stn__gpe_arky.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,14
-stn__gpe_arky.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-stn__gpe_arky.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",2,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,"Uniform(0.0, 10.0)"
+stn__gpe_arky.mod_factor,0.001,0,0.001,0.001,0.001,0.001,0.001,0,0,0,0,,0,,,,,
+stn__gpe_arky.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,
+stn__gpe_arky.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,0.001
+stn__gpe_arky.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",2,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,2
 ### STN - GPE-CP PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 stn__gpe_cp.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 stn__gpe_cp.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-stn__gpe_cp.mod_factor,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0,0,0.001,0,,0,,,,,0.001
-stn__gpe_cp.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,14
-stn__gpe_cp.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-stn__gpe_cp.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",2,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,"Uniform(0.0, 10.0)"
+stn__gpe_cp.mod_factor,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0,0,0.001,0,,0,,,,,
+stn__gpe_cp.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,
+stn__gpe_cp.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,0.001
+stn__gpe_cp.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",2,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,2
 ### GPE-PROTO - STN PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 gpe_proto__stn.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 gpe_proto__stn.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-gpe_proto__stn.mod_factor,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0,0,0.001,0,,0,,,,,0.001
-gpe_proto__stn.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,14
-gpe_proto__stn.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-gpe_proto__stn.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",4,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,"Uniform(0.0, 10.0)"
+gpe_proto__stn.mod_factor,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0,0,0.001,0,,0,,,,,
+gpe_proto__stn.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,
+gpe_proto__stn.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,0.001
+gpe_proto__stn.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",4,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,4
 ### GPE-PROTO - SNR PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 gpe_proto__snr.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 gpe_proto__snr.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-gpe_proto__snr.mod_factor,0.015,0.015,0.015,0.015,0.015,0.015,0.015,0,0,0.015,0,,0,,,,,0.015
-gpe_proto__snr.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,14
-gpe_proto__snr.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-gpe_proto__snr.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",3,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,"Uniform(0.0, 10.0)"
+gpe_proto__snr.mod_factor,0.015,0.015,0.015,0.015,0.015,0.015,0.015,0,0,0.015,0,,0,,,,,
+gpe_proto__snr.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,
+gpe_proto__snr.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,0.015
+gpe_proto__snr.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",3,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,3
 ### GPE-PROTO - GPE-ARKY PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 gpe_proto__gpe_arky.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 gpe_proto__gpe_arky.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-gpe_proto__gpe_arky.mod_factor,0.025,0.025,0.025,0.025,0.025,0.025,0.025,0,0,0.025,0,,0,,,,,0.025
-gpe_proto__gpe_arky.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,14
-gpe_proto__gpe_arky.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-gpe_proto__gpe_arky.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",2,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,"Uniform(0.0, 10.0)"
+gpe_proto__gpe_arky.mod_factor,0.025,0.025,0.025,0.025,0.025,0.025,0.025,0,0,0.025,0,,0,,,,,
+gpe_proto__gpe_arky.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,
+gpe_proto__gpe_arky.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,0.025
+gpe_proto__gpe_arky.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",2,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,4
 ### GPE-PROTO - STRFSI PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 gpe_proto__str_fsi.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,connect_fixed_probability,connect_fixed_number_pre
 gpe_proto__str_fsi.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
 gpe_proto__str_fsi.probability,,,,,,,,,,,,,,,,,0.375,
-gpe_proto__str_fsi.mod_factor,1.6,1.6,1.6,0.024,0.024,0,1.6,1.0,0,0.024,1.0,,1.0,,,,0,1.6
-gpe_proto__str_fsi.max_trans,1120,1120,1120,1120,1120,1120,1120,1120,1120,1120,1120,,1120,,,,,1120
-gpe_proto__str_fsi.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,1,1
-gpe_proto__str_fsi.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",2,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,"Normal(5.0,0.5,0,7.0)","Uniform(0.0, 10.0)"
+gpe_proto__str_fsi.mod_factor,1.6,1.6,1.6,0.024,0.024,0,1.6,1.0,0,0.024,1.0,,1.0,,,,0,
+gpe_proto__str_fsi.max_trans,1120,1120,1120,1120,1120,1120,1120,1120,1120,1120,1120,,1120,,,,,
+gpe_proto__str_fsi.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,1,1.6
+gpe_proto__str_fsi.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",2,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,"Normal(5.0,0.5,0,7.0)",5
 ### GPE-PROTO - GPE-CP PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 gpe_proto__gpe_cp.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 gpe_proto__gpe_cp.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-gpe_proto__gpe_cp.mod_factor,0.025,0.025,0.025,0.025,0.025,0.025,0.025,0,0,0.025,0,,0,,,,,0.025
-gpe_proto__gpe_cp.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,14
-gpe_proto__gpe_cp.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-gpe_proto__gpe_cp.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",2,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,"Uniform(0.0, 10.0)"
+gpe_proto__gpe_cp.mod_factor,0.025,0.025,0.025,0.025,0.025,0.025,0.025,0,0,0.025,0,,0,,,,,
+gpe_proto__gpe_cp.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,
+gpe_proto__gpe_cp.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,0.025
+gpe_proto__gpe_cp.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",2,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,4
 ### GPE-ARKY - STRD1 PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 gpe_arky__str_d1.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 gpe_arky__str_d1.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-gpe_arky__str_d1.mod_factor,3.25,3.25,3.25,3.25,3.25,3.25,3.25,0,0,3.25,0,,0,,,,,3.25
-gpe_arky__str_d1.max_trans,700,700,700,700,700,700,700,700,700,700,700,,700,,,,,700
-gpe_arky__str_d1.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-gpe_arky__str_d1.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,"Uniform(0.0, 10.0)"
+gpe_arky__str_d1.mod_factor,3.25,3.25,3.25,3.25,3.25,3.25,3.25,0,0,3.25,0,,0,,,,,
+gpe_arky__str_d1.max_trans,700,700,700,700,700,700,700,700,700,700,700,,700,,,,,
+gpe_arky__str_d1.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,3.25
+gpe_arky__str_d1.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,5
 ### GPE-ARKY - STRD2 PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 gpe_arky__str_d2.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,,,connect_fixed_number_pre
 gpe_arky__str_d2.number,10,10,10,10,10,10,10,10,10,10,10,10,10,10,,,,10
-gpe_arky__str_d2.mod_factor,6,6,6,6,6,6,6,0,0,6,0,0,0,0,,,,6
-gpe_arky__str_d2.max_trans,700,700,700,700,700,700,700,700,700,700,700,700,700,700,,,,700
-gpe_arky__str_d2.weights,1,1,1,1,1,1,1,1,1,1,1,1,1,1,,,,1
-gpe_arky__str_d2.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Normal(5.0,0.5,0,7.0)","Uniform(0.0, 10.0)","Normal(5.0,0.5,0,7.0)",,,,"Uniform(0.0, 10.0)"
+gpe_arky__str_d2.mod_factor,6,6,6,6,6,6,6,0,0,6,0,0,0,0,,,,
+gpe_arky__str_d2.max_trans,700,700,700,700,700,700,700,700,700,700,700,700,700,700,,,,
+gpe_arky__str_d2.weights,1,1,1,1,1,1,1,1,1,1,1,1,1,1,,,,6
+gpe_arky__str_d2.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Normal(5.0,0.5,0,7.0)","Uniform(0.0, 10.0)","Normal(5.0,0.5,0,7.0)",,,,5
 ### GPE-ARKY - GPE-PROTO PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 gpe_arky__gpe_proto.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 gpe_arky__gpe_proto.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-gpe_arky__gpe_proto.mod_factor,0.008,0.008,0.008,0.008,0.008,0.008,0.008,0,0,0.008,0,,0,,,,,0.008
-gpe_arky__gpe_proto.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,14
-gpe_arky__gpe_proto.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-gpe_arky__gpe_proto.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",2,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,"Uniform(0.0, 10.0)"
+gpe_arky__gpe_proto.mod_factor,0.008,0.008,0.008,0.008,0.008,0.008,0.008,0,0,0.008,0,,0,,,,,
+gpe_arky__gpe_proto.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,
+gpe_arky__gpe_proto.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,0.008
+gpe_arky__gpe_proto.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",2,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,4
 ### GPE-ARKY - STRFSI PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 gpe_arky__str_fsi.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_probability,connect_fixed_number_pre,connect_fixed_probability,connect_fixed_probability,connect_fixed_probability,,connect_fixed_number_pre
 gpe_arky__str_fsi.number,10,10,10,10,10,10,10,10,10,10,10,0,10,,,,,10
 gpe_arky__str_fsi.probability,,,,,,,,,,,,0.375,,0.375,0.375,0.375,,
-gpe_arky__str_fsi.mod_factor,6.4,6.4,6.4,0.096,0.096,0,6.4,0,1.0,0.096,0,0,0,0,0,0,,6.4
-gpe_arky__str_fsi.max_trans,1120,1120,1120,1120,1120,1120,1120,1120,1120,1120,1120,1120,1120,1120,,,,1120
-gpe_arky__str_fsi.weights,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,,1
-gpe_arky__str_fsi.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",2,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Normal(5.0,0.5,0,7.0)","Uniform(0.0, 10.0)","Normal(5.0,0.5,0,7.0)","Normal(5.0,0.5,0,7.0)","Normal(5.0,0.5,0,7.0)",,"Uniform(0.0, 10.0)"
+gpe_arky__str_fsi.mod_factor,6.4,6.4,6.4,0.096,0.096,0,6.4,0,1.0,0.096,0,0,0,0,0,0,,
+gpe_arky__str_fsi.max_trans,1120,1120,1120,1120,1120,1120,1120,1120,1120,1120,1120,1120,1120,1120,,,,
+gpe_arky__str_fsi.weights,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,,6.4
+gpe_arky__str_fsi.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",2,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Normal(5.0,0.5,0,7.0)","Uniform(0.0, 10.0)","Normal(5.0,0.5,0,7.0)","Normal(5.0,0.5,0,7.0)","Normal(5.0,0.5,0,7.0)",,5
 ### GPE-ARKY - GPE-CP PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 gpe_arky__gpe_cp.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 gpe_arky__gpe_cp.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-gpe_arky__gpe_cp.mod_factor,0.008,0.008,0.008,0.008,0.008,0.008,0.008,0,0,0.008,0,,0,,,,,0.008
-gpe_arky__gpe_cp.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,14
-gpe_arky__gpe_cp.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-gpe_arky__gpe_cp.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",2,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,"Uniform(0.0, 10.0)"
+gpe_arky__gpe_cp.mod_factor,0.008,0.008,0.008,0.008,0.008,0.008,0.008,0,0,0.008,0,,0,,,,,
+gpe_arky__gpe_cp.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,
+gpe_arky__gpe_cp.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,0.008
+gpe_arky__gpe_cp.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",2,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,5
 ### GPE-CP - GPE-PROTO PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 gpe_cp__gpe_proto.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 gpe_cp__gpe_proto.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-gpe_cp__gpe_proto.mod_factor,0.008,0.008,0.008,0.008,0.008,0.008,0.008,0,0,0.008,0,,0,,,,,0.008
-gpe_cp__gpe_proto.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,14
-gpe_cp__gpe_proto.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-gpe_cp__gpe_proto.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",2,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,"Uniform(0.0, 10.0)"
+gpe_cp__gpe_proto.mod_factor,0.008,0.008,0.008,0.008,0.008,0.008,0.008,0,0,0.008,0,,0,,,,,
+gpe_cp__gpe_proto.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,
+gpe_cp__gpe_proto.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,0.008
+gpe_cp__gpe_proto.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",2,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,4
 ### GPE-CP - STRD1 PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 gpe_cp__str_d1.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 gpe_cp__str_d1.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-gpe_cp__str_d1.mod_factor,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0,0,0,0,,0,,,,,0.5
-gpe_cp__str_d1.max_trans,700,700,700,700,700,700,700,700,700,700,700,,700,,,,,700
-gpe_cp__str_d1.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-gpe_cp__str_d1.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,"Uniform(0.0, 10.0)"
+gpe_cp__str_d1.mod_factor,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0,0,0,0,,0,,,,,
+gpe_cp__str_d1.max_trans,700,700,700,700,700,700,700,700,700,700,700,,700,,,,,
+gpe_cp__str_d1.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,0.5
+gpe_cp__str_d1.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,5
 ### GPE-CP - STRD2 PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 gpe_cp__str_d2.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 gpe_cp__str_d2.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-gpe_cp__str_d2.mod_factor,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0,0,0.5,0,,0,,,,,0.5
-gpe_cp__str_d2.max_trans,700,700,700,700,700,700,700,700,700,700,700,,700,,,,,700
-gpe_cp__str_d2.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-gpe_cp__str_d2.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,"Uniform(0.0, 10.0)"
+gpe_cp__str_d2.mod_factor,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0,0,0.5,0,,0,,,,,
+gpe_cp__str_d2.max_trans,700,700,700,700,700,700,700,700,700,700,700,,700,,,,,
+gpe_cp__str_d2.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,0.5
+gpe_cp__str_d2.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,5
 ### GPE-CP - STRFSI PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 gpe_cp__str_fsi.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 gpe_cp__str_fsi.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-gpe_cp__str_fsi.mod_factor,0.8,0.8,0.8,0.05,0.05,0,0.8,0,0,0.05,0,,0,,,,,0.8
-gpe_cp__str_fsi.max_trans,1120,1120,1120,1120,1120,1120,1120,1120,1120,1120,1120,,1120,,,,,1120
-gpe_cp__str_fsi.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-gpe_cp__str_fsi.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,"Uniform(0.0, 10.0)"
+gpe_cp__str_fsi.mod_factor,0.8,0.8,0.8,0.05,0.05,0,0.8,0,0,0.05,0,,0,,,,,
+gpe_cp__str_fsi.max_trans,1120,1120,1120,1120,1120,1120,1120,1120,1120,1120,1120,,1120,,,,,
+gpe_cp__str_fsi.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,0.8
+gpe_cp__str_fsi.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,5
 ### GPE-CP - GPE-ARKY PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 gpe_cp__gpe_arky.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 gpe_cp__gpe_arky.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-gpe_cp__gpe_arky.mod_factor,0.008,0.008,0.008,0.008,0.008,0.008,0.008,0,0,0.008,0,,0,,,,,0.008
-gpe_cp__gpe_arky.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,14
-gpe_cp__gpe_arky.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-gpe_cp__gpe_arky.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",2,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,"Uniform(0.0, 10.0)"
+gpe_cp__gpe_arky.mod_factor,0.008,0.008,0.008,0.008,0.008,0.008,0.008,0,0,0.008,0,,0,,,,,
+gpe_cp__gpe_arky.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,
+gpe_cp__gpe_arky.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,0.008
+gpe_cp__gpe_arky.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",2,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,5
 ### GPE-CP - INTEGRATOR STOP PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 gpe_cp__integrator_stop.connectivity,connect_all_to_all,connect_all_to_all,connect_all_to_all,connect_all_to_all,connect_all_to_all,connect_all_to_all,connect_all_to_all,connect_all_to_all,connect_all_to_all,connect_all_to_all,connect_all_to_all,,connect_all_to_all,,,,,
 gpe_cp__integrator_stop.mod_factor,0.00095,0.00095,0.00095,0.00095,0.00095,0.00095,0.00095,0,0,0.00095,0,,0,,,,,
@@ -518,10 +518,10 @@ gpe_cp__integrator_stop.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Unifor
 ### SNR - THAL PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 snr__thal.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 snr__thal.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-snr__thal.mod_factor,0.06,0.06,0.06,0.06,0.06,0.06,0.06,0,0,0.06,0,,0,,,,,0.06
-snr__thal.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,14
-snr__thal.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-snr__thal.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,"Uniform(0.0, 10.0)"
+snr__thal.mod_factor,0.06,0.06,0.06,0.06,0.06,0.06,0.06,0,0,0.06,0,,0,,,,,
+snr__thal.max_trans,14,14,14,14,14,14,14,14,14,14,14,,14,,,,,
+snr__thal.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,0.06
+snr__thal.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,5
 ### THAL - INTEGRATOR GO PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 thal__integrator_go.connectivity,connect_all_to_all,connect_all_to_all,connect_all_to_all,connect_all_to_all,connect_all_to_all,connect_all_to_all,connect_all_to_all,connect_all_to_all,connect_all_to_all,connect_all_to_all,connect_all_to_all,,connect_all_to_all,,,,,
 thal__integrator_go.mod_factor,0.00056,0.00056,0.00056,0.00056,0.00056,0.00056,0.00056,0,0,0.00056,0,,0,,,,,
@@ -531,24 +531,24 @@ thal__integrator_go.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.
 ### THAL - STRD1 PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 thal__str_d1.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 thal__str_d1.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-thal__str_d1.mod_factor,7,7,7,7,10.5,7,10.5,0,0,7,0,,0,,,,,7
-thal__str_d1.max_trans,700,700,700,700,700,700,700,700,700,700,700,,700,,,,,700
-thal__str_d1.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-thal__str_d1.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,"Uniform(0.0, 10.0)"
+thal__str_d1.mod_factor,7,7,7,7,10.5,7,10.5,0,0,7,0,,0,,,,,
+thal__str_d1.max_trans,700,700,700,700,700,700,700,700,700,700,700,,700,,,,,
+thal__str_d1.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,7
+thal__str_d1.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,4
 ### THAL - STRD2 PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 thal__str_d2.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 thal__str_d2.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-thal__str_d2.mod_factor,6,6,6,6,9,6,9,0,0,6,0,,0,,,,,6
-thal__str_d2.max_trans,700,700,700,700,700,700,700,700,700,700,700,,700,,,,,700
-thal__str_d2.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-thal__str_d2.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,"Uniform(0.0, 10.0)"
+thal__str_d2.mod_factor,6,6,6,6,9,6,9,0,0,6,0,,0,,,,,
+thal__str_d2.max_trans,700,700,700,700,700,700,700,700,700,700,700,,700,,,,,
+thal__str_d2.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,6
+thal__str_d2.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,4
 ### THAL - STRFSI PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 thal__str_fsi.connectivity,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,,,,connect_fixed_number_pre
 thal__str_fsi.number,10,10,10,10,10,10,10,10,10,10,10,,10,,,,,10
-thal__str_fsi.mod_factor,9.6,9.6,9.6,0.036,0.036,0,9.6,0,0,0.036,0,,0,,,,,9.6
-thal__str_fsi.max_trans,1120,1120,1120,1120,1120,1120,1120,1120,1120,1120,1120,,1120,,,,,1120
-thal__str_fsi.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,1
-thal__str_fsi.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,"Uniform(0.0, 10.0)"
+thal__str_fsi.mod_factor,9.6,9.6,9.6,0.036,0.036,0,9.6,0,0,0.036,0,,0,,,,,
+thal__str_fsi.max_trans,1120,1120,1120,1120,1120,1120,1120,1120,1120,1120,1120,,1120,,,,,
+thal__str_fsi.weights,1,1,1,1,1,1,1,1,1,1,1,,1,,,,,9.6
+thal__str_fsi.delays,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",5,"Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)","Uniform(0.0, 10.0)",,"Uniform(0.0, 10.0)",,,,,4
 ### GPE-PROTO  GPE-PROTO PROJECTION PARAMS,,,,,,,,,,,,,,,,,,
 gpe_proto__gpe_proto.connectivity,,,,,,,,connect_fixed_number_pre,connect_fixed_number_pre,,connect_fixed_number_pre,,connect_fixed_number_pre,,,,connect_fixed_probability,
 gpe_proto__gpe_proto.number,,,,,,,,10,10,,10,,10,,,,,

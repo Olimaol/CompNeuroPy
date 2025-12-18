@@ -2867,6 +2867,7 @@ def BGM_v07(self):
         - "ci.n_gpe_arky": number of cortical input neurons for a GPe_arky neuron
         - "ci.n_gpe_cp": number of cortical input neurons for a GPe_cp neuron
         - "ci.n_stn": number of cortical input neurons for a STN neuron
+    - do not use factor_synapse anymore -> use standard synapse, now change proj.w instead of proj.mod_factor
     """
 
     ### CREATE THE STRIATAL MICRO CIRCUIT FOR THE CURRENT LOOP
@@ -2885,7 +2886,7 @@ def BGM_v07(self):
         seed=self.model_creation_kwargs["mc.seed"],
         fitted_params_path=self.model_creation_kwargs["mc.fitted_params_path"],
         cortical_rate_path=self.model_creation_kwargs["mc.cortical_rate_path"],
-        verbose=True,
+        verbose=False,
     )
     str_pop = mc.create_model()
 
@@ -2922,7 +2923,7 @@ def BGM_v07(self):
     )
     thal = ann.Population(
         self.params["thal.size"],
-        Izhikevich2003NoisyBaseNonlin(stabilize=True, use_nonlin=True),
+        Izhikevich2003NoisyBaseNonlin(stabilize=True, use_nonlin=False),
         name="thal",
     )
 
@@ -2933,14 +2934,12 @@ def BGM_v07(self):
         pre=str_d1,
         post=snr,
         target="gaba",
-        synapse=factor_synapse,
         name=f"str_d1__{snr.name}",
     )
     ann.Projection(
         pre=str_d1,
         post=gpe_cp,
         target="gaba",
-        synapse=factor_synapse,
         name=f"str_d1__{gpe_cp.name}",
     )
     ### str d2 output
@@ -2948,21 +2947,18 @@ def BGM_v07(self):
         pre=str_d2,
         post=gpe_proto,
         target="gaba",
-        synapse=factor_synapse,
         name=f"str_d2__{gpe_proto.name}",
     )
     ann.Projection(
         pre=str_d2,
         post=gpe_arky,
         target="gaba",
-        synapse=factor_synapse,
         name=f"str_d2__{gpe_arky.name}",
     )
     ann.Projection(
         pre=str_d2,
         post=gpe_cp,
         target="gaba",
-        synapse=factor_synapse,
         name=f"str_d2__{gpe_cp.name}",
     )
     ### stn output
@@ -2970,28 +2966,24 @@ def BGM_v07(self):
         pre=stn,
         post=snr,
         target="ampa",
-        synapse=factor_synapse,
         name=f"{stn.name}__{snr.name}",
     )
     ann.Projection(
         pre=stn,
         post=gpe_proto,
         target="ampa",
-        synapse=factor_synapse,
         name=f"{stn.name}__{gpe_proto.name}",
     )
     ann.Projection(
         pre=stn,
         post=gpe_arky,
         target="ampa",
-        synapse=factor_synapse,
         name=f"{stn.name}__{gpe_arky.name}",
     )
     ann.Projection(
         pre=stn,
         post=gpe_cp,
         target="ampa",
-        synapse=factor_synapse,
         name=f"{stn.name}__{gpe_cp.name}",
     )
     ### gpe proto output
@@ -2999,35 +2991,30 @@ def BGM_v07(self):
         pre=gpe_proto,
         post=stn,
         target="gaba",
-        synapse=factor_synapse,
         name=f"{gpe_proto.name}__{stn.name}",
     )
     ann.Projection(
         pre=gpe_proto,
         post=snr,
         target="gaba",
-        synapse=factor_synapse,
         name=f"{gpe_proto.name}__{snr.name}",
     )
     ann.Projection(
         pre=gpe_proto,
         post=gpe_arky,
         target="gaba",
-        synapse=factor_synapse,
         name=f"{gpe_proto.name}__{gpe_arky.name}",
     )
     ann.Projection(
         pre=gpe_proto,
         post=gpe_cp,
         target="gaba",
-        synapse=factor_synapse,
         name=f"{gpe_proto.name}__{gpe_cp.name}",
     )
     ann.Projection(
         pre=gpe_proto,
         post=str_fsi,
         target="gaba",
-        synapse=factor_synapse,
         name=f"{gpe_proto.name}__str_fsi",
     )
     ### gpe arky output
@@ -3035,35 +3022,30 @@ def BGM_v07(self):
         pre=gpe_arky,
         post=str_d1,
         target="gaba",
-        synapse=factor_synapse,
         name=f"{gpe_arky.name}__str_d1",
     )
     ann.Projection(
         pre=gpe_arky,
         post=str_d2,
         target="gaba",
-        synapse=factor_synapse,
         name=f"{gpe_arky.name}__str_d2",
     )
     ann.Projection(
         pre=gpe_arky,
         post=str_fsi,
         target="gaba",
-        synapse=factor_synapse,
         name=f"{gpe_arky.name}__str_fsi",
     )
     ann.Projection(
         pre=gpe_arky,
         post=gpe_proto,
         target="gaba",
-        synapse=factor_synapse,
         name=f"{gpe_arky.name}__{gpe_proto.name}",
     )
     ann.Projection(
         pre=gpe_arky,
         post=gpe_cp,
         target="gaba",
-        synapse=factor_synapse,
         name=f"{gpe_arky.name}__{gpe_cp.name}",
     )
     ### gpe cp output
@@ -3071,35 +3053,30 @@ def BGM_v07(self):
         pre=gpe_cp,
         post=str_d1,
         target="gaba",
-        synapse=factor_synapse,
         name=f"{gpe_cp.name}__str_d1",
     )
     ann.Projection(
         pre=gpe_cp,
         post=str_d2,
         target="gaba",
-        synapse=factor_synapse,
         name=f"{gpe_cp.name}__str_d2",
     )
     ann.Projection(
         pre=gpe_cp,
         post=str_fsi,
         target="gaba",
-        synapse=factor_synapse,
         name=f"{gpe_cp.name}__str_fsi",
     )
     ann.Projection(
         pre=gpe_cp,
         post=gpe_proto,
         target="gaba",
-        synapse=factor_synapse,
         name=f"{gpe_cp.name}__{gpe_proto.name}",
     )
     ann.Projection(
         pre=gpe_cp,
         post=gpe_arky,
         target="gaba",
-        synapse=factor_synapse,
         name=f"{gpe_cp.name}__{gpe_arky.name}",
     )
     ### snr output
@@ -3107,28 +3084,24 @@ def BGM_v07(self):
         pre=snr,
         post=thal,
         target="gaba",
-        synapse=factor_synapse,
         name=f"{snr.name}__{thal.name}",
     )
     ann.Projection(
         pre=thal,
         post=str_d1,
         target="glut",
-        synapse=factor_synapse,
         name=f"{thal.name}__str_d1",
     )
     ann.Projection(
         pre=thal,
         post=str_d2,
         target="glut",
-        synapse=factor_synapse,
         name=f"{thal.name}__str_d2",
     )
     ann.Projection(
         pre=thal,
         post=str_fsi,
         target="ampa",
-        synapse=factor_synapse,
         name=f"{thal.name}__str_fsi",
     )
 
@@ -3155,7 +3128,7 @@ def BGM_v07(self):
         cortical_rate_path=self.model_creation_kwargs["mc.cortical_rate_path"],
         build_cortical_input=self.model_creation_kwargs["build_ci"],
         seed=self.model_creation_kwargs["ci.seed"],
-        verbose=True,
+        verbose=False,
     )
     ci.create_model()
 
