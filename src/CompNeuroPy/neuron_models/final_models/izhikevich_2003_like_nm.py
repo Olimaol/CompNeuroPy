@@ -785,6 +785,8 @@ class Izhikevich2003NoisyBaseNonlin(ann.Neuron):
             If True, the neuron model uses numerical stabilization factors for the
             conductances and a current based excitatory synapse with a fixed driving
             force of 50 mV instead of a conductance based one.
+        exp_input (float, optional):
+            Exponential input rate for additional excitatory input.
         use_nonlin (bool, optional):
             If True, the neuron model uses a nonlinear function for the external
             current.
@@ -822,6 +824,7 @@ class Izhikevich2003NoisyBaseNonlin(ann.Neuron):
         rate_base_noise: float = 0,
         nonlin: float = 1,
         stabilize: bool = False,
+        exp_input: float = 0.0,
         use_nonlin: bool = True,
     ):
         # Create the arguments
@@ -842,15 +845,27 @@ class Izhikevich2003NoisyBaseNonlin(ann.Neuron):
             base_noise      = {base_noise}
             rate_base_noise = {rate_base_noise}
             nonlin          = {nonlin} : population
+            lambda           = {exp_input} : population
+            exp_input_weight = 1.0 : population
         """
         if use_nonlin:
             ext_current = "f(I,nonlin)"
         else:
             ext_current = "I"
 
+        if exp_input > 0.0:
+            exp_input_string = (
+                "exp_input = Exponential(lambda) * exp_input_weight * g_cor"
+            )
+            g_ampa_addition = "+ exp_input / dt"
+        else:
+            exp_input_string = ""
+            g_ampa_addition = ""
+
         if not stabilize:
             eq = f"""
-                dg_ampa/dt  = -g_ampa/tau_ampa
+                {exp_input_string}
+                dg_ampa/dt  = -g_ampa/tau_ampa {g_ampa_addition}
                 dg_gaba/dt  = -g_gaba / tau_gaba
                 offset_base = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rate_base_noise, offset_base, Normal(0, 1) * base_noise)
                 I_base      = base_mean + offset_base
@@ -860,7 +875,8 @@ class Izhikevich2003NoisyBaseNonlin(ann.Neuron):
             """
         else:
             eq = f"""
-                dg_ampa/dt  = -g_ampa/tau_ampa
+                {exp_input_string}
+                dg_ampa/dt  = -g_ampa/tau_ampa {g_ampa_addition}
                 dg_gaba/dt  = -g_gaba / tau_gaba
                 offset_base = ite(Uniform(0.0, 1.0) * 1000.0 / dt > rate_base_noise, offset_base, Normal(0, 1) * base_noise)
                 I_base      = base_mean + offset_base

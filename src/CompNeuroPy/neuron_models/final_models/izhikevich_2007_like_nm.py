@@ -27,6 +27,14 @@ _I_base_noise = """
     I_base      = base_mean + offset_base
 """
 
+_syn_humphries2009_spn_exp_input = """
+    exp_input = Exponential(lambda) * exp_input_weight * g_cor
+    dg_ampa/dt = -g_ampa / tau_ampa + g_glut / dt + exp_input / dt
+    dg_nmda/dt = -g_nmda / tau_nmda + g_glut / dt + exp_input / dt
+    dg_gaba/dt = -g_gaba / tau_gaba
+    B_nmda = 1 / (1 + 0.28 * exp(-0.062 * v)) # MG2+/3.57 --> 0.28
+"""
+
 _syn_humphries2009_spn = """
     dg_ampa/dt = -g_ampa / tau_ampa + g_glut / dt
     dg_nmda/dt = -g_nmda / tau_nmda + g_glut / dt
@@ -56,6 +64,12 @@ _dv_humphries2009_d2 = """
 """
 
 _syn_humphries2009_fsi = _syn_default
+
+_syn_humphries2009_fsi_exp_input = """
+    exp_input = Exponential(lambda) * exp_input_weight * g_cor
+    dg_ampa/dt = -g_ampa/tau_ampa + exp_input / dt
+    dg_gaba/dt = -g_gaba/tau_gaba
+"""
 
 _I_syn_humphries2009_fsi = """
     g_ampa * (E_ampa - v) / (1 + g_ampa * dt / C) + g_gaba * (E_gaba - v) * (1 - epsilon * phi_2) / (1 + g_gaba * dt / C) + I_app
@@ -1589,6 +1603,8 @@ class Izhikevich2007Humphries2009SPND1(ann.Neuron):
             Dopamine modulation parameter for D1 receptor.
         current_based_excitation (bool, optional):
             If True, the excitatory synapses are current-based with a fixed driving force of 50 mV (default: conductance-based).
+        exp_input (float, optional):
+            Exponential input rate for additional excitatory input.
         params_for_pop (bool, optional):
             If True, the parameters are population-wide and not neuron-specific.
         init (dict, optional):
@@ -1615,6 +1631,7 @@ class Izhikevich2007Humphries2009SPND1(ann.Neuron):
         tau_gaba: float = 4.0,
         phi_1: float = 0.0,
         current_based_excitation: bool = False,
+        exp_input: float = 0.0,
         params_for_pop: bool = False,
         init: dict = {},
     ):
@@ -1629,6 +1646,8 @@ class Izhikevich2007Humphries2009SPND1(ann.Neuron):
             E_gaba   = -60.0 : population
             I_app    = {I_app}
             E_exc    = {50.0 if current_based_excitation else 0.0} : population
+            lambda           = {exp_input} {': population' if params_for_pop else ''}
+            exp_input_weight = 1.0 {': population' if params_for_pop else ''}
 
             # neuron model parameters
             C      = 50.0   : population
@@ -1648,7 +1667,11 @@ class Izhikevich2007Humphries2009SPND1(ann.Neuron):
             beta_1 = 3.75 : population
         """
 
-        syn = _syn_humphries2009_spn
+        syn = (
+            _syn_humphries2009_spn
+            if exp_input == 0.0
+            else _syn_humphries2009_spn_exp_input
+        )
         i_v = (
             _I_syn_humphries2009_d1
             if not current_based_excitation
@@ -1701,6 +1724,8 @@ class Izhikevich2007Humphries2009SPND2(ann.Neuron):
             Dopamine modulation parameter for D2 receptor.
         current_based_excitation (bool, optional):
             If True, the excitatory synapses are current-based with a fixed driving force of 50 mV (default: conductance-based).
+        exp_input (float, optional):
+            Exponential input rate for additional excitatory input.
         params_for_pop (bool, optional):
             If True, the parameters are population-wide and not neuron-specific.
         init (dict, optional):
@@ -1727,6 +1752,7 @@ class Izhikevich2007Humphries2009SPND2(ann.Neuron):
         tau_gaba: float = 4.0,
         phi_2: float = 0.0,
         current_based_excitation: bool = False,
+        exp_input: float = 0.0,
         params_for_pop: bool = False,
         init: dict = {},
     ):
@@ -1741,6 +1767,8 @@ class Izhikevich2007Humphries2009SPND2(ann.Neuron):
             E_gaba   = -60.0 : population
             I_app    = {I_app}
             E_exc    = {50.0 if current_based_excitation else 0.0} : population
+            lambda           = {exp_input} {': population' if params_for_pop else ''}
+            exp_input_weight = 1.0 {': population' if params_for_pop else ''}
 
             # neuron model parameters
             C      = 50.0   : population
@@ -1759,7 +1787,7 @@ class Izhikevich2007Humphries2009SPND2(ann.Neuron):
             beta_2 = 0.156 : population
         """
 
-        syn = _syn_humphries2009_spn
+        syn = _syn_humphries2009_spn if exp_input == 0.0 else _syn_humphries2009_spn_exp_input
         i_v = (
             _I_syn_humphries2009_d2
             if not current_based_excitation
@@ -1812,6 +1840,8 @@ class Izhikevich2007Humphries2009FSI(ann.Neuron):
             Dopamine modulation parameter for D2 receptor.
         current_based_excitation (bool, optional):
             If True, the excitatory synapses are current-based with a fixed driving force of 50 mV (default: conductance-based).
+        exp_input (float, optional):
+            Exponential input rate for additional excitatory input.
         params_for_pop (bool, optional):
             If True, the parameters are population-wide and not neuron-specific.
         init (dict, optional):
@@ -1836,6 +1866,7 @@ class Izhikevich2007Humphries2009FSI(ann.Neuron):
         phi_1: float = 0.0,
         phi_2: float = 0.0,
         current_based_excitation: bool = False,
+        exp_input: float = 0.0,
         params_for_pop: bool = False,
         init: dict = {},
     ):
@@ -1848,6 +1879,8 @@ class Izhikevich2007Humphries2009FSI(ann.Neuron):
             E_gaba   = -60.0 : population
             I_app    = {I_app}
             E_exc    = {50.0 if current_based_excitation else 0.0} : population
+            lambda           = {exp_input} {': population' if params_for_pop else ''}
+            exp_input_weight = 1.0 {': population' if params_for_pop else ''}
 
             # neuron model parameters
             C      = 80.0   : population
@@ -1867,7 +1900,7 @@ class Izhikevich2007Humphries2009FSI(ann.Neuron):
             epsilon = 0.625 : population
         """
 
-        syn = _syn_humphries2009_fsi
+        syn = _syn_humphries2009_fsi if exp_input == 0.0 else _syn_humphries2009_fsi_exp_input
         i_v = (
             _I_syn_humphries2009_fsi
             if not current_based_excitation

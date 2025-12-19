@@ -15,10 +15,14 @@ from CompNeuroPy.neuron_models import (
     Izhikevich2003_flexible_noisy_I_nonlin,
     Izhikevich2003FixedNoisyAmpa,
     Izhikevich2003NoisyBaseNonlin,
+    Izhikevich2007Humphries2009SPND1,
+    Izhikevich2007Humphries2009SPND2,
+    Izhikevich2007Humphries2009FSI,
 )
 from CompNeuroPy.synapse_models import factor_synapse, factor_synapse_without_max
 from CompNeuroPy.striatal_microcircuit.microcircuit import Microcircuit
 from CompNeuroPy.striatal_microcircuit.cortical_inputs import CorticalInputs
+import numpy as np
 
 
 def BGM_v01(self):
@@ -3133,3 +3137,354 @@ def BGM_v07(self):
     ci.create_model()
 
     return mc, ci
+
+
+def BGM_v08(self):
+    """
+    difference to Goenner et al. (2021):
+    - no cortical populations: they are replaced by spike count TimedArray inputs
+        - the following pops receive input from the TimedArray via CurrentProjection:
+        - str_d1
+        - str_d2
+        - str_fsi
+        - thal
+        - gpe_arky
+        - gpe_cp
+        - stn
+    - Integrators not used anymore
+    - new neuron models
+        - striatal neurons fully based on Humphries 2009
+        - GPe parameters were refitted and GPe neurons use nonlinear function for external current (not baseline current)
+        - implemented a new noise method (not noisy ampa anymore but noisy baseline current)
+        - implemented numerical stabilization for conductances (factor and constant driving force for ampa)
+        - implemented a exp_input: additional incoming exc spikes from exponential distribution with lambda "exp_input" (mean=1/lambda), weighted by the input "g_cor"
+            - for labda values see: https://docs.google.com/spreadsheets/d/1yPWpbQnrIrALBvEErs7cz59YovRqgoXFFPaCmKbDYaw/edit?usp=sharing
+    - using this model_creation_function requires the BGM class to have a model_creation_kwargs dict with the following entries:
+        - "input.rates": array with (steps,) shape containing the input rates for each time step
+        - "input.schedule": a single scalar with the schedule time in ms for updating the input rates
+        - "timestep": simulation timestep in ms
+    - do not use factor_synapse anymore -> use standard synapse, now change proj.w instead of proj.mod_factor
+    """
+
+    #######   POPULATIONS   ######
+    ### Str Populations now obtained from Microcircuit class
+    str_d1 = ann.Population(
+        self.params["str_d1.size"],
+        Izhikevich2007Humphries2009SPND1(
+            current_based_excitation=True, exp_input=1 / 0.7, params_for_pop=True
+        ),
+        name="str_d1",
+    )
+    str_d2 = ann.Population(
+        self.params["str_d2.size"],
+        Izhikevich2007Humphries2009SPND2(
+            current_based_excitation=True, exp_input=1 / 0.7, params_for_pop=True
+        ),
+        name="str_d2",
+    )
+    str_fsi = ann.Population(
+        self.params["str_fsi.size"],
+        Izhikevich2007Humphries2009FSI(
+            current_based_excitation=True, exp_input=1 / 0.28, params_for_pop=True
+        ),
+        name="str_fsi",
+    )
+    ### BG Populations
+    stn = ann.Population(
+        self.params["stn.size"],
+        Izhikevich2003NoisyBaseNonlin(
+            stabilize=True, use_nonlin=False, exp_input=1 / 0.075
+        ),
+        name="stn",
+    )
+    snr = ann.Population(
+        self.params["snr.size"],
+        Izhikevich2003NoisyBaseNonlin(stabilize=True, use_nonlin=False),
+        name="snr",
+    )
+    gpe_proto = ann.Population(
+        self.params["gpe_proto.size"],
+        Izhikevich2003NoisyBaseNonlin(stabilize=True, use_nonlin=True),
+        name="gpe_proto",
+    )
+    gpe_arky = ann.Population(
+        self.params["gpe_arky.size"],
+        Izhikevich2003NoisyBaseNonlin(
+            stabilize=True, use_nonlin=True, exp_input=1 / 0.03
+        ),
+        name="gpe_arky",
+    )
+    gpe_cp = ann.Population(
+        self.params["gpe_cp.size"],
+        Izhikevich2003NoisyBaseNonlin(
+            stabilize=True, use_nonlin=True, exp_input=1 / 0.03
+        ),
+        name="gpe_cp",
+    )
+    thal = ann.Population(
+        self.params["thal.size"],
+        Izhikevich2003NoisyBaseNonlin(
+            stabilize=True, use_nonlin=False, exp_input=1 / 0.12
+        ),
+        name="thal",
+    )
+
+    ######   PROJECTIONS   ######
+
+    ### str d1 output
+    ann.Projection(
+        pre=str_d1,
+        post=snr,
+        target="gaba",
+        name=f"str_d1__{snr.name}",
+    )
+    ann.Projection(
+        pre=str_d1,
+        post=gpe_cp,
+        target="gaba",
+        name=f"str_d1__{gpe_cp.name}",
+    )
+    ann.Projection(
+        pre=str_d1,
+        post=str_d1,
+        target="gaba",
+        name="str_d1__str_d1",
+    )
+    ann.Projection(
+        pre=str_d1,
+        post=str_d2,
+        target="gaba",
+        name="str_d1__str_d2",
+    )
+    ### str d2 output
+    ann.Projection(
+        pre=str_d2,
+        post=gpe_proto,
+        target="gaba",
+        name=f"str_d2__{gpe_proto.name}",
+    )
+    ann.Projection(
+        pre=str_d2,
+        post=gpe_arky,
+        target="gaba",
+        name=f"str_d2__{gpe_arky.name}",
+    )
+    ann.Projection(
+        pre=str_d2,
+        post=gpe_cp,
+        target="gaba",
+        name=f"str_d2__{gpe_cp.name}",
+    )
+    ann.Projection(
+        pre=str_d2,
+        post=str_d1,
+        target="gaba",
+        name="str_d2__str_d1",
+    )
+    ann.Projection(
+        pre=str_d2,
+        post=str_d2,
+        target="gaba",
+        name="str_d2__str_d2",
+    )
+    ### str fsi output
+    ann.Projection(
+        pre=str_fsi,
+        post=str_d1,
+        target="gaba",
+        name="str_fsi__str_d1",
+    )
+    ann.Projection(
+        pre=str_fsi,
+        post=str_d2,
+        target="gaba",
+        name="str_fsi__str_d2",
+    )
+    ann.Projection(
+        pre=str_fsi,
+        post=str_fsi,
+        target="gaba",
+        name="str_fsi__str_fsi",
+    )
+    ### stn output
+    ann.Projection(
+        pre=stn,
+        post=snr,
+        target="ampa",
+        name=f"{stn.name}__{snr.name}",
+    )
+    ann.Projection(
+        pre=stn,
+        post=gpe_proto,
+        target="ampa",
+        name=f"{stn.name}__{gpe_proto.name}",
+    )
+    ann.Projection(
+        pre=stn,
+        post=gpe_arky,
+        target="ampa",
+        name=f"{stn.name}__{gpe_arky.name}",
+    )
+    ann.Projection(
+        pre=stn,
+        post=gpe_cp,
+        target="ampa",
+        name=f"{stn.name}__{gpe_cp.name}",
+    )
+    ### gpe proto output
+    ann.Projection(
+        pre=gpe_proto,
+        post=stn,
+        target="gaba",
+        name=f"{gpe_proto.name}__{stn.name}",
+    )
+    ann.Projection(
+        pre=gpe_proto,
+        post=snr,
+        target="gaba",
+        name=f"{gpe_proto.name}__{snr.name}",
+    )
+    ann.Projection(
+        pre=gpe_proto,
+        post=gpe_arky,
+        target="gaba",
+        name=f"{gpe_proto.name}__{gpe_arky.name}",
+    )
+    ann.Projection(
+        pre=gpe_proto,
+        post=gpe_cp,
+        target="gaba",
+        name=f"{gpe_proto.name}__{gpe_cp.name}",
+    )
+    ann.Projection(
+        pre=gpe_proto,
+        post=str_fsi,
+        target="gaba",
+        name=f"{gpe_proto.name}__str_fsi",
+    )
+    ### gpe arky output
+    ann.Projection(
+        pre=gpe_arky,
+        post=str_d1,
+        target="gaba",
+        name=f"{gpe_arky.name}__str_d1",
+    )
+    ann.Projection(
+        pre=gpe_arky,
+        post=str_d2,
+        target="gaba",
+        name=f"{gpe_arky.name}__str_d2",
+    )
+    ann.Projection(
+        pre=gpe_arky,
+        post=str_fsi,
+        target="gaba",
+        name=f"{gpe_arky.name}__str_fsi",
+    )
+    ann.Projection(
+        pre=gpe_arky,
+        post=gpe_proto,
+        target="gaba",
+        name=f"{gpe_arky.name}__{gpe_proto.name}",
+    )
+    ann.Projection(
+        pre=gpe_arky,
+        post=gpe_cp,
+        target="gaba",
+        name=f"{gpe_arky.name}__{gpe_cp.name}",
+    )
+    ### gpe cp output
+    ann.Projection(
+        pre=gpe_cp,
+        post=str_d1,
+        target="gaba",
+        name=f"{gpe_cp.name}__str_d1",
+    )
+    ann.Projection(
+        pre=gpe_cp,
+        post=str_d2,
+        target="gaba",
+        name=f"{gpe_cp.name}__str_d2",
+    )
+    ann.Projection(
+        pre=gpe_cp,
+        post=str_fsi,
+        target="gaba",
+        name=f"{gpe_cp.name}__str_fsi",
+    )
+    ann.Projection(
+        pre=gpe_cp,
+        post=gpe_proto,
+        target="gaba",
+        name=f"{gpe_cp.name}__{gpe_proto.name}",
+    )
+    ann.Projection(
+        pre=gpe_cp,
+        post=gpe_arky,
+        target="gaba",
+        name=f"{gpe_cp.name}__{gpe_arky.name}",
+    )
+    ### snr output
+    ann.Projection(
+        pre=snr,
+        post=thal,
+        target="gaba",
+        name=f"{snr.name}__{thal.name}",
+    )
+    ann.Projection(
+        pre=thal,
+        post=str_d1,
+        target="glut",
+        name=f"{thal.name}__str_d1",
+    )
+    ann.Projection(
+        pre=thal,
+        post=str_d2,
+        target="glut",
+        name=f"{thal.name}__str_d2",
+    )
+    ann.Projection(
+        pre=thal,
+        post=str_fsi,
+        target="ampa",
+        name=f"{thal.name}__str_fsi",
+    )
+
+    ### TimedInputs + CurrentÜrojections ###
+    inputs = self.model_creation_kwargs["input.rates"]
+    # inputs is currently shaped (steps,) and needs to be reshaped into (steps, post_pop_size) so post_pop_size times the same input
+    inputs = np.repeat(
+        inputs[:, np.newaxis], repeats=self.params["str_d1.size"], axis=1
+    )
+    schedule = self.model_creation_kwargs["input.schedule"]
+    inp = ann.TimedArray(
+        rates=inputs,
+        schedule=schedule,
+        name="TimedInput_cortex",
+    )
+    # # set schedule and period in c by my own (prevent ANNarchy bug) TODO this only works after compile... so do the update!
+    # value = [float(schedule * i) for i in range(inputs.shape[0])]
+    # val_int = np.rint(
+    #     np.atleast_1d(value) / self.model_creation_kwargs["timestep"]
+    # ).astype(np.int64)
+    # inp.cyInstance.set_schedule(val_int)
+    # value = -1
+    # period_steps = int(np.rint(value / self.model_creation_kwargs["timestep"]))
+    # inp.cyInstance.set_period(period_steps)
+    # create current projections
+    for pop in [
+        str_d1,
+        str_d2,
+        str_fsi,
+        thal,
+        gpe_arky,
+        gpe_cp,
+        stn,
+    ]:
+        proj = ann.CurrentInjection(
+            pre=inp,
+            post=pop,
+            target="cor",
+            name=f"{inp.name}__{pop.name}",
+        )
+        proj.connect_current()
