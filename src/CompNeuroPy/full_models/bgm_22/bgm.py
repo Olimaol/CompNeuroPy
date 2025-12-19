@@ -430,6 +430,9 @@ class BGM(CompNeuroModel):
             ### skip projections created by model components/inputs helpers
             if proj_name in self._components_created_by_mc_ci:
                 continue
+            ### skip projections starting with "TimedInput"
+            if proj_name.startswith("TimedInput"):
+                continue
             ### get the type of connectivity for projection
             try:
                 connectivity = self.params[proj_name + ".connectivity"]
