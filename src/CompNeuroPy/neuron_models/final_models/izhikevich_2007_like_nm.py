@@ -1787,7 +1787,11 @@ class Izhikevich2007Humphries2009SPND2(ann.Neuron):
             beta_2 = 0.156 : population
         """
 
-        syn = _syn_humphries2009_spn if exp_input == 0.0 else _syn_humphries2009_spn_exp_input
+        syn = (
+            _syn_humphries2009_spn
+            if exp_input == 0.0
+            else _syn_humphries2009_spn_exp_input
+        )
         i_v = (
             _I_syn_humphries2009_d2
             if not current_based_excitation
@@ -1891,6 +1895,7 @@ class Izhikevich2007Humphries2009FSI(ann.Neuron):
             a      = 0.2   : population
             b      = 0.025  : population
             c      = -60.0  : population
+            d      = 0.0  : population
             v_peak = 25.0   : population
 
             # dopamine modulation parameter
@@ -1900,7 +1905,11 @@ class Izhikevich2007Humphries2009FSI(ann.Neuron):
             epsilon = 0.625 : population
         """
 
-        syn = _syn_humphries2009_fsi if exp_input == 0.0 else _syn_humphries2009_fsi_exp_input
+        syn = (
+            _syn_humphries2009_fsi
+            if exp_input == 0.0
+            else _syn_humphries2009_fsi_exp_input
+        )
         i_v = (
             _I_syn_humphries2009_fsi
             if not current_based_excitation
