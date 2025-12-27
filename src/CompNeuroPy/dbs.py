@@ -413,10 +413,17 @@ class _CreateDBSmodel:
         neuron_model_init_parameter_dict = self.neuron_model_init_parameter_dict[
             pop_name
         ]
-        ### adjust these parameters to implement DBS
-        neuron_model_init_parameter_dict = self.add_DBS_to_neuron_model(
-            neuron_model_init_parameter_dict
-        )
+        ### adjust these parameters to implement DBS unless population is excluded
+        exclude_from_dbs = pop_name in self.excluded_populations_name_list
+        if exclude_from_dbs:
+            print(
+                f"Recreating population '{pop_name}' without DBS mechanisms (excluded)."
+            )
+        else:
+            print(f"Recreating population '{pop_name}' with DBS mechanisms.")
+            neuron_model_init_parameter_dict = self.add_DBS_to_neuron_model(
+                neuron_model_init_parameter_dict
+            )
         ### create the new neuron model
         neuron_model_new = ann.Neuron(**neuron_model_init_parameter_dict)
 
@@ -690,10 +697,17 @@ class _CreateDBSmodel:
         synapse_init_parameter_dict = self.synapse_init_parameter_dict[proj_name]
         ### get the stored parameters of the __init__ function of the Projection
         proj_init_parameter_dict = self.proj_init_parameter_dict[proj_name]
-        ### adjust the equations and paramters of the synapse model to implement DBS
-        synapse_init_parameter_dict = self.add_DBS_to_synapse_model(
-            synapse_init_parameter_dict,
+        ### check if this projection involves an excluded population
+        pre_name, post_name = self.pre_post_pop_name_dict[proj_name]
+        exclude_from_dbs = (
+            pre_name in self.excluded_populations_name_list
+            or post_name in self.excluded_populations_name_list
         )
+        ### adjust the equations and parameters of the synapse model to implement DBS
+        if not exclude_from_dbs:
+            synapse_init_parameter_dict = self.add_DBS_to_synapse_model(
+                synapse_init_parameter_dict,
+            )
         ### create the new synapse model
         synapse_new = ann.Synapse(**synapse_init_parameter_dict)
 
@@ -701,12 +715,8 @@ class _CreateDBSmodel:
         ### replace the synapse model with the new synapse model
         proj_init_parameter_dict["synapse"] = synapse_new
         ### replace pre and post to new populations
-        proj_init_parameter_dict["pre"] = ann.get_population(
-            self.pre_post_pop_name_dict[proj_name][0]
-        )
-        proj_init_parameter_dict["post"] = ann.get_population(
-            self.pre_post_pop_name_dict[proj_name][1]
-        )
+        proj_init_parameter_dict["pre"] = ann.get_population(pre_name)
+        proj_init_parameter_dict["post"] = ann.get_population(post_name)
         ### create the new projection
         proj_new = ann.Projection(**proj_init_parameter_dict)
 
@@ -1234,8 +1244,15 @@ class DBSstimulator:
         if isinstance(dbs_depolarization, type(None)):
             dbs_depolarization = self.dbs_depolarization
 
-        ### set depolarization of population
+        ### set depolarization of population (skip excluded populations)
+        excluded_pops = set(self.excluded_populations_list)
         for pop in ann.populations():
+            if pop in excluded_pops:
+                if hasattr(pop, "dbs_depolarization"):
+                    pop.dbs_depolarization = 0
+                continue
+            if not hasattr(pop, "dbs_depolarization"):
+                continue
             if pop == self.stimulated_population:
                 pop.dbs_depolarization = dbs_depolarization
             else:
@@ -1374,18 +1391,41 @@ class DBSstimulator:
         """
         Deactivate axon spikes forwarding for both orthodromic and antidromic.
         """
+        excluded_pops = set(self.excluded_populations_list)
         for pop in ann.populations():
-            ### deactivate axon spike genearation for all populations
-            pop.prob_axon_spike = 0
-            pop.axon_rate_amp = 0
-            ### deactivate antidromic transmission for all populations
-            pop.antidromic = 0
-            pop.antidromic_prob = 0
+            if pop in excluded_pops:
+                if hasattr(pop, "prob_axon_spike"):
+                    pop.prob_axon_spike = 0
+                if hasattr(pop, "axon_rate_amp"):
+                    pop.axon_rate_amp = 0
+                if hasattr(pop, "antidromic"):
+                    pop.antidromic = 0
+                if hasattr(pop, "antidromic_prob"):
+                    pop.antidromic_prob = 0
+                continue
+            ### deactivate axon spike generation for all non-excluded populations
+            if hasattr(pop, "prob_axon_spike"):
+                pop.prob_axon_spike = 0
+            if hasattr(pop, "axon_rate_amp"):
+                pop.axon_rate_amp = 0
+            ### deactivate antidromic transmission for all non-excluded populations
+            if hasattr(pop, "antidromic"):
+                pop.antidromic = 0
+            if hasattr(pop, "antidromic_prob"):
+                pop.antidromic_prob = 0
 
-        ### deactivate orthodromic transmission for all projections
+        ### deactivate orthodromic transmission for all projections that use DBS extensions
         for proj in ann.projections():
+            if not hasattr(proj, "axon_transmission"):
+                continue
+            if proj.pre in excluded_pops or proj.post in excluded_pops:
+                proj.axon_transmission = 0
+                if hasattr(proj, "p_axon_spike_trans"):
+                    proj.p_axon_spike_trans = 0
+                continue
             proj.axon_transmission = 0
-            proj.p_axon_spike_trans = 0
+            if hasattr(proj, "p_axon_spike_trans"):
+                proj.p_axon_spike_trans = 0
 
     def _set_orthodromic(
         self,
@@ -1423,6 +1463,7 @@ class DBSstimulator:
                 keys for each population with a different value for the axon_rate of
                 the efferent axons of this population.
         """
+        excluded_pops = set(self.excluded_populations_list)
         if efferents:
             ### activate all efferent projections
             projection_list = ann.projections(pre=self.stimulated_population)
@@ -1470,19 +1511,25 @@ class DBSstimulator:
         if passing_fibres:
             ### activate all passing projections
             for proj_idx, proj in enumerate(self.passing_fibres_list):
-                proj.axon_transmission = 1
-                proj.p_axon_spike_trans = passing_fibres_strength[proj_idx]
+                if proj.pre in excluded_pops or proj.post in excluded_pops:
+                    continue
+                if hasattr(proj, "axon_transmission"):
+                    proj.axon_transmission = 1
+                if hasattr(proj, "p_axon_spike_trans"):
+                    proj.p_axon_spike_trans = passing_fibres_strength[proj_idx]
                 ### set prob_axon_spike for spiking model
-                proj.pre.prob_axon_spike = self._axon_spikes_per_pulse_to_prob(
-                    axon_spikes_per_pulse
-                )
+                if hasattr(proj.pre, "prob_axon_spike"):
+                    proj.pre.prob_axon_spike = self._axon_spikes_per_pulse_to_prob(
+                        axon_spikes_per_pulse
+                    )
                 ### set axon_rate_amp for rate-coded model
-                if proj.pre in axon_rate_amp.keys():
-                    ### axon_rate_amp is specified for this population
-                    proj.pre.axon_rate_amp = axon_rate_amp[proj.pre]
-                else:
-                    ### axon_rate_amp is not specified for this population, use default value
-                    proj.pre.axon_rate_amp = axon_rate_amp["default"]
+                if hasattr(proj.pre, "axon_rate_amp"):
+                    if proj.pre in axon_rate_amp.keys():
+                        ### axon_rate_amp is specified for this population
+                        proj.pre.axon_rate_amp = axon_rate_amp[proj.pre]
+                    else:
+                        ### axon_rate_amp is not specified for this population, use default value
+                        proj.pre.axon_rate_amp = axon_rate_amp["default"]
 
     def _set_antidromic(
         self,
@@ -1519,6 +1566,8 @@ class DBSstimulator:
                 Number of average axon spikes per DBS pulse
         """
 
+        excluded_pops = set(self.excluded_populations_list)
+
         if efferents:
             ### activate all efferent projections, i.e. antodromic activation of stimulated population
             pop = self.stimulated_population
@@ -1554,6 +1603,8 @@ class DBSstimulator:
             presyn_pop_list = []
             presyn_pop_name_list = []
             for proj in self.passing_fibres_list:
+                if proj.pre in excluded_pops:
+                    continue
                 ### check if presynaptic population is already in list
                 if proj.pre.name not in presyn_pop_name_list:
                     presyn_pop_name_list.append(proj.pre.name)
@@ -1731,8 +1782,15 @@ class DBSstimulator:
             ### create new dbs_on_array
             dbs_on_array = self._create_dbs_on_array(population_proportion, seed)
 
-        ### set DBS on for all populations
+        ### set DBS on for all populations except excluded ones
+        excluded_pops = set(self.excluded_populations_list)
         for pop in ann.populations():
+            if pop in excluded_pops:
+                if hasattr(pop, "dbs_on"):
+                    pop.dbs_on = 0
+                continue
+            if not hasattr(pop, "dbs_on"):
+                continue
             ### of the stimulated population only the specified proportion is affected by DBS
             if pop == self.stimulated_population:
                 pop.dbs_on = dbs_on_array
@@ -1743,11 +1801,23 @@ class DBSstimulator:
         """
         Deactivate DBS.
         """
-        ### set DBS off for all populations
+        ### set DBS off for all populations except excluded ones
+        excluded_pops = set(self.excluded_populations_list)
         for pop in ann.populations():
-            pop.dbs_on = 0
-            pop.prob_axon_spike = 0
-            pop.axon_rate_amp = 0
+            if pop in excluded_pops:
+                if hasattr(pop, "dbs_on"):
+                    pop.dbs_on = 0
+                if hasattr(pop, "prob_axon_spike"):
+                    pop.prob_axon_spike = 0
+                if hasattr(pop, "axon_rate_amp"):
+                    pop.axon_rate_amp = 0
+                continue
+            if hasattr(pop, "dbs_on"):
+                pop.dbs_on = 0
+            if hasattr(pop, "prob_axon_spike"):
+                pop.prob_axon_spike = 0
+            if hasattr(pop, "axon_rate_amp"):
+                pop.axon_rate_amp = 0
 
         ### deactivate DBS axon transmission
         self._deactivate_axon_DBS()
