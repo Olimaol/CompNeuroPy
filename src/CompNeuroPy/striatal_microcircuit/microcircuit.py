@@ -431,18 +431,11 @@ class Microcircuit:
                 if key[1] in {"dSPN", "iSPN", "FS"}:
                     fs_debug_cache.setdefault(key[0], {})[key[1]] = inputs
 
-            # update the TimedArray population with weighted inputs
-            inp_population.reset()
-            inp_population.update(rates=inputs * self.mean_weights_by_type[key])
-
-            # set schedule and period in c by my own (prevent ANNarchy bug)
-            schedule = self.dt
-            value = [float(schedule * i) for i in range(inputs.shape[0])]
-            val_int = np.rint(np.atleast_1d(value) / self.dt).astype(np.int64)
-            inp_population.cyInstance.set_schedule(val_int)
-            value = -1
-            period_steps = int(np.rint(value / self.dt))
-            inp_population.cyInstance.set_period(period_steps)
+            # update the TimedArray population with weighted inputs, rewinding the
+            # internal timers so the new chunk is played from its first block
+            inp_population.update(
+                rates=inputs * self.mean_weights_by_type[key], reset=True
+            )
 
         if self.verbose and self.debug and dSPN_inputs_sum:
             # plot the summed cortical inputs to dSPN neuron 0 over time
@@ -1228,9 +1221,23 @@ class Microcircuit:
 
             dt_seconds = float(time_arr[1] - time_arr[0])
             dt_ms = dt_seconds * 1000.0
-            if not np.isclose(dt_ms, self.dt, rtol=1e-6, atol=1e-9):
+
+            if np.isclose(dt_ms, self.dt, rtol=1e-6, atol=1e-9):
+                expansion_factor = 1
+            elif dt_ms > self.dt:
+                ratio = dt_ms / self.dt
+                expansion_factor = int(round(ratio))
+                if not np.isclose(ratio, expansion_factor, rtol=1e-6, atol=1e-9):
+                    raise ValueError(
+                        f"Cortical drive dt ({dt_ms:.6f} ms) is not an integer multiple of Microcircuit dt ({self.dt:.6f} ms)."
+                    )
+                if self.verbose:
+                    print(
+                        f"Cortical drive dt ({dt_ms:.6f} ms) is {expansion_factor}x the Microcircuit dt; repeating rate values accordingly."
+                    )
+            else:
                 raise ValueError(
-                    f"Cortical drive dt ({dt_ms:.6f} ms) does not match Microcircuit dt ({self.dt:.6f} ms)."
+                    f"Cortical drive dt ({dt_ms:.6f} ms) is finer than Microcircuit dt ({self.dt:.6f} ms); please regenerate cortical drive data."
                 )
 
             # Simulate spike counts per cortical region for dSPN and iSPN receivers
@@ -1254,12 +1261,17 @@ class Microcircuit:
                             f"Rate key '{rate_key}' missing in cortical drive file {rate_path}."
                         )
                     rate_series = np.asarray(data[rate_key])
-                    if rate_series.size < self.n_steps:
+                    available_steps = rate_series.size * expansion_factor
+                    if available_steps < self.n_steps:
                         raise ValueError(
-                            f"Rate series for {cortical_region} has only {rate_series.size} samples; "
+                            f"Rate series for {cortical_region} provides {available_steps} microcircuit-sized steps after expansion; "
                             f"expected at least {self.n_steps}."
                         )
-                    rate_segment = rate_series[: self.n_steps]
+                    if expansion_factor > 1:
+                        rate_series_expanded = np.repeat(rate_series, expansion_factor)
+                        rate_segment = rate_series_expanded[: self.n_steps]
+                    else:
+                        rate_segment = rate_series[: self.n_steps]
 
                     # number of expected inputs from this cortical region
                     N_total = self.N_cortical_inputs_dict[receiver_type]

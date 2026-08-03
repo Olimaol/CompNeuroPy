@@ -202,17 +202,10 @@ class CorticalInputs:
             inp_population = self.annarchy_inp_populations[key]
             inputs = next(inp_iterator).T  # (n_steps, n_neurons)
 
-            inp_population.reset()
-            inp_population.update(rates=inputs * self.mean_weights_by_type[key])
-
-            # Explicitly set schedule/period to avoid ANNarchy defaults biting us
-            schedule = self.dt
-            value = [float(schedule * i) for i in range(inputs.shape[0])]
-            val_int = np.rint(np.atleast_1d(value) / self.dt).astype(np.int64)
-            inp_population.cyInstance.set_schedule(val_int)
-            value = -1
-            period_steps = int(np.rint(value / self.dt))
-            inp_population.cyInstance.set_period(period_steps)
+            # rewind the internal timers so the new chunk is played from its first block
+            inp_population.update(
+                rates=inputs * self.mean_weights_by_type[key], reset=True
+            )
 
         if run_simulation:
             simulate(self.update_time)
