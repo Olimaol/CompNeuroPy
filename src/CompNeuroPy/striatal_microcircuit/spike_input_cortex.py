@@ -539,6 +539,85 @@ if __name__ == "__main__":
     )
     _plot_counts(counts_dist_rho[: min(R_dist, 40)], "Distance dependent (with rho)")
 
+    # 6) Three-receiver demo with shared input between receivers 0 and 1
+    n_receivers_demo = 3
+    n_steps_demo = 150
+    n_trials_demo = 1000
+    rate_demo = np.linspace(5.0, 15.0, n_steps_demo)  # Hz
+    dt_demo = 1.0  # ms
+    concentration_demo = 100.0
+    rng_demo = np.random.default_rng(2025)
+
+    shared_demo = np.array(
+        [
+            [1.0, 0.9, 0.0],
+            [0.9, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+        ],
+        dtype=np.float64,
+    )
+
+    sim_demo = ReceiverSimulator(
+        n_receivers=n_receivers_demo,
+        n_steps=n_steps_demo,
+        n_trials=n_trials_demo,
+        rng=rng_demo,
+    )
+    global_p_demo = sim_demo.get_global_p(dt=dt_demo, rate=rate_demo, rho=0.0)
+    print(global_p_demo)
+    p_matrix_demo = sim_demo.generate_p_matrix(
+        global_p_curve=global_p_demo,
+        shared_input=shared_demo,
+        concentration=concentration_demo,
+    )
+    print(p_matrix_demo)
+    counts_demo = sim_demo.simulate(p_matrix=p_matrix_demo, shared_input=shared_demo)
+
+    time_demo = np.arange(n_steps_demo)
+
+    fig_prob, axes_prob = plt.subplots(
+        nrows=n_receivers_demo, ncols=1, figsize=(9, 7), sharex=True
+    )
+    max_combined_max = 0.0
+    for idx, ax in enumerate(axes_prob):
+        ax.plot(time_demo, global_p_demo, color="black", linewidth=4, label="global p")
+        ax.plot(
+            time_demo,
+            p_matrix_demo[idx],
+            color=f"C{idx}",
+            linewidth=3,
+            label=f"receiver {idx} p",
+        )
+        combined_max = max(float(global_p_demo.max()), float(p_matrix_demo[idx].max()))
+        if combined_max > max_combined_max:
+            max_combined_max = combined_max
+        ax.tick_params(labelsize=20)
+    for ax in axes_prob:
+        ax.set_ylim(0.0, max_combined_max * 1.05)
+    axes_prob[-2].set_ylabel("Probability", fontsize=20)
+    axes_prob[-1].set_xlabel("Time", fontsize=20)
+    fig_prob.tight_layout()
+
+    fig_demo, axes_demo = plt.subplots(
+        nrows=n_receivers_demo, ncols=1, figsize=(9, 7), sharex=True
+    )
+    for idx, ax in enumerate(axes_demo):
+        ax.step(time_demo, counts_demo[idx], where="mid", linewidth=3, color=f"C{idx}")
+        ax.tick_params(labelsize=20)
+    axes_demo[-2].set_ylabel("Spikes", fontsize=20)
+    axes_demo[-1].set_xlabel("Time", fontsize=20)
+    # axes_demo[0].text(
+    #     0.02,
+    #     0.9,
+    #     f"Input neurons: {n_trials_demo}, rate: {rate_demo} Hz",
+    #     transform=axes_demo[0].transAxes,
+    #     fontsize=20,
+    #     verticalalignment="top",
+    #     bbox=dict(boxstyle="round", facecolor="white", alpha=0.7),
+    # )
+    fig_demo.tight_layout()
+    plt.show()
+
     # 6) Memmap equivalence for homogeneous and distance-dependent
     with tempfile.TemporaryDirectory() as tmpdir:
         fname_h = os.path.join(tmpdir, "homogeneous.dat")
