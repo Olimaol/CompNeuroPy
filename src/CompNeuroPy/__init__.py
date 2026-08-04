@@ -106,7 +106,7 @@ from CompNeuroPy.monitors import CompNeuroMonitors
 from CompNeuroPy.experiment import CompNeuroExp
 from CompNeuroPy.generate_model import CompNeuroModel
 from CompNeuroPy.generate_simulation import CompNeuroSim
-from CompNeuroPy.dbs import DBSstimulator
+from CompNeuroPy.dbs import DBSstimulator, add_dbs_mechanisms
 from CompNeuroPy.striatal_microcircuit.microcircuit import Microcircuit
 from CompNeuroPy.striatal_microcircuit.cortical_inputs import CorticalInputs
 

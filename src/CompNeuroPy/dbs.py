@@ -20,6 +20,522 @@ _connector_methods_dict = {
     "From File": ann_ConnectorMethods.connect_from_file,
 }
 
+### names of the DBS parameters added to a model, used to check whether a
+### population or projection carries the DBS mechanisms
+DBS_SPIKING_NEURON_PARAMETERS = [
+    "dbs_depolarization",
+    "dbs_on",
+    "antidromic",
+    "antidromic_prob",
+    "prob_axon_spike",
+]
+DBS_RATE_CODED_NEURON_PARAMETERS = [
+    "dbs_depolarization",
+    "dbs_on",
+    "axon_rate_amp",
+]
+DBS_SYNAPSE_PARAMETERS = ["p_axon_spike_trans"]
+
+
+def add_term_to_eq_line(line: str, term: str):
+    """
+    Add a term to an equation string, in front of a possible ANNarchy flag.
+
+    Args:
+        line (str):
+            Equation string
+        term (str):
+            Term to add
+
+    Returns:
+        line_new (str):
+            Equation string with added term
+    """
+    ### check if colon is in line
+    if ":" not in line:
+        ### add term
+        return line + term
+    ### split line at colon, add term to the equation part, join again
+    line_split = line.split(":")
+    line_split[0] = line_split[0] + term
+    return ":".join(line_split)
+
+
+def get_line_is_dvdt(line: str):
+    """
+    Check if a equation string contains dv/dt left of the equal sign.
+
+    Args:
+        line (str):
+            Equation string
+    """
+    if "v" not in line:
+        return False
+
+    ### remove whitespaces
+    line = line.replace(" ", "")
+
+    ### check if dv/dt is in line and check if dv/dt is left of =
+    if "dv/dt" in line and line.find("dv/dt") < line.find("="):
+        return True
+
+    return False
+
+
+def get_line_is_dmpdt(line: str):
+    """
+    Check if a equation string contains dmp/dt left of the equal sign.
+
+    Args:
+        line (str):
+            Equation string
+    """
+    if "mp" not in line:
+        return False
+
+    ### remove whitespaces
+    line = line.replace(" ", "")
+
+    ### check if dmp/dt is in line and check if dmp/dt is left of =
+    if "dmp/dt" in line and line.find("dmp/dt") < line.find("="):
+        return True
+
+    return False
+
+
+def add_DBS_to_neuron_model(neuron_model_init_parameter_dict):
+    """
+    Add DBS mechanisms to the neuron model.
+
+    Args:
+        neuron_model_init_parameter_dict (dict):
+            Dictionary with the parameters of the __init__ function of the Neuron
+
+    Returns:
+        neuron_model_init_parameter_dict (dict):
+            Dictionary with the parameters of the __init__ function of the Neuron
+            with DBS mechanisms added
+    """
+
+    ### get the type of the neuron --> DBS mechanisms different for spiking and rate-coded neurons
+    spiking = not (isinstance(neuron_model_init_parameter_dict["spike"], type(None)))
+
+    ### add DBS mechanisms
+    if spiking:
+        return add_DBS_to_spiking_neuron_model(neuron_model_init_parameter_dict)
+    return add_DBS_to_rate_coded_neuron_model(neuron_model_init_parameter_dict)
+
+
+def add_DBS_to_spiking_neuron_model(neuron_model_init_parameter_dict):
+    """
+    Add DBS mechanisms to the spiking neuron model
+
+    Args:
+        neuron_model_init_parameter_dict (dict):
+            Dictionary with the parameters of the __init__ function of the Neuron
+
+    Returns:
+        neuron_model_init_parameter_dict (dict):
+            Dictionary with the parameters of the __init__ function of the Neuron
+            with DBS mechanisms added
+    """
+
+    ### 1st add new DBS parameters
+    ### get the parameters as a list of strings
+    parameters_line_split_list = str(
+        neuron_model_init_parameter_dict["parameters"]
+    ).splitlines()
+    ### append list with new parameters
+    parameters_line_split_list.append("dbs_depolarization = 0 : population")
+    parameters_line_split_list.append("dbs_on = 0")
+    parameters_line_split_list.append("antidromic = 0 : population")
+    parameters_line_split_list.append("antidromic_prob = 0 : population")
+    parameters_line_split_list.append("prob_axon_spike = 0 : population")
+    ### join list to a string
+    neuron_model_init_parameter_dict["parameters"] = "\n".join(
+        parameters_line_split_list
+    )
+
+    ### 2nd add new equations
+    ### get the equations of the neuron model as a list of strings
+    equations_line_split_list = str(
+        neuron_model_init_parameter_dict["equations"]
+    ).splitlines()
+    ### prepend uniform variables
+    equations_line_split_list.insert(0, "unif_var_dbs1 = Uniform(0.0, 1.0)")
+    equations_line_split_list.insert(0, "unif_var_dbs2 = Uniform(0.0, 1.0)")
+    ### search for equation with dv/dt
+    lines_with_v_count = 0
+    for line_idx, line in enumerate(equations_line_split_list):
+        if get_line_is_dvdt(line):
+            ### add depolarization term
+            equations_line_split_list[line_idx] = add_term_to_eq_line(
+                line=equations_line_split_list[line_idx],
+                term=" + pulse(t)*dbs_on*dbs_depolarization*neg(-90 - v)",
+            )
+            ### increase counter
+            lines_with_v_count += 1
+    if lines_with_v_count == 0:
+        raise ValueError(
+            "No line with dv/dt found, only Izhikevich spiking models supported yet"
+        )
+    ### join list to a string
+    neuron_model_init_parameter_dict["equations"] = "\n".join(equations_line_split_list)
+
+    ### 3rd add axon spike term
+    neuron_model_init_parameter_dict["axon_spike"] = (
+        "pulse(t)*dbs_on*unif_var_dbs1 > 1-prob_axon_spike"
+    )
+
+    ### 4th add axon reset term
+    neuron_model_init_parameter_dict[
+        "axon_reset"
+    ] = """
+            v += ite(unif_var_dbs2 < antidromic_prob, dbs_on*antidromic*(-v + c), 0)
+            u += ite(unif_var_dbs2 < antidromic_prob, dbs_on*antidromic*d, 0)
+        """
+
+    ### 5th extend description
+    neuron_model_init_parameter_dict["description"] = (
+        f"{neuron_model_init_parameter_dict['description']}\nWith DBS mechanisms implemented."
+    )
+
+    return neuron_model_init_parameter_dict
+
+
+def add_DBS_to_rate_coded_neuron_model(neuron_model_init_parameter_dict):
+    """
+    Add DBS mechanisms to the rate-coded neuron model
+
+    Args:
+        neuron_model_init_parameter_dict (dict):
+            Dictionary with the parameters of the __init__ function of the Neuron
+
+    Returns:
+        neuron_model_init_parameter_dict (dict):
+            Dictionary with the parameters of the __init__ function of the Neuron
+            with DBS mechanisms added
+    """
+
+    ### 1st add new DBS parameters
+    ### get the parameters as a list of strings
+    parameters_line_split_list = str(
+        neuron_model_init_parameter_dict["parameters"]
+    ).splitlines()
+    ### append list with new parameters
+    parameters_line_split_list.append("dbs_depolarization = 0 : population")
+    parameters_line_split_list.append("dbs_on = 0")
+    parameters_line_split_list.append(
+        "axon_rate_amp = 1.0 : population # equivalent to prob_axon_spike in spiking model"
+    )
+    ### join list to a string
+    neuron_model_init_parameter_dict["parameters"] = "\n".join(
+        parameters_line_split_list
+    )
+
+    ### 2nd add new equations
+    ### get the equations of the neuron model as a list of strings
+    equations_line_split_list = str(
+        neuron_model_init_parameter_dict["equations"]
+    ).splitlines()
+    ### append axon_rate
+    equations_line_split_list.append(
+        "axon_rate = axon_rate_amp*dbs_on # equivalent to axon_spike in spiking model"
+    )
+    ### search for equation with dmp/dt
+    lines_with_mp_count = 0
+    for line_idx, line in enumerate(equations_line_split_list):
+        if get_line_is_dmpdt(line):
+            ### add depolarization term
+            equations_line_split_list[line_idx] = add_term_to_eq_line(
+                line=equations_line_split_list[line_idx],
+                term=" + pulse(t)*dbs_on*dbs_depolarization*neg(-1 - mp)",
+            )
+            lines_with_mp_count += 1
+    if lines_with_mp_count == 0:
+        raise ValueError(
+            "No line with dmp/dt found, only rate-coded models with mp as 'membrane potential' supported yet"
+        )
+    ### join list to a string
+    neuron_model_init_parameter_dict["equations"] = "\n".join(equations_line_split_list)
+
+    ### 3rd extend description
+    neuron_model_init_parameter_dict["description"] = (
+        f"{neuron_model_init_parameter_dict['description']}\nWith DBS mechanisms implemented."
+    )
+
+    return neuron_model_init_parameter_dict
+
+
+def add_DBS_to_synapse_model(synapse_init_parameter_dict):
+    """
+    Add DBS mechanisms to the synapse model.
+
+    Args:
+        synapse_init_parameter_dict (dict):
+            Dictionary with the parameters of the __init__ function of the Synapse
+
+    Returns:
+        synapse_init_parameter_dict (dict):
+            Dictionary with the parameters of the __init__ function of the Synapse
+            with DBS mechanisms added
+    """
+
+    ### check if projection is spiking
+    spiking = not (isinstance(synapse_init_parameter_dict["pre_spike"], type(None)))
+
+    ### add DBS mechanisms
+    if spiking:
+        return add_DBS_to_spiking_synapse_model(synapse_init_parameter_dict)
+    return add_DBS_to_rate_coded_synapse_model(synapse_init_parameter_dict)
+
+
+def add_DBS_to_spiking_synapse_model(synapse_init_parameter_dict):
+    """
+    Add DBS mechanisms to the spiking synapse model.
+
+    Args:
+        synapse_init_parameter_dict (dict):
+            Dictionary with the parameters of the __init__ function of the Synapse
+
+    Returns:
+        synapse_init_parameter_dict (dict):
+            Dictionary with the parameters of the __init__ function of the Synapse
+            with DBS mechanisms added
+    """
+
+    ### 1st add new DBS parameters
+    ### get the parameters as a list of strings
+    parameters_line_split_list = str(
+        synapse_init_parameter_dict["parameters"]
+    ).splitlines()
+    ### append list with new parameters
+    parameters_line_split_list.append("p_axon_spike_trans=0 : projection")
+    ### join list to a string
+    synapse_init_parameter_dict["parameters"] = "\n".join(parameters_line_split_list)
+
+    ### 2nd add new equation for uniform variable
+    ### get the equations of the synapse model as a list of strings
+    equations_line_split_list = str(
+        synapse_init_parameter_dict["equations"]
+    ).splitlines()
+    ### prepend uniform variable
+    equations_line_split_list.insert(0, "unif_var_dbs = Uniform(0., 1.)")
+    ### join list to a string
+    synapse_init_parameter_dict["equations"] = "\n".join(equations_line_split_list)
+
+    ### 3rd add pre_axon_spike
+    synapse_init_parameter_dict["pre_axon_spike"] = (
+        "g_target+=ite(unif_var_dbs<p_axon_spike_trans,w*post.dbs_on,0)"
+    )
+
+    ### 4th extend description
+    synapse_init_parameter_dict["description"] = (
+        f"{synapse_init_parameter_dict['description']}\nWith DBS mechanisms implemented."
+    )
+
+    return synapse_init_parameter_dict
+
+
+def add_DBS_to_rate_coded_synapse_model(synapse_init_parameter_dict):
+    """
+    Add DBS mechanisms to the rate-coded synapse model.
+
+    Args:
+        synapse_init_parameter_dict (dict):
+            Dictionary with the parameters of the __init__ function of the Synapse
+
+    Returns:
+        synapse_init_parameter_dict (dict):
+            Dictionary with the parameters of the __init__ function of the Synapse
+            with DBS mechanisms added
+    """
+
+    ### 1st add new DBS parameters
+    ### get the parameters as a list of strings
+    parameters_line_split_list = str(
+        synapse_init_parameter_dict["parameters"]
+    ).splitlines()
+    ### append list with new parameters
+    parameters_line_split_list.append("p_axon_spike_trans=0 : projection")
+    ### join list to a string
+    synapse_init_parameter_dict["parameters"] = "\n".join(parameters_line_split_list)
+
+    ### 2nd add new equations and replace pre.r
+    ### get the equations of the synapse model as a list of strings
+    equations_line_split_list = str(
+        synapse_init_parameter_dict["equations"]
+    ).splitlines()
+    ### replace pre.r with pre_rate everywhere
+    for key, val in synapse_init_parameter_dict.items():
+        if isinstance(val, str):
+            synapse_init_parameter_dict[key] = val.replace("pre.r", "pre_rate")
+    ### prepend pre_rate definition
+    equations_line_split_list.insert(
+        0, "pre_rate = pre.r + p_axon_spike_trans*pre.axon_rate*post.dbs_on"
+    )
+    ### join list to a string
+    synapse_init_parameter_dict["equations"] = "\n".join(equations_line_split_list)
+
+    ### 3rd extend description
+    synapse_init_parameter_dict["description"] = (
+        f"{synapse_init_parameter_dict['description']}\nWith DBS mechanisms implemented."
+    )
+
+    return synapse_init_parameter_dict
+
+
+def _refresh_derived_fields(obj, description: dict, extra_init: dict = {}):
+    """
+    Recompute the fields ANNarchy derives from a neuron or synapse model.
+
+    Population.__init__ and Projection.__init__ derive exactly these from the
+    model: parameters, variables, attributes, functions and init. Everything else
+    (geometry, connectivity, id, name, specific templates) is independent of it,
+    which is what makes swapping the model in place possible.
+
+    Args:
+        obj (Population | Projection):
+            Object whose model was just replaced
+        description (dict):
+            The `description` of the freshly analysed model
+        extra_init (dict, optional):
+            Entries that belong in `init` but do not come from the model, i.e. the
+            Projection control flags. Default: {}
+    """
+    ### the values already assigned before the retrofit, they have to survive it
+    previous_init = dict(obj.init)
+
+    ### recompute the name lists, attributes gates __setattr__ so it must be
+    ### updated before anything assigns a DBS parameter
+    object.__setattr__(obj, "parameters", [p["name"] for p in description["parameters"]])
+    object.__setattr__(obj, "variables", [v["name"] for v in description["variables"]])
+    object.__setattr__(obj, "attributes", obj.parameters + obj.variables)
+    object.__setattr__(obj, "functions", [f["name"] for f in description["functions"]])
+
+    ### rebuild init from the new model, then put the previously set values back
+    init = dict(extra_init)
+    for param in description["parameters"]:
+        init[param["name"]] = param["init"]
+    for var in description["variables"]:
+        init[var["name"]] = var["init"]
+    for name, value in previous_init.items():
+        if name in init:
+            init[name] = value
+    object.__setattr__(obj, "init", init)
+
+
+def add_dbs_mechanisms(
+    populations: list[ann.Population] = [],
+    projections: list[ann.Projection] = [],
+):
+    """
+    Add the DBS mechanisms to already created populations and projections.
+
+    This is the alternative to `DBSstimulator(auto_implement=True)`, which clears
+    the whole network and recreates it. Recreation rebuilds every population as a
+    plain `Population` and every projection through a table of connector
+    functions, so it cannot survive specific populations or projections
+    (`TimedArray`, `CurrentInjection`, anything whose `connector_name` is
+    "Specific") and it invalidates every Python pointer into the model.
+
+    This function instead swaps the neuron/synapse model on the existing objects
+    and recomputes the fields ANNarchy derives from it. Connectivity, object
+    identity and specific templates all survive.
+
+    !!! warning
+        Call this after the populations and projections are created and
+        connected, and **before** `compile()`.
+
+    Args:
+        populations (list[Population], optional):
+            Populations which should get the DBS mechanisms. Default: []
+        projections (list[Projection], optional):
+            Projections which should get the DBS mechanisms. Their pre- and
+            post-synaptic populations have to be in `populations` (here or in an
+            earlier call), since the synapse equations read `post.dbs_on` and
+            `pre.axon_rate`. Default: []
+    """
+    neuron_init_params = [
+        param
+        for param in inspect.signature(ann.Neuron.__init__).parameters
+        if param != "self"
+    ]
+    synapse_init_params = [
+        param
+        for param in inspect.signature(ann.Synapse.__init__).parameters
+        if param != "self"
+    ]
+
+    for pop in populations:
+        if pop.initialized:
+            raise RuntimeError(
+                f"add_dbs_mechanisms: population '{pop.name}' is already compiled. "
+                "The DBS mechanisms change the neuron model, so they have to be "
+                "added before compile()."
+            )
+        ### rebuild the neuron model with the DBS terms added
+        neuron_init_parameter_dict = {
+            param: getattr(pop.neuron_type, param) for param in neuron_init_params
+        }
+        neuron_new = ann.Neuron(
+            **add_DBS_to_neuron_model(neuron_init_parameter_dict)
+        )
+        neuron_new._analyse()
+        object.__setattr__(pop, "neuron_type", neuron_new)
+        _refresh_derived_fields(pop, neuron_new.description)
+
+    for proj in projections:
+        if proj.initialized:
+            raise RuntimeError(
+                f"add_dbs_mechanisms: projection '{proj.name}' is already compiled. "
+                "The DBS mechanisms change the synapse model, so they have to be "
+                "added before compile()."
+            )
+        ### rebuild the synapse model with the DBS terms added
+        synapse_init_parameter_dict = {
+            param: getattr(proj.synapse_type, param) for param in synapse_init_params
+        }
+        synapse_new = ann.Synapse(
+            **add_DBS_to_synapse_model(synapse_init_parameter_dict)
+        )
+        ### Projection.__init__ sets the type from the presynaptic neuron before
+        ### analysing, _analyse() depends on it
+        synapse_new.type = proj.synapse_type.type
+        synapse_new._analyse()
+        object.__setattr__(proj, "synapse_type", synapse_new)
+        _refresh_derived_fields(
+            proj,
+            synapse_new.description,
+            extra_init={
+                "transmission": True,
+                "axon_transmission": True,
+                "update": True,
+                "plasticity": True,
+            },
+        )
+
+
+def _missing_dbs_parameters(pop: ann.Population):
+    """
+    Get the DBS parameters a population should carry but does not.
+
+    Args:
+        pop (Population):
+            Population to check
+
+    Returns:
+        missing (list[str]):
+            Names of the missing DBS parameters, empty if the population carries
+            the DBS mechanisms
+    """
+    required = (
+        DBS_SPIKING_NEURON_PARAMETERS
+        if pop.neuron_type.type == "spike"
+        else DBS_RATE_CODED_NEURON_PARAMETERS
+    )
+    return [name for name in required if name not in pop.attributes]
+
 
 class _CreateDBSmodel:
     """
@@ -421,7 +937,7 @@ class _CreateDBSmodel:
             )
         else:
             print(f"Recreating population '{pop_name}' with DBS mechanisms.")
-            neuron_model_init_parameter_dict = self.add_DBS_to_neuron_model(
+            neuron_model_init_parameter_dict = add_DBS_to_neuron_model(
                 neuron_model_init_parameter_dict
             )
         ### create the new neuron model
@@ -441,246 +957,6 @@ class _CreateDBSmodel:
         ### set the parameters and variables
         for attr_name, attr_val in neuron_model_attr_dict.items():
             setattr(pop_new, attr_name, attr_val)
-
-    def add_DBS_to_neuron_model(self, neuron_model_init_parameter_dict):
-        """
-        Add DBS mechanisms to the neuron model.
-
-        Args:
-            neuron_model_init_parameter_dict (dict):
-                Dictionary with the parameters of the __init__ function of the Neuron
-
-        Returns:
-            neuron_model_init_parameter_dict (dict):
-                Dictionary with the parameters of the __init__ function of the Neuron
-                with DBS mechanisms added
-        """
-
-        ### get the type of the neuron --> DBS mechanisms different for spiking and rate-coded neurons
-        spiking = not (
-            isinstance(neuron_model_init_parameter_dict["spike"], type(None))
-        )
-
-        ### add DBS mechanisms
-        if spiking:
-            return self.add_DBS_to_spiking_neuron_model(
-                neuron_model_init_parameter_dict
-            )
-        else:
-            return self.add_DBS_to_rate_coded_neuron_model(
-                neuron_model_init_parameter_dict
-            )
-
-    def add_DBS_to_spiking_neuron_model(self, neuron_model_init_parameter_dict):
-        """
-        Add DBS mechanisms to the spiking neuron model
-
-        Args:
-            neuron_model_init_parameter_dict (dict):
-                Dictionary with the parameters of the __init__ function of the Neuron
-
-        Returns:
-            neuron_model_init_parameter_dict (dict):
-                Dictionary with the parameters of the __init__ function of the Neuron
-                with DBS mechanisms added
-        """
-
-        ### 1st add new DBS parameters
-        ### get the parameters as a list of strings
-        parameters_line_split_list = str(
-            neuron_model_init_parameter_dict["parameters"]
-        ).splitlines()
-        ### append list with new parameters
-        parameters_line_split_list.append("dbs_depolarization = 0 : population")
-        parameters_line_split_list.append("dbs_on = 0")
-        parameters_line_split_list.append("antidromic = 0 : population")
-        parameters_line_split_list.append("antidromic_prob = 0 : population")
-        parameters_line_split_list.append("prob_axon_spike = 0 : population")
-        ### join list to a string
-        neuron_model_init_parameter_dict["parameters"] = "\n".join(
-            parameters_line_split_list
-        )
-
-        ### 2nd add new equations
-        ### get the equations of the neuron model as a list of strings
-        equations_line_split_list = str(
-            neuron_model_init_parameter_dict["equations"]
-        ).splitlines()
-        ### prepend uniform variables
-        equations_line_split_list.insert(0, "unif_var_dbs1 = Uniform(0.0, 1.0)")
-        equations_line_split_list.insert(0, "unif_var_dbs2 = Uniform(0.0, 1.0)")
-        ### search for equation with dv/dt
-        lines_with_v_count = 0
-        for line_idx, line in enumerate(equations_line_split_list):
-            if self.get_line_is_dvdt(line):
-                ### add depolarization term
-                equations_line_split_list[line_idx] = self.add_term_to_eq_line(
-                    line=equations_line_split_list[line_idx],
-                    term=" + pulse(t)*dbs_on*dbs_depolarization*neg(-90 - v)",
-                )
-                ### increase counter
-                lines_with_v_count += 1
-        if lines_with_v_count == 0:
-            raise ValueError(
-                "No line with dv/dt found, only Izhikevich spiking models supported yet"
-            )
-        ### join list to a string
-        neuron_model_init_parameter_dict["equations"] = "\n".join(
-            equations_line_split_list
-        )
-
-        ### 3rd add axon spike term
-        neuron_model_init_parameter_dict["axon_spike"] = (
-            "pulse(t)*dbs_on*unif_var_dbs1 > 1-prob_axon_spike"
-        )
-
-        ### 4th add axon reset term
-        neuron_model_init_parameter_dict[
-            "axon_reset"
-        ] = """
-            v += ite(unif_var_dbs2 < antidromic_prob, dbs_on*antidromic*(-v + c), 0)
-            u += ite(unif_var_dbs2 < antidromic_prob, dbs_on*antidromic*d, 0)
-        """
-
-        ### 5th extend description
-        neuron_model_init_parameter_dict["description"] = (
-            f"{neuron_model_init_parameter_dict['description']}\nWith DBS mechanisms implemented."
-        )
-
-        return neuron_model_init_parameter_dict
-
-    def add_term_to_eq_line(self, line: str, term: str):
-        """
-        Add a term to an equation string.
-
-        Args:
-            line (str):
-                Equation string
-            term (str):
-                Term to add
-
-        Returns:
-            line_new (str):
-                Equation string with added term
-        """
-        ### check if colon is in line
-        if ":" not in line:
-            ### add term
-            line_new = line + term
-        else:
-            ### split line at colon
-            line_split = line.split(":")
-            ### add term
-            line_split[0] = line_split[0] + term
-            ### join line again
-            line_new = ":".join(line_split)
-        ### return new line
-        return line_new
-
-    def get_line_is_dvdt(self, line: str):
-        """
-        Check if a equation string contains dv/dt.
-
-        Args:
-            line (str):
-                Equation string
-        """
-        if "v" not in line:
-            return False
-
-        ### remove whitespaces
-        line = line.replace(" ", "")
-
-        ### check if dv/dt is in line and check if dv/dt is left of =
-        if "dv/dt" in line and line.find("dv/dt") < line.find("="):
-            return True
-
-        return False
-
-    def get_line_is_dmpdt(self, line: str):
-        """
-        Check if a equation string contains dmp/dt.
-
-        Args:
-            line (str):
-                Equation string
-        """
-        if "mp" not in line:
-            return False
-
-        ### remove whitespaces
-        line = line.replace(" ", "")
-
-        ### check if dv/dt is in line and check if dv/dt is left of =
-        if "dmp/dt" in line and line.find("dmp/dt") < line.find("="):
-            return True
-
-        return False
-
-    def add_DBS_to_rate_coded_neuron_model(self, neuron_model_init_parameter_dict):
-        """
-        Add DBS mechanisms to the rate-coded neuron model
-
-        Args:
-            neuron_model_init_parameter_dict (dict):
-                Dictionary with the parameters of the __init__ function of the Neuron
-
-        Returns:
-            neuron_model_init_parameter_dict (dict):
-                Dictionary with the parameters of the __init__ function of the Neuron
-                with DBS mechanisms added
-        """
-
-        ### 1st add new DBS parameters
-        ### get the parameters as a list of strings
-        parameters_line_split_list = str(
-            neuron_model_init_parameter_dict["parameters"]
-        ).splitlines()
-        ### append list with new parameters
-        parameters_line_split_list.append("dbs_depolarization = 0 : population")
-        parameters_line_split_list.append("dbs_on = 0")
-        parameters_line_split_list.append(
-            "axon_rate_amp = 1.0 : population # equivalent to prob_axon_spike in spiking model"
-        )
-        ### join list to a string
-        neuron_model_init_parameter_dict["parameters"] = "\n".join(
-            parameters_line_split_list
-        )
-
-        ### 2nd add new equations
-        ### get the equations of the neuron model as a list of strings
-        equations_line_split_list = str(
-            neuron_model_init_parameter_dict["equations"]
-        ).splitlines()
-        ### append axon_rate
-        equations_line_split_list.append(
-            "axon_rate = axon_rate_amp*dbs_on # equivalent to axon_spike in spiking model"
-        )
-        ### search for equation with dmp/dt
-        lines_with_mp_count = 0
-        for line_idx, line in enumerate(equations_line_split_list):
-            if self.get_line_is_dmpdt(line):
-                ### add depolarization term
-                equations_line_split_list[line_idx] = self.add_term_to_eq_line(
-                    line=equations_line_split_list[line_idx],
-                    term=" + pulse(t)*dbs_on*dbs_depolarization*neg(-1 - mp)",
-                )
-                lines_with_mp_count += 1
-        if lines_with_mp_count == 0:
-            raise ValueError(
-                "No line with dmp/dt found, only rate-coded models with mp as 'membrane potential' supported yet"
-            )
-        ### join list to a string
-        neuron_model_init_parameter_dict["equations"] = "\n".join(
-            equations_line_split_list
-        )
-
-        ### 3rd extend description
-        neuron_model_init_parameter_dict["description"] = (
-            f"{neuron_model_init_parameter_dict['description']}\nWith DBS mechanisms implemented."
-        )
-
-        return neuron_model_init_parameter_dict
 
     def recreate_projection(self, proj_name):
         """
@@ -705,7 +981,7 @@ class _CreateDBSmodel:
         )
         ### adjust the equations and parameters of the synapse model to implement DBS
         if not exclude_from_dbs:
-            synapse_init_parameter_dict = self.add_DBS_to_synapse_model(
+            synapse_init_parameter_dict = add_DBS_to_synapse_model(
                 synapse_init_parameter_dict,
             )
         ### create the new synapse model
@@ -736,127 +1012,6 @@ class _CreateDBSmodel:
         ### set the parameters and variables
         for attr_name, attr_val in synapse_model_attr_dict.items():
             setattr(proj_new, attr_name, attr_val)
-
-    def add_DBS_to_synapse_model(self, synapse_init_parameter_dict):
-        """
-        Add DBS mechanisms to the synapse model.
-
-        Args:
-            synapse_init_parameter_dict (dict):
-                Dictionary with the parameters of the __init__ function of the Synapse
-
-        Returns:
-            synapse_init_parameter_dict (dict):
-                Dictionary with the parameters of the __init__ function of the Synapse
-                with DBS mechanisms added
-        """
-
-        ### check if projection is spiking
-        spiking = not (isinstance(synapse_init_parameter_dict["pre_spike"], type(None)))
-
-        ### add DBS mechanisms
-        if spiking:
-            return self.add_DBS_to_spiking_synapse_model(synapse_init_parameter_dict)
-        else:
-            return self.add_DBS_to_rate_coded_synapse_model(synapse_init_parameter_dict)
-
-    def add_DBS_to_spiking_synapse_model(self, synapse_init_parameter_dict):
-        """
-        Add DBS mechanisms to the spiking synapse model.
-
-        Args:
-            synapse_init_parameter_dict (dict):
-                Dictionary with the parameters of the __init__ function of the Synapse
-
-        Returns:
-            synapse_init_parameter_dict (dict):
-                Dictionary with the parameters of the __init__ function of the Synapse
-                with DBS mechanisms added
-        """
-
-        ### 1st add new DBS parameters
-        ### get the parameters as a list of strings
-        parameters_line_split_list = str(
-            synapse_init_parameter_dict["parameters"]
-        ).splitlines()
-        ### append list with new parameters
-        parameters_line_split_list.append("p_axon_spike_trans=0 : projection")
-        ### join list to a string
-        synapse_init_parameter_dict["parameters"] = "\n".join(
-            parameters_line_split_list
-        )
-
-        ### 2nd add new equation for uniform variable
-        ### get the equations of the synapse model as a list of strings
-        equations_line_split_list = str(
-            synapse_init_parameter_dict["equations"]
-        ).splitlines()
-        ### prepend uniform variable
-        equations_line_split_list.insert(0, "unif_var_dbs = Uniform(0., 1.)")
-        ### join list to a string
-        synapse_init_parameter_dict["equations"] = "\n".join(equations_line_split_list)
-
-        ### 3rd add pre_axon_spike
-        synapse_init_parameter_dict["pre_axon_spike"] = (
-            "g_target+=ite(unif_var_dbs<p_axon_spike_trans,w*post.dbs_on,0)"
-        )
-
-        ### 4th extend description
-        synapse_init_parameter_dict["description"] = (
-            f"{synapse_init_parameter_dict['description']}\nWith DBS mechanisms implemented."
-        )
-
-        return synapse_init_parameter_dict
-
-    def add_DBS_to_rate_coded_synapse_model(self, synapse_init_parameter_dict):
-        """
-        Add DBS mechanisms to the rate-coded synapse model.
-
-        Args:
-            synapse_init_parameter_dict (dict):
-                Dictionary with the parameters of the __init__ function of the Synapse
-
-        Returns:
-            synapse_init_parameter_dict (dict):
-                Dictionary with the parameters of the __init__ function of the Synapse
-                with DBS mechanisms added
-        """
-
-        ### 1st add new DBS parameters
-        ### get the parameters as a list of strings
-        parameters_line_split_list = str(
-            synapse_init_parameter_dict["parameters"]
-        ).splitlines()
-        ### append list with new parameters
-        parameters_line_split_list.append("p_axon_spike_trans=0 : projection")
-        ### join list to a string
-        synapse_init_parameter_dict["parameters"] = "\n".join(
-            parameters_line_split_list
-        )
-
-        ### 2nd add new equations and replace pre.r
-        ### get the equations of the synapse model as a list of strings
-        equations_line_split_list = str(
-            synapse_init_parameter_dict["equations"]
-        ).splitlines()
-        ### replace pre.r with pre_rate everywhere
-        for key, val in synapse_init_parameter_dict.items():
-            if isinstance(val, str):
-                synapse_init_parameter_dict[key] = val.replace("pre.r", "pre_rate")
-        ### prepend pre_rate definition
-        equations_line_split_list.insert(
-            0, "pre_rate = pre.r + p_axon_spike_trans*pre.axon_rate*post.dbs_on"
-        )
-        ### join list to a string
-        synapse_init_parameter_dict["equations"] = "\n".join(equations_line_split_list)
-
-        ### 3rd extend description
-        synapse_init_parameter_dict["description"] = (
-            f"{synapse_init_parameter_dict['description']}\nWith DBS mechanisms implemented."
-        )
-
-        return synapse_init_parameter_dict
-
 
 class _CreateDBSmodelcnp(_CreateDBSmodel):
     """
@@ -1732,6 +1887,12 @@ class DBSstimulator:
                 from initialization
         """
 
+        ### check that everything DBS is about to be written to can actually hold
+        ### it, see the docstring of _check_mechanisms
+        self._check_mechanisms(
+            orthodromic, antidromic, efferents, afferents, passing_fibres
+        )
+
         ### set DBS on for all populations
         ### also sets the proportion of affected neurons, call this before set_depolarization and set_axon_spikes!
         self._set_dbs_on(population_proportion, seed)
@@ -1751,6 +1912,96 @@ class DBSstimulator:
             axon_spikes_per_pulse,
             axon_rate_amp,
         )
+
+    def _check_mechanisms(
+        self,
+        orthodromic: bool | None,
+        antidromic: bool | None,
+        efferents: bool | None,
+        afferents: bool | None,
+        passing_fibres: bool | None,
+    ):
+        """
+        Check that every population and projection DBS will write to carries the
+        DBS mechanisms, and raise if one does not.
+
+        Assigning a DBS parameter to a population that does not have it is not an
+        error in ANNarchy: `Population.__setattr__` falls through to
+        `object.__setattr__` and creates a plain Python attribute. The DBS effect
+        is then silently dropped. That is harmless when the mechanisms are
+        implemented everywhere, but this class also supports implementing them
+        only where DBS can reach (see `add_dbs_mechanisms`), and there a typo in
+        the population list would otherwise produce a run that looks stimulated
+        and is not.
+
+        Args:
+            orthodromic, antidromic, efferents, afferents, passing_fibres:
+                The corresponding arguments of `on()`, None meaning "use the value
+                from initialization"
+        """
+        ### resolve the arguments the same way _set_axon_spikes does
+        if isinstance(orthodromic, type(None)):
+            orthodromic = self.orthodromic
+        if isinstance(antidromic, type(None)):
+            antidromic = self.antidromic
+        if isinstance(efferents, type(None)):
+            efferents = self.efferents
+        if isinstance(afferents, type(None)):
+            afferents = self.afferents
+        if isinstance(passing_fibres, type(None)):
+            passing_fibres = self.passing_fibres
+
+        excluded_pops = set(self.excluded_populations_list)
+        problem_list: list[str] = []
+
+        def check_pop(pop: ann.Population, role: str):
+            missing = _missing_dbs_parameters(pop)
+            if missing:
+                problem_list.append(
+                    f"population '{pop.name}' ({role}) is missing {missing}"
+                )
+
+        def check_proj(proj: ann.Projection, role: str):
+            if "p_axon_spike_trans" not in proj.attributes:
+                problem_list.append(
+                    f"projection '{proj.name}' ({role}) is missing "
+                    f"{DBS_SYNAPSE_PARAMETERS}"
+                )
+
+        ### the stimulated population always gets dbs_on and dbs_depolarization
+        check_pop(self.stimulated_population, "stimulated")
+
+        axonal = orthodromic or antidromic
+        if axonal and efferents:
+            for proj in ann.projections(pre=self.stimulated_population):
+                if proj.post in excluded_pops:
+                    continue
+                check_proj(proj, "efferent of the stimulated population")
+                check_pop(proj.post, "postsynaptic to a stimulated efferent")
+        if axonal and afferents:
+            for proj in ann.projections(post=self.stimulated_population):
+                if proj.pre in excluded_pops:
+                    continue
+                check_proj(proj, "afferent of the stimulated population")
+                check_pop(proj.pre, "presynaptic to a stimulated afferent")
+        if axonal and passing_fibres:
+            for proj in self.passing_fibres_list:
+                if proj.pre in excluded_pops or proj.post in excluded_pops:
+                    continue
+                check_proj(proj, "passing fibre")
+                check_pop(proj.pre, "presynaptic to a passing fibre")
+                check_pop(proj.post, "postsynaptic to a passing fibre")
+
+        if problem_list:
+            raise ValueError(
+                "DBSstimulator.on(): DBS would be written to populations or "
+                "projections that do not carry the DBS mechanisms, so the effect "
+                "would be silently dropped:\n  "
+                + "\n  ".join(problem_list)
+                + "\n\nAdd them with add_dbs_mechanisms() before compile(), or put "
+                "them in excluded_populations_list if they should not be "
+                "stimulated."
+            )
 
     def _set_dbs_on(self, population_proportion: float | None, seed: int | None):
         """
