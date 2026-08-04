@@ -404,9 +404,26 @@ class CorticalInputs:
                 )
             dt_seconds = float(time_arr[1] - time_arr[0])
             dt_ms = dt_seconds * 1000.0
-            if not np.isclose(dt_ms, self.dt, rtol=1e-6, atol=1e-9):
+
+            # The drive may be sampled more coarsely than dt (it comes from BOLD,
+            # one value per TR), in which case each value is repeated. Same rule
+            # as in Microcircuit._simulate_cor_input_spike_counts.
+            if np.isclose(dt_ms, self.dt, rtol=1e-6, atol=1e-9):
+                expansion_factor = 1
+            elif dt_ms > self.dt:
+                ratio = dt_ms / self.dt
+                expansion_factor = int(round(ratio))
+                if not np.isclose(ratio, expansion_factor, rtol=1e-6, atol=1e-9):
+                    raise ValueError(
+                        f"Cortical drive dt ({dt_ms:.6f} ms) is not an integer multiple of CorticalInputs dt ({self.dt:.6f} ms)."
+                    )
+                if self.verbose:
+                    print(
+                        f"Cortical drive dt ({dt_ms:.6f} ms) is {expansion_factor}x the CorticalInputs dt; repeating rate values accordingly."
+                    )
+            else:
                 raise ValueError(
-                    f"Cortical drive dt ({dt_ms:.6f} ms) does not match requested dt ({self.dt:.6f} ms)."
+                    f"Cortical drive dt ({dt_ms:.6f} ms) is finer than CorticalInputs dt ({self.dt:.6f} ms); please regenerate cortical drive data."
                 )
 
             for post_type, post_pop in self.populations.items():
@@ -428,11 +445,18 @@ class CorticalInputs:
                             f"Rate key '{rate_key}' missing in cortical drive file {rate_path}."
                         )
                     rate_series = np.asarray(data[rate_key])
-                    if rate_series.size < self.n_steps:
+                    available_steps = rate_series.size * expansion_factor
+                    if available_steps < self.n_steps:
                         raise ValueError(
-                            f"Rate series for {cortical_region} has only {rate_series.size} samples; expected at least {self.n_steps}."
+                            f"Rate series for {cortical_region} provides {available_steps} steps after expansion; "
+                            f"expected at least {self.n_steps}."
                         )
-                    rate_segment = rate_series[: self.n_steps]
+                    if expansion_factor > 1:
+                        rate_segment = np.repeat(rate_series, expansion_factor)[
+                            : self.n_steps
+                        ]
+                    else:
+                        rate_segment = rate_series[: self.n_steps]
 
                     N_eff = int(np.round(proportion * N_total))
                     if N_eff == 0:
