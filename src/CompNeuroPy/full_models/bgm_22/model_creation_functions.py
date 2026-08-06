@@ -2865,6 +2865,7 @@ def BGM_v07(self):
         - "mc.seed": random seed for the microcircuit generation
         - "mc.fitted_params_path": path to the fitted striatal connection probabilities
         - "mc.cortical_rate_path": path to the cortical rate time series (it's not used here but it needs to be the same as for creating the inputs for the Microcircuits)
+        - "mc.cortical_proportions_dict": share of a striatal neuron's cortical afferents per cortical region for this loop, summing to 1. Required, no default. Must be the same mapping the cortical rate file was mixed with, since it also weights caudate_rate/putamen_rate there. Shared by the Microcircuit and the CorticalInputs.
         - "ci.storage_dir": directory where to store/load the putamen cortical inputs data
         - "ci.seed": random seed for the cortical input generation
         - "ci.n_thal": number of cortical input neurons for a thalamic neuron
@@ -2881,6 +2882,9 @@ def BGM_v07(self):
         b=self.model_creation_kwargs["mc.b"],
         dbs_condition=self.model_creation_kwargs["dbs"],
         firing_rate_dict=self.model_creation_kwargs["mc.firing_rate_dict"],
+        cortical_proportions_dict=self.model_creation_kwargs[
+            "mc.cortical_proportions_dict"
+        ],
         build_connectivity=self.model_creation_kwargs["build_mc"],
         build_missing_gaba_input=self.model_creation_kwargs["build_mc"],
         build_cortical_input=self.model_creation_kwargs["build_ci"],
@@ -3128,6 +3132,9 @@ def BGM_v07(self):
         update_time=self.model_creation_kwargs["update_time"],
         T=self.model_creation_kwargs["t.duration"],
         name=self.model_creation_kwargs["mc.name"],
+        cortical_proportions_dict=self.model_creation_kwargs[
+            "mc.cortical_proportions_dict"
+        ],
         dbs_condition=self.model_creation_kwargs["dbs"],
         storage_dir=self.model_creation_kwargs["ci.storage_dir"],
         cortical_rate_path=self.model_creation_kwargs["mc.cortical_rate_path"],

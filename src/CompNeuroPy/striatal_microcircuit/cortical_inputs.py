@@ -22,6 +22,7 @@ from ANNarchy import CurrentInjection, Population, TimedArray, simulate
 from CompNeuroPy.striatal_microcircuit.spike_input_cortex import (
     iter_memmap_spike_counts,
     simulate_receiver_counts_homogeneous_to_memmap,
+    validate_cortical_proportions,
 )
 
 
@@ -38,6 +39,10 @@ class CorticalInputs:
         update_time: Time window (ms) covered by each update chunk.
         T: Total simulation time in ms.
         name: Striatal region label, ``"caudate"`` or ``"putamen"``.
+        cortical_proportions_dict: Region name -> share of a receiver's cortical
+            afferents, summing to 1. Required; see ``validate_cortical_proportions``
+            for why there is no default. Must be the same mapping the cortical rate
+            file was mixed with.
         dbs_condition: DBS condition string used to pick the rate file (``"on"``/``"off"``).
         storage_dir: Optional directory for memmaps and state; defaults to a hidden
             folder next to this module.
@@ -54,6 +59,7 @@ class CorticalInputs:
         update_time: float,
         T: float,
         name: str,
+        cortical_proportions_dict: Optional[Dict[str, float]] = None,
         dbs_condition: str = "on",
         cortical_rate_path: Optional[str] = None,
         storage_dir: Optional[str] = None,
@@ -89,7 +95,9 @@ class CorticalInputs:
         self.verbose = verbose
         self.rng = np.random.default_rng(seed)
 
-        self.cortical_proportions_dict = self._default_cortical_proportions()[self.name]
+        self.cortical_proportions_dict = validate_cortical_proportions(
+            cortical_proportions_dict, "CorticalInputs"
+        )
         self.N_cortical_inputs_dict = N_cortical_inputs_dict
 
         script_dir = os.path.dirname(__file__)
@@ -257,27 +265,6 @@ class CorticalInputs:
     def _cortical_input_state_path(self) -> str:
         return os.path.join(self.inputs_dir, "cortical_input_state.pkl")
 
-    def _default_cortical_proportions(self) -> Dict[str, Dict[str, float]]:
-        return {
-            "caudate": {
-                "dlPFC": 0.45,
-                "preSMA": 0.25,
-                "PMd": 0.15,
-                "PMv": 0.10,
-                "SMA": 0.04,
-                "M1": 0.01,
-                "S1": 0.00,
-            },
-            "putamen": {
-                "dlPFC": 0.05,
-                "preSMA": 0.10,
-                "PMd": 0.15,
-                "PMv": 0.05,
-                "SMA": 0.25,
-                "M1": 0.30,
-                "S1": 0.10,
-            },
-        }
 
     def _save_cortical_input_state(self) -> None:
         if not self.cor_input_memmap_dict:

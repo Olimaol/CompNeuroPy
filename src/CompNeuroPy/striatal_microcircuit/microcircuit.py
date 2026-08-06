@@ -24,6 +24,7 @@ from CompNeuroPy.striatal_microcircuit.spike_input_cortex import (
     simulate_receiver_counts_homogeneous_to_memmap,
     simulate_receiver_counts_distance_dependent_to_memmap,
     iter_memmap_spike_counts,
+    validate_cortical_proportions,
 )
 from CompNeuroPy.striatal_microcircuit.get_weights import (
     components_spn_spn,
@@ -145,30 +146,11 @@ class Microcircuit:
             N_cortical_inputs_dict = {"FS": 2800, "dSPN": 7000, "iSPN": 7000}
         self.N_cortical_inputs_dict = N_cortical_inputs_dict
 
-        # the cortical proportions dict for our given cortical regions from the BOLD data:
-        if cortical_proportions_dict is None:
-            proportions = {
-                "caudate": {
-                    "dlPFC": 0.45,
-                    "preSMA": 0.25,
-                    "PMd": 0.15,
-                    "PMv": 0.10,
-                    "SMA": 0.04,
-                    "M1": 0.01,
-                    "S1": 0.00,
-                },
-                "putamen": {
-                    "dlPFC": 0.05,
-                    "preSMA": 0.10,
-                    "PMd": 0.15,
-                    "PMv": 0.05,
-                    "SMA": 0.25,
-                    "M1": 0.30,
-                    "S1": 0.10,
-                },
-            }
-            cortical_proportions_dict = proportions[self.name]
-        self.cortical_proportions_dict = cortical_proportions_dict
+        # the cortical proportions dict for our given cortical regions from the BOLD
+        # data; required, see validate_cortical_proportions for why there is no default
+        self.cortical_proportions_dict = validate_cortical_proportions(
+            cortical_proportions_dict, "Microcircuit"
+        )
 
         # shared fraction of inputs between striatal neurons based on Kincaid et al., 1998
         self.shared_fraction = 0.014
@@ -2537,6 +2519,10 @@ if __name__ == "__main__":
         dbs_condition="off",
         nx=10,
         b=10,
+        # placeholder only -- this demo builds no cortical input, so the mapping is
+        # never used. It is NOT the model's proportions; those live in BGM_22's
+        # BOLD_optimization/parameters.py.
+        cortical_proportions_dict={"dlPFC": 1.0},
         build_cortical_input=False,
         build_missing_gaba_input=False,
         build_connectivity=False,

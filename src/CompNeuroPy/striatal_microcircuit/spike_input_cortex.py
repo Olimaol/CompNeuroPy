@@ -131,6 +131,59 @@ def beta_params_from_p_rho(p: float, rho: float) -> Tuple[float, float]:
     return alpha, beta_val
 
 
+def validate_cortical_proportions(
+    cortical_proportions_dict: Optional[Dict[str, float]], owner: str
+) -> Dict[str, float]:
+    """Check a per-region cortical proportion mapping and return it unchanged.
+
+    There is deliberately no default. The proportions are the only physical
+    difference between the caudate and the putamen loop, and the same numbers
+    also weight the mix that produces the ``caudate_rate``/``putamen_rate``
+    series in the cortical rate ``.npz``. A default here would be a second copy
+    that could silently disagree with the one the rate file was built from, so
+    the caller has to say which proportions it means. In BGM_22 they live in
+    ``BOLD_optimization/parameters.py`` under ``cortical_proportions_dict``.
+
+    Args:
+        cortical_proportions_dict (dict):
+            Region name -> share of a receiver's cortical afferents. Shares must
+            be non-negative and sum to 1; a region at 0 gets no stream at all.
+
+        owner (str):
+            Name of the calling class, used in the error messages.
+
+    Returns:
+        cortical_proportions_dict (dict):
+            The validated mapping.
+    """
+    if cortical_proportions_dict is None:
+        raise ValueError(
+            f"{owner} requires cortical_proportions_dict; there is no default. "
+            "Pass the mapping for this loop -- in BGM_22 it is "
+            "parameters.py['cortical_proportions_dict'][loop]. Note that the "
+            "cortical rate .npz was mixed with these same numbers, so changing "
+            "them means regenerating it."
+        )
+    if not isinstance(cortical_proportions_dict, dict) or not cortical_proportions_dict:
+        raise ValueError(
+            f"{owner}: cortical_proportions_dict must be a non-empty dict, got "
+            f"{cortical_proportions_dict!r}."
+        )
+    negative = {k: v for k, v in cortical_proportions_dict.items() if v < 0}
+    if negative:
+        raise ValueError(
+            f"{owner}: cortical proportions must be non-negative, got {negative}."
+        )
+    total = float(sum(cortical_proportions_dict.values()))
+    if not np.isclose(total, 1.0, rtol=0.0, atol=1e-9):
+        raise ValueError(
+            f"{owner}: cortical proportions must sum to 1, got {total!r} for "
+            f"{cortical_proportions_dict}. They split a fixed number of cortical "
+            "afferents, so a sum below or above 1 silently rescales the drive."
+        )
+    return cortical_proportions_dict
+
+
 @dataclass(frozen=True)
 class DistanceCorrelationState:
     receiver_positions: np.ndarray
