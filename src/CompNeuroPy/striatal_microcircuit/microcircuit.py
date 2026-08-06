@@ -125,9 +125,12 @@ class Microcircuit:
         # default for dSPN and iSPN: the parkinsonian Off state (levodopa withdrawn)
         # of (Liang et al., 2008), Table 1, taken directly. See the derivation and its
         # assumptions in BGM_22/experimental_data/activity_striatum/README.md
-        # default for FS: 10 Hz based on: (Yamada et al., 2016; Marche und Apicella, 2021; Adler et al., 2013; Hernandez et al., 2013; He et al., 2024)
+        # default for FS: no parkinsonian-primate FSI recording exists, so 10.5 Hz is
+        # the n-weighted normal-primate level (Marche und Apicella, 2021; Yamada et al.,
+        # 2016; Adler et al., 2013) times a chronic dopamine-depletion factor of 1.0
+        # (Mallet et al., 2006; Hernandez et al., 2013; He et al., 2024). Same README.
         if firing_rate_dict is None:
-            firing_rate_dict = {"FS": 10.0, "dSPN": 25.0, "iSPN": 33.0}
+            firing_rate_dict = {"FS": 10.5, "dSPN": 25.0, "iSPN": 33.0}
         self.firing_rate_dict = firing_rate_dict
 
         # average correlations between pairs of cell types
