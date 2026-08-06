@@ -122,10 +122,12 @@ class Microcircuit:
             raise ValueError("name must be either 'caudate' or 'putamen'")
 
         # firing rates per cell type (Hz)
-        # default for D1 and D2 extracted from: (Liang et al., 2008) using with levodopa treatment, see experimental_data/activity_striatum/extract_from_liang_etal_2008.py
+        # default for dSPN and iSPN: the parkinsonian Off state (levodopa withdrawn)
+        # of (Liang et al., 2008), Table 1, taken directly. See the derivation and its
+        # assumptions in BGM_22/experimental_data/activity_striatum/README.md
         # default for FS: 10 Hz based on: (Yamada et al., 2016; Marche und Apicella, 2021; Adler et al., 2013; Hernandez et al., 2013; He et al., 2024)
         if firing_rate_dict is None:
-            firing_rate_dict = {"FS": 10.0, "dSPN": 37.07, "iSPN": 29.07}
+            firing_rate_dict = {"FS": 10.0, "dSPN": 25.0, "iSPN": 33.0}
         self.firing_rate_dict = firing_rate_dict
 
         # average correlations between pairs of cell types
@@ -1685,6 +1687,10 @@ class Microcircuit:
             "mean_weights_by_type": dict(self.mean_weights_by_type),
             "dt": self.dt,
             "n_steps": self.n_steps,
+            # the spike counts were drawn at these rates and correlations, so a cache
+            # built with different ones is not interchangeable
+            "firing_rate_dict": dict(self.firing_rate_dict),
+            "correlation_dict": dict(self.correlation_dict),
         }
         with open(self._missing_input_state_path(), "wb") as f:
             pickle.dump(payload, f)
@@ -1716,6 +1722,33 @@ class Microcircuit:
             raise ValueError(
                 f"Cached missing-input n_steps ({n_steps_saved}) does not match current n_steps ({self.n_steps}); rebuild missing inputs."
             )
+
+        # The spike counts were drawn at a specific rate and correlation per cell type.
+        # Both are absent from caches built before these fields were recorded, and such
+        # a cache cannot be shown to match -- refuse it rather than load it silently.
+        for field, current in (
+            ("firing_rate_dict", self.firing_rate_dict),
+            ("correlation_dict", self.correlation_dict),
+        ):
+            saved = payload.get(field)
+            if saved is None:
+                raise ValueError(
+                    f"Cached missing-input state does not record {field}; it predates "
+                    "this check and cannot be verified against the current settings. "
+                    "Rebuild missing inputs."
+                )
+            mismatch = {
+                cell_type: (saved.get(cell_type), current[cell_type])
+                for cell_type in self.cell_types
+                if not np.isclose(
+                    saved.get(cell_type, np.nan), current[cell_type], rtol=1e-9, atol=0.0
+                )
+            }
+            if mismatch:
+                raise ValueError(
+                    f"Cached missing-input {field} does not match current settings "
+                    f"(cached vs current: {mismatch}); rebuild missing inputs."
+                )
 
         self.local_input_memmap_dict = payload.get("local_input_memmap_dict")
         if self.local_input_memmap_dict is None:

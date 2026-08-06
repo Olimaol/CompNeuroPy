@@ -2880,6 +2880,7 @@ def BGM_v07(self):
         nx=self.model_creation_kwargs["mc.nx"],
         b=self.model_creation_kwargs["mc.b"],
         dbs_condition=self.model_creation_kwargs["dbs"],
+        firing_rate_dict=self.model_creation_kwargs["mc.firing_rate_dict"],
         build_connectivity=self.model_creation_kwargs["build_mc"],
         build_missing_gaba_input=self.model_creation_kwargs["build_mc"],
         build_cortical_input=self.model_creation_kwargs["build_ci"],
