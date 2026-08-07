@@ -2885,6 +2885,14 @@ def BGM_v07(self):
         cortical_proportions_dict=self.model_creation_kwargs[
             "mc.cortical_proportions_dict"
         ],
+        shared_fraction=self.model_creation_kwargs["mc.shared_fraction"],
+        correlation_dict=self.model_creation_kwargs["mc.correlation_dict"],
+        cortical_correlation=self.model_creation_kwargs["mc.cortical_correlation"],
+        correlation_window_ms=self.model_creation_kwargs["mc.correlation_window_ms"],
+        correlation_timescale_ms=self.model_creation_kwargs[
+            "mc.correlation_timescale_ms"
+        ],
+        source_multiplicity=self.model_creation_kwargs["mc.source_multiplicity"],
         build_connectivity=self.model_creation_kwargs["build_mc"],
         build_missing_gaba_input=self.model_creation_kwargs["build_mc"],
         build_cortical_input=self.model_creation_kwargs["build_ci"],
@@ -3134,6 +3142,22 @@ def BGM_v07(self):
         name=self.model_creation_kwargs["mc.name"],
         cortical_proportions_dict=self.model_creation_kwargs[
             "mc.cortical_proportions_dict"
+        ],
+        # keyed like N_cortical_inputs_dict above, i.e. by population name
+        shared_fraction_dict={
+            thal.name: self.model_creation_kwargs["ci.shared_fraction_dict"]["thal"],
+            gpe_arky.name: self.model_creation_kwargs["ci.shared_fraction_dict"][
+                "gpe_arky"
+            ],
+            gpe_cp.name: self.model_creation_kwargs["ci.shared_fraction_dict"][
+                "gpe_cp"
+            ],
+            stn.name: self.model_creation_kwargs["ci.shared_fraction_dict"]["stn"],
+        },
+        cortical_correlation=self.model_creation_kwargs["mc.cortical_correlation"],
+        correlation_window_ms=self.model_creation_kwargs["mc.correlation_window_ms"],
+        correlation_timescale_ms=self.model_creation_kwargs[
+            "mc.correlation_timescale_ms"
         ],
         dbs_condition=self.model_creation_kwargs["dbs"],
         storage_dir=self.model_creation_kwargs["ci.storage_dir"],

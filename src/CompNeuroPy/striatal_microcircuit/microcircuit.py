@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.spatial as sp
 from scipy import integrate
-from scipy.interpolate import interp1d
 from scipy.sparse import lil_matrix, load_npz, save_npz
 
 # ANNarchy imports
@@ -21,8 +20,11 @@ from ANNarchy import (
 
 # Local imports
 from CompNeuroPy.striatal_microcircuit.spike_input_cortex import (
-    simulate_receiver_counts_homogeneous_to_memmap,
-    simulate_receiver_counts_distance_dependent_to_memmap,
+    axon_pool_size,
+    simulate_cortical_axon_pool_streams_to_memmap,
+    simulate_receiver_counts_geometric_to_memmap,
+    build_geometric_source_pools,
+    check_stream_statistics,
     iter_memmap_spike_counts,
     validate_cortical_proportions,
 )
@@ -57,6 +59,11 @@ class Microcircuit:
     - output_dir: path where plots are saved
     """
 
+    # Smallest number of virtual sources a receiver may have in a geometric pool.
+    # Below this the source multiplicity quantises the realised degree and shared
+    # fraction coarsely enough to bias them.
+    _MIN_SOURCES_PER_RECEIVER = 50
+
     # ----------------------
     # Storage helpers
     # ----------------------
@@ -88,6 +95,11 @@ class Microcircuit:
         density: float = 84900.0,
         firing_rate_dict: dict | None = None,
         correlation_dict: dict | None = None,
+        correlation_window_ms: float | None = None,
+        correlation_timescale_ms: float = 0.0,
+        shared_fraction: float | None = None,
+        cortical_correlation: float = 0.0,
+        source_multiplicity: int = 10,
         N_cortical_inputs_dict: dict | None = None,
         cortical_proportions_dict: dict | None = None,
         cortical_rate_path: str | Path | None = None,
@@ -134,11 +146,30 @@ class Microcircuit:
             firing_rate_dict = {"FS": 10.5, "dSPN": 25.0, "iSPN": 33.0}
         self.firing_rate_dict = firing_rate_dict
 
-        # average correlations between pairs of cell types
+        # Pairwise spike-count correlation among the unsimulated striatal neurons
+        # that feed the missing-GABA streams. No default: a correlation is only
+        # meaningful together with the window it was measured at, and the value
+        # sets the simulated BOLD amplitude (see input_streams/README.md section 3).
         if correlation_dict is None:
-            # default based on (Adler et al., 2013):
-            correlation_dict = {"FS": 0.06, "dSPN": 0.004, "iSPN": 0.004}
+            raise ValueError(
+                "Microcircuit requires correlation_dict; there is no default. In "
+                "BGM_22 it is parameters.py['mc.correlation_dict']. It must be "
+                "given together with correlation_window_ms, the window the value "
+                "was measured at."
+            )
         self.correlation_dict = correlation_dict
+        if correlation_window_ms is None and any(
+            v > 0 for v in correlation_dict.values()
+        ):
+            raise ValueError(
+                "correlation_dict has non-zero entries but correlation_window_ms "
+                "is None. A spike-count correlation without its measurement "
+                "window is not a well-defined quantity -- see "
+                "experimental_data/input_streams/README.md section 2."
+            )
+        self.correlation_window_ms = correlation_window_ms
+        self.correlation_timescale_ms = correlation_timescale_ms
+        self.source_multiplicity = source_multiplicity
 
         # expected number of input neurons from cortex per receiver neuron per cell type
         # default based on my calculations (see zotero/goolge/notebooks)
@@ -152,8 +183,35 @@ class Microcircuit:
             cortical_proportions_dict, "Microcircuit"
         )
 
-        # shared fraction of inputs between striatal neurons based on Kincaid et al., 1998
-        self.shared_fraction = 0.014
+        # Fraction of cortical afferents two striatal neurons have in common.
+        # Kincaid et al. 1998: one corticostriatal axon contacts <=1.4 % of the
+        # cells in its arborization, and the shared fraction between two SPNs
+        # equals that same figure. No default, for the same reason the
+        # proportions have none -- see validate_cortical_proportions.
+        if shared_fraction is None:
+            raise ValueError(
+                "Microcircuit requires shared_fraction; there is no default. In "
+                "BGM_22 it is parameters.py['mc.shared_fraction']."
+            )
+        if not (0.0 <= shared_fraction <= 1.0):
+            raise ValueError(
+                f"shared_fraction must be in [0, 1], got {shared_fraction}"
+            )
+        self.shared_fraction = shared_fraction
+        # Pairwise spike-count correlation among the cortical neurons themselves.
+        # 0 means they are conditionally independent given the BOLD-derived drive,
+        # which is the only shared fluctuation the model then has. Any non-zero
+        # value needs correlation_window_ms, like correlation_dict does.
+        self.cortical_correlation = cortical_correlation
+        if cortical_correlation > 0 and correlation_window_ms is None:
+            raise ValueError(
+                "cortical_correlation > 0 requires correlation_window_ms, the "
+                "window the value was measured at. Cohen & Kohn 2011 Table 1 "
+                "reports windows of 66-3000 ms; nothing is measured at dt."
+            )
+        # Per-stream target and measured statistics, filled during the build and
+        # written into the cache state so every cache carries an audit trail.
+        self.stream_statistics: dict[str, dict] = {}
 
         # timestep for simulation in ms
         self.dt = dt
@@ -366,12 +424,6 @@ class Microcircuit:
             raise RuntimeError(
                 "create_model() must be called before update to build ANNarchy objects."
             )
-        fs_debug_cache: dict[str, dict[str, np.ndarray]] | None = (
-            {} if self.verbose and self.debug else None
-        )
-        fs_scaling_factors = None
-        if self.verbose and self.debug:
-            fs_scaling_factors = self._compute_fs_scaling_factors()
         dSPN_inputs_sum = []
         # Loop over all input iterators and update the corresponding TimedArray populations
         for key, inp_iterator in self.inp_iterator_dict.items():
@@ -413,11 +465,6 @@ class Microcircuit:
             if key[0] in self.cortical_proportions_dict.keys() and key[1] == "dSPN":
                 dSPN_inputs_sum.append(inputs[:, 0])
 
-            # collect cortical chunks for FS validation
-            if fs_debug_cache is not None and key[0] in self.cortical_proportions_dict:
-                if key[1] in {"dSPN", "iSPN", "FS"}:
-                    fs_debug_cache.setdefault(key[0], {})[key[1]] = inputs
-
             # update the TimedArray population with weighted inputs, rewinding the
             # internal timers so the new chunk is played from its first block
             inp_population.update(
@@ -439,17 +486,6 @@ class Microcircuit:
             )
             plt.tight_layout()
             plt.show()
-
-        if (
-            self.verbose
-            and self.debug
-            and fs_debug_cache
-            and fs_scaling_factors is not None
-        ):
-            self._debug_validate_fs_inputs(
-                fs_debug_cache=fs_debug_cache,
-                scaling_factors=fs_scaling_factors,
-            )
 
         # Optional simulate the network for the update_time
         if run_simulation:
@@ -486,293 +522,6 @@ class Microcircuit:
                 copy=False,
                 verbose=self.verbose,
             )
-
-    def _compute_fs_scaling_factors(self) -> np.ndarray | None:
-        """Recompute the FS scaling factors used during FS input generation."""
-        if ("FS", "dSPN") not in self.weights_by_type or (
-            "FS",
-            "iSPN",
-        ) not in self.weights_by_type:
-            if self.verbose:
-                print(
-                    "[FS debug] Missing FS->dSPN or FS->iSPN weights; cannot validate FS inputs."
-                )
-            return None
-
-        W_fs_dspn = self.weights_by_type[("FS", "dSPN")]
-        W_fs_ispn = self.weights_by_type[("FS", "iSPN")]
-
-        N_spn_total = self.N_cortical_inputs_dict.get("dSPN", 0)
-        N_fs_total = self.N_cortical_inputs_dict.get("FS", 0)
-        if N_spn_total <= 0 or N_fs_total <= 0:
-            if self.verbose:
-                print(
-                    "[FS debug] Invalid cortical input expectations for SPN/FS; cannot validate."
-                )
-            return None
-
-        sum_w_dspn = np.array(W_fs_dspn.sum(axis=1)).flatten()
-        sum_w_ispn = np.array(W_fs_ispn.sum(axis=1)).flatten()
-        total_weighted_capacity = (sum_w_dspn * N_spn_total) + (
-            sum_w_ispn * N_spn_total
-        )
-
-        scaling_factors = np.zeros_like(total_weighted_capacity, dtype=np.float64)
-        mask = total_weighted_capacity > 0
-        scaling_factors[mask] = N_fs_total / total_weighted_capacity[mask]
-        return scaling_factors
-
-    def _debug_validate_fs_inputs(
-        self,
-        fs_debug_cache: dict[str, dict[str, np.ndarray]],
-        scaling_factors: np.ndarray,
-    ) -> None:
-        """Validate that FS inputs follow from dSPN/iSPN inputs and visualize the relation."""
-
-        W_fs_dspn = self.weights_by_type[("FS", "dSPN")].tocsr()
-        W_fs_ispn = self.weights_by_type[("FS", "iSPN")].tocsr()
-
-        for region, region_chunks in fs_debug_cache.items():
-            dspn_chunk = region_chunks.get("dSPN")
-            ispn_chunk = region_chunks.get("iSPN")
-            fs_chunk = region_chunks.get("FS")
-
-            if dspn_chunk is None or ispn_chunk is None or fs_chunk is None:
-                if self.verbose:
-                    print(
-                        f"[FS debug] {region}: missing chunks for validation. Have keys {list(region_chunks.keys())}."
-                    )
-                continue
-
-            # inputs are stored as (steps, neurons); transpose for matrix multiplication
-            dspn_inputs = dspn_chunk.T
-            ispn_inputs = ispn_chunk.T
-            fs_inputs_actual = fs_chunk.T
-
-            expected_mean = (W_fs_dspn @ dspn_inputs) + (W_fs_ispn @ ispn_inputs)
-            expected_mean = expected_mean * scaling_factors[:, None]
-
-            if expected_mean.shape != fs_inputs_actual.shape:
-                if self.verbose:
-                    print(
-                        f"[FS debug] {region}: shape mismatch expected {expected_mean.shape} vs actual {fs_inputs_actual.shape}."
-                    )
-                continue
-
-            total_expected = float(expected_mean.sum())
-            total_actual = float(fs_inputs_actual.sum())
-            ratio_total = (
-                total_actual / total_expected if total_expected > 0 else np.nan
-            )
-
-            flat_expected = expected_mean.ravel()
-            flat_actual = fs_inputs_actual.ravel()
-            corr = np.nan
-            if flat_expected.std() > 0 and flat_actual.std() > 0:
-                corr = float(np.corrcoef(flat_expected, flat_actual)[0, 1])
-
-            per_neuron_expected_mean = expected_mean.mean(axis=1)
-            with np.errstate(divide="ignore", invalid="ignore"):
-                per_neuron_ratio = np.divide(
-                    fs_inputs_actual.mean(axis=1),
-                    per_neuron_expected_mean,
-                    out=np.full_like(per_neuron_expected_mean, np.nan),
-                    where=per_neuron_expected_mean > 0,
-                )
-
-            corr_display = "nan" if np.isnan(corr) else f"{corr:.3f}"
-            mean_ratio = float(np.nanmean(per_neuron_ratio))
-            std_ratio = float(np.nanstd(per_neuron_ratio))
-
-            if self.verbose:
-                print(
-                    f"[FS debug] {region}: steps={fs_inputs_actual.shape[1]}, FS neurons={fs_inputs_actual.shape[0]}, "
-                    f"total_expected={total_expected:.2f}, total_actual={total_actual:.2f}, "
-                    f"total_ratio={ratio_total:.3f}, corr={corr_display}, "
-                    f"mean_neuron_ratio={mean_ratio:.3f}+/-{std_ratio:.3f}"
-                )
-
-            time_axis = np.arange(fs_inputs_actual.shape[1]) * self.dt
-            fig, axes = plt.subplots(2, 2, figsize=(12, 8), constrained_layout=True)
-
-            axes[0, 0].plot(
-                time_axis, expected_mean.sum(axis=0), label="expected (from SPNs)"
-            )
-            axes[0, 0].plot(
-                time_axis,
-                fs_inputs_actual.sum(axis=0),
-                label="actual (FS memmap)",
-                alpha=0.7,
-            )
-            axes[0, 0].set_xlabel("Time (ms)")
-            axes[0, 0].set_ylabel("Input count")
-            axes[0, 0].set_title(f"{region}: total FS input per timestep")
-            axes[0, 0].legend()
-
-            sample_size = min(3000, flat_expected.size)
-            sample_idx = (
-                np.linspace(0, flat_expected.size - 1, num=sample_size, dtype=int)
-                if sample_size > 0
-                else np.array([], dtype=int)
-            )
-            axes[0, 1].scatter(
-                flat_expected[sample_idx],
-                flat_actual[sample_idx],
-                s=6,
-                alpha=0.6,
-                label="samples",
-            )
-            if sample_size > 0:
-                max_val = max(
-                    flat_expected[sample_idx].max(), flat_actual[sample_idx].max()
-                )
-                axes[0, 1].plot([0, max_val], [0, max_val], "r--", lw=1, label="y=x")
-            axes[0, 1].set_xlabel("Expected (Poisson mean)")
-            axes[0, 1].set_ylabel("Actual (sampled)")
-            axes[0, 1].set_title("Expected vs actual (sampled points)")
-            axes[0, 1].legend()
-
-            axes[1, 0].hist(
-                per_neuron_ratio[~np.isnan(per_neuron_ratio)],
-                bins=30,
-                color="steelblue",
-                edgecolor="black",
-            )
-            axes[1, 0].axvline(1.0, color="red", linestyle="--", label="ideal")
-            axes[1, 0].set_xlabel("Mean(actual)/Mean(expected)")
-            axes[1, 0].set_ylabel("FS neuron count")
-            axes[1, 0].set_title("FS neuron-wise ratio")
-            axes[1, 0].legend()
-
-            n_show = min(3, fs_inputs_actual.shape[0])
-            for idx in range(n_show):
-                axes[1, 1].plot(
-                    time_axis,
-                    expected_mean[idx],
-                    label=f"expected n{idx}",
-                    linestyle="--",
-                    alpha=0.8,
-                )
-                axes[1, 1].plot(
-                    time_axis,
-                    fs_inputs_actual[idx],
-                    label=f"actual n{idx}",
-                    alpha=0.8,
-                )
-            axes[1, 1].set_xlabel("Time (ms)")
-            axes[1, 1].set_ylabel("Input count")
-            axes[1, 1].set_title("Example FS neurons")
-            axes[1, 1].legend()
-
-            plt.suptitle(f"FS input validation for {region}")
-            plt.show()
-
-            # Detailed per-neuron view: one FS neuron and its connected SPNs
-            fs_idx = None
-            for candidate in range(fs_inputs_actual.shape[0]):
-                if (
-                    W_fs_dspn.getrow(candidate).nnz > 0
-                    or W_fs_ispn.getrow(candidate).nnz > 0
-                ):
-                    fs_idx = candidate
-                    break
-
-            if fs_idx is None:
-                if self.verbose:
-                    print(
-                        f"[FS debug] {region}: no FS neuron with SPN connections found for detailed plot."
-                    )
-                continue
-
-            w_dspn_row = np.array(W_fs_dspn.getrow(fs_idx).toarray()).ravel()
-            w_ispn_row = np.array(W_fs_ispn.getrow(fs_idx).toarray()).ravel()
-
-            conn_list = []
-            for idx, w in enumerate(w_dspn_row):
-                if w > 0:
-                    conn_list.append(("dSPN", idx, w))
-            for idx, w in enumerate(w_ispn_row):
-                if w > 0:
-                    conn_list.append(("iSPN", idx, w))
-
-            if not conn_list:
-                if self.verbose:
-                    print(
-                        f"[FS debug] {region}: FS neuron {fs_idx} has no SPN connections for detailed plot."
-                    )
-                continue
-
-            # Keep plot readable: show strongest connections first
-            conn_list.sort(key=lambda x: x[2], reverse=True)
-            max_traces = 6
-            conn_list = conn_list[:max_traces]
-
-            colors = plt.cm.tab10(np.linspace(0, 1, len(conn_list)))
-            fig_detail, axes_detail = plt.subplots(
-                1, 3, figsize=(15, 4), constrained_layout=True
-            )
-
-            # FS neuron spikes
-            axes_detail[0].plot(
-                time_axis,
-                fs_inputs_actual[fs_idx],
-                color="black",
-                label=f"FS {fs_idx} actual",
-            )
-            axes_detail[0].plot(
-                time_axis,
-                expected_mean[fs_idx],
-                color="gray",
-                linestyle="--",
-                label="expected",
-            )
-            axes_detail[0].set_title(f"FS neuron {fs_idx} input counts")
-            axes_detail[0].set_xlabel("Time (ms)")
-            axes_detail[0].set_ylabel("Input count")
-            axes_detail[0].legend()
-
-            # SPN spike counts (raw)
-            for color, (ctype, idx, w) in zip(colors, conn_list):
-                if ctype == "dSPN":
-                    axes_detail[1].plot(
-                        time_axis,
-                        dspn_inputs[idx],
-                        color=color,
-                        label=f"dSPN {idx} (w={w:.3f})",
-                    )
-                else:
-                    axes_detail[1].plot(
-                        time_axis,
-                        ispn_inputs[idx],
-                        color=color,
-                        label=f"iSPN {idx} (w={w:.3f})",
-                    )
-            axes_detail[1].set_title("Connected SPN spike counts")
-            axes_detail[1].set_xlabel("Time (ms)")
-            axes_detail[1].set_ylabel("Spike count")
-            axes_detail[1].legend()
-
-            # Weighted SPN spike counts
-            for color, (ctype, idx, w) in zip(colors, conn_list):
-                if ctype == "dSPN":
-                    weighted = dspn_inputs[idx] * w
-                else:
-                    weighted = ispn_inputs[idx] * w
-                axes_detail[2].plot(
-                    time_axis,
-                    weighted,
-                    color=color,
-                    label=f"{ctype} {idx} (w={w:.3f})",
-                )
-            axes_detail[2].set_title("Weighted SPN spike counts")
-            axes_detail[2].set_xlabel("Time (ms)")
-            axes_detail[2].set_ylabel("Weighted count")
-            axes_detail[2].legend()
-
-            fig_detail.suptitle(
-                f"FS {fs_idx} and connected SPNs ({region})", fontsize=12
-            )
-            plt.show()
 
     def get_input_receiver_populations(self) -> dict[str, Population]:
         """
@@ -1098,69 +847,6 @@ class Microcircuit:
         )
         return 4 * np.pi * rho * val
 
-    def _expected_shared_for_d(self, rho, Rin, Rout, p_func, d):
-        """
-        Expected number of shared presynaptic inputs from the outer shells of two receivers separated by distance d.
-
-        Math derivation (summary):
-            E[N_shared(d)] = rho * ∫ p(r_A) p(r_B) dV
-        Place receiver A at origin, receiver B on polar axis at distance d.
-            E[N_shared(d)] = 2*pi * rho * ∫_{r=Rin}^{Rout} r^2 ∫_{theta=0}^{pi}
-                            p(r) p(r_B) sin(theta) dtheta dr
-        where r_B = sqrt(r^2 + d^2 - 2*r*d*cos(theta)).
-
-        Parameters
-        ----------
-        rho : float
-            Presynaptic density (neurons per unit volume).
-        Rin, Rout : float
-            Inner and outer radii defining the shell of interest.
-        p_func : callable
-            Connection kernel p(r).
-        d : float
-            Distance between the two receiving neurons (units consistent with radii).
-
-        Returns
-        -------
-        float
-            Expected number of shared presynaptic neurons that are in both outer shells and connect to both receivers.
-
-        Edge cases & checks
-        -------------------
-        - If d >= 2*Rout there is no overlap of the outer shells -> returns 0.
-        - If d == 0, this reduces to E[N_shared(0)] = 4*pi*rho * ∫_{Rin}^{Rout} p(r)^2 r^2 dr.
-
-        Numerical considerations
-        ------------------------
-        - This is a nested integral (r then theta). Use quad for the inner theta integral and then quad for r.
-        - For many d values, consider caching/interpolating results.
-        """
-        if d >= 2 * Rout:
-            return 0.0
-
-        def inner_theta(theta, r):
-            # distance to receiver B
-            rB = np.sqrt(max(0.0, r * r + d * d - 2 * r * d * np.cos(theta)))
-            if (rB < Rin) or (rB > Rout):
-                return 0.0
-            return p_func(r) * p_func(rB) * (r**2) * np.sin(theta)
-
-        def integrand_r(r):
-            val_theta, _ = integrate.quad(
-                lambda th: inner_theta(th, r),
-                0.0,
-                np.pi,
-                epsabs=1e-6,
-                epsrel=1e-5,
-                limit=200,
-            )
-            return val_theta
-
-        val_r, _ = integrate.quad(
-            integrand_r, Rin, Rout, epsabs=1e-6, epsrel=1e-5, limit=200
-        )
-        return 2 * np.pi * rho * val_r
-
     def _p_exp(
         self, d: float | np.ndarray, P0: float, sigma: float
     ) -> float | np.ndarray:
@@ -1227,333 +913,124 @@ class Microcircuit:
                     f"Cortical drive dt ({dt_ms:.6f} ms) is finer than Microcircuit dt ({self.dt:.6f} ms); please regenerate cortical drive data."
                 )
 
-            # Simulate spike counts per cortical region for dSPN and iSPN receivers
+            # All receiver types of one region draw on the SAME cortical axon
+            # pool, so the streams for a region are generated together. Drawn
+            # independently per receiver type, a dSPN and an iSPN sitting in the
+            # same tissue and sampling the same axons would share nothing at all,
+            # and an FS would share nothing with the SPNs it inhibits.
             cor_input_memmap_dict = {}
-            for receiver_type in ("dSPN", "iSPN"):
-                for (
-                    cortical_region,
-                    proportion,
-                ) in self.cortical_proportions_dict.items():
+            for (
+                cortical_region,
+                proportion,
+            ) in self.cortical_proportions_dict.items():
+                if proportion <= 0:
+                    # a region with no share gets no stream at all, which is the
+                    # only reason the two loops differ in stream count
+                    continue
 
-                    if self.verbose:
-                        print(
-                            f"Simulating cortical input spike counts for region '{cortical_region}' to receiver type '{receiver_type}'."
+                rate_key = f"{cortical_region}_rate"
+                if rate_key not in data:
+                    raise KeyError(
+                        f"Rate key '{rate_key}' missing in cortical drive file {rate_path}."
+                    )
+                rate_series = np.asarray(data[rate_key])
+                available_steps = rate_series.size * expansion_factor
+                if available_steps < self.n_steps:
+                    raise ValueError(
+                        f"Rate series for {cortical_region} provides {available_steps} "
+                        f"microcircuit-sized steps after expansion; expected at least "
+                        f"{self.n_steps}."
+                    )
+                if expansion_factor > 1:
+                    rate_segment = np.repeat(rate_series, expansion_factor)[
+                        : self.n_steps
+                    ]
+                else:
+                    rate_segment = rate_series[: self.n_steps]
+
+                # The pool size is fixed by the shared fraction measured on SPNs,
+                # so every other shared fraction -- FS to FS, FS to SPN -- follows
+                # from it instead of being a free parameter.
+                n_eff_reference = int(
+                    np.round(proportion * self.N_cortical_inputs_dict["dSPN"])
+                )
+                if n_eff_reference == 0:
+                    continue
+                pool_size = axon_pool_size(
+                    n_reference=n_eff_reference,
+                    shared_fraction=self.shared_fraction,
+                )
+
+                streams = {}
+                for receiver_type in self.cell_types:
+                    n_eff = int(
+                        np.round(
+                            proportion * self.N_cortical_inputs_dict[receiver_type]
                         )
-
-                    spike_file = self._spike_counts_path(cortical_region, receiver_type)
-
-                    rate_key = f"{cortical_region}_rate"
-                    if rate_key not in data:
-                        raise KeyError(
-                            f"Rate key '{rate_key}' missing in cortical drive file {rate_path}."
-                        )
-                    rate_series = np.asarray(data[rate_key])
-                    available_steps = rate_series.size * expansion_factor
-                    if available_steps < self.n_steps:
-                        raise ValueError(
-                            f"Rate series for {cortical_region} provides {available_steps} microcircuit-sized steps after expansion; "
-                            f"expected at least {self.n_steps}."
-                        )
-                    if expansion_factor > 1:
-                        rate_series_expanded = np.repeat(rate_series, expansion_factor)
-                        rate_segment = rate_series_expanded[: self.n_steps]
-                    else:
-                        rate_segment = rate_series[: self.n_steps]
-
-                    # number of expected inputs from this cortical region
-                    N_total = self.N_cortical_inputs_dict[receiver_type]
-                    N = proportion * N_total
-                    N_eff = int(np.round(N))
-                    if N_eff == 0:
+                    )
+                    if n_eff == 0:
                         continue
-                    # number of receivers R of the receiver type
-                    R = self.type_counts[receiver_type]
-                    # key is (pre, post)
-                    key = (cortical_region, receiver_type)
+                    streams[receiver_type] = {
+                        "filename": self._spike_counts_path(
+                            cortical_region, receiver_type
+                        ),
+                        "R": self.type_counts[receiver_type],
+                        "N": n_eff,
+                    }
+                if not streams:
+                    continue
 
-                    simulate_receiver_counts_homogeneous_to_memmap(
-                        filename=spike_file,
-                        R=R,
-                        N=N_eff,
-                        shared_input=self.shared_fraction,
-                        rate=rate_segment,
-                        dt=self.dt,
-                        rho=0.0,  # rho is ignored because fluctuations come rate time series based on BOLD
-                        num_bins=self.n_steps,
-                        receiver_dtype=np.float64,
-                        rng=self.rng,
-                        # concentration=1000.0,
-                        verbose=self.verbose,
+                if self.verbose:
+                    print(
+                        f"Simulating cortical input spike counts for region "
+                        f"'{cortical_region}' ({', '.join(streams)})."
                     )
 
-                    # Debugging check for dlPFC -> dSPN inputs: compare expected vs simulated counts in first chunk
-                    if cortical_region == "dlPFC" and receiver_type == "dSPN":
-                        chunk_steps = int(self.update_time / self.dt)
-                        if chunk_steps > 0:
-                            rate_chunk = rate_segment[:chunk_steps]
-                            dt_seconds = self.dt / 1000.0
-                            # Expected count per input neuron over the first chunk
-                            expected_per_input = float(np.sum(rate_chunk) * dt_seconds)
-                            expected_total = expected_per_input * N_eff
-
-                            # Load first chunk of simulated counts from memmap
-                            first_chunk_iter = iter_memmap_spike_counts(
-                                filename=spike_file,
-                                R=R,
-                                num_bins=self.n_steps,
-                                receiver_dtype=np.float64,
-                                chunk_size=chunk_steps,
-                                copy=False,
-                                verbose=False,
-                            )
-                            first_chunk = next(first_chunk_iter)
-                            simulated_sum_per_receiver = np.sum(first_chunk, axis=1)
-                            sim_mean = float(np.mean(simulated_sum_per_receiver))
-                            sim_std = float(np.std(simulated_sum_per_receiver))
-
-                            if self.verbose:
-                                print("[dlPFC->dSPN debug] First chunk diagnostics:")
-                                print(
-                                    f"  chunk_steps={chunk_steps}, dt_ms={self.dt}, chunk_time_ms={chunk_steps * self.dt}"
-                                )
-                                print(
-                                    f"  N_eff (inputs)={N_eff}, rate_chunk_mean_Hz={np.mean(rate_chunk):.4f}, rate_chunk_sum_Hz={np.sum(rate_chunk):.4f}"
-                                )
-                                print(
-                                    f"  expected_per_input_count={expected_per_input:.4f}, expected_total_count={expected_total:.4f}"
-                                )
-                                print(
-                                    f"  simulated_sum_per_receiver: mean={sim_mean:.4f}, std={sim_std:.4f} (over {len(simulated_sum_per_receiver)} receivers)"
-                                )
-                        else:
-                            if self.verbose:
-                                print(
-                                    "[dlPFC->dSPN debug] Skipped diagnostics because chunk_steps computed as 0."
-                                )
-
-                    # store infos in cor_input_memmap_dict
-                    cor_input_memmap_dict[key] = {
-                        "R": R,
+                stats = simulate_cortical_axon_pool_streams_to_memmap(
+                    streams=streams,
+                    pool_size=pool_size,
+                    rate=rate_segment,
+                    dt=self.dt,
+                    num_bins=self.n_steps,
+                    receiver_dtype=np.float64,
+                    rng=self.rng,
+                    r_sc=self.cortical_correlation,
+                    tau_c_ms=self.correlation_timescale_ms,
+                    t_meas_ms=self.correlation_window_ms,
+                    verbose=self.verbose,
+                )
+                for receiver_type in streams:
+                    check_stream_statistics(
+                        f"{cortical_region}->{receiver_type} ({self.name})",
+                        stats[receiver_type]["target"],
+                        stats[receiver_type]["measured"],
+                        sample_shape=stats[receiver_type]["sample_shape"],
+                    )
+                    self.stream_statistics[
+                        f"{cortical_region}-{receiver_type}"
+                    ] = stats[receiver_type]
+                    cor_input_memmap_dict[(cortical_region, receiver_type)] = {
+                        "R": self.type_counts[receiver_type],
                         "receiver_dtype": np.float64,
                     }
-
-        # After generating SPN inputs, derive FS inputs from them
-        cor_input_memmap_dict = self._derive_fs_cortical_inputs(cor_input_memmap_dict)
-
-        return cor_input_memmap_dict
-
-    def _calculate_max_chunk_size(
-        self, N_dspn: int, N_ispn: int, N_fs: int, max_ram_mb: float = 512.0
-    ) -> int:
-        """
-        Calculate safe chunk size based on available RAM.
-
-        Args:
-            N_dspn, N_ispn, N_fs: Number of neurons per type
-            max_ram_mb: Target maximum RAM usage in MB
-        """
-        # Bytes per float64
-        bytes_per_float = 8
-
-        # Memory per time step:
-        # We need to load chunks for dSPN and iSPN, compute sums, and store FS
-        # Plus overhead for sparse matrix multiplication (intermediate buffers)
-        # Conservative estimate: (N_d + N_i + 2 * N_fs) * bytes_per_float * safety_factor
-        safety_factor = 4.0
-        bytes_per_step = (N_dspn + N_ispn + 2 * N_fs) * bytes_per_float * safety_factor
-
-        # Total available bytes
-        total_bytes = max_ram_mb * 1024 * 1024
-
-        # Steps fitting in memory
-        chunk_size = int(total_bytes / bytes_per_step)
-
-        # Ensure at least 1 step
-        return max(1, chunk_size)
-
-    def _derive_fs_cortical_inputs(self, cor_input_memmap_dict):
-        """
-        Derive cortical inputs for FS neurons from their connected dSPN/iSPN targets.
-
-        The FS inputs are generated by:
-        1. Identifying all dSPNs and iSPNs connected to each FS neuron.
-        2. Computing a WEIGHTED sum of the cortical spike counts of these connected targets.
-           Stronger connections contribute more to the "input pool".
-        3. Scaling this weighted sum to match the expected FS input count (N_FS) via Poisson sampling.
-           This ensures input magnitude is correct while preserving the relative influence of strong vs weak connections.
-        """
-        if self.verbose:
-            print("Deriving FS cortical inputs from connected dSPN/iSPN targets...")
-
-        # 1. Prepare connectivity matrices (FS -> dSPN and FS -> iSPN)
-        # We use CSR format for efficient row slicing / matrix multiplication
-        if ("FS", "dSPN") not in self.weights_by_type or (
-            "FS",
-            "iSPN",
-        ) not in self.weights_by_type:
-            if self.verbose:
-                print(
-                    "Warning: FS->dSPN or FS->iSPN weights missing. Cannot derive FS inputs."
-                )
-            return cor_input_memmap_dict
-
-        W_fs_dspn = self.weights_by_type[("FS", "dSPN")].tocsr()
-        W_fs_ispn = self.weights_by_type[("FS", "iSPN")].tocsr()
-
-        # 2. Compute Scaling Factors
-        # We want the expected output count to be N_FS_total.
-        # The weighted sum has an expected value proportional to the sum of weights.
-        # Scale_i = N_FS / (Sum_j(W_ij * N_SPN))
-
-        N_spn_total = self.N_cortical_inputs_dict[
-            "dSPN"
-        ]  # Assuming dSPN and iSPN have same N (7000)
-        N_fs_total = self.N_cortical_inputs_dict["FS"]  # 2800
-
-        # Sum of weights per FS neuron (axis 1 = sum over columns/targets)
-        # Result is shape (n_fs, 1)
-        sum_w_dspn = np.array(W_fs_dspn.sum(axis=1)).flatten()
-        sum_w_ispn = np.array(W_fs_ispn.sum(axis=1)).flatten()
-
-        # Total weighted input capacity per FS neuron
-        total_weighted_capacity = (sum_w_dspn * N_spn_total) + (
-            sum_w_ispn * N_spn_total
-        )
-
-        # Avoid division by zero for FS neurons with no connections
-        scaling_factors = np.zeros_like(total_weighted_capacity)
-        mask = total_weighted_capacity > 0
-        scaling_factors[mask] = N_fs_total / total_weighted_capacity[mask]
-
-        # 3. Iterate over cortical regions
-        R_fs = self.type_counts["FS"]
-        R_dspn = self.type_counts["dSPN"]
-        R_ispn = self.type_counts["iSPN"]
-
-        # Calculate dynamic chunk size
-        chunk_size = self._calculate_max_chunk_size(
-            R_dspn, R_ispn, R_fs, max_ram_mb=512.0
-        )
-        # clip chunk size to not exceed total steps
-        chunk_size = min(chunk_size, self.n_steps)
-
-        if self.verbose:
-            print(f"  Calculated chunk size: {chunk_size} steps")
-
-        for cortical_region in self.cortical_proportions_dict.keys():
-            # Only process if this region actually provides input
-            if self.cortical_proportions_dict[cortical_region] <= 0:
-                continue
-
-            key_dspn = (cortical_region, "dSPN")
-            key_ispn = (cortical_region, "iSPN")
-            key_fs = (cortical_region, "FS")
-
-            # Ensure SPN inputs exist
-            if (
-                key_dspn not in cor_input_memmap_dict
-                or key_ispn not in cor_input_memmap_dict
-            ):
-                continue
-
-            if self.verbose:
-                print(f"  Processing {cortical_region} -> FS inputs...")
-
-            # Output filename for FS inputs
-            fs_spike_file = self._spike_counts_path(cortical_region, "FS")
-            # Create memmap for writing FS inputs
-            fs_mm = np.memmap(
-                fs_spike_file, dtype=np.float64, mode="w+", shape=(R_fs, self.n_steps)
-            )
-
-            # Input iterators for SPN inputs
-            iter_dspn = iter_memmap_spike_counts(
-                filename=self._spike_counts_path(cortical_region, "dSPN"),
-                R=R_dspn,
-                num_bins=self.n_steps,
-                receiver_dtype=np.float64,
-                chunk_size=chunk_size,
-            )
-            iter_ispn = iter_memmap_spike_counts(
-                filename=self._spike_counts_path(cortical_region, "iSPN"),
-                R=R_ispn,
-                num_bins=self.n_steps,
-                receiver_dtype=np.float64,
-                chunk_size=chunk_size,
-            )
-
-            # Iterate through time chunks
-            current_step = 0
-            for chunk_dspn, chunk_ispn in zip(iter_dspn, iter_ispn):
-                # chunk shape: (n_neurons, n_steps_in_chunk)
-                steps_in_chunk = chunk_dspn.shape[1]
-
-                # Weighted Sum of inputs from connected targets
-                # (n_fs, n_dspn) @ (n_dspn, steps) -> (n_fs, steps)
-                weighted_sum = (W_fs_dspn @ chunk_dspn) + (W_fs_ispn @ chunk_ispn)
-
-                # Apply scaling factor to match target N_FS expectation
-                # scaling_factors shape (n_fs,), broadcast over time steps
-                expected_fs_counts = weighted_sum * scaling_factors[:, None]
-
-                # Sample discrete spikes using Poisson
-                # This preserves the mean rate while generating integer counts
-                fs_inputs = self.rng.poisson(expected_fs_counts).astype(np.float64)
-
-                # Write to memmap
-                fs_mm[:, current_step : current_step + steps_in_chunk] = fs_inputs
-                current_step += steps_in_chunk
-
-            fs_mm.flush()
-
-            # Update dictionary
-            cor_input_memmap_dict[key_fs] = {
-                "R": R_fs,
-                "receiver_dtype": np.float64,
-            }
+                self.stream_statistics[f"{cortical_region}-pool"] = {
+                    "pool_size": stats["pool_size"],
+                    "cross_type_shared_fractions": stats[
+                        "cross_type_shared_fractions"
+                    ],
+                }
 
         return cor_input_memmap_dict
-
-    def _build_distance_dependent_shared_fraction_matrices(self, f_d_interp_dict):
-        """Build distance-dependent shared fraction matrices for all pre/post type pairs."""
-        f_d_matrices_dict = {}
-        for key, f_d_interp in f_d_interp_dict.items():
-            _, post_type = key
-            R = self.type_counts[post_type]
-            # initialize shared fraction matrix
-            f_d_matrix = np.zeros((R, R), dtype=np.float32)
-            # loop over all receiver pairs
-            for i_local, i_global in enumerate(self.indices_by_type[post_type]):
-                for j_local, j_global in enumerate(self.indices_by_type[post_type]):
-                    if i_global == j_global:
-                        f_d_matrix[i_local, j_local] = 1.0
-                    else:
-                        d = self._periodic_distance(i_global, j_global)
-                        f_d_matrix[i_local, j_local] = f_d_interp(d)
-            # keep correlation/shared-fraction values within [0, 1]
-            np.fill_diagonal(f_d_matrix, 1.0)
-            np.clip(f_d_matrix, 0.0, 1.0, out=f_d_matrix)
-            f_d_matrices_dict[key] = f_d_matrix
-        return f_d_matrices_dict
 
     def _missing_local_input(self):
-        """Construct distance-dependent shared input matrices and simulate local inhibitory spike counts."""
-        # Get distance dependent shared input curves f(d)
-        (
-            f_d_interp_dict,
-            f_d_raw_dict,
-            expected_outer_dict,
-            expected_shared_dict,
-        ) = self._define_distance_dependent_shared_input_curves()
-
-        # Given the shared input curves f(d) combined with receiver positions obtain shared fraction matrices
-        f_d_matrices_dict = self._build_distance_dependent_shared_fraction_matrices(
-            f_d_interp_dict=f_d_interp_dict
+        """Simulate the GABAergic input from striatal neurons outside the cube."""
+        expected_outer_dict, expected_inner_dict, kernel_dict = (
+            self._define_expected_input_counts()
         )
+        self.expected_inner_dict = expected_inner_dict
 
-        # Simulate spike counts for these matrices and assign to receivers and store them
         self.local_input_memmap_dict = self._simulate_distance_dependent_spike_counts(
-            f_d_matrices_dict=f_d_matrices_dict, expected_outer_dict=expected_outer_dict
+            expected_outer_dict=expected_outer_dict, kernel_dict=kernel_dict
         )
 
         # store the mean of the weights per pre-post type pair
@@ -1620,43 +1097,101 @@ class Microcircuit:
             self.inp_iterator_dict[key] = inp_iterator
 
     def _simulate_distance_dependent_spike_counts(
-        self, f_d_matrices_dict, expected_outer_dict
+        self, expected_outer_dict, kernel_dict
     ):
-        """Generate spike-count time series for each f_d matrix."""
+        """Generate the missing-GABA streams from explicit geometric source pools.
+
+        For each pair, virtual source neurons are scattered around the receiver
+        lattice and connected with the pair's own distance kernel. The shared
+        fraction between two receivers is then the overlap of their pools, so
+        ``f(d)`` is reproduced without being computed, and the realised degree
+        reproduces ``E_outer`` without being imposed. Both are checked.
+        """
         local_input_memmap_dict = {}
-        # Loop over postsynaptic neuron type
+        self.stream_statistics = getattr(self, "stream_statistics", {})
+
         for post_type in self.cell_types:
-            # loop over presynaptic neuron type
             for pre_type in self.cell_types:
                 key = (pre_type, post_type)
                 if key not in self.conn_params:
                     continue
 
-                spike_file = self._spike_counts_path(pre_type, post_type)
-
-                # use an integer number of effective presynaptic sources; avoid fractional trials that can yield NaNs
-                N_eff = int(round(expected_outer_dict[key]))
-                if N_eff == 0:
+                expected_outer = expected_outer_dict[key]
+                if int(round(expected_outer)) == 0:
                     continue
 
-                simulate_receiver_counts_distance_dependent_to_memmap(
-                    filename=spike_file,
-                    correlation_matrix=f_d_matrices_dict[key],
-                    N=N_eff,
-                    rate=self.firing_rate_dict[pre_type],
-                    dt=self.dt,
-                    rho=self.correlation_dict[pre_type],
-                    num_bins=self.n_steps,
-                    receiver_dtype=np.float64,
+                P0, sigma_mm, r_in, r_out, rho_pre = kernel_dict[key]
+                positions = self.positions[self.indices_by_type[post_type]]
+
+                # One virtual source stands for `multiplicity` real neurons, which
+                # keeps the source cloud small. But it also quantises a receiver's
+                # degree, so a pair with few afferents needs a finer grain: at
+                # multiplicity 10 the 12-afferent FS->FS pair would have barely one
+                # source per receiver and both its degree and its shared fraction
+                # would be rounded away.
+                multiplicity = max(
+                    1,
+                    min(
+                        self.source_multiplicity,
+                        int(expected_outer // self._MIN_SOURCES_PER_RECEIVER),
+                    ),
+                )
+
+                if self.verbose:
+                    print(f"Building geometric source pool for {pre_type}->{post_type}")
+                pools = build_geometric_source_pools(
+                    receiver_positions=positions,
+                    p_func=lambda d, _P0=P0, _s=sigma_mm: self._p_exp(d, _P0, _s),
+                    r_in=r_in,
+                    r_out=r_out,
+                    density_pre=rho_pre,
                     rng=self.rng,
-                    # concentration=1000.0,
+                    multiplicity=multiplicity,
                     verbose=self.verbose,
                 )
 
-                # store infos in local_input_memmap_dict
-                R = self.type_counts[post_type]
+                # The pool is one random realisation of the source cloud, so its
+                # mean degree only has to agree with E_outer to within the spread
+                # of that draw. Receiver degrees are NOT independent -- nearby
+                # receivers share sources -- so the spread is set by the cloud,
+                # not by the receiver count. Measured over 8 seeds it is 1.6 % of
+                # E_outer for dSPN->dSPN and 4.8 % for FS->dSPN, with a bias below
+                # 1 %; the tolerance below is ~4 sigma of the worst case. Anything
+                # that actually breaks the construction -- a wrong kernel, radius
+                # or density -- is off by a factor, not by 20 %.
+                if abs(pools.mean_n_eff - expected_outer) > 0.20 * expected_outer:
+                    raise ValueError(
+                        f"Geometric pool for {pre_type}->{post_type} realises "
+                        f"{pools.mean_n_eff:.1f} afferents per receiver but the "
+                        f"kernel integral expects {expected_outer:.1f}. The pool "
+                        "does not reproduce E_outer; check the kernel, r_in/r_out "
+                        "or the density."
+                    )
+
+                stats = simulate_receiver_counts_geometric_to_memmap(
+                    filename=self._spike_counts_path(pre_type, post_type),
+                    pools=pools,
+                    rate=self.firing_rate_dict[pre_type],
+                    dt=self.dt,
+                    num_bins=self.n_steps,
+                    receiver_dtype=np.float64,
+                    rng=self.rng,
+                    r_sc=self.correlation_dict[pre_type],
+                    tau_c_ms=self.correlation_timescale_ms,
+                    t_meas_ms=self.correlation_window_ms,
+                    verbose=self.verbose,
+                )
+                check_stream_statistics(
+                    f"{pre_type}->{post_type} ({self.name})",
+                    stats["target"],
+                    stats["measured"],
+                    sample_shape=stats["sample_shape"],
+                )
+                stats["expected_outer"] = float(expected_outer)
+                self.stream_statistics[f"{pre_type}-{post_type}"] = stats
+
                 local_input_memmap_dict[key] = {
-                    "R": R,
+                    "R": self.type_counts[post_type],
                     "receiver_dtype": np.float64,
                 }
         return local_input_memmap_dict
@@ -1676,6 +1211,18 @@ class Microcircuit:
             # built with different ones is not interchangeable
             "firing_rate_dict": dict(self.firing_rate_dict),
             "correlation_dict": dict(self.correlation_dict),
+            # a correlation is only defined together with its measurement window
+            # and timescale, so all three are part of what the cache was built at
+            "correlation_window_ms": self.correlation_window_ms,
+            "correlation_timescale_ms": self.correlation_timescale_ms,
+            "source_multiplicity": self.source_multiplicity,
+            # what the streams were measured to contain, so a cache can be
+            # audited without regenerating it
+            "stream_statistics": dict(self.stream_statistics),
+            "expected_inner_dict": {
+                f"{pre}-{post}": v
+                for (pre, post), v in getattr(self, "expected_inner_dict", {}).items()
+            },
         }
         with open(self._missing_input_state_path(), "wb") as f:
             pickle.dump(payload, f)
@@ -1735,6 +1282,34 @@ class Microcircuit:
                     f"(cached vs current: {mismatch}); rebuild missing inputs."
                 )
 
+        # A correlation is only defined together with the window it was measured
+        # at and the timescale it was realised with, so a cache built at different
+        # ones holds different streams even at an identical correlation_dict.
+        for field, current in (
+            ("correlation_window_ms", self.correlation_window_ms),
+            ("correlation_timescale_ms", self.correlation_timescale_ms),
+            ("source_multiplicity", self.source_multiplicity),
+        ):
+            if field not in payload:
+                raise ValueError(
+                    f"Cached missing-input state does not record {field}; it "
+                    "predates this check and cannot be verified. Rebuild missing "
+                    "inputs."
+                )
+            saved = payload[field]
+            same = (
+                saved is None
+                and current is None
+                or saved is not None
+                and current is not None
+                and np.isclose(saved, current, rtol=1e-9, atol=0.0)
+            )
+            if not same:
+                raise ValueError(
+                    f"Cached missing-input {field} is {saved!r} but current "
+                    f"setting is {current!r}; rebuild missing inputs."
+                )
+
         self.local_input_memmap_dict = payload.get("local_input_memmap_dict")
         if self.local_input_memmap_dict is None:
             raise ValueError(
@@ -1776,8 +1351,12 @@ class Microcircuit:
             "cortical_proportions_dict": self.cortical_proportions_dict,
             "N_cortical_inputs_dict": self.N_cortical_inputs_dict,
             "shared_fraction": self.shared_fraction,
+            "cortical_correlation": self.cortical_correlation,
+            "correlation_window_ms": self.correlation_window_ms,
+            "correlation_timescale_ms": self.correlation_timescale_ms,
             "cortical_rate_path": str(self.cortical_rate_path),
             "keys": [f"{pre}-{post}" for (pre, post) in self.cor_input_memmap_dict],
+            "stream_statistics": dict(self.stream_statistics),
         }
 
         with open(self._cortical_input_state_path(), "wb") as f:
@@ -1832,6 +1411,31 @@ class Microcircuit:
                 "Cached cortical-input state uses different shared_fraction; rebuild cortical inputs."
             )
 
+        for field, current in (
+            ("cortical_correlation", self.cortical_correlation),
+            ("correlation_window_ms", self.correlation_window_ms),
+            ("correlation_timescale_ms", self.correlation_timescale_ms),
+        ):
+            if field not in payload:
+                raise ValueError(
+                    f"Cached cortical-input state does not record {field}; it "
+                    "predates this check and cannot be verified. Rebuild cortical "
+                    "inputs."
+                )
+            saved = payload[field]
+            same = (
+                saved is None
+                and current is None
+                or saved is not None
+                and current is not None
+                and np.isclose(saved, current, rtol=1e-9, atol=0.0)
+            )
+            if not same:
+                raise ValueError(
+                    f"Cached cortical-input {field} is {saved!r} but current "
+                    f"setting is {current!r}; rebuild cortical inputs."
+                )
+
         rate_path_saved = payload.get("cortical_rate_path")
         if rate_path_saved is not None:
             current_rate_path = str(Path(self.cortical_rate_path))
@@ -1863,43 +1467,53 @@ class Microcircuit:
         if rng_state is not None:
             self.rng.bit_generator.state = rng_state
 
-    def _define_distance_dependent_shared_input_curves(self):
-        """Compute distance-dependent shared-input fraction curves f(d) for all valid type pairs."""
+    def _define_expected_input_counts(self):
+        """Expected presynaptic counts inside and outside the simulated volume.
 
-        # Get shared input fraction depending on distance f(d) considering the size of
-        # the simulated volume and the distance-dependent connection probability
-        # Number of inputs from outer shell:
-        Rin_mm = (
-            self.neighborhood_radii_mm
-        )  # inner radius of outer shell (mm), i.e. simulated volume around receiver neuron
-        Rout_mm = (
-            self.max_sigma_mm
-        )  # outer cutoff radius (mm), i.e. theoretical max sigma
+        The simulated cube is far smaller than the connection kernel reaches, so
+        each receiver is wired only out to ``Rin`` and everything from there to
+        ``Rout = 3 sigma`` has to be supplied synthetically. This returns how many
+        afferents that is per pair.
+
+        It no longer computes the shared fraction ``f(d)``. That used to be a
+        50-point nested quadrature whose result was then imposed on the draw
+        through a Gaussian copula; the geometric source pools of
+        ``_simulate_distance_dependent_spike_counts`` realise the same overlap
+        directly, so ``f(d)`` emerges instead of being imposed and is exact at
+        any lattice size or density.
+
+        Returns:
+            expected_outer_dict (dict):
+                ``(pre, post) -> E_outer``, the synthetic afferent count.
+
+            expected_inner_dict (dict):
+                ``(pre, post) -> E_inner``, what the simulated cube supplies. Only
+                a sanity check against the connections actually made.
+
+            kernel_dict (dict):
+                ``(pre, post) -> (P0, sigma_mm, Rin_mm, Rout_mm, rho_pre)``, what
+                the geometric pool builder needs.
+        """
+        Rin_mm = self.neighborhood_radii_mm
+        Rout_mm = self.max_sigma_mm
         rho_pre = {
             pre_type: self.props[pre_type] * self.density
             for pre_type in self.cell_types
-        }  # presynaptic density (neurons/mm^3)
+        }
 
-        # variables to store the returns
-        f_d_interp_dict = {}
-        f_d_raw_dict = {}
         expected_outer_dict = {}
-        expected_shared_dict = {}
+        expected_inner_dict = {}
+        kernel_dict = {}
 
-        # Loop over postsynaptic type
         for post_type in self.cell_types:
-            # loop over presynaptic type
             for pre_type in self.cell_types:
                 key = (pre_type, post_type)
                 if key not in self.conn_params:
                     continue
                 P0, sigma_um = self.conn_params[key]
-                sigma_mm = sigma_um * 1e-3  # mm
+                sigma_mm = sigma_um * 1e-3
+                p_func = lambda r_mm, _P0=P0, _s=sigma_mm: self._p_exp(r_mm, _P0, _s)
 
-                # define p_func
-                p_func = lambda r_mm: self._p_exp(r_mm, P0, sigma_mm)
-
-                # compute expected number of inputs from outer shell per receiver neuron
                 expected_outer = self._expected_outer(
                     rho=rho_pre[pre_type],
                     Rin=Rin_mm[post_type],
@@ -1913,88 +1527,23 @@ class Microcircuit:
                     p_func=p_func,
                 )
                 if self.verbose:
-                    print(f"Computed E_outer for {pre_type}->{post_type}...")
                     print(
-                        f"  Rin={Rin_mm[post_type]:.3f} mm, Rout={Rout_mm[post_type]:.3f} mm"
+                        f"  {pre_type}->{post_type}: Rin={Rin_mm[post_type]:.3f} mm, "
+                        f"Rout={Rout_mm[post_type]:.3f} mm, "
+                        f"E_inner={expected_inner:.1f}, E_outer={expected_outer:.1f}"
                     )
-                    print(f"  rho_pre={rho_pre[pre_type]:.2f} neurons/mm^3")
-                    print(
-                        f"  p_func at 0 mm = {p_func(0):.4f}, p_func at Rin = {p_func(Rin_mm[post_type]):.4f}"
-                    )
-                    print(
-                        f"  E_outer = {expected_outer:.4f} inputs per receiver neuron"
-                    )
-                    print(
-                        f"  E_inner = {expected_inner:.4f} inputs per receiver neuron (has to match with local inputs in simulated volume)"
-                    )
-                    print("\n")
 
-                # compute expected shared inputs for distance d between two neurons
-                # precalculate the expected shared inputs for some distances to later interpolate
-                dmax = (
-                    np.sqrt(3) * self.L.max() / 2
-                )  # maximum possible distance between pair of neurons in periodic cube, i.e. half the space diagonal
-                d_vals = np.linspace(0, dmax, 50)
-                expected_shared_vals = np.array(
-                    [
-                        self._expected_shared_for_d(
-                            rho_pre[pre_type],
-                            Rin_mm[post_type],
-                            Rout_mm[post_type],
-                            p_func,
-                            d,
-                        )
-                        for d in d_vals
-                    ]
-                )
-                if self.verbose:
-                    print(f"Computed E_shared_outer for {pre_type}->{post_type}...")
-                    print(f"  For distances between pairs d in [0, {dmax:.3f}] mm")
-                    print(
-                        f"  Expected shared inputs at d=0 mm: {expected_shared_vals[0]:.4f}"
-                    )
-                    print(
-                        f"  Expected shared inputs at d={dmax:.3f} mm: {expected_shared_vals[-1]:.4f}"
-                    )
-                    print("\n")
-
-                # distance-dependent shared input fraction f(d)
-                f_d = expected_shared_vals / max(expected_outer, 1e-12)
-
-                # store f(d) as an interpolating function
-                f_d_interp_dict[key] = interp1d(
-                    d_vals, f_d, kind="cubic", fill_value="extrapolate"
-                )
-
-                # store the raw f_d values and expected outer and shared numbers for later use
-                f_d_raw_dict[key] = (d_vals, f_d)
                 expected_outer_dict[key] = expected_outer
-                expected_shared_dict[key] = (d_vals, expected_shared_vals)
+                expected_inner_dict[key] = expected_inner
+                kernel_dict[key] = (
+                    P0,
+                    sigma_mm,
+                    Rin_mm[post_type],
+                    Rout_mm[post_type],
+                    rho_pre[pre_type],
+                )
 
-                # visualization of f(d) (optional)
-                # plt.figure(figsize=(8, 6))
-                # plt.subplot(211)
-                # d_vals_plot = np.linspace(0, dmax, 200)
-                # plt.plot(d_vals_plot, f_d_dict[key](d_vals_plot))
-                # plt.plot(d_vals, f_d, "o")
-                # plt.title(
-                #     f"Shared input fraction f(d) for {pre_type}->{post_type} \n E_outer={expected_outer:.2f}"
-                # )
-                # plt.xlabel("Distance d (mm)")
-                # plt.ylabel("Shared input fraction f(d)")
-                # plt.subplot(212)
-                # plt.plot(d_vals, expected_shared_vals)
-                # plt.title(f"Expected shared inputs for {pre_type}->{post_type}")
-                # plt.xlabel("Distance d (mm)")
-                # plt.ylabel("Expected shared inputs")
-                # plt.show()
-
-        return (
-            f_d_interp_dict,
-            f_d_raw_dict,
-            expected_outer_dict,
-            expected_shared_dict,
-        )
+        return expected_outer_dict, expected_inner_dict, kernel_dict
 
     # ----------------------
     # Reporting & summaries

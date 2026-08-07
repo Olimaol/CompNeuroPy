@@ -17,9 +17,8 @@ from typing import Dict, Iterable, Optional, Tuple
 import numpy as np
 from ANNarchy import CurrentInjection, Population, TimedArray, simulate
 
-# import from the local spike_input_cortex module the functions iter_memmap_spike_counts and
-# simulate_receiver_counts_homogeneous_to_memmap:
 from CompNeuroPy.striatal_microcircuit.spike_input_cortex import (
+    check_stream_statistics,
     iter_memmap_spike_counts,
     simulate_receiver_counts_homogeneous_to_memmap,
     validate_cortical_proportions,
@@ -60,6 +59,10 @@ class CorticalInputs:
         T: float,
         name: str,
         cortical_proportions_dict: Optional[Dict[str, float]] = None,
+        shared_fraction_dict: Optional[Dict[str, float]] = None,
+        cortical_correlation: float = 0.0,
+        correlation_window_ms: Optional[float] = None,
+        correlation_timescale_ms: float = 0.0,
         dbs_condition: str = "on",
         cortical_rate_path: Optional[str] = None,
         storage_dir: Optional[str] = None,
@@ -95,6 +98,28 @@ class CorticalInputs:
         self.verbose = verbose
         self.rng = np.random.default_rng(seed)
 
+        # Fraction of cortical afferents two receivers of the same population have
+        # in common. There is no measurement of corticosubthalamic or
+        # corticothalamic afferent overlap, so this starts at zero -- which is
+        # certainly wrong physically. It is a parameter rather than a hardcoded
+        # constant so the assumption stays visible; see
+        # BGM_22/experimental_data/input_streams/README.md section 4.6.
+        if shared_fraction_dict is None:
+            raise ValueError(
+                "CorticalInputs requires shared_fraction_dict; there is no "
+                "default. In BGM_22 it is parameters.py['ci.shared_fraction_dict']."
+            )
+        self.shared_fraction_dict = shared_fraction_dict
+        self.cortical_correlation = cortical_correlation
+        if cortical_correlation > 0 and correlation_window_ms is None:
+            raise ValueError(
+                "cortical_correlation > 0 requires correlation_window_ms, the "
+                "window the value was measured at."
+            )
+        self.correlation_window_ms = correlation_window_ms
+        self.correlation_timescale_ms = correlation_timescale_ms
+        self.stream_statistics: Dict[str, Dict] = {}
+
         self.cortical_proportions_dict = validate_cortical_proportions(
             cortical_proportions_dict, "CorticalInputs"
         )
@@ -115,6 +140,13 @@ class CorticalInputs:
                 raise ValueError(f"Duplicate population type '{pop_type}' provided")
             self.populations[pop_type] = pop
         self.cell_types = set(self.populations.keys())
+        missing = self.cell_types - set(self.shared_fraction_dict)
+        if missing:
+            raise ValueError(
+                f"shared_fraction_dict is missing entries for {sorted(missing)}; "
+                f"it must be keyed like N_cortical_inputs_dict "
+                f"({sorted(self.N_cortical_inputs_dict)})."
+            )
 
         self.cor_input_memmap_dict: Dict[Tuple[str, str], Dict[str, object]] = {}
         self.annarchy_inp_populations: Dict[Tuple[str, str], TimedArray] = {}
@@ -450,19 +482,28 @@ class CorticalInputs:
                         continue
 
                     spike_file = self._spike_counts_path(cortical_region, post_type)
-                    simulate_receiver_counts_homogeneous_to_memmap(
+                    stats = simulate_receiver_counts_homogeneous_to_memmap(
                         filename=spike_file,
                         R=post_pop.size,
                         N=N_eff,
-                        shared_input=0.0,  # no shared fraction
+                        shared_input=self.shared_fraction_dict[post_type],
                         rate=rate_segment,
                         dt=self.dt,
-                        rho=0.0,
                         num_bins=self.n_steps,
                         receiver_dtype=np.float64,
                         rng=self.rng,
+                        r_sc=self.cortical_correlation,
+                        tau_c_ms=self.correlation_timescale_ms,
+                        t_meas_ms=self.correlation_window_ms,
                         verbose=self.verbose,
                     )
+                    check_stream_statistics(
+                        f"{cortical_region}->{post_type} ({self.name})",
+                        stats["target"],
+                        stats["measured"],
+                        sample_shape=stats["sample_shape"],
+                    )
+                    self.stream_statistics[f"{cortical_region}-{post_type}"] = stats
 
                     self.cor_input_memmap_dict[(cortical_region, post_type)] = {
                         "R": post_pop.size,
