@@ -824,8 +824,12 @@ class GeometricSourcePools:
         ).tocsr()
         overlap = np.asarray((a @ a.T).todense(), dtype=np.float64)
         overlap *= self.multiplicity
-        denom = self.degrees * self.multiplicity
-        return overlap / np.maximum(denom[:, None], 1e-12)
+        # The correlation of two Binomial counts sharing `n` of N_i and N_j
+        # afferents is n / sqrt(N_i N_j), so the normaliser is the geometric mean
+        # of the two degrees, not either one of them. Degrees vary by ~8 % across
+        # receivers, so this is not quite the same as dividing by the row degree.
+        deg = np.maximum(self.degrees * self.multiplicity, 1e-12)
+        return overlap / np.sqrt(np.outer(deg, deg))
 
 
 def build_geometric_source_pools(
