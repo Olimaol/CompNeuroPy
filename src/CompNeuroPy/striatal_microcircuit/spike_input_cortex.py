@@ -230,7 +230,10 @@ def make_global_p_trace(
     z = _ar1_trace(num_bins=num_bins, a=a, rng=rng, carry=carry)
     # Gamma marginal, mean 1, variance sigma^2
     shape_k = 1.0 / (sigma * sigma)
-    modulation = gamma_dist.ppf(norm.cdf(z), a=shape_k, scale=sigma * sigma)
+    # kept off 0 and 1 because norm.cdf saturates past |z| ~ 8.3 and
+    # gamma.ppf(1.0) is infinite
+    uniforms = np.clip(norm.cdf(z), 1e-12, 1.0 - 1e-12)
+    modulation = gamma_dist.ppf(uniforms, a=shape_k, scale=sigma * sigma)
     p_t = np.clip(p_drive * modulation, 0.0, 1.0)
     return p_t, sigma, float(z[-1])
 
@@ -244,11 +247,14 @@ def _ar1_trace(
         return xi
     from scipy.signal import lfilter
 
+    # lfilter starts from a zero initial state, so the leading samples would have
+    # reduced variance. Seeding the first chunk from the stationary distribution
+    # keeps the process stationary from step 1, which matters because the
+    # self-check measures the first bins written.
+    if carry is None:
+        carry = float(rng.standard_normal())
     z = lfilter([math.sqrt(1.0 - a * a)], [1.0, -a], xi)
-    if carry is not None:
-        # add the decaying memory of the previous chunk
-        z = z + carry * a ** np.arange(1, num_bins + 1)
-    return z
+    return z + carry * a ** np.arange(1, num_bins + 1)
 
 
 # ---------------------------------------------------------------------------
