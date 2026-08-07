@@ -7,8 +7,15 @@ firing at a stated rate whose afferent pools overlap between receivers by a
 stated fraction ``f`` -- and is therefore not a modelling choice:
 
     mean = N * p(t)
-    Fano = 1 + N * p * sigma^2                (approximately, for small p)
-    corr = (f + N * p * sigma^2) / (1 + N * p * sigma^2)
+    var  = N*p*(1 - p*(1 + sigma^2)) + (N*p)^2 * sigma^2     Fano = var / (N*p)
+    cov  = f*N*p*(1 - p*(1 + sigma^2)) + (N*p)^2 * sigma^2   corr = cov / var
+
+where ``sigma^2`` is the shared-modulation variance (``stream_target_statistics``
+implements exactly these). In terms of the presynaptic pairwise correlation
+``rho = p*sigma^2/(1-p)`` the same law reads ``Fano = (1-p)*((1-rho) + N*rho)``
+and ``corr = (f*(1-rho) + N*rho) / ((1-rho) + N*rho)``, which is the form the
+contract document states; at ``rho = sigma = 0`` both reduce to
+``Fano = 1 - p``, ``corr = f``.
 
 See ``BGM_22/experimental_data/input_streams/README.md`` for the full contract,
 the sources of each input quantity, and the list of things this approach
