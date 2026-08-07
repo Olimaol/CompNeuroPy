@@ -2068,10 +2068,12 @@ if __name__ == "__main__":
         dbs_condition="off",
         nx=10,
         b=10,
-        # placeholder only -- this demo builds no cortical input, so the mapping is
-        # never used. It is NOT the model's proportions; those live in BGM_22's
+        # placeholders only -- this demo builds no input at all, so none of these
+        # are used. They are NOT the model's values; those live in BGM_22's
         # BOLD_optimization/parameters.py.
         cortical_proportions_dict={"dlPFC": 1.0},
+        shared_fraction=0.014,
+        correlation_dict={"FS": 0.0, "dSPN": 0.0, "iSPN": 0.0},
         build_cortical_input=False,
         build_missing_gaba_input=False,
         build_connectivity=False,
