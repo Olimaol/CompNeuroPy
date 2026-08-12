@@ -42,6 +42,14 @@ produce the correlations, rather than computing a correlation and imposing it.
     streams for thal/GPe/STN). Splits each receiver's afferents into shared and
     private and draws each with a Binomial.
 
+The homogeneous construction is not made redundant by the pool: shared+private
+with fraction ``f`` gives the same pairwise statistics as a pool of
+``M = N/f`` axons, so the pool subsumes it -- except at ``f = 0``, which would
+need an infinite pool and falls out of the split naturally as a pure-private
+draw (``CorticalInputs`` runs at exactly that). Conversely, one pool ties the
+fractions of every receiver type sampling it to ``f_i = N_i/M``, where the
+shared+private split leaves each type's ``f`` free.
+
 Both take an optional shared rate modulation carrying a real correlation
 timescale (``tau_c``), because a spike-count correlation is only meaningful
 together with the measurement window it was observed at.
